@@ -32,6 +32,8 @@ REPOSITORY_ALT_URL = None # 'git@bitbucket.org:nprapps/%s.git' % REPOSITORY_NAME
 ASSETS_SLUG = 'BIGGIG_ASSETS'
 
 
+
+
 """ 
 MAIL
 """ 

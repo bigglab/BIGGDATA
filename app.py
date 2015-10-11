@@ -17,8 +17,9 @@ from celery import Celery
 
 
 app = Flask(__name__)
-secret_key = 'hi'
-app.config['SECRET_KEY'] = secret_key
+#set key for Flask session handler 
+app.secret_key = '\x95\x90+\x1c\xd36\xa3\x94\x99\xaeA\xac\xd3M5\x0b\xc7\xefF\xf3\x08\x05t\xd9'
+
 # Initialize extensions
 mail = Mail(app)
 
