@@ -9,6 +9,10 @@ import random
 from render_utils import make_context, smarty_filter, urlencode_filter
 from werkzeug.debug import DebuggedApplication
 from flask import Flask, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify
+from flask.ext.login import * 
+import wtforms
+from forms import LoginForm
+
 # from flask_mail import Mail
 from flask.ext.mail import Mail, Message
 from flask_sqlalchemy import SQLAlchemy
@@ -22,6 +26,9 @@ app.secret_key = '\x95\x90+\x1c\xd36\xa3\x94\x99\xaeA\xac\xd3M5\x0b\xc7\xefF\xf3
 
 # Initialize extensions
 mail = Mail(app)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
 
 celery = Celery(app.name, broker='amqp://')
 import celery_config
@@ -82,6 +89,28 @@ templateEnv = jinja2.Environment( loader=templateLoader )
 def index():
     template = templateEnv.get_template('index.html')
     return template.render(r='r')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    # Here we use a class of some kind to represent and validate our
+    # client-side form data. For example, WTForms is a library that will
+    # handle this for us, and we use a custom LoginForm to validate.
+    form = LoginForm()
+    if form.validate_on_submit():
+        # Login and validate the user.
+        # user should be an instance of your `User` class
+        login_user(user)
+
+        flask.flash('Logged in successfully.')
+
+        next = flask.request.args.get('next')
+        # next_is_valid should check if the user has valid
+        # permission to access the `next` url
+        if not next_is_valid(next):
+            return abort(400)
+
+        return redirect(next or flask.url_for('index'))
+    return render_template('login.html', form=form)
 
 
 @app.route('/igrep')
