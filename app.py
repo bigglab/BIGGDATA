@@ -16,11 +16,13 @@ from flask_user import login_required, SQLAlchemyAdapter, UserManager, UserMixin
 from celery import Celery
 
 
-app = Flask(__name__)
-import app_config
-app.config.from_object(app_config)
+# app = Flask(__name__)
+app = Flask(__name__, instance_relative_config=True)
+# Load the configuration from the instance folder
+app.config.from_pyfile('config.py')
+# import app_config
+# app.config.from_object(app_config)
 #set key for Flask session handler - should be in a more secret place... 
-app.secret_key = '\x95\x90+\x1c\xd36\xa3\x94\x99\xaeA\xac\xd3M5\x0b\xc7\xefF\xf3\x08\x05t\xd9'
 
 # Initialize extensions
 # Postgres DB for Users 
@@ -204,11 +206,7 @@ def users():
     engine = create_engine('postgresql://localhost/biggig', echo=True)
     conn = engine.connect()
     metadata = MetaData()
-    users = Table('users', metadata, 
-        Column('id', Integer, primary_key=True),
-        Column('first_name', String),
-        Column('last_name', String),
-        Column('email', String))
+    users = Table('users', metadata, autoload=True, autoload_with=engine)
     s = select([users])
     results = conn.execute(s)  
     print 'query results from /users:'
