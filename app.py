@@ -5,17 +5,17 @@ import os
 import time
 import random
 from render_utils import make_context, smarty_filter, urlencode_filter
-from werkzeug.debug import DebuggedApplication
+# from werkzeug.debug import DebuggedApplication
 from flask import Flask, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages
 from flask.ext.login import LoginManager, UserMixin, current_user, login_user, logout_user
 import wtforms
-from forms import LoginForm
 from flask.ext.mail import Mail, Message
 from flask_sqlalchemy import SQLAlchemy
 from flask_user import login_required, SQLAlchemyAdapter, UserManager, UserMixin, roles_required
 from celery import Celery
 from flask.ext.bcrypt import Bcrypt
 
+from forms import LoginForm
 
 
 app = Flask(__name__, instance_relative_config=True)
@@ -30,82 +30,57 @@ db = SQLAlchemy(app)
 from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
 from sqlalchemy.sql import select
-engine = create_engine('postgresql://localhost/biggig', echo=True)
-# use SQLALCHEMY_DATABASE_URI config variable instead 
-conn = engine.connect()
-metadata = MetaData()
-
-# This kind of Query Works for now: 
-# user = Table('user', metadata, autoload=True, autoload_with=engine)
-# s = select([user])
-# results = conn.execute(s)  
-
-
-
-# Get DB Sessions working 
-
-from sqlalchemy.orm import sessionmaker
-
-# create a configured "Session" class
-Session = sessionmaker(bind=engine)
-# create a Session
-session = Session()
-
-# # work with sess
-# myobject = MyObject('foo', 'bar')
-# session.add(myobject)
-# session.commit()
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 from models import User 
-us = session.query(User).all()
-print us 
-
-
-
-
-
-
-
-
-
-#  User Auth Functions - Flask-Login  
 login_manager = LoginManager()
 login_manager.init_app(app)
 
 
+
+# load template environment for cleaner routes 
+import jinja2 
+templateLoader = jinja2.FileSystemLoader( searchpath="/Users/red/Desktop/BIGGIG/templates" )
+templateEnv = jinja2.Environment( loader=templateLoader )
+
+
+
 # Flask-Login use this to reload the user object from the user ID stored in the session
 @login_manager.user_loader
-def load_user(id):
-    return User.get(id)
+def load_user(email):
+    result = db.session.query(User).filter_by(email=email).all()
+    return result[0]
 
 
 
-@app.route('/login/check', methods=['post'])
-def login_check():
-    # validate username and password
-    user = User.get(request.form['username'])
-    if (user and user.password == request.form['password']):
-        login_user(user)
-    else:
-        flash('Username or password incorrect')
-    return redirect(url_for('index'))
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    results = db.session.query(User).all()
+    template = templateEnv.get_template('users.html')
+    return template.render(results=results, current_user=current_user)
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    """For GET requests, display the login form. For POSTS, login the current user
-    by processing the form."""
-    print db
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.get(form.email.data)
+        user = load_user(form.email.data)
+        print user.first_name 
+
         if user:
-            if bcrypt.check_password_hash(user.password_hash, form.password.data):
+            if user.password_hash == form.password.data:
                 user.authenticated = True
                 db.session.add(user)
                 db.session.commit()
                 login_user(user, remember=True)
-                return redirect(url_for("app.example"))
+                return redirect(url_for("index"))
+        # if user:
+        #     if bcrypt.check_password_hash(user.password_hash, form.password.data):
+        #         user.authenticated = True
+        #         db.session.add(user)
+        #         db.session.commit()
+        #         login_user(user, remember=True)
+        #         return redirect(url_for("app.example"))
     return render_template("login.html", form=form)
 
 
@@ -121,98 +96,6 @@ def logout():
     return render_template("logout.html")
 
 
-
-
-# Celery configured for local RabbitMQ 
-celery = Celery(app.name, broker='amqp://')
-import celery_config 
-celery.config_from_object('celery_config')
-
-
-# should really break out tasks to celery_tasks.py or something 
-@celery.task
-def add(x, y):
-    # some long running task here
-    return x + y 
-
-
-@celery.task
-def send_async_email(msg):
-    """Background task to send an email with Flask-Mail."""
-    with app.app_context():
-        mail.send(msg)
-
-
-@celery.task(bind=True)
-def long_task(self):
-    """Background task that runs a long function with progress reports."""
-    verb = ['Starting up', 'Booting', 'Repairing', 'Loading', 'Checking']
-    adjective = ['master', 'radiant', 'silent', 'harmonic', 'fast']
-    noun = ['solar array', 'particle reshaper', 'cosmic ray', 'orbiter', 'bit']
-    message = ''
-    total = random.randint(10, 50)
-    for i in range(total):
-        if not message or random.random() < 0.25:
-            message = '{0} {1} {2}...'.format(random.choice(verb),
-                                              random.choice(adjective),
-                                              random.choice(noun))
-    # total = 100 
-    # for i in range(total): 
-    #     message = ''
-        self.update_state(state='PROGRESS',
-                          meta={'current': i, 'total': total,
-                                'status': message})
-        time.sleep(1)
-    return {'current': 100, 'total': 100, 'status': 'Task completed!',
-            'result': 42}
-
-
-
-
-
-
-
-# load template environment for cleaner routes 
-import jinja2 
-templateLoader = jinja2.FileSystemLoader( searchpath="/Users/red/Desktop/BIGGIG/templates" )
-templateEnv = jinja2.Environment( loader=templateLoader )
-
-
-
-# @app.route('/')
-# # @oauth.oauth_required
-# def index():
-#     template = templateEnv.get_template('index.html')
-#     return template.render(r='r')
-
-# @app.route('/login', methods=['GET', 'POST'])
-# def login():
-#     # Here we use a class of some kind to represent and validate our
-#     # client-side form data. For example, WTForms is a library that will
-#     # handle this for us, and we use a custom LoginForm to validate.
-#     form = LoginForm()
-#     if form.validate_on_submit():
-#         # Login and validate the user.
-#         # user should be an instance of your `User` class
-#         login_user(user)
-
-#         flask.flash('Logged in successfully.')
-
-#         next = flask.request.args.get('next')
-#         # next_is_valid should check if the user has valid
-#         # permission to access the `next` url
-#         if not next_is_valid(next):
-#             return abort(400)
-
-#         return redirect(next or flask.url_for('index'))
-#     return render_template('login.html', form=form)
-
-
-@app.route('/igrep')
-# @oauth.oauth_required
-def igrep():
-    template = templateEnv.get_template('igrep.html')
-    return template.render(r='r')
 
 
 @app.route('/add1/<num>')
@@ -291,23 +174,68 @@ def taskstatus(task_id):
     return jsonify(response)
 
 
-@app.route('/', methods=['GET', 'POST'])
-def users():
-    users = Table('user', metadata, autoload=True, autoload_with=engine)
-    s = select([users])
-    results = conn.execute(s)  
-    print 'query results from /users:'
-    # for row in results:
-    #     print row
-    template = templateEnv.get_template('users.html')
-    return template.render(results=results)
 
 
 
 
-print 'app loaded'
+
+
+
+
+
+
+# Celery configured for local RabbitMQ 
+celery = Celery(app.name, broker='amqp://')
+import celery_config 
+celery.config_from_object('celery_config')
+
+
+# should really break out tasks to celery_tasks.py or something 
+@celery.task
+def add(x, y):
+    # some long running task here
+    return x + y 
+
+
+@celery.task
+def send_async_email(msg):
+    """Background task to send an email with Flask-Mail."""
+    with app.app_context():
+        mail.send(msg)
+
+
+@celery.task(bind=True)
+def long_task(self):
+    """Background task that runs a long function with progress reports."""
+    verb = ['Starting up', 'Booting', 'Repairing', 'Loading', 'Checking']
+    adjective = ['master', 'radiant', 'silent', 'harmonic', 'fast']
+    noun = ['solar array', 'particle reshaper', 'cosmic ray', 'orbiter', 'bit']
+    message = ''
+    total = random.randint(10, 50)
+    for i in range(total):
+        if not message or random.random() < 0.25:
+            message = '{0} {1} {2}...'.format(random.choice(verb),
+                                              random.choice(adjective),
+                                              random.choice(noun))
+    # total = 100 
+    # for i in range(total): 
+    #     message = ''
+        self.update_state(state='PROGRESS',
+                          meta={'current': i, 'total': total,
+                                'status': message})
+        time.sleep(1)
+    return {'current': 100, 'total': 100, 'status': 'Task completed!',
+            'result': 42}
+
+
+
+
+
+
+
 
 if __name__ == '__main__':
+    print 'Running application on port 5000......'
     app.run(host='0.0.0.0', port=5000, debug=True)
 
 

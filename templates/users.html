@@ -4,6 +4,7 @@
 	{% for r in results %}
 	  <h3>{{r.first_name}} {{r.last_name}}: {{r.email}}</h3>
 	{% endfor %}
+<h4>current user is: {{current_user.first_name}}</h4>
 
 {%endblock content %}
 

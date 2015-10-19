@@ -1,19 +1,16 @@
 
 
-
+from flask_wtf import Form
+from wtforms import TextField, PasswordField, SelectField
 import wtforms
 from wtforms.fields import * 
-from wtforms.form import * 
-# Form = wtforms.form.Form 
 validators = wtforms.validators 
+from wtforms.validators import DataRequired
+
 
 
 class LoginForm(Form):
-	first_name = StringField(u'First Name', validators=[validators.input_required()])
-	last_name  = StringField(u'Last Name', validators=[validators.input_required()])
-	email = StringField(u'Email', validators=[validators.input_required()])
+	# first_name = StringField(u'First Name', validators=[validators.input_required()])
+	# last_name  = StringField(u'Last Name', validators=[validators.input_required()])
+	email = StringField('Email', validators=[validators.input_required()])
 	password = PasswordField('password', validators=[validators.input_required()])
-	def validate_on_submit(self):
-	  print 'validating user login form.... '
-
-
