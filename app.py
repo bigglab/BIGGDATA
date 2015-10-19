@@ -20,9 +20,6 @@ from celery import Celery
 app = Flask(__name__, instance_relative_config=True)
 # Load the configuration from the instance folder
 app.config.from_pyfile('config.py')
-# import app_config
-# app.config.from_object(app_config)
-#set key for Flask session handler - should be in a more secret place... 
 
 # Initialize extensions
 # Postgres DB for Users 
@@ -218,7 +215,7 @@ def users():
 
 
 
-
+print 'hello slack!'
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
