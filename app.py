@@ -6,7 +6,7 @@ import time
 import random
 from render_utils import make_context, smarty_filter, urlencode_filter
 # from werkzeug.debug import DebuggedApplication
-from flask import Flask, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages
+from flask import Flask, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify
 from flask.ext.login import LoginManager, UserMixin, current_user, login_user, logout_user
 import wtforms
 from flask.ext.mail import Mail, Message
@@ -15,7 +15,6 @@ from flask_user import login_required, SQLAlchemyAdapter, UserManager, UserMixin
 from celery import Celery
 from flask.ext.bcrypt import Bcrypt
 
-from forms import LoginForm
 
 
 app = Flask(__name__, instance_relative_config=True)
@@ -24,7 +23,6 @@ app.config.from_pyfile('config.py')
 # Initialize extensions
 bcrypt = Bcrypt(app)
 
-
 # Postgres DB for Admin Purposes 
 db = SQLAlchemy(app)
 from sqlalchemy import create_engine
@@ -32,24 +30,29 @@ from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
 from sqlalchemy.sql import select
 from sqlalchemy.orm import sessionmaker, scoped_session
 
-from models import User 
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-
+from flask import get_flashed_messages
 
 # load template environment for cleaner routes 
 import jinja2 
 templateLoader = jinja2.FileSystemLoader( searchpath="/Users/red/Desktop/BIGGIG/templates" )
-templateEnv = jinja2.Environment( loader=templateLoader )
+templateEnv = jinja2.Environment( loader=templateLoader, extensions=['jinja2.ext.with_'])
 
+
+from models import User 
+from forms import LoginForm, CreateUserForm
 
 
 # Flask-Login use this to reload the user object from the user ID stored in the session
 @login_manager.user_loader
 def load_user(email):
     result = db.session.query(User).filter_by(email=email).all()
-    return result[0]
+    if len(result) == 0: 
+        return None 
+    else:
+        return result[0]
 
 
 
@@ -62,26 +65,51 @@ def index():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = load_user(form.email.data)
-        print user.first_name 
-
+    login_form = LoginForm()
+    if login_form.validate_on_submit():
+        user = load_user(login_form.email.data)
         if user:
-            if user.password_hash == form.password.data:
+            print "found user" + user.first_name  
+            if bcrypt.check_password_hash(user.password_hash, login_form.password.data):
                 user.authenticated = True
                 db.session.add(user)
                 db.session.commit()
                 login_user(user, remember=True)
+                flash('logged in!', 'success')
                 return redirect(url_for("index"))
-        # if user:
-        #     if bcrypt.check_password_hash(user.password_hash, form.password.data):
-        #         user.authenticated = True
-        #         db.session.add(user)
-        #         db.session.commit()
-        #         login_user(user, remember=True)
-        #         return redirect(url_for("app.example"))
-    return render_template("login.html", form=form)
+            else: 
+                flash("Password doesn't match for " + user.first_name, 'error')
+                print "password didnt match for " + user.first_name 
+        else: 
+            flash("couldn't find that user... try registering a new user", 'normal')
+    #also supply create_user_form here for convenience
+    create_user_form = CreateUserForm()
+    return render_template("login.html", login_form=login_form, create_user_form=create_user_form)
+
+@app.route("/users/create", methods=["POST"])
+def create_user():
+    form = CreateUserForm()
+    # add some validations / cleansing 
+    with load_user(form.email.data) as user:
+        if user:
+            if bcrypt.check_password_hash(user.password_hash, login_form.password.data):
+                login_user(user)
+                user.authenticated = True
+                db.session.add(user)
+                db.session.commit()
+            flash('email already exists!', 'error')
+            return redirect(url_for("login"))
+    new_user = User()
+    new_user.first_name = form.first_name.data
+    new_user.last_name = form.last_name.data 
+    new_user.email = form.email.data
+    new_user.password_hash = bcrypt.generate_password_hash(form.password.data)
+    db.session.add(new_user)
+    db.session.commit()
+    login_user(new_user, remember=True)
+    flash("new user created and logged in", 'success')
+    return redirect(url_for("index"))
+    # return render_template("login.html", form=form)
 
 
 @app.route("/logout", methods=["GET"])

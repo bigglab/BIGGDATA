@@ -1,11 +1,28 @@
 {% extends "_base.html" %}
 {% block content %}
+<br>
+<h2>Enter your email and password to login:</h2>
 <div class="container">
     <form method="POST" action="/login">
-        {{ form.csrf_token }}
-        {{ form.email.label }} {{ form.email(size=20) }}
-        {{ form.password.label }} {{ form.password(size=20) }}
+        {{ login_form.csrf_token }}
+        {{ login_form.email.label }} {{ login_form.email(size=20) }}
+        {{ login_form.password.label }} {{ login_form.password(size=20) }}
         <input type="submit" value="Login">
     </form>
 </div>
+
+<br>
+<h3>Or register here if you're new: </h3>
+<div class="container">
+    <form method="POST" action="/users/create">
+        {{ create_user_form.csrf_token }}
+        {{ create_user_form.first_name.label }} {{ create_user_form.first_name(size=20) }}
+        {{ create_user_form.last_name.label }} {{ create_user_form.last_name(size=20) }}
+        <br>
+        {{ create_user_form.email.label }} {{ create_user_form.email(size=40) }}
+        {{ create_user_form.password.label }} {{ create_user_form.password(size=20) }}
+        <input type="submit" value="Submit">
+    </form>
+</div>
+
 {% endblock %}
