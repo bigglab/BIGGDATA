@@ -11,7 +11,7 @@ See get_secrets() below for a fast way to access them.
 import os
 import sys
 
-DATABASE_URL="postgresql://localhost/biggig"
+SQLALCHEMY_DATABASE_URI = "postgresql://localhost/biggig"
 
 
 # These variables will be set at runtime. See configure_targets() below

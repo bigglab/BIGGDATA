@@ -199,6 +199,30 @@ def taskstatus(task_id):
     return jsonify(response)
 
 
+@app.route('/users', methods=['GET', 'POST'])
+def users():
+    from sqlalchemy import create_engine
+    from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
+    engine = create_engine('postgresql://localhost/biggig', echo=True)
+    conn = engine.connect()
+    from sqlalchemy.sql import select
+    metadata = MetaData()
+    users = Table('users', metadata, 
+        Column('id', Integer, primary_key=True),
+        Column('first_name', String),
+        Column('last_name', String)
+        )
+    s = select([users])
+    results = conn.execute(s)  
+    print 'query results from /users:'
+    # for row in results:
+    #     print row
+    template = templateEnv.get_template('users.html')
+    return template.render(results=results)
+
+
+
+
 
 
 if __name__ == '__main__':
