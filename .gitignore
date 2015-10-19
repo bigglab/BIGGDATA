@@ -2,3 +2,4 @@
 *.pyo
 legacy/* 
 credentials.txt
+instance/*
