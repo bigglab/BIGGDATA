@@ -1,7 +1,6 @@
 
-import app_config
 import json
-import oauth
+# import oauth
 import static
 import os
 import time
@@ -21,17 +20,20 @@ from celery import Celery
 
 
 app = Flask(__name__)
-#set key for Flask session handler 
+import app_config
+app.config.from_object(app_config)
+#set key for Flask session handler - should be in a more secret place... 
 app.secret_key = '\x95\x90+\x1c\xd36\xa3\x94\x99\xaeA\xac\xd3M5\x0b\xc7\xefF\xf3\x08\x05t\xd9'
 
 # Initialize extensions
-mail = Mail(app)
-
+# Postgres DB for Users 
+pgdb = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
+# Celery configured for local RabbitMQ
 celery = Celery(app.name, broker='amqp://')
-import celery_config
+import celery_config 
 celery.config_from_object('celery_config')
 
 
@@ -77,7 +79,8 @@ def long_task(self):
 
 
 
-# load template environment 
+
+# load template environment for cleaner routes 
 import jinja2 
 templateLoader = jinja2.FileSystemLoader( searchpath="/Users/red/Desktop/BIGGIG/templates" )
 templateEnv = jinja2.Environment( loader=templateLoader )
@@ -194,6 +197,7 @@ def taskstatus(task_id):
             'status': str(task.info),  # this is the exception raised
         }
     return jsonify(response)
+
 
 
 
