@@ -1,6 +1,5 @@
 
 import json
-# import oauth
 import static
 import os
 import time
@@ -11,8 +10,6 @@ from flask import Flask, make_response, render_template, render_template_string,
 from flask.ext.login import * 
 import wtforms
 from forms import LoginForm
-
-# from flask_mail import Mail
 from flask.ext.mail import Mail, Message
 from flask_sqlalchemy import SQLAlchemy
 from flask_user import login_required, SQLAlchemyAdapter, UserManager, UserMixin, roles_required
@@ -203,15 +200,15 @@ def taskstatus(task_id):
 def users():
     from sqlalchemy import create_engine
     from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
+    from sqlalchemy.sql import select
     engine = create_engine('postgresql://localhost/biggig', echo=True)
     conn = engine.connect()
-    from sqlalchemy.sql import select
     metadata = MetaData()
     users = Table('users', metadata, 
         Column('id', Integer, primary_key=True),
         Column('first_name', String),
-        Column('last_name', String)
-        )
+        Column('last_name', String),
+        Column('email', String))
     s = select([users])
     results = conn.execute(s)  
     print 'query results from /users:'
