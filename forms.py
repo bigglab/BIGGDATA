@@ -10,7 +10,9 @@ validators = wtforms.validators
 
 class LoginForm(Form):
 	first_name = StringField(u'First Name', validators=[validators.input_required()])
-	last_name  = StringField(u'Last Name', validators=[validators.optional()])
+	last_name  = StringField(u'Last Name', validators=[validators.input_required()])
+	email = StringField(u'Email', validators=[validators.input_required()])
+	password = PasswordField('password', validators=[validators.input_required()])
 	def validate_on_submit(self):
 	  print 'validating user login form.... '
 

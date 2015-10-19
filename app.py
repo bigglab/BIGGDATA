@@ -6,28 +6,124 @@ import time
 import random
 from render_utils import make_context, smarty_filter, urlencode_filter
 from werkzeug.debug import DebuggedApplication
-from flask import Flask, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify
-from flask.ext.login import * 
+from flask import Flask, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages
+from flask.ext.login import LoginManager, UserMixin, current_user, login_user, logout_user
 import wtforms
 from forms import LoginForm
 from flask.ext.mail import Mail, Message
 from flask_sqlalchemy import SQLAlchemy
 from flask_user import login_required, SQLAlchemyAdapter, UserManager, UserMixin, roles_required
 from celery import Celery
+from flask.ext.bcrypt import Bcrypt
 
 
-# app = Flask(__name__)
+
 app = Flask(__name__, instance_relative_config=True)
 # Load the configuration from the instance folder
 app.config.from_pyfile('config.py')
-
 # Initialize extensions
-# Postgres DB for Users 
-pgdb = SQLAlchemy(app)
+bcrypt = Bcrypt(app)
+
+
+# Postgres DB for Admin Purposes 
+db = SQLAlchemy(app)
+from sqlalchemy import create_engine
+from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
+from sqlalchemy.sql import select
+engine = create_engine('postgresql://localhost/biggig', echo=True)
+# use SQLALCHEMY_DATABASE_URI config variable instead 
+conn = engine.connect()
+metadata = MetaData()
+
+# This kind of Query Works for now: 
+# user = Table('user', metadata, autoload=True, autoload_with=engine)
+# s = select([user])
+# results = conn.execute(s)  
+
+
+
+# Get DB Sessions working 
+
+from sqlalchemy.orm import sessionmaker
+
+# create a configured "Session" class
+Session = sessionmaker(bind=engine)
+# create a Session
+session = Session()
+
+# # work with sess
+# myobject = MyObject('foo', 'bar')
+# session.add(myobject)
+# session.commit()
+
+from models import User 
+us = session.query(User).all()
+print us 
+
+
+
+
+
+
+
+
+
+#  User Auth Functions - Flask-Login  
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-# Celery configured for local RabbitMQ
+
+# Flask-Login use this to reload the user object from the user ID stored in the session
+@login_manager.user_loader
+def load_user(id):
+    return User.get(id)
+
+
+
+@app.route('/login/check', methods=['post'])
+def login_check():
+    # validate username and password
+    user = User.get(request.form['username'])
+    if (user and user.password == request.form['password']):
+        login_user(user)
+    else:
+        flash('Username or password incorrect')
+    return redirect(url_for('index'))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """For GET requests, display the login form. For POSTS, login the current user
+    by processing the form."""
+    print db
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.get(form.email.data)
+        if user:
+            if bcrypt.check_password_hash(user.password_hash, form.password.data):
+                user.authenticated = True
+                db.session.add(user)
+                db.session.commit()
+                login_user(user, remember=True)
+                return redirect(url_for("app.example"))
+    return render_template("login.html", form=form)
+
+
+@app.route("/logout", methods=["GET"])
+@login_required
+def logout():
+    """Logout the current user."""
+    user = current_user
+    user.authenticated = False
+    db.session.add(user)
+    db.session.commit()
+    logout_user()
+    return render_template("logout.html")
+
+
+
+
+# Celery configured for local RabbitMQ 
 celery = Celery(app.name, broker='amqp://')
 import celery_config 
 celery.config_from_object('celery_config')
@@ -83,33 +179,33 @@ templateEnv = jinja2.Environment( loader=templateLoader )
 
 
 
-@app.route('/')
-# @oauth.oauth_required
-def index():
-    template = templateEnv.get_template('index.html')
-    return template.render(r='r')
+# @app.route('/')
+# # @oauth.oauth_required
+# def index():
+#     template = templateEnv.get_template('index.html')
+#     return template.render(r='r')
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    # Here we use a class of some kind to represent and validate our
-    # client-side form data. For example, WTForms is a library that will
-    # handle this for us, and we use a custom LoginForm to validate.
-    form = LoginForm()
-    if form.validate_on_submit():
-        # Login and validate the user.
-        # user should be an instance of your `User` class
-        login_user(user)
+# @app.route('/login', methods=['GET', 'POST'])
+# def login():
+#     # Here we use a class of some kind to represent and validate our
+#     # client-side form data. For example, WTForms is a library that will
+#     # handle this for us, and we use a custom LoginForm to validate.
+#     form = LoginForm()
+#     if form.validate_on_submit():
+#         # Login and validate the user.
+#         # user should be an instance of your `User` class
+#         login_user(user)
 
-        flask.flash('Logged in successfully.')
+#         flask.flash('Logged in successfully.')
 
-        next = flask.request.args.get('next')
-        # next_is_valid should check if the user has valid
-        # permission to access the `next` url
-        if not next_is_valid(next):
-            return abort(400)
+#         next = flask.request.args.get('next')
+#         # next_is_valid should check if the user has valid
+#         # permission to access the `next` url
+#         if not next_is_valid(next):
+#             return abort(400)
 
-        return redirect(next or flask.url_for('index'))
-    return render_template('login.html', form=form)
+#         return redirect(next or flask.url_for('index'))
+#     return render_template('login.html', form=form)
 
 
 @app.route('/igrep')
@@ -195,15 +291,9 @@ def taskstatus(task_id):
     return jsonify(response)
 
 
-@app.route('/users', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 def users():
-    from sqlalchemy import create_engine
-    from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
-    from sqlalchemy.sql import select
-    engine = create_engine('postgresql://localhost/biggig', echo=True)
-    conn = engine.connect()
-    metadata = MetaData()
-    users = Table('users', metadata, autoload=True, autoload_with=engine)
+    users = Table('user', metadata, autoload=True, autoload_with=engine)
     s = select([users])
     results = conn.execute(s)  
     print 'query results from /users:'
@@ -215,7 +305,7 @@ def users():
 
 
 
-print 'hello slack!'
+print 'app loaded'
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
