@@ -14,6 +14,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_user import login_required, SQLAlchemyAdapter, UserManager, UserMixin, roles_required
 from celery import Celery
 from flask.ext.bcrypt import Bcrypt
+# flash does not seem to be working: 
+from flask import get_flashed_messages
 
 
 
@@ -33,7 +35,6 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-from flask import get_flashed_messages
 
 # load template environment for cleaner routes 
 import jinja2 
@@ -41,8 +42,18 @@ templateLoader = jinja2.FileSystemLoader( searchpath="/Users/red/Desktop/BIGGIG/
 templateEnv = jinja2.Environment( loader=templateLoader, extensions=['jinja2.ext.with_'])
 
 
+
 from models import User 
 from forms import LoginForm, CreateUserForm
+
+
+
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    results = db.session.query(User).all()
+    template = templateEnv.get_template('users.html')
+    return template.render(results=results, current_user=current_user)
 
 
 # Flask-Login use this to reload the user object from the user ID stored in the session
@@ -53,14 +64,6 @@ def load_user(email):
         return None 
     else:
         return result[0]
-
-
-
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    results = db.session.query(User).all()
-    template = templateEnv.get_template('users.html')
-    return template.render(results=results, current_user=current_user)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -85,6 +88,7 @@ def login():
     #also supply create_user_form here for convenience
     create_user_form = CreateUserForm()
     return render_template("login.html", login_form=login_form, create_user_form=create_user_form)
+
 
 @app.route("/users/create", methods=["POST"])
 def create_user():
