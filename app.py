@@ -38,15 +38,11 @@ login_manager.init_app(app)
 
 # load template environment for cleaner routes 
 import jinja2 
-templateLoader = jinja2.FileSystemLoader( searchpath="/Users/red/Desktop/BIGGIG/templates" )
+templateLoader = jinja2.FileSystemLoader( searchpath="/Users/red/Desktop/GeorgiouProjects/BIGGIG/templates" )
 templateEnv = jinja2.Environment( loader=templateLoader, extensions=['jinja2.ext.with_'])
 
-
-
 from models import User 
-from forms import LoginForm, CreateUserForm
-
-
+from forms import LoginForm, RegistrationForm
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -59,11 +55,42 @@ def index():
 # Flask-Login use this to reload the user object from the user ID stored in the session
 @login_manager.user_loader
 def load_user(email):
-    result = db.session.query(User).filter_by(email=email).all()
-    if len(result) == 0: 
-        return None 
+    user = db.session.query(User).filter_by(email=email).first()
+    if user: 
+        return user 
     else:
-        return result[0]
+        return None
+
+
+# @login_manager.user_loader
+# def load_user(userid):
+#     session = settings.Session()
+#     user = session.query(models.User).filter(models.User.id == userid).first()
+#     session.expunge_all()
+#     session.commit()
+#     session.close()
+#     return user
+
+
+# def superuser_required(f):
+#     '''
+#     Decorator for views requiring superuser access
+#     '''
+#     @wraps(f)
+#     def decorated_function(*args, **kwargs):
+#         if (
+#             not AUTHENTICATE or
+#             (not current_user.is_anonymous() and current_user.is_superuser())
+#         ):
+#             return f(*args, **kwargs)
+#         else:
+#             flash("This page requires superuser privileges", "error")
+#             return redirect(url_for('admin.index'))
+#     return decorated_function
+
+
+
+
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -86,13 +113,13 @@ def login():
         else: 
             flash("couldn't find that user... try registering a new user", 'normal')
     #also supply create_user_form here for convenience
-    create_user_form = CreateUserForm()
+    create_user_form = RegistrationForm()
     return render_template("login.html", login_form=login_form, create_user_form=create_user_form)
 
 
 @app.route("/users/create", methods=["POST"])
 def create_user():
-    form = CreateUserForm()
+    form = RegistrationForm()
     # add some validations / cleansing 
     with load_user(form.email.data) as user:
         if user:
