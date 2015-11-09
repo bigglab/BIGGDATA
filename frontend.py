@@ -1,95 +1,22 @@
 
-import json
-import static
-import os
-import time
-import random
-from celery import Celery
-
 from flask import Blueprint, render_template, flash, redirect, url_for
-from flask import Flask, Blueprint, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages
-from flask.ext.bcrypt import Bcrypt
-from flask.ext.login import LoginManager, UserMixin, current_user, login_user, logout_user
-from flask.ext.mail import Mail, Message
-from flask_bootstrap import Bootstrap
 from flask_bootstrap import __version__ as FLASK_BOOTSTRAP_VERSION
-from flask_nav import Nav 
+from flask_bootstrap import Bootstrap
 from flask_nav.elements import Navbar, View, Subgroup, Link, Text, Separator
-from flask_sqlalchemy import SQLAlchemy
-from flask_user import login_required, SQLAlchemyAdapter, UserManager, UserMixin, roles_required
 from markupsafe import escape
 from render_utils import make_context, smarty_filter, urlencode_filter
+# from werkzeug.debug import DebuggedApplication
+from flask import Flask, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages
+from flask.ext.login import LoginManager, UserMixin, current_user, login_user, logout_user
 import wtforms
+from flask.ext.mail import Mail, Message
+from flask_sqlalchemy import SQLAlchemy
+from flask_user import login_required, SQLAlchemyAdapter, UserManager, UserMixin, roles_required
+from flask.ext.bcrypt import Bcrypt
 
 
-app = Flask(__name__, instance_relative_config=True)
-# Load the configuration from the instance folder
-app.config.from_pyfile('config.py')
-# Initialize extensions
-bcrypt = Bcrypt(app)
-nav = Nav() 
-Bootstrap(app) 
- 
-
-
-# Postgres DB for Admin Purposes 
-db = SQLAlchemy(app)
-from sqlalchemy import create_engine
-from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
-from sqlalchemy.sql import select
-from sqlalchemy.orm import sessionmaker, scoped_session
-
-login_manager = LoginManager()
-login_manager.init_app(app)
-
-
-# load template environment for cleaner routes 
-import jinja2 
-templateLoader = jinja2.FileSystemLoader( searchpath="/Users/red/Desktop/GeorgiouProjects/BIGGIG/templates" )
-templateEnv = jinja2.Environment( loader=templateLoader, extensions=['jinja2.ext.with_'])
-
-from models import User 
 from forms import LoginForm, RegistrationForm
-
-
-# Flask-Login use this to reload the user object from the user ID stored in the session
-@login_manager.user_loader
-def load_user(email):
-    user = db.session.query(User).filter_by(email=email).first()
-    if user: 
-        return user 
-    else:
-        return None
-
-
-# @login_manager.user_loader
-# def load_user(userid):
-#     session = settings.Session()
-#     user = session.query(models.User).filter(models.User.id == userid).first()
-#     session.expunge_all()
-#     session.commit()
-#     session.close()
-#     return user
-
-
-# def superuser_required(f):
-#     '''
-#     Decorator for views requiring superuser access
-#     '''
-#     @wraps(f)
-#     def decorated_function(*args, **kwargs):
-#         if (
-#             not AUTHENTICATE or
-#             (not current_user.is_anonymous() and current_user.is_superuser())
-#         ):
-#             return f(*args, **kwargs)
-#         else:
-#             flash("This page requires superuser privileges", "error")
-#             return redirect(url_for('admin.index'))
-#     return decorated_function
-
-
-
+from nav import nav
 
 frontend = Blueprint('frontend', __name__)
 
@@ -97,9 +24,9 @@ frontend = Blueprint('frontend', __name__)
 # navbar has an usual amount of Link-Elements, more commonly you will have a
 # lot more View instances.
 nav.register_element('frontend_top', Navbar(
-    View('BIGG DATA', '.index'),
+    View('Flask-Bootstrap', '.index'),
     View('Home', '.index'),
-    View('Login', '.login'),
+    View('Forms Example', '.login'),
     Subgroup(
         'Docs',
         Link('Flask-Bootstrap', 'http://pythonhosted.org/Flask-Bootstrap'),
@@ -113,7 +40,7 @@ nav.register_element('frontend_top', Navbar(
         Link('Javascript', 'http://getbootstrap.com/javascript/'),
         Link('Customize', 'http://getbootstrap.com/customize/'),
     ),
-    Text('Using Python Version {}'.format('2.7')),
+    Text('Using Flask-Bootstrap {}'.format(FLASK_BOOTSTRAP_VERSION)),
 ))
 
 
@@ -124,7 +51,8 @@ nav.register_element('frontend_top', Navbar(
 @frontend.route('/', methods=['GET', 'POST'])
 def index():
     results = db.session.query(User).all()
-    return render_template("users.html", results=results)
+    template = templateEnv.get_template('users.html')
+    return template.render(results=results, current_user=current_user)
 
 
 
@@ -141,7 +69,7 @@ def login():
                 db.session.commit()
                 login_user(user, remember=True)
                 flash('logged in!', 'success')
-                return redirect(url_for(".index"))
+                return redirect(url_for("index"))
             else: 
                 flash("Password doesn't match for " + user.first_name, 'error')
                 print "password didnt match for " + user.first_name 
@@ -266,82 +194,5 @@ def taskstatus(task_id):
             'status': str(task.info),  # this is the exception raised
         }
     return jsonify(response)
-
-
-
-app.register_blueprint(frontend)
-nav.init_app(app)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Celery configured for local RabbitMQ 
-celery = Celery(app.name, broker='amqp://')
-import celery_config 
-celery.config_from_object('celery_config')
-
-
-# should really break out tasks to celery_tasks.py or something 
-@celery.task
-def add(x, y):
-    # some long running task here
-    return x + y 
-
-
-@celery.task
-def send_async_email(msg):
-    """Background task to send an email with Flask-Mail."""
-    with app.app_context():
-        mail.send(msg)
-
-
-@celery.task(bind=True)
-def long_task(self):
-    """Background task that runs a long function with progress reports."""
-    verb = ['Starting up', 'Booting', 'Repairing', 'Loading', 'Checking']
-    adjective = ['master', 'radiant', 'silent', 'harmonic', 'fast']
-    noun = ['solar array', 'particle reshaper', 'cosmic ray', 'orbiter', 'bit']
-    message = ''
-    total = random.randint(10, 50)
-    for i in range(total):
-        if not message or random.random() < 0.25:
-            message = '{0} {1} {2}...'.format(random.choice(verb),
-                                              random.choice(adjective),
-                                              random.choice(noun))
-    # total = 100 
-    # for i in range(total): 
-    #     message = ''
-        self.update_state(state='PROGRESS',
-                          meta={'current': i, 'total': total,
-                                'status': message})
-        time.sleep(1)
-    return {'current': 100, 'total': 100, 'status': 'Task completed!',
-            'result': 42}
-
-
-
-
-
-
-
-
-if __name__ == '__main__':
-    print 'Running application on port 5000......'
-    app.run(host='0.0.0.0', port=5000, debug=True)
 
 

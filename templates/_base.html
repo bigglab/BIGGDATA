@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+{%- extends "bootstrap/base.html" %}
+{%block title %}BIGG IG{% endblock %}
+{% import "bootstrap/fixes.html" as fixes %}
 
-<head>
-    <!-- CHARTBEAT -->
-    <script type="text/javascript">
-        var _sf_startpt=(new Date()).getTime();
-    </script>
+{%block head %}
+{{super()}}
+{{fixes.ie8()}}
+{%- endblock %}
 
+{% block styles -%}
+    {{super()}}
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
-    
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
  <!--   <script type="text/javascript" src="/igrep_assets/scripts/igrep.script.tools.js"></script>      
 -->
@@ -17,9 +20,16 @@
 <!--     <link rel="stylesheet" type="text/css" href="/igrep_assets/styles/dashboard.css">   
     <link rel="stylesheet" type="text/css" href="/igrep_assets/styles/immunogrep_stylesheet.css">   
  -->
-    <title>BIGG IG</title>
+{%- endblock %}
 
-</head>
+
+{% block navbar %} 
+{{nav.frontend_top.render()}}
+{% endblock %}
+
+
+
+
 <body>
 
   <a class="sr-only" href="#content">Skip To Content</a>
