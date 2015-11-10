@@ -40,13 +40,14 @@ class User(db.Model):
     #     unvalidated_response = db.session.query(User).filter_by(email=email).all()
     #     return unvalidated_response[0]
 
-    def is_active(self):
-        """True, as all users are active."""
-        return True
-
     def get_id(self):
         """Return the email address to satisfy Flask-Login's requirements."""
         return self.email
+
+
+    def is_active(self):
+        """True, as all users are active."""
+        return True
 
     def is_authenticated(self):
         """Return True if the user is authenticated."""

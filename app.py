@@ -1,55 +1,52 @@
-
+#System Imports
 import json
 import static
 import os
 import time
 import random
 from celery import Celery
-
+#Flask Imports
 from flask import Blueprint, render_template, flash, redirect, url_for
 from flask import Flask, Blueprint, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages
 from flask.ext.bcrypt import Bcrypt
-from flask.ext.login import LoginManager, UserMixin, current_user, login_user, logout_user
+from flask.ext.login import LoginManager, UserMixin, current_user, login_user, logout_user, login_required
 from flask.ext.mail import Mail, Message
 from flask_bootstrap import Bootstrap
 from flask_bootstrap import __version__ as FLASK_BOOTSTRAP_VERSION
 from flask_nav import Nav 
 from flask_nav.elements import Navbar, View, Subgroup, Link, Text, Separator
 from flask_sqlalchemy import SQLAlchemy
-from flask_user import login_required, SQLAlchemyAdapter, UserManager, UserMixin, roles_required
 from markupsafe import escape
 from render_utils import make_context, smarty_filter, urlencode_filter
 import wtforms
 import random
-
-app = Flask(__name__, instance_relative_config=True)
-# Load the configuration from the instance folder
-app.config.from_pyfile('config.py')
-# Initialize extensions
-bcrypt = Bcrypt(app)
-nav = Nav() 
-Bootstrap(app) 
- 
-
-
-# Postgres DB for Admin Purposes 
-db = SQLAlchemy(app)
+import jinja2 
 from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
 from sqlalchemy.sql import select
 from sqlalchemy.orm import sessionmaker, scoped_session
 
+#Local Imports 
+from forms import *
+from models import User 
+
+
+app = Flask(__name__, instance_relative_config=True)
+app.config.from_pyfile('config.py')
+# Initialize extensions
+bcrypt = Bcrypt(app)
+nav = Nav() 
+Bootstrap(app) 
+# Postgres DB for Admin and File Tracking Purposes 
+db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
 
 # load template environment for cleaner routes 
-import jinja2 
 templateLoader = jinja2.FileSystemLoader( searchpath="/Users/red/Desktop/GeorgiouProjects/BIGGIG/templates" )
 templateEnv = jinja2.Environment( loader=templateLoader, extensions=['jinja2.ext.with_'])
 
-from models import User 
-from forms import LoginForm, RegistrationForm
 
 
 # Flask-Login use this to reload the user object from the user ID stored in the session
@@ -99,10 +96,14 @@ frontend = Blueprint('frontend', __name__)
 nav.register_element('frontend_top', Navbar(
     View('BIGG DATA', '.index'),
     View('Home', '.index'),
-    View('Login', '.login'),
+    Subgroup(
+        'Login',
+        View('Login', '.login'),
+        View('Logout', '.logout'),
+        ),
     Subgroup(
         'Files', 
-        Link('My Files', 'under_construction'), 
+        View('My Files', '.files'), 
         Link('Public Files', 'under_construction'),
         Link('Add File(s)', 'under_construction'),
         Link('Share Files', 'under_construction'),
@@ -153,17 +154,6 @@ nav.register_element('frontend_top', Navbar(
 def index():
     results = db.session.query(User).all()
     return render_template("users.html", results=results)
-
-
-
-@frontend.route('/under_construction', methods=['GET', 'POST'])
-def under_construction():
-    gifs_dir = '/Users/red/Desktop/GeorgiouProjects/BIGGIG/static/goldens'
-    gifs = os.listdir(gifs_dir)
-    gif = random.choice(gifs)
-    gif_path = url_for('static', filename='goldens/{}'.format(gif))
-    return render_template("under_construction.html", gif_path=gif_path)
-
 
 
 @frontend.route("/login", methods=["GET", "POST"])
@@ -217,16 +207,42 @@ def create_user():
 
 
 @frontend.route("/logout", methods=["GET"])
-@login_required
 def logout():
     """Logout the current user."""
-    user = current_user
-    user.authenticated = False
-    db.session.add(user)
-    db.session.commit()
-    logout_user()
-    return render_template("logout.html")
+    if current_user.is_authenticated(): 
+        user = current_user
+        user.authenticated = False
+        db.session.add(user)
+        db.session.commit()
+        logout_user()
+        flash('you have been logged out', 'success')
+        return redirect(url_for('.index'))
+    else: 
+        flash('no user logged in')
+        return redirect(url_for('.index'))
+        # return render_template("index.html")
 
+
+
+
+
+@frontend.route('/under_construction', methods=['GET', 'POST'])
+def under_construction():
+    gifs_dir = '/Users/red/Desktop/GeorgiouProjects/BIGGIG/static/goldens'
+    gifs = os.listdir(gifs_dir)
+    gif = random.choice(gifs)
+    gif_path = url_for('static', filename='goldens/{}'.format(gif))
+    return render_template("under_construction.html", gif_path=gif_path)
+
+
+@frontend.route('/files', methods=['GET', 'POST'])
+@login_required
+def files():
+    gifs_dir = '/Users/red/Desktop/GeorgiouProjects/BIGGIG/static/goldens'
+    gifs = os.listdir(gifs_dir)
+    gif = random.choice(gifs)
+    gif_path = url_for('static', filename='goldens/{}'.format(gif))
+    return render_template("under_construction.html", gif_path=gif_path)
 
 
 
