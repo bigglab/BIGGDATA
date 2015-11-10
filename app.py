@@ -20,7 +20,7 @@ from flask_user import login_required, SQLAlchemyAdapter, UserManager, UserMixin
 from markupsafe import escape
 from render_utils import make_context, smarty_filter, urlencode_filter
 import wtforms
-
+import random
 
 app = Flask(__name__, instance_relative_config=True)
 # Load the configuration from the instance folder
@@ -101,7 +101,35 @@ nav.register_element('frontend_top', Navbar(
     View('Home', '.index'),
     View('Login', '.login'),
     Subgroup(
-        'Docs',
+        'Files', 
+        Link('My Files', 'under_construction'), 
+        Link('Public Files', 'under_construction'),
+        Link('Add File(s)', 'under_construction'),
+        Link('Share Files', 'under_construction'),
+        ),
+    Subgroup(
+        'Pipelines', 
+        Link('My Pipelines', 'under_construction'), 
+        Link('Public Pipelines', 'under_construction'), 
+        Link('Create New From Base', 'under_construction')
+        ),
+    Subgroup(
+        'Usage',
+        Link('Tasks', 'under_construction'), 
+        Link('Jobs', 'under_construction')
+        ),
+    Subgroup(
+        'Database', 
+        Link('Dashboard', 'under_construction'), 
+        Link('Download', 'under_construction')
+        ),
+    Subgroup(
+        'Documentation', 
+        Link('Confluence', 'under_construction'), 
+        Link('How To Write A Pipeline', 'under_construction'),
+        ),
+    Subgroup(
+        'External Docs',
         Link('Flask-Bootstrap', 'http://pythonhosted.org/Flask-Bootstrap'),
         Link('Flask-AppConfig', 'https://github.com/mbr/flask-appconfig'),
         Link('Flask-Debug', 'https://github.com/mbr/flask-debug'),
@@ -113,7 +141,7 @@ nav.register_element('frontend_top', Navbar(
         Link('Javascript', 'http://getbootstrap.com/javascript/'),
         Link('Customize', 'http://getbootstrap.com/customize/'),
     ),
-    Text('Using Python Version {}'.format('2.7')),
+    Text('Powered by {}'.format('Python and Flask')),
 ))
 
 
@@ -125,6 +153,16 @@ nav.register_element('frontend_top', Navbar(
 def index():
     results = db.session.query(User).all()
     return render_template("users.html", results=results)
+
+
+
+@frontend.route('/under_construction', methods=['GET', 'POST'])
+def under_construction():
+    gifs_dir = '/Users/red/Desktop/GeorgiouProjects/BIGGIG/static/goldens'
+    gifs = os.listdir(gifs_dir)
+    gif = random.choice(gifs)
+    gif_path = url_for('static', filename='goldens/{}'.format(gif))
+    return render_template("under_construction.html", gif_path=gif_path)
 
 
 
