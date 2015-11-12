@@ -11,6 +11,8 @@ from flask import Flask, Blueprint, make_response, render_template, render_templ
 from flask.ext.bcrypt import Bcrypt
 from flask.ext.login import LoginManager, UserMixin, current_user, login_user, logout_user, login_required
 from flask.ext.mail import Mail, Message
+from flask.ext.script import Manager
+from flask.ext.migrate import Migrate, MigrateCommand
 from flask_bootstrap import Bootstrap
 from flask_bootstrap import __version__ as FLASK_BOOTSTRAP_VERSION
 from flask_nav import Nav 
@@ -26,9 +28,9 @@ from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
 from sqlalchemy.sql import select
 from sqlalchemy.orm import sessionmaker, scoped_session
 
+
 #Local Imports 
 from forms import *
-from models import User 
 
 
 app = Flask(__name__, instance_relative_config=True)
@@ -42,10 +44,73 @@ db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-
 # load template environment for cleaner routes 
 templateLoader = jinja2.FileSystemLoader( searchpath="/Users/red/Desktop/GeorgiouProjects/BIGGIG/templates" )
 templateEnv = jinja2.Environment( loader=templateLoader, extensions=['jinja2.ext.with_'])
+
+
+
+# MODELS. Not abstracted to make alembic migrations easier 
+
+class User(db.Model):
+        __tablename__ = 'user'
+        id = db.Column(db.Integer, primary_key=True)
+        first_name = db.Column(db.String(128))
+        last_name = db.Column(db.String(128))
+        email = db.Column(db.String(128))
+        password_hash = db.Column(db.String(128))
+        data = db.Column(db.Text())
+        authenticated = db.Column(db.Boolean, default=False)
+        user_type = db.Column(db.String(128))
+        dropbox_path = db.Column(db.String(256))
+        scratch_path = db.Column(db.String(256))
+        files = db.relationship('File', backref='user', lazy='dynamic')
+        datasets = db.relationship('Dataset', backref='user', lazy='dynamic')
+
+        def get_id(self):
+            """Return the email address to satisfy Flask-Login's requirements."""
+            return self.email
+
+        def is_active(self):
+            """True, as all users are active."""
+            return True
+
+        def is_authenticated(self):
+            """Return True if the user is authenticated."""
+            return self.authenticated
+
+        def is_anonymous(self):
+            """False, as anonymous users aren't supported."""
+            return False
+
+
+class File(db.Model):
+        __tablename__ = 'file'
+        id = db.Column(db.Integer, primary_key=True)
+        user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+        dataset_id = db.Column(db.Integer, db.ForeignKey('dataset.id'))
+        name = db.Column(db.String(256))
+        description =db.Column(db.String(512))
+        file_type = db.Column(db.String(128))
+        path = db.Column(db.String(256))
+        locus = db.Column(db.String(128))
+        created = db.Column(db.DateTime, default=db.func.now())
+        paired_partner = db.Column(db.Integer, db.ForeignKey('file.id'))
+        parent = db.Column(db.Integer, db.ForeignKey('file.id'))
+
+
+
+class Dataset(db.Model):
+        __tablename__ = 'dataset'
+        id = db.Column(db.Integer, primary_key=True)
+        user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+        name = db.Column(db.String(256))
+        description =db.Column(db.String(512))
+        ig_type = db.Column(db.String(128))
+        paired = db.Column(db.Boolean, default=False)
+        files = db.relationship('File', backref='dataset', lazy='dynamic')
+
+
 
 
 
@@ -223,9 +288,6 @@ def logout():
         # return render_template("index.html")
 
 
-
-
-
 @frontend.route('/under_construction', methods=['GET', 'POST'])
 def under_construction():
     gifs_dir = '/Users/red/Desktop/GeorgiouProjects/BIGGIG/static/goldens'
@@ -235,14 +297,19 @@ def under_construction():
     return render_template("under_construction.html", gif_path=gif_path)
 
 
+
+
+
+
+
+
+
 @frontend.route('/files', methods=['GET', 'POST'])
 @login_required
 def files():
-    gifs_dir = '/Users/red/Desktop/GeorgiouProjects/BIGGIG/static/goldens'
-    gifs = os.listdir(gifs_dir)
-    gif = random.choice(gifs)
-    gif_path = url_for('static', filename='goldens/{}'.format(gif))
-    return render_template("under_construction.html", gif_path=gif_path)
+    files = current_user.files
+    return render_template("files.html", files=files)
+
 
 
 
