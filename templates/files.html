@@ -1,7 +1,10 @@
 {% extends '_base.html' %}
 
 {% block content %}
-<h1>{{files[0].__dict__}}</h1>
+<h1>Files Associated With {{current_user.first_name}}: </h1>
+	{% for file in files %}
+		<h4>{{file.__dict__}}</h4>
+	{% endfor %}
 {%endblock content %}
 
 
