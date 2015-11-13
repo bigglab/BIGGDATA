@@ -168,9 +168,8 @@ nav.register_element('frontend_top', Navbar(
         ),
     Subgroup(
         'Files', 
+        Link('My Datasets', 'under_construction'),
         View('My Files', '.files'), 
-        Link('Public Files', 'under_construction'),
-        Link('Add File(s)', 'under_construction'),
         Link('Share Files', 'under_construction'),
         ),
     Subgroup(
@@ -187,7 +186,8 @@ nav.register_element('frontend_top', Navbar(
     Subgroup(
         'Database', 
         Link('Dashboard', 'under_construction'), 
-        Link('Download', 'under_construction')
+        Link('Download', 'under_construction'),
+        Link('Mass Spec', 'under_construction')
         ),
     Subgroup(
         'Documentation', 
@@ -249,26 +249,35 @@ def login():
 def create_user():
     form = RegistrationForm()
     # add some validations / cleansing 
-    with load_user(form.email.data) as user:
-        if user:
-            if bcrypt.check_password_hash(user.password_hash, login_form.password.data):
-                login_user(user)
-                user.authenticated = True
-                db.session.add(user)
-                db.session.commit()
-            flash('email already exists!', 'error')
-            return redirect(url_for("login"))
+    user = load_user(form.email.data)
+    if user:
+        if bcrypt.check_password_hash(user.password_hash, form.password.data):
+            login_user(user)
+            user.authenticated = True
+            db.session.add(user)
+            db.session.commit()
+        flash('email already exists!', 'error')
+        return redirect(url_for(".login"))
     new_user = User()
     new_user.first_name = form.first_name.data
     new_user.last_name = form.last_name.data 
     new_user.email = form.email.data
     new_user.password_hash = bcrypt.generate_password_hash(form.password.data)
+    new_user.dropbox_path = '{}/{}{}'.format(app.config['DROPBOX_ROOT'], form.first_name.data, form.last_name.data)
+    new_user.scratch_path = '{}/{}{}'.format(app.config['SCRATCH_ROOT'], form.first_name.data, form.last_name.data)
     db.session.add(new_user)
     db.session.commit()
     login_user(new_user, remember=True)
     flash("new user created and logged in", 'success')
-    return redirect(url_for("index"))
-    # return render_template("login.html", form=form)
+    #create home and scratch if necessary 
+    if not os.path.isdir(new_user.dropbox_path):
+        os.makedirs(new_user.dropbox_path)
+        print 'created new directory at {}'.format(new_user.dropbox_path)
+    if not os.path.isdir(new_user.scratch_path):
+        os.makedirs(new_user.scratch_path)
+        print 'created new directory at {}'.format(new_user.dropbox_path)
+    # return redirect(url_for("index"))
+    return render_template("index.html")
 
 
 @frontend.route("/logout", methods=["GET"])
@@ -300,14 +309,30 @@ def under_construction():
 
 
 
+def get_filepaths(directory_path):
+    file_paths = []
+    for root, directories, files in os.walk(directory_path):
+        for filename in files:
+            filepath = os.path.join(root, filename)
+            file_paths.append(filepath)
+    return file_paths 
+
+def get_dropbox_files(user):
+    dropbox_path = user.dropbox_path
+    dropbox_file_paths = get_filepaths(dropbox_path)
+    return dropbox_file_paths
 
 
 @frontend.route('/files', methods=['GET', 'POST'])
 @login_required
 def files():
     files = current_user.files.all()
-    return render_template("files.html", files=files)
+    dropbox_file_paths = get_dropbox_files(current_user)
+    return render_template("files.html", files=files, dropbox_files=dropbox_file_paths)
 
+
+# @frontend.route('/scan_dropbox', methods=['GET'])
+# @login_required
 
 
 

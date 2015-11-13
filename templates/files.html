@@ -9,6 +9,9 @@
 				<th>Description</th>
 				<th>DatasetID</th>
 				<th>FileType</th>
+				<th>Locus</th>
+				<th>Mate File</th>
+				<th>Parent</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -18,10 +21,33 @@
 					<th>{{file.description}}</th>
 					<th>{{file.dataset_id}}</th>
 					<th>{{file.file_type}}</th>
+					<th>{{file.locus}}</th>
+					<th>{{file.paired_partner}}</th>
+					<th>{{file.parent}}</th>
 				</tr>
 			{% endfor %}
 		</tbody>
 	</table>
+<br>
+{% if dropbox_files %}
+	<h2>there are also some files in your dropbox:</h2>
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>File Path</th>
+				<th>Import?</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for file in dropbox_files %}
+				<tr>
+					<th>{{file}}</th>
+					<th>button...</th>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+{% endif %}
 {%endblock content %}
 
 
