@@ -2,9 +2,26 @@
 
 {% block content %}
 <h1>Files Associated With {{current_user.first_name}}: </h1>
-	{% for file in files %}
-		<h4>{{file.__dict__}}</h4>
-	{% endfor %}
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Name</th>
+				<th>Description</th>
+				<th>DatasetID</th>
+				<th>FileType</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for file in files %}
+				<tr>
+					<th>{{file.name}}</th>
+					<th>{{file.description}}</th>
+					<th>{{file.dataset_id}}</th>
+					<th>{{file.file_type}}</th>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
 {%endblock content %}
 
 

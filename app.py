@@ -302,13 +302,12 @@ def under_construction():
 
 
 
-
-
 @frontend.route('/files', methods=['GET', 'POST'])
 @login_required
 def files():
     files = current_user.files.all()
     return render_template("files.html", files=files)
+
 
 
 
