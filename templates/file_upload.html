@@ -2,28 +2,31 @@
 {% block content %}
 <br>
 
-<h3>Upload a new file from your computer: </h3>
 <div class="container">
+<h3>Upload a new file from your computer: </h3>
     <form method="POST" action="/file_upload" enctype="multipart/form-data">
     <table class="table table-striped">
         {{ form.csrf_token }}
         <thead>
             <tr>
+            <th>File To Upload</th>
                 <th>Description</th>
-                <th>Locus</th>
+                <th>Locus (IgG,IgM,...)</th>
                 <th>Mate File ID</th>
+                <th>Dataset ID</th>
             </tr>
         </thead>
         <tbody>
             <tr>
+                <th>{{ form.file }}</th>
                 <th> {{ form.description }}</th>
                 <th>{{ form.locus  }}</th>
                 <th>{{ form.paired_partner }}</th>
-                <th>{{ form.file }}</th>
+                <th>{{ form.dataset_id }}</th>
+                <th><input type="submit" value="Submit"></th>
             </tr>
         </tbody>
     </table>
-    <input type="submit" value="Submit">
     </form>
 </div>
 

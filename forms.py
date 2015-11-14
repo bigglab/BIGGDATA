@@ -31,5 +31,5 @@ class FileUploadForm(Form):
     description  = TextAreaField(u'File Description')
     locus  = TextAreaField(u'IG Loci')
     paired_partner  = IntegerField()
-
+    dataset_id = IntegerField()
 

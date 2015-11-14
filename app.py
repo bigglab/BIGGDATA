@@ -137,23 +137,6 @@ def load_user(email):
 #     return user
 
 
-# def superuser_required(f):
-#     '''
-#     Decorator for views requiring superuser access
-#     '''
-#     @wraps(f)
-#     def decorated_function(*args, **kwargs):
-#         if (
-#             not AUTHENTICATE or
-#             (not current_user.is_anonymous() and current_user.is_superuser())
-#         ):
-#             return f(*args, **kwargs)
-#         else:
-#             flash("This page requires superuser privileges", "error")
-#             return redirect(url_for('admin.index'))
-#     return decorated_function
-
-
 
 
 frontend = Blueprint('frontend', __name__)
@@ -325,6 +308,7 @@ def get_filepaths(directory_path):
 def get_dropbox_files(user):
     dropbox_path = user.dropbox_path
     dropbox_file_paths = get_filepaths(dropbox_path)
+    dropbox_file_paths = [file_path for file_path in dropbox_file_paths if file_path not in [file.path for file in user.files]]
     return dropbox_file_paths
 
 def tree(): return defaultdict(tree)
@@ -362,15 +346,6 @@ def parse_file_ext(path):
         else: 
             return file_type
 
-def link_file_to_user(path, user, name):
-    file = File()
-    file.name = name 
-    file.path = path 
-    file.user_id = user.id
-    file.file_type = parse_file_ext(file.path)
-    db.session.add(file)
-    db.session.commit()
-    return True
 
 
 
@@ -388,6 +363,7 @@ def file_upload():
         file.description = form.description.data
         file.locus = form.locus.data
         file.paired_partner = form.paired_partner.data 
+        file.dataset_id = form.dataset_id.data
         file.path = '{}/{}'.format(current_user.scratch_path, file.name) 
         file.user_id = current_user.id
         print 'Saving uploaded file to {}'.format(file.path)
@@ -402,6 +378,17 @@ def file_upload():
 
 
 
+def link_file_to_user(path, user, name):
+    file = File()
+    file.name = name 
+    file.path = path 
+    file.user_id = user.id
+    file.description = ''
+    file.file_type = parse_file_ext(file.path)
+    db.session.add(file)
+    db.session.commit()
+    return True
+
 
 @frontend.route('/files', methods=['GET', 'POST'])
 @login_required
@@ -409,8 +396,6 @@ def files():
     print request
     files = current_user.files.all()
     dropbox_file_paths = get_dropbox_files(current_user)
-    tmp = [file_path for file_path in dropbox_file_paths if file_path not in [file.path for file in current_user.files]]
-    dropbox_file_paths = tmp 
     form = Form()
     if request.method == 'POST' and os.path.isfile(request.form['submit']):
         file_path = request.form['submit'] 
@@ -423,9 +408,12 @@ def files():
                 files = current_user.files
         else: 
             flash('file metadata already created to your user')
+            dropbox_file_paths = get_dropbox_files(current_user)
         return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form)
     else: 
+        dropbox_file_paths = get_dropbox_files(current_user)
         return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form)
+
 
 
 @frontend.route('/datasets', methods=['GET', 'POST'])
@@ -434,11 +422,14 @@ def datasets():
     print request.__dict__
     files = current_user.files.all()
     datasets = current_user.datasets.all()
+    datadict = tree()
+    for dataset in datasets:
+        datadict[dataset] = dataset.files.all()
     form = Form()
     if request.method == 'POST' and os.path.isfile(request.form['submit']):
         do_nothing = ''
     else: 
-        return render_template("datasets.html", files=files, datasets=datasets, form=form)
+        return render_template("datasets.html", datadict=datadict, form=form)
 
 
 

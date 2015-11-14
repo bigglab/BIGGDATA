@@ -1,5 +1,6 @@
 {% extends "_base.html" %}
 {% block content %}
+<div class="container">
 <br>
 <h2>Enter your email and password to login:</h2>
 <div class="container">
@@ -23,6 +24,7 @@
         {{ create_user_form.password.label }} {{ create_user_form.password(size=20) }}
         <input type="submit" value="Submit">
     </form>
+</div>
 </div>
 
 {% endblock %}

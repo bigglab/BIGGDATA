@@ -1,11 +1,12 @@
 {% extends '_base.html' %}
 {% block content %}
+<div class="container">
 	<h1>query results should be here:</h1>
 	{% for r in results %}
 	  <h3>{{r.first_name}} {{r.last_name}}: {{r.email}}</h3>
 	{% endfor %}
 <h4>current user is: {{current_user.first_name}}</h4>
-
+</div>
 {%endblock content %}
 
 
