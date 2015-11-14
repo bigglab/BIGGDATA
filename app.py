@@ -5,6 +5,7 @@ import os
 import time
 import random
 from celery import Celery
+from collections import defaultdict
 #Flask Imports
 from flask import Blueprint, render_template, flash, redirect, url_for
 from flask import Flask, Blueprint, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages
@@ -21,6 +22,7 @@ from flask_sqlalchemy import SQLAlchemy
 from markupsafe import escape
 from render_utils import make_context, smarty_filter, urlencode_filter
 import wtforms
+from flask_wtf import Form
 import random
 import jinja2 
 from sqlalchemy import create_engine
@@ -179,23 +181,24 @@ nav.register_element('frontend_top', Navbar(
         Link('Create New From Base', 'under_construction')
         ),
     Subgroup(
-        'Usage',
-        Link('Tasks', 'under_construction'), 
-        Link('Jobs', 'under_construction')
+        'Jobs',
+        Link('Dashboard', 'under_construction'), 
+        Link('My Jobs', 'under_construction'),
+        Link('My Tasks', 'under_construction'), 
         ),
     Subgroup(
         'Database', 
-        Link('Dashboard', 'under_construction'), 
+        Link('Browse', 'under_construction'),
         Link('Download', 'under_construction'),
         Link('Mass Spec', 'under_construction')
         ),
+    Link('Dashboard', 'under_construction'),
     Subgroup(
         'Documentation', 
         Link('Confluence', 'under_construction'), 
         Link('How To Write A Pipeline', 'under_construction'),
-        ),
-    Subgroup(
-        'External Docs',
+        Separator(),
+        Text('External Docs'),
         Link('Flask-Bootstrap', 'http://pythonhosted.org/Flask-Bootstrap'),
         Link('Flask-AppConfig', 'https://github.com/mbr/flask-appconfig'),
         Link('Flask-Debug', 'https://github.com/mbr/flask-debug'),
@@ -322,17 +325,74 @@ def get_dropbox_files(user):
     dropbox_file_paths = get_filepaths(dropbox_path)
     return dropbox_file_paths
 
+def tree(): return defaultdict(tree)
+
+def parse_file_ext(path):
+    if path.split('.')[-1] == 'gz':
+        ext = '{}.{}'.format(path.split('.')[-2], path.split('.')[-1])
+    else:
+        ext = path.split('.')[-1]
+    ext_dict = tree()
+    ext_dict['fastq'] = 'fastq'
+    ext_dict['fq'] = 'fastq'
+    ext_dict['fastq.gz'] = 'gzipped_fastq'
+    ext_dict['fq.gz'] = 'gzipped_fastq'
+    ext_dict['fa'] = 'fasta'
+    ext_dict['fasta'] = 'fasta'
+    ext_dict['fa.gz'] = 'gzipped_fasta'
+    ext_dict['fasta.gz'] = 'gzipped_fasta'
+    ext_dict['txt'] = 'text'
+    ext_dict['json'] = 'json'
+    ext_dict['tab'] = 'tab'
+    ext_dict['csv'] = 'csv'
+    ext_dict['yaml'] = 'yaml'
+    ext_dict['pileup'] = 'pileup'
+    ext_dict['sam'] = 'sam'
+    ext_dict['bam'] = 'bam'
+    file_type = ext_dict[ext]
+    if isinstance(file_type, defaultdict):
+        return None
+    else:
+        return file_type
+        
+def link_file_to_user(path, user, name):
+    file = File()
+    file.name = name 
+    file.path = path 
+    file.user_id = user.id
+    file.file_type = parse_file_ext(file.path)
+    db.session.add(file)
+    db.session.commit()
+    return True
 
 @frontend.route('/files', methods=['GET', 'POST'])
 @login_required
 def files():
+    print request
     files = current_user.files.all()
     dropbox_file_paths = get_dropbox_files(current_user)
-    return render_template("files.html", files=files, dropbox_files=dropbox_file_paths)
+    tmp = [file_path for file_path in dropbox_file_paths if file_path not in [file.path for file in current_user.files]]
+    dropbox_file_paths = tmp 
+    form = Form()
+    if request.method == 'POST' and os.path.isfile(request.form['submit']):
+        file_path = request.form['submit'] 
+        file_name = file_path.split('/')[-1]
+        if file_path not in [file.path for file in current_user.files]:
+            print 'linking new file "{}"  to  {}'.format(file_name, file_path)
+            if link_file_to_user(file_path, current_user, file_name):
+                flash('linked new file to your user: {}'.format(file_path), 'success')
+                dropbox_file_paths = dropbox_file_paths.remove(file_path)
+                files = current_user.files
+        else: 
+            flash('file metadata already created to your user')
+        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form)
+    else: 
+        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form)
 
 
-# @frontend.route('/scan_dropbox', methods=['GET'])
-# @login_required
+
+
+
 
 
 

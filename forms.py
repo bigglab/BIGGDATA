@@ -23,6 +23,3 @@ class RegistrationForm(Form):
 	email = StringField('Email', validators=[validators.input_required()])
 	password = PasswordField('password', validators=[validators.input_required()])
 
-
-
-	
