@@ -1,0 +1,49 @@
+{% extends '_base.html' %}
+
+{% block content %}
+<h1>Your Datasets: </h1>
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Name</th>
+				<th>Description</th>
+				<th>IG Type</th>
+				<th>Paired?</th>
+				<th># Files</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for dataset in datasets %}
+				<tr>
+					<th>{{dataset.name}}</th>
+					<th>{{dataset.description}}</th>
+					<th>{{dataset.ig_type}}</th>
+					<th>{{''.format(dataset.paired)}}</th>
+					<th>{{dataset.files.count()}}</th>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+<!-- <br>
+{% if dropbox_files %}
+	<h2>Or click to add any of these from your dropbox:</h2>
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for file in dropbox_files %}
+				<tr>
+					<form role='form' method='POST' action='/files'>
+					<th><input type='submit' name='submit' value={{file}}></th>
+					</form>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+{% endif %} -->
+{%endblock content %}
+
+

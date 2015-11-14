@@ -1,0 +1,30 @@
+{% extends "_base.html" %}
+{% block content %}
+<br>
+
+<h3>Upload a new file from your computer: </h3>
+<div class="container">
+    <form method="POST" action="/file_upload" enctype="multipart/form-data">
+    <table class="table table-striped">
+        {{ form.csrf_token }}
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Locus</th>
+                <th>Mate File ID</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <th> {{ form.description }}</th>
+                <th>{{ form.locus  }}</th>
+                <th>{{ form.paired_partner }}</th>
+                <th>{{ form.file }}</th>
+            </tr>
+        </tbody>
+    </table>
+    <input type="submit" value="Submit">
+    </form>
+</div>
+
+{% endblock %}

@@ -7,6 +7,7 @@ import random
 from celery import Celery
 from collections import defaultdict
 #Flask Imports
+from werkzeug import secure_filename
 from flask import Blueprint, render_template, flash, redirect, url_for
 from flask import Flask, Blueprint, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages
 from flask.ext.bcrypt import Bcrypt
@@ -170,8 +171,9 @@ nav.register_element('frontend_top', Navbar(
         ),
     Subgroup(
         'Files', 
-        Link('My Datasets', 'under_construction'),
         View('My Files', '.files'), 
+        View('My Datasets', '.datasets'),
+        View('Upload File', '.file_upload'), 
         Link('Share Files', 'under_construction'),
         ),
     Subgroup(
@@ -328,33 +330,38 @@ def get_dropbox_files(user):
 def tree(): return defaultdict(tree)
 
 def parse_file_ext(path):
+
     if path.split('.')[-1] == 'gz':
-        ext = '{}.{}'.format(path.split('.')[-2], path.split('.')[-1])
+        gzipped = True
+    else:
+        gzipped = False
+    if gzipped: 
+        ext = path.split('.')[-2]
     else:
         ext = path.split('.')[-1]
     ext_dict = tree()
-    ext_dict['fastq'] = 'fastq'
-    ext_dict['fq'] = 'fastq'
-    ext_dict['fastq.gz'] = 'gzipped_fastq'
-    ext_dict['fq.gz'] = 'gzipped_fastq'
-    ext_dict['fa'] = 'fasta'
-    ext_dict['fasta'] = 'fasta'
-    ext_dict['fa.gz'] = 'gzipped_fasta'
-    ext_dict['fasta.gz'] = 'gzipped_fasta'
-    ext_dict['txt'] = 'text'
-    ext_dict['json'] = 'json'
-    ext_dict['tab'] = 'tab'
-    ext_dict['csv'] = 'csv'
-    ext_dict['yaml'] = 'yaml'
-    ext_dict['pileup'] = 'pileup'
-    ext_dict['sam'] = 'sam'
-    ext_dict['bam'] = 'bam'
+    ext_dict['fastq'] = 'FASTQ'
+    ext_dict['fq'] = 'FASTQ'
+    ext_dict['fa'] = 'FASTA'
+    ext_dict['fasta'] = 'FASTA'
+    ext_dict['txt'] = 'TEXT'
+    ext_dict['json'] = 'JSON'
+    ext_dict['tab'] = 'TAB'
+    ext_dict['csv'] = 'CSV'
+    ext_dict['yaml'] = 'YAML'
+    ext_dict['pileup'] = 'PILEUP'
+    ext_dict['sam'] = 'SAM'
+    ext_dict['bam'] = 'BAM'
+    ext_dict['imgt'] = 'IMGT'
     file_type = ext_dict[ext]
     if isinstance(file_type, defaultdict):
         return None
     else:
-        return file_type
-        
+        if gzipped: 
+            return 'GZIPPED_{}'.format(file_type)
+        else: 
+            return file_type
+
 def link_file_to_user(path, user, name):
     file = File()
     file.name = name 
@@ -364,6 +371,37 @@ def link_file_to_user(path, user, name):
     db.session.add(file)
     db.session.commit()
     return True
+
+
+
+@frontend.route('/file_upload', methods=['GET', 'POST'])
+@login_required
+def file_upload():
+    form = FileUploadForm()
+    if request.method == 'POST':
+        request_file = request.files['file']
+        print 'request file: '
+        print request_file.__dict__
+        file = File()
+        file.name = request_file.filename
+        file.file_type = parse_file_ext(file.name)
+        file.description = form.description.data
+        file.locus = form.locus.data
+        file.paired_partner = form.paired_partner.data 
+        file.path = '{}/{}'.format(current_user.scratch_path, file.name) 
+        file.user_id = current_user.id
+        print 'Saving uploaded file to {}'.format(file.path)
+        request_file.save(file.path)
+        print 'Saving File Metadata to Postgres: {}'.format(file.__dict__)
+        db.session.add(file)
+        db.session.commit()
+        flash('file uploaded to {}'.format(file.path))
+        return redirect(url_for('.files'))
+    else:
+        return render_template("file_upload.html", form=form)
+
+
+
 
 @frontend.route('/files', methods=['GET', 'POST'])
 @login_required
@@ -390,6 +428,17 @@ def files():
         return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form)
 
 
+@frontend.route('/datasets', methods=['GET', 'POST'])
+@login_required
+def datasets():
+    print request.__dict__
+    files = current_user.files.all()
+    datasets = current_user.datasets.all()
+    form = Form()
+    if request.method == 'POST' and os.path.isfile(request.form['submit']):
+        do_nothing = ''
+    else: 
+        return render_template("datasets.html", files=files, datasets=datasets, form=form)
 
 
 

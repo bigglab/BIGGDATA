@@ -23,3 +23,13 @@ class RegistrationForm(Form):
 	email = StringField('Email', validators=[validators.input_required()])
 	password = PasswordField('password', validators=[validators.input_required()])
 
+
+
+
+class FileUploadForm(Form):
+    file     = FileField(u'File Path', validators=[validators.input_required()])
+    description  = TextAreaField(u'File Description')
+    locus  = TextAreaField(u'IG Loci')
+    paired_partner  = IntegerField()
+
+
