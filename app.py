@@ -365,6 +365,7 @@ class Analysis(db.Model):
 def flatten_list(lst):
     return [item for sublist in lst for item in sublist]
 
+
 # Flask-Login use this to reload the user object from the user ID stored in the session
 @login_manager.user_loader
 def load_user(email):
