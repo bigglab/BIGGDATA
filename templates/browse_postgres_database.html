@@ -1,0 +1,103 @@
+{% extends '_base.html' %}
+
+{% block content %}
+<div class='container'>
+<h1>Here's some of the experiments in the database, curated first:</h1>
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Project Name</th>
+				<th>Experiment Name</th>
+				<th>Description</th>
+				<th>Species</th>
+				<th>Chains</th>
+				<th>Cells</th>
+				<th>Isotypes</th>
+				<th>Primers</th>
+				<th>Paired</th>
+				<th>Platform</th>
+				<th>Seq Count</th>
+				<th>Created</th>
+				<th>Curated</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for exp in exps %}
+				<tr>
+					<th>{{exp.project_name}}</th>
+					<th>{{exp.experiment_name}}</th>
+					<th>{{exp.description.replace('{','').replace('}','').replace('"','')}}</th>
+					<th>{{exp.species}}</th>
+					<th>{{','.join(exp.chain_types_sequenced)}}</th>
+					<th>{{','.join(exp.cell_types_sequenced)}}</th>
+					<th>{{','.join(exp.isotypes_sequenced)}}</th>
+					{% if exp.primer_set_name %}
+						<th>{{','.join(exp.primer_set_name)}}</th>
+					{% else %}
+						<th></th>
+					{% endif %}
+					<th>{{exp.paired}}</th>
+					<th>{{exp.sequencing_platform}}</th>
+					<th>{{exp.seq_count}}</th>
+					<th>{{exp.experiment_creation_date}}</th>
+					<th>{{exp.curated}}</th>
+					<th>
+					</th>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	</div>
+
+
+
+
+
+
+
+
+
+<div class="container">
+<h1>Your File-Based Datasets: </h1>
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Name</th>
+				<th>Description</th>
+				<th>IG Type</th>
+				<th>Paired?</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for dataset, files in datadict.iteritems() %}
+				<tr>
+					<th>{{dataset.name}}</th>
+					<th>{{dataset.description}}</th>
+					<th>{{dataset.ig_type}}</th>
+					<th>{{''.format(dataset.paired)}}</th>
+					<th>
+					<table class='table table-striped'>
+						<thead>
+							<tr>
+								<th>File Name</th>
+								<th>File Type</th>
+							</tr>
+						</thead>
+						{% for file in files %}
+						<tr>
+							<th>{{file.name}}</th>
+							<th>{{file.file_type}}</th>
+						</tr>
+						{% endfor %}	
+					</table>
+					</th>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	</div>
+{%endblock content %}
+
+

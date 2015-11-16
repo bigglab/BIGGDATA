@@ -14,6 +14,11 @@ SQLALCHEMY_DATABASE_URI = "postgresql://localhost/biggig"
 SQLALCHEMY_TRACK_MODIFICATIONS = True
 SQLALCHEMY_POOL_TIMEOUT = None
 
+MONGO_DATABASE_URI = "biotseq.icmb.utexas.edu"
+MONGO_USER = 'reader'
+MONGO_PASSWORD = 'cdrom'
+
+mongo_config = {"reader":"cdrom","writer":"rag1rag2","dbpath":"biotseq.icmb.utexas.edu"}
 
 
  # 'BOOTSTRAP_LOCAL_SUBDOMAIN': None, 

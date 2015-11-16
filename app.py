@@ -6,6 +6,7 @@ import time
 import random
 from celery import Celery
 from collections import defaultdict
+import collections
 #Flask Imports
 from werkzeug import secure_filename
 from flask import Blueprint, render_template, flash, redirect, url_for
@@ -27,10 +28,13 @@ from flask_wtf import Form
 import random
 import jinja2 
 from sqlalchemy import create_engine
-from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
+from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Boolean
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql import JSON, JSONB, ARRAY, BIT, VARCHAR, INTEGER, FLOAT, NUMERIC, OID, REAL, TEXT, TIME, TIMESTAMP, TSRANGE, UUID, NUMRANGE, DATERANGE
 from sqlalchemy.sql import select
 from sqlalchemy.orm import sessionmaker, scoped_session
-
+from pymongo import MongoClient
+import pymongo
 
 #Local Imports 
 from forms import *
@@ -44,6 +48,8 @@ nav = Nav()
 Bootstrap(app) 
 # Postgres DB for Admin and File Tracking Purposes 
 db = SQLAlchemy(app)
+# Mongo DB for Legacy Sequence Data
+mongo_connection_uri = 'mongodb://reader:cdrom@biotseq.icmb.utexas.edu:27017/'
 login_manager = LoginManager()
 login_manager.init_app(app)
 
@@ -58,6 +64,7 @@ templateEnv = jinja2.Environment( loader=templateLoader, extensions=['jinja2.ext
 class User(db.Model):
         __tablename__ = 'user'
         id = db.Column(db.Integer, primary_key=True)
+        username = db.Column(db.String(64))
         first_name = db.Column(db.String(128))
         last_name = db.Column(db.String(128))
         email = db.Column(db.String(128))
@@ -86,6 +93,28 @@ class User(db.Model):
             """False, as anonymous users aren't supported."""
             return False
 
+        def __repr__(self): 
+            return "<  User {}: {}  {}  {}  >".format(self.username, self.first_name, self.last_name, self.email)
+
+
+        def create_resources(self): 
+            if self.first_name != None & self.last_name != None: 
+                self.dropbox_path = '{}/{}{}'.format(app.config['DROPBOX_ROOT'], self.first_name, self.last_name)
+                self.scratch_path = '{}/{}{}'.format(app.config['SCRATCH_ROOT'], self.first_name, self.last_name)
+                if not os.path.isdir(self.dropbox_path):
+                    os.makedirs(self.dropbox_path)
+                    print 'created new directory at {}'.format(self.dropbox_path)
+                if not os.path.isdir(self.scratch_path):
+                    os.makedirs(self.scratch_path)
+                    print 'created new directory at {}'.format(self.dropbox_path)
+                return True 
+            else: 
+                print 'USER FIRST AND LAST NAMES NOT SET!'
+                return False 
+
+
+
+
 
 class File(db.Model):
         __tablename__ = 'file'
@@ -101,21 +130,99 @@ class File(db.Model):
         paired_partner = db.Column(db.Integer, db.ForeignKey('file.id'))
         parent = db.Column(db.Integer, db.ForeignKey('file.id'))
 
+        def __repr__(self): 
+            if self.paired_partner: 
+                p = 'Paired To: {}'.format(str(self.paired_partner))
+            else: 
+                p = ''
+            return "<  File {}: _{}_  {}  {} >".format(self.id, self.file_type, self.name, p)
+
+
+        def pair(self, f): 
+            if self.file_type == f.file_type: 
+                self.paired_partner = f.id 
+                f.paired_partner = self.id 
+                if self.dataset_id: 
+                    d = self.dataset 
+                    d.paired = True 
+                return True 
+            else: 
+                return False
 
 
 class Dataset(db.Model):
         __tablename__ = 'dataset'
         id = db.Column(db.Integer, primary_key=True)
         user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+        experiment_id = db.Column(db.Integer, db.ForeignKey('experiment.id'))
         name = db.Column(db.String(256))
         description =db.Column(db.String(512))
         ig_type = db.Column(db.String(128))
         paired = db.Column(db.Boolean, default=False)
         files = db.relationship('File', backref='dataset', lazy='dynamic')
 
+class Experiment(db.Model):
+        __tablename__ = 'experiment'
+        id = db.Column(db.Integer, primary_key=True)
+        user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+        project_name = db.Column(db.String(128))
+        description = db.Column(db.String(256))
+        _id = db.Column(JSON())
+        paired = db.Column(db.Boolean, default=False)
+        chain_types_sequenced = db.Column(postgresql.ARRAY(db.String(20)))
+        owners_of_experiment = db.Column(postgresql.ARRAY(db.String(20)))
+        read_access = db.Column(postgresql.ARRAY(db.String(50)))
+        cell_types_sequenced = db.Column(postgresql.ARRAY(db.String(50)))
+        isotypes_sequenced = db.Column(postgresql.ARRAY(db.String(10)))
+        publications = db.Column(postgresql.ARRAY(db.String(256)))
+        mid_tag = db.Column(postgresql.ARRAY(db.String(256)))
+        filenames = db.Column(postgresql.ARRAY(db.String(256)))
+        reverse_primer_used_in_rt_step = db.Column(db.String(128))
+        sample_preparation_date = db.Column(db.String(128))
+        uploaded_by = db.Column(db.String(128))
+        sequencing_platform = db.Column(db.String(128))
+        experiment_creation_date = db.Column(db.String(128))
+        species = db.Column(db.String(128))
+        seq_count = db.Column(db.Integer())
+        cell_number = db.Column(db.Integer())
+        target_reads = db.Column(db.Integer())
+        template_type = db.Column(db.String(128))
+        experiment_name = db.Column(db.String(256))
+        work_order = db.Column(db.String(128))
+        gsaf_sample_name = db.Column(db.String(128))
+        lab = db.Column(db.String(128))
+        cell_selection_kit_name = db.Column(db.String(128))
+        contains_rna_seq_data = db.Column(db.Boolean, default=False)
+        curated = db.Column(db.Boolean, default=False)
+        gsaf_barcode = db.Column(db.String(20))
+        analyses_settings = db.Column(JSON())
+        lab_notebook_source = db.Column(db.String(128))
+        pairing_technique = db.Column(db.String(128))
+        analyses_count = db.Column(JSON())
+        person_who_prepared_library = db.Column(db.String(128))
+        cell_markers_used = db.Column(postgresql.ARRAY(db.String(100)))
+        list_of_polymerases_used = db.Column(postgresql.ARRAY(db.String(100)))
+        primer_set_name = db.Column(postgresql.ARRAY(db.String(100)))
+        datasets = db.relationship('Dataset', backref='experiment', lazy='dynamic')
+
+        def __repr__(self): 
+            return "<  Experiment {}:  {}   :   {}   :   {} >".format(self.id, self.project_name, self.experiment_name, self.seq_count)
 
 
+def build_exp_from_dict(dict): 
+    ex = Experiment()
+    for k,v in dict.iteritems():
+        vetted_k = ''
+        for c in k: 
+            if c in ['$']:
+                do_nothing = ''
+            else: 
+                vetted_k = ''.format(vetted_k, c)
+        setattr(ex, k.lower(), v)
+    return ex
 
+def flatten_list(lst):
+    return [item for sublist in lst for item in sublist]
 
 # Flask-Login use this to reload the user object from the user ID stored in the session
 @login_manager.user_loader
@@ -173,7 +280,8 @@ nav.register_element('frontend_top', Navbar(
         ),
     Subgroup(
         'Database', 
-        Link('Browse', 'under_construction'),
+        Link('Browse Mongo', 'under_construction'),
+        View('Browse Postgres', '.browse_postgres_database'),
         Link('Download', 'under_construction'),
         Link('Mass Spec', 'under_construction')
         ),
@@ -285,15 +393,18 @@ def logout():
         # return render_template("index.html")
 
 
-@frontend.route('/under_construction', methods=['GET', 'POST'])
-def under_construction():
+def retrieve_golden():
     gifs_dir = '/Users/red/Desktop/GeorgiouProjects/BIGGIG/static/goldens'
     gifs = os.listdir(gifs_dir)
     gif = random.choice(gifs)
     gif_path = url_for('static', filename='goldens/{}'.format(gif))
+    return gif_path
+
+
+@frontend.route('/under_construction', methods=['GET', 'POST'])
+def under_construction():
+    gif_path=retrieve_golden()
     return render_template("under_construction.html", gif_path=gif_path)
-
-
 
 
 
@@ -430,6 +541,57 @@ def datasets():
         do_nothing = ''
     else: 
         return render_template("datasets.html", datadict=datadict, form=form)
+
+
+
+
+
+@frontend.route('/browse_mongo_database', methods=['GET', 'POST'])
+@login_required
+def browse_mongo_database():
+    # print request.__dict__
+    files = current_user.files.all()
+    datasets = current_user.datasets.all()
+    datadict = tree()
+    for dataset in datasets:
+        datadict[dataset] = dataset.files.all()
+    form = Form()
+    mongo_client = MongoClient(mongo_connection_uri)
+    mongodb = mongo_client['appsoma']
+    try: 
+        exps = mongodb.exps.find_one()
+    except pymongo.errors.OperationFailure as e:
+        print e.code
+        print e.details
+        err = 'PyMongo connection error: {}'.format(e.details['errmsg'])
+        exps = {}
+    else:
+        err = False
+    # if request.method == 'POST' and os.path.isfile(request.form['submit']):
+    #     do_nothing = ''
+    # else: 
+    golden = retrieve_golden()
+    return render_template("browse_mongo_database.html", datadict=datadict, form=form, exps=exps, err=err, gif_path=golden)
+
+
+
+@frontend.route('/browse_postgres_database', methods=['GET', 'POST'])
+@login_required
+def browse_postgres_database():
+    # print request.__dict__
+    files = current_user.files.all()
+    datasets = current_user.datasets.all()
+    datadict = tree()
+    for dataset in datasets:
+        datadict[dataset] = dataset.files.all()
+    form = Form()
+    exps = db.session.query(Experiment).order_by(Experiment.curated.desc(), Experiment.experiment_creation_date.desc()).all()
+    golden = retrieve_golden()
+    err = False
+    return render_template("browse_postgres_database.html", datadict=datadict, form=form, exps=exps, err=err, gif_path=golden)
+
+
+
 
 
 

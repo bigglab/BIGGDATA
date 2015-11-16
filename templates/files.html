@@ -6,20 +6,24 @@
 	<table class="table table-striped">
 		<thead>
 			<tr>
+				<th>ID</th>
 				<th>Name</th>
 				<th>Description</th>
-				<th>DatasetID</th>
-				<th>FileType</th>
+				<th>Dataset ID</th>
+				<th>File Type</th>
+				<th>Paired To</th>
 				<th>Path</th>
 			</tr>
 		</thead>
 		<tbody>
 			{% for file in files %}
 				<tr>
+					<th>{{file.id}}</th>
 					<th>{{file.name}}</th>
 					<th>{{file.description}}</th>
 					<th>{{file.dataset_id}}</th>
 					<th>{{file.file_type}}</th>
+					<th>{{file.paired_partner}}</th>
 					<th>{{file.path}}</th>
 				</tr>
 			{% endfor %}
