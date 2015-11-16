@@ -388,9 +388,10 @@ def build_annotation_from_mongo_dict(d):
                         ann.v_hits[v[i]] 
                 if len(ann.v_hits) > 0: 
                     ann.v_top_hit = ann.v_top_hit_locus = sorted(ann.v_hits, key=operator.itemgetter(1))[-1]
-                    if '-' in ann.v_top_hit_locus: ann.v_top_hit_locus = ann.v_top_hit_locus.split('-')[0]
-                    if '*' in ann.v_top_hit_locus: ann.v_top_hit_locus = ann.v_top_hit_locus.split('*')[0]
-                    if '.' in ann.v_top_hit_locus: ann.v_top_hit_locus = ann.v_top_hit_locus.split('.')[0]
+                    if '-' in ann.v_top_hit_locus: ann.v_top_hit_locus = [l for l in ann.v_top_hit_locus.split('-') if 'IG' in l][0]
+                    if '*' in ann.v_top_hit_locus: ann.v_top_hit_locus = [l for l in ann.v_top_hit_locus.split('*') if 'IG' in l][0]
+                    if '.' in ann.v_top_hit_locus: ann.v_top_hit_locus = [l for l in ann.v_top_hit_locus.split('.') if 'IG' in l][0]
+                    if 'S' in ann.v_top_hit_locus: ann.v_top_hit_locus = [l for l in ann.v_top_hit_locus.split('S') if 'IG' in l][0]
                     if ' ' in ann.v_top_hit_locus: ann.v_top_hit_locus = [l for l in ann.v_top_hit_locus.split(' ') if 'IG' in l][0]
             if "data.dregion.dgenes" == k: 
                 if "data.dregion.dgene_scores" in d: 
@@ -404,9 +405,9 @@ def build_annotation_from_mongo_dict(d):
                         ann.d_top_hit = ann.d_top_hit_locus = ann.d_hits.keys()[0]
                     else: 
                         ann.d_top_hit = ann.d_top_hit_locus = sorted(ann.d_hits, key=operator.itemgetter(1))[-1]
-                    if '-' in ann.d_top_hit_locus: ann.d_top_hit_locus = ann.d_top_hit_locus.split('-')[0]
-                    if '*' in ann.d_top_hit_locus: ann.d_top_hit_locus = ann.d_top_hit_locus.split('*')[0]
-                    if '.' in ann.d_top_hit_locus: ann.d_top_hit_locus = ann.d_top_hit_locus.split('.')[0]
+                    if '-' in ann.d_top_hit_locus: ann.d_top_hit_locus = [l for l in ann.d_top_hit_locus.split('-') if 'IG' in l][0]
+                    if '*' in ann.d_top_hit_locus: ann.d_top_hit_locus = [l for l in ann.d_top_hit_locus.split('*') if 'IG' in l][0]
+                    if '.' in ann.d_top_hit_locus: ann.d_top_hit_locus = [l for l in ann.d_top_hit_locus.split('.') if 'IG' in l][0]
                     if ' ' in ann.d_top_hit_locus: ann.d_top_hit_locus = [l for l in ann.d_top_hit_locus.split(' ') if 'IG' in l][0]
             if "data.jregion.jgenes" == k: 
                 if "data.jregion.jgene_scores" in d: 
@@ -418,12 +419,14 @@ def build_annotation_from_mongo_dict(d):
                             ann.j_hits[v[i]] = d["data.jregion.jgene_scores"][0]
                 else: 
                     for i in range(0,len(v)):
-                        ann.j_hits[v[i]] = True 
+                        if 'LESS' not in v[i]:
+                            ann.j_hits[v[i]] = True 
                 if len(ann.j_hits) > 0: 
                     ann.j_top_hit = ann.j_top_hit_locus = sorted(ann.j_hits, key=operator.itemgetter(1))[-1]
-                    if '-' in ann.j_top_hit_locus: ann.j_top_hit_locus = ann.j_top_hit_locus.split('-')[0]
-                    if '*' in ann.j_top_hit_locus: ann.j_top_hit_locus = ann.j_top_hit_locus.split('*')[0]
-                    if '.' in ann.j_top_hit_locus: ann.j_top_hit_locus = ann.j_top_hit_locus.split('.')[0]
+                    if '-' in ann.j_top_hit_locus: ann.j_top_hit_locus = [l for l in ann.j_top_hit_locus.split('-') if 'IG' in l][0]
+                    if '*' in ann.j_top_hit_locus: ann.j_top_hit_locus = [l for l in ann.j_top_hit_locus.split('*') if 'IG' in l][0]
+                    if '.' in ann.j_top_hit_locus: ann.j_top_hit_locus = [l for l in ann.j_top_hit_locus.split('.') if 'IG' in l][0]
+                    if 'P' in ann.j_top_hit_locus: ann.j_top_hit_locus = [l for l in ann.j_top_hit_locus.split('P') if 'IG' in l][0]
                     if ' ' in ann.j_top_hit_locus: ann.j_top_hit_locus = [l for l in ann.j_top_hit_locus.split(' ') if 'IG' in l][0]
             # CONSTANT REGION FROM IMGT? 
             # if "data.cregion.cgenes" == k: 

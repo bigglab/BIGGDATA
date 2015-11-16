@@ -9,6 +9,23 @@ a = db.session.add
 c = db.session.commit 
 
 
+
+# lns = open('data/appsoma-seqs.imgt').readlines()
+# anns = []
+# for l in lns: 
+# 	d = json.loads(l) 
+# 	b = build_annotation_from_mongo_dict(d)
+# 	anns.append(b)
+
+
+
+
+
+
+
+
+
+
 test_imgt_seq = {'ANALYSIS_NAME': 'IMGT',
  'DATA.CDR3.AA': 'ARVRVHFGRQANPRRNWFDP',
  'DATA.CDR3.AA_LENGTH': 20,
@@ -68,4 +85,3 @@ test_imgt_seq = {'ANALYSIS_NAME': 'IMGT',
  'SETTINGS': 1,
  '_id': '552c9cee904f3e9c087069d2'}
 
- 
