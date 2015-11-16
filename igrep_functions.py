@@ -39,6 +39,7 @@ def _modify_function(f):
 
 
 
+
 #--- The flatten dictionary function should be put into some universal ImmunoGrep module, and shouldn't remain here.
 #--- The code is included here for prototyping porpoises.
 def flatten_dictionary(d):
@@ -63,6 +64,9 @@ def flatten_dictionary(d):
 	return flattened_dict
 
 
+
+def flatten_list(lst):
+    return [item for sublist in lst for item in sublist]
 
 
 

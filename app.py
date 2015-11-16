@@ -4,8 +4,9 @@ import static
 import os
 import time
 import random
+import operator
 from celery import Celery
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import collections
 #Flask Imports
 from werkzeug import secure_filename
@@ -38,7 +39,7 @@ import pymongo
 
 #Local Imports 
 from forms import *
-
+from igrep_functions import * 
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_pyfile('config.py')
@@ -252,6 +253,8 @@ class Sequence(db.Model):
 
 
 
+
+
 class Annotation(db.Model):  
 
         id = Column(Integer(), primary_key=True)
@@ -284,12 +287,12 @@ class Annotation(db.Model):
         cdr2_aa = Column(String(100))
         cdr2_nt = Column(String(100))
         cdr3_aa = Column(String(100))
-        cdr3_nt = Column(String(100))
+        cdr3_nt = Column(String(200))
         fr1_nt = Column(String(200))
         fr1_aa = Column(String(100))
         fr2_nt = Column(String(100))
         fr2_aa = Column(String(100))
-        fr3_nt = Column(String(100))
+        fr3_nt = Column(String(200))
         fr3_aa = Column(String(200))
         fr4_nt  = Column(String(100))
         fr4_aa = Column(String(100))
@@ -329,6 +332,124 @@ class Annotation(db.Model):
 
 
 
+def build_annotation_from_mongo_dict(d): 
+    d = flatten_dictionary(d)
+    nd = {}
+    for k,v in d.iteritems(): 
+        nd[k.lower()] = v 
+    d = nd 
+    ann = Annotation() 
+    if d['analysis_name'] == 'IMGT': 
+        print 'interpreting IMGT Annotation Record from flattened mongo sequence document' 
+        print d
+        ann.v_hits = OrderedDict()
+        ann.d_hits = OrderedDict()
+        ann.j_hits = OrderedDict()
+        ann.c_hits = OrderedDict()
+        for k,v in d.iteritems(): 
+            if "_id" == k: ann._id = v
+            if "seq_id" == k: ann.seq_id = v
+            if "exp_id" == k: ann.exp_id = v
+            if "analysis_name" == k: ann.analysis_name = v
+            if "recombination_type" == k: ann.recombination_type = v
+            if "data.cdr3.aa" == k: ann.cdr3_aa = v
+            if "data.cdr3.nt" == k: ann.cdr3_nt = v
+            if "data.jregion.fr4.aa" == k: ann.fr4_aa = v            
+            if "data.jregion.fr4.nt" == k: ann.fr4_nt = v
+            # if "data.notes" == k: ann.notes = v
+            if "data.predicted_ab_seq.aa" == k: ann.aa = v
+            if "data.predicted_ab_seq.nt" == k: ann.nt = v
+            if "data.strand" == k: ann.strand = v
+            if "data.vregion.cdr1.aa" == k: ann.cdr1_aa = v
+            if "data.vregion.cdr1.nt" == k: ann.cdr1_nt = v
+            if "data.vregion.cdr2.aa" == k: ann.cdr2_aa = v
+            if "data.vregion.cdr2.nt" == k: ann.cdr2_nt = v
+            if "data.vregion.fr1.aa" == k: ann.fr1_aa = v
+            if "data.vregion.fr1.nt" == k: ann.fr1_nt = v
+            if "data.vregion.fr2.aa" == k: ann.fr2_aa = v
+            if "data.vregion.fr2.nt" == k: ann.fr2_nt = v
+            if "data.vregion.fr3.aa" == k: ann.fr3_aa = v
+            if "data.vregion.fr3.nt" == k: ann.fr3_nt = v
+            if "data.vregion.shm.aa" == k: ann.shm_aa = v
+            if "data.vregion.shm.nt" == k: ann.shm_nt = v
+            # if "date_updated" == k: ann.date_updated = v
+            # if "settings" == k: ann.settings = v
+
+            if "data.vregion.vgenes" == k: 
+                if "data.vregion.vgene_scores" in d: 
+                    if len(v) == len(d["data.vregion.vgene_scores"]):
+                        for i in range(0,len(v)):
+                            ann.v_hits[v[i]] = d["data.vregion.vgene_scores"][i]
+                    else: 
+                        for i in range(0,len(v)):
+                            ann.v_hits[v[i]] = d["data.vregion.vgene_scores"][0]
+                else: 
+                    for i in range(0,len(v)):
+                        ann.v_hits[v[i]] 
+                if len(ann.v_hits) > 0: 
+                    ann.v_top_hit = ann.v_top_hit_locus = sorted(ann.v_hits, key=operator.itemgetter(1))[-1]
+                    if '-' in ann.v_top_hit_locus: ann.v_top_hit_locus = ann.v_top_hit_locus.split('-')[0]
+                    if '*' in ann.v_top_hit_locus: ann.v_top_hit_locus = ann.v_top_hit_locus.split('*')[0]
+                    if '.' in ann.v_top_hit_locus: ann.v_top_hit_locus = ann.v_top_hit_locus.split('.')[0]
+                    if ' ' in ann.v_top_hit_locus: ann.v_top_hit_locus = [l for l in ann.v_top_hit_locus.split(' ') if 'IG' in l][0]
+            if "data.dregion.dgenes" == k: 
+                if "data.dregion.dgene_scores" in d: 
+                    for i in range(0,len(v)):
+                        ann.d_hits[v[i]] = d["data.dregion.dgene_scores"][i]
+                else: 
+                    for i in range(0,len(v)):
+                        ann.d_hits[v[i]] = True 
+                if len(ann.d_hits) > 0 : 
+                    if ann.d_hits.values() == [True]: 
+                        ann.d_top_hit = ann.d_top_hit_locus = ann.d_hits.keys()[0]
+                    else: 
+                        ann.d_top_hit = ann.d_top_hit_locus = sorted(ann.d_hits, key=operator.itemgetter(1))[-1]
+                    if '-' in ann.d_top_hit_locus: ann.d_top_hit_locus = ann.d_top_hit_locus.split('-')[0]
+                    if '*' in ann.d_top_hit_locus: ann.d_top_hit_locus = ann.d_top_hit_locus.split('*')[0]
+                    if '.' in ann.d_top_hit_locus: ann.d_top_hit_locus = ann.d_top_hit_locus.split('.')[0]
+                    if ' ' in ann.d_top_hit_locus: ann.d_top_hit_locus = [l for l in ann.d_top_hit_locus.split(' ') if 'IG' in l][0]
+            if "data.jregion.jgenes" == k: 
+                if "data.jregion.jgene_scores" in d: 
+                    if len(v) == len(d["data.jregion.jgene_scores"]):
+                        for i in range(0,len(v)):
+                            ann.j_hits[v[i]] = d["data.jregion.jgene_scores"][i]
+                    else: 
+                        for i in range(0,len(v)):
+                            ann.j_hits[v[i]] = d["data.jregion.jgene_scores"][0]
+                else: 
+                    for i in range(0,len(v)):
+                        ann.j_hits[v[i]] = True 
+                if len(ann.j_hits) > 0: 
+                    ann.j_top_hit = ann.j_top_hit_locus = sorted(ann.j_hits, key=operator.itemgetter(1))[-1]
+                    if '-' in ann.j_top_hit_locus: ann.j_top_hit_locus = ann.j_top_hit_locus.split('-')[0]
+                    if '*' in ann.j_top_hit_locus: ann.j_top_hit_locus = ann.j_top_hit_locus.split('*')[0]
+                    if '.' in ann.j_top_hit_locus: ann.j_top_hit_locus = ann.j_top_hit_locus.split('.')[0]
+                    if ' ' in ann.j_top_hit_locus: ann.j_top_hit_locus = [l for l in ann.j_top_hit_locus.split(' ') if 'IG' in l][0]
+            # CONSTANT REGION FROM IMGT? 
+            # if "data.cregion.cgenes" == k: 
+            #     if "data.cregion.cgene_scores" in d: 
+            #         for i in range(0,len(v)):
+            #             ann.c_hits[v[i]] = d["data.cregion.cgene_scores"][i]
+            #     else: 
+            #         for i in range(0,len(v)):
+            #             ann.c_hits[v[i]] 
+                # if len(ann.c_hits) > 0: 
+                #     ann.c_top_hit = sorted(ann.c_hits, key=operator.itemgetter(1))[-1][0]
+                #     ann.c_top_hit_locus = ann.c_top_hit.split('-')[0].split('*')[0].split('.')[0]
+
+            if "data.productive" == k: 
+                if 'PRODUCTIVE' in v: 
+                    ann.productive = True
+                else: 
+                    ann.productive = False 
+
+        return ann 
+    else: 
+        print 'CAN NOT INTERPRET NON-IMGT DOCUMENTS (yet)'
+        return False
+
+
+
 class Analysis(db.Model):  
 
         id = Column(Integer(), primary_key=True)
@@ -360,10 +481,6 @@ class Analysis(db.Model):
 
 
 
-
-
-def flatten_list(lst):
-    return [item for sublist in lst for item in sublist]
 
 
 # Flask-Login use this to reload the user object from the user ID stored in the session
