@@ -1,0 +1,80 @@
+{% extends '_base.html' %}
+
+{% block content %}
+
+
+
+
+
+	<div class="container">
+		<h3>Create A New Dataset: </h3>
+		<div class="container">
+		    <form method="POST" action="/datasets/create">
+		    <table class='table table-striped'> 
+			    <tr>
+		        <th>{{ form.csrf_token }}</th>
+		        <th>{{ form.name.label }} {{ form.name(size=20) }}</th>
+		        <th>{{ form.paired.label }} {{ form.paired }}</th>
+		        <th>{{ form.description.label }} {{ form.description(size=40) }}</th>
+		        <th><input type="submit" value="Submit"></th>
+	        </tr>
+        </table>
+		    </form>
+		</div>
+	</div>
+
+
+
+
+
+
+<div class="container">
+<h1>Your Datasets: </h1>
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Name</th>
+				<th>Description</th>
+				<th>IG Type</th>
+				<th>Paired?</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for dataset, files in datadict.iteritems() %}
+				<tr>
+					<th>{{dataset.name}}</th>
+					<th>{{dataset.description}}</th>
+					<th>{{dataset.ig_type}}</th>
+					{% if dataset.paired %}
+						<th>YES</th>
+					{% else %}
+						<th></th>
+					{% endif %}
+					<th>
+					<table class='table table-striped'>
+						<thead>
+							<tr>
+								<th>File Name</th>
+								<th>File Type</th>
+							</tr>
+						</thead>
+						{% for file in files %}
+						<tr>
+							<th>{{file.name}}</th>
+							<th>{{file.file_type}}</th>
+						</tr>
+						{% endfor %}	
+					</table>
+					</th>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	</div>
+
+
+
+{%endblock content %}
+
+

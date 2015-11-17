@@ -528,6 +528,7 @@ nav.register_element('frontend_top', Navbar(
         'Files', 
         View('My Files', '.files'), 
         View('My Datasets', '.datasets'),
+        View('New Dataset', '.create_dataset'),
         View('Upload File', '.file_upload'), 
         Link('Share Files', 'under_construction'),
         ),
@@ -840,6 +841,13 @@ def files():
         return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form)
 
 
+def get_user_dataset_dict(user): 
+    datadict = OrderedDict()
+    for dataset in sorted(user.datasets, key=lambda x: x.id, reverse=True):
+        datadict[dataset] = dataset.files.all()
+    return datadict
+
+
 
 @frontend.route('/datasets', methods=['GET', 'POST'])
 @login_required
@@ -847,10 +855,8 @@ def datasets():
     print request.__dict__
     files = current_user.files.all()
     datasets = current_user.datasets.all()
-    datadict = tree()
-    for dataset in datasets:
-        datadict[dataset] = dataset.files.all()
     form = Form()
+    datadict = get_user_dataset_dict(current_user)
     if request.method == 'POST' and os.path.isfile(request.form['submit']):
         do_nothing = ''
     else: 
@@ -858,34 +864,36 @@ def datasets():
 
 
 
+@frontend.route('/datasets/create', methods=['GET', 'POST'])
+@login_required
+def create_dataset():
+    print request.__dict__
+    files = current_user.files.all()
+    datasets = current_user.datasets.all()
+    datadict = get_user_dataset_dict(current_user)
+    form = CreateDatasetForm()
+    if request.method == 'POST':
+        if form.name.data: 
+            d = Dataset() 
+            d.name = form.name.data 
+            d.description = form.description.data
+            d.paired = form.paired.data 
+            d.user_id = current_user.id 
+            db.session.add(d)
+            db.session.commit()
+        return redirect(url_for('.datasets')) # render_template("datasets.html", datadict=datadict, form=Form())
+    else: 
+        return render_template("create_dataset.html", datadict=datadict, form=form)
 
 
-# @frontend.route('/browse_mongo_database', methods=['GET', 'POST'])
-# @login_required
-# def browse_mongo_database():
-#     # print request.__dict__
-#     files = current_user.files.all()
-#     datasets = current_user.datasets.all()
-#     datadict = tree()
-#     for dataset in datasets:
-#         datadict[dataset] = dataset.files.all()
-#     form = Form()
-#     mongo_client = MongoClient(mongo_connection_uri)
-#     mongodb = mongo_client['appsoma']
-#     try: 
-#         exps = mongodb.exps.find_one()
-#     except pymongo.errors.OperationFailure as e:
-#         print e.code
-#         print e.details
-#         err = 'PyMongo connection error: {}'.format(e.details['errmsg'])
-#         exps = {}
-#     else:
-#         err = False
-#     # if request.method == 'POST' and os.path.isfile(request.form['submit']):
-#     #     do_nothing = ''
-#     # else: 
-#     golden = retrieve_golden()
-#     return render_template("browse_mongo_database.html", datadict=datadict, form=form, exps=exps, err=err, gif_path=golden)
+
+
+
+
+
+
+
+
 
 
 

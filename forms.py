@@ -42,3 +42,25 @@ class FileDownloadForm(Form):
     paired_partner  = IntegerField()
     dataset_id = IntegerField()
 
+
+
+class CreateDatasetForm(Form):
+
+    name = TextField()
+    description = TextField()
+    paired = BooleanField()
+    # experiment_id = db.Column(db.Integer, db.ForeignKey('experiment.id'))
+    # files = db.relationship('File', backref='dataset', lazy='dynamic')
+    # sequences = db.relationship('Sequence', backref='dataset', lazy='dynamic')
+    # analyses = db.relationship('Analysis', backref='dataset', lazy='dynamic')
+    # annotations = db.relationship('Annotation', backref='dataset', lazy='dynamic')
+
+
+
+
+
+
+
+
+
+
