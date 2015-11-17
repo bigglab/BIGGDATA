@@ -1,11 +1,14 @@
 #System Imports
 import json
 import static
+import sys
 import os
 import time
 import random
 import operator
 import urllib
+import itertools
+import subprocess
 from celery import Celery
 from collections import defaultdict, OrderedDict
 import collections
@@ -130,6 +133,7 @@ class File(db.Model):
         path = db.Column(db.String(256))
         locus = db.Column(db.String(128))
         url = db.Column(db.String(256))
+        command = db.Column(db.String(1024))
         available = db.Column(db.Boolean)
         created = db.Column(db.DateTime, default=db.func.now())
         paired_partner = db.Column(db.Integer, db.ForeignKey('file.id'))
@@ -170,6 +174,8 @@ class Dataset(db.Model):
         sequences = db.relationship('Sequence', backref='dataset', lazy='dynamic')
         analyses = db.relationship('Analysis', backref='dataset', lazy='dynamic')
         annotations = db.relationship('Annotation', backref='dataset', lazy='dynamic')
+        cell_types_sequenced = db.Column(postgresql.ARRAY(db.String(50)))
+        chain_types_sequenced = db.Column(postgresql.ARRAY(db.String(20)))
 
 
         def __repr__(self): 
@@ -466,21 +472,47 @@ class Analysis(db.Model):
         program = Column(String())
         started = Column(TIMESTAMP)
         finished = Column(TIMESTAMP)
-        duration = Column(TSRANGE)
         params = Column(JSON)
+        commands = Column(postgresql.ARRAY(String(1024)))
+        responses = Column(postgresql.ARRAY(Integer))
         vdj_count = Column(Integer)
         vj_count = Column(Integer)
         tcra_count = Column(Integer)
         tcrb_count = Column(Integer)
         total_count = Column(Integer)
-        passed_filter = Column(Integer)
-        command = Column(String(256))
+        active_command = Column(String(512))
+        status = Column(String(256))
         notes = Column(String(1000))
+        available = Column(Boolean)
+        inserted_into_db = Column(Boolean)
 
         annotations = db.relationship('Annotation', backref='analysis', lazy='dynamic')
 
         def __repr__(self): 
             return "< Analysis {}: {} : {} : {}>".format(self.id, self.program, self.name, self.started)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -844,7 +876,7 @@ def files():
 def get_user_dataset_dict(user): 
     datadict = OrderedDict()
     for dataset in sorted(user.datasets, key=lambda x: x.id, reverse=True):
-        datadict[dataset] = dataset.files.all()
+        datadict[dataset] = sorted(dataset.files.all(), key=lambda x: x.file_type)
     return datadict
 
 
@@ -1052,6 +1084,12 @@ nav.init_app(app)
 
 
 
+
+
+
+
+
+
 # Celery configured for local RabbitMQ 
 celery = Celery(app.name, broker='amqp://')
 import celery_config 
@@ -1070,6 +1108,124 @@ def download_file(url, path, file_id):
     f.available = True
     db.session.commit()
     return True 
+
+
+
+def run_mixcr_with_dataset(dataset):
+    print 'RUNNING MIXCR ON DATASET {}'.format(dataset.__dict__)
+    gzipped_fastqs = [f for f in dataset.files.all() if f.file_type=='GZIPPED_FASTQ']
+    fastqs = [f for f in dataset.files.all() if f.file_type=='FASTQ']
+    print 'FOUND THESE FASTQ FILES: GZIPPED_FASTQ: {} {}  FASTQ: {} {}'.format(len(gzipped_fastqs), gzipped_fastqs, len(fastqs), fastqs)
+    if len(fastqs) == 0 and len(gzipped_fastqs) == 0: 
+        print 'NO FASTQ DATA ASSOCIATED WITH DATASET'
+        return False 
+    if len(fastqs) == 0 and len(gzipped_fastqs) != 0: 
+        print 'PLEASE DECOMPRESS FASTQ.GZ AND RESUBMIT JOB'
+        return False
+    analysis = Analysis()
+    analysis.dataset_id = dataset.id
+    if getattr(current_user, 'id', True):
+        analysis.user_id = 6
+    else: 
+        analysis.user_id = current_user.id
+    analysis.program = 'mixcr'
+    analysis.started = 'now'
+    analysis.params = {}
+    analysis.status = 'QUEUED'
+    analysis.responses = []
+    analysis.available = False
+    analysis.inserted_into_db = False
+    db.session.add(analysis)
+    db.session.commit()
+    if len(fastqs) != 0: 
+        fastqs_by_locus = {}
+        for key, values in itertools.groupby(fastqs, lambda x: x.locus): 
+            fastqs_by_locus[key] = list(values)
+        print fastqs_by_locus
+        for locus, fastqs in fastqs_by_locus.items(): 
+            print 'ABOUT TO RUN MIXCR ANAYSIS {} ON FILES FROM LOCUS {}'.format(analysis.__repr__, locus)
+            run_mixcr_analysis_id_with_files(analysis.id, fastqs)
+        return True 
+    # db.session.commit()
+    return False 
+
+
+
+
+@celery.task
+def run_mixcr_analysis_id_with_files(analysis_id, files):
+    analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
+    print 'RUNNING MIXCR ON THESE FILES: {}'.format(files)
+    commands = []
+    output_files = []
+    alignment_file = File() 
+    alignment_file.path = '{}.aln.vdjca'.format(files[0].path.split('.')[:-1][0])
+    alignment_file.name = alignment_file.path.split('/')[-1]
+    alignment_file.command = 'mixcr align -f {} {}'.format(' '.join([f.path for f in files]), alignment_file.path)
+    alignment_file.file_type = 'MIXCR_ALIGNMENTS'
+    commands.append(alignment_file.command) 
+    output_files.append(alignment_file)
+    clone_file = File()
+    clone_file.file_type = 'MIXCR_CLONES'
+    clone_file.path = '{}.aln.clns'.format(files[0].path.split('.')[:-1][0])
+    clone_file.name = clone_file.path.split('/')[-1]
+    clone_file.command = 'mixcr assemble -f {} {}'.format(alignment_file.path, clone_file.path)
+    commands.append(clone_file.command)
+    output_files.append(clone_file)
+    clone_output_file = File()
+    clone_output_file.path = '{}.txt'.format(clone_file.path)
+    clone_output_file.file_type = 'MIXCR_CLONES_TEXT'
+    clone_output_file.name = clone_output_file.path.split('/')[-1]
+    clone_output_file.command = 'mixcr exportClones {} {}'.format(clone_file.path, clone_output_file.path)
+    commands.append(clone_output_file.command) 
+    output_files.append(clone_output_file)
+    alignment_output_file = File()
+    alignment_output_file.path = '{}.txt'.format(alignment_file.path)
+    alignment_output_file.file_type = 'MIXCR_ALIGNMENT_TEXT'
+    alignment_output_file.name = alignment_output_file.path.split('/')[-1]
+    alignment_output_file.command = 'mixcr exportAlignments {} {}'.format(alignment_file.path, alignment_output_file.path)
+    commands.append(alignment_output_file.command) 
+    output_files.append(alignment_output_file)
+    pretty_alignment_file = File()
+    pretty_alignment_file.path = '{}.pretty.txt'.format(alignment_file.path)
+    pretty_alignment_file.file_type = 'MIXCR_PRETTY_ALIGNMENT_TEXT'
+    pretty_alignment_file.name = pretty_alignment_file.path.split('/')[-1]
+    pretty_alignment_file.command = 'mixcr exportAlignmentsPretty {} {}'.format(alignment_file.path, pretty_alignment_file.path)
+    commands.append(pretty_alignment_file.command)
+    output_files.append(pretty_alignment_file)
+    print 'running these commands:'
+    print '\n'.join(commands)
+    analysis.commands = commands 
+    analysis.status = 'EXECUTING'
+    db.session.commit()
+    for f in output_files:
+        f.command = f.command.encode('ascii')
+        # f.command = str(f.command)
+        f.dataset_id = analysis.dataset_id 
+        f.locus = files[0].locus 
+        db.session.add(f)
+        print 'Executing: {}'.format(f.command)
+        analysis.active_command = f.command
+        db.session.commit()
+        response = os.system(f.command)
+        responses = analysis.responses
+        responses.append(response)
+        analysis.responses = responses 
+        db.session.commit()
+        print 'Response: {}'.format(response)
+        if response == 0: 
+            f.available = True 
+            db.session.commit()
+    print 'All commands in analysis {} have been executed.'.format(analysis)
+    analysis.status = 'SUCCESS'
+    analysis.available = True
+    analysis.active_command = ''
+    analysis.finished = 'now'
+    db.session.commit()
+    # KICK OFF ASYNC DB INSERTS FROM OUTPUT FILES 
+    return True 
+
+
 
 
 

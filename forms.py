@@ -49,6 +49,7 @@ class CreateDatasetForm(Form):
     name = TextField()
     description = TextField()
     paired = BooleanField()
+    ig_type = TextField()
     # experiment_id = db.Column(db.Integer, db.ForeignKey('experiment.id'))
     # files = db.relationship('File', backref='dataset', lazy='dynamic')
     # sequences = db.relationship('Sequence', backref='dataset', lazy='dynamic')

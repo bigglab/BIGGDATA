@@ -7,15 +7,18 @@
 
 
 	<div class="container">
-		<h3>Create A New Dataset: </h3>
 		<div class="container">
 		    <form method="POST" action="/datasets/create">
 		    <table class='table table-striped'> 
+		    <thead>
+			    <h4>Create A New Dataset:</h4>
+		    </thead>
 			    <tr>
 		        <th>{{ form.csrf_token }}</th>
-		        <th>{{ form.name.label }} {{ form.name(size=20) }}</th>
-		        <th>{{ form.paired.label }} {{ form.paired }}</th>
-		        <th>{{ form.description.label }} {{ form.description(size=40) }}</th>
+		        <th>{{ form.name.label }}: {{ form.name(size=20) }}</th>
+		        <th>{{ form.description.label }}: {{ form.description(size=40) }}</th>
+		        <th>IG Type: {{ form.ig_type(size=10) }}</th>
+		        <th>Paired: {{ form.paired }}</th>
 		        <th><input type="submit" value="Submit"></th>
 	        </tr>
         </table>
