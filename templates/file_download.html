@@ -1,0 +1,44 @@
+{% extends "_base.html" %}
+{% block content %}
+<br>
+
+<div class="container">
+<h3>Download a file from a URL: </h3>
+    <form method="POST" action="/file_download" enctype="multipart/form-data">
+    <table class="table table-striped">
+        {{ download_form.csrf_token }}
+        <thead>
+            <tr>
+                <th>File URL</th>
+                <th>Description</th>
+                <th>Locus (IgG,IgM,...)</th>
+                <th>Mate File ID</th>
+                <th>Dataset ID</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <th>{{ download_form.url }}</th>
+                <th> {{ download_form.description }}</th>
+                <th>{{ download_form.locus  }}</th>
+                <th>{{ download_form.paired_partner }}</th>
+                <th>{{ download_form.dataset_id }}</th>
+                <th><input type="submit" value="Submit"></th>
+            </tr>
+        </tbody>
+    </table>
+    </form>
+</div>
+
+<br>
+
+<div class='container'>
+{% for ln in status %}
+    <h4>{{ln}}</h4>
+{% endfor %}
+<br>
+<p>Async Task ID: {{r.id}}</p>
+</div>
+
+<!-- <h4>{{ r }}</h4> -->
+{% endblock %}

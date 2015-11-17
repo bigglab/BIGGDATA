@@ -1,19 +1,14 @@
 {% extends '_base.html' %}
 
 {% block content %}
+
 <div class='container'>
-<h1>Here's some stuff from the Mongo Database:</h1>
-{% for exp in exps %}
-<p>{{exp.__dict__}}</p>
-{% endfor %}
-{% if err %}
-<p>{{ err }}. Here's a golden.<br>
-<img id="goldens" alt="goldens" src="{{gif_path}}"></p>
-{% endif %}
+<h4>Some info on what's in postgres:</h4>
+<p>Sequences in database: {{seq_count}}</p>
+<p>Annotations in database: {{ann_count}}</p>
 </div>
 
-
-
+<!-- 
 <div class="container">
 <h1>Your File-Based Datasets: </h1>
 	<table class="table table-striped">
@@ -54,6 +49,8 @@
 		</tbody>
 	</table>
 	</div>
-{%endblock content %}
 
+	-->
+	
+{%endblock content %}
 

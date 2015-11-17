@@ -6,7 +6,7 @@
 <h3>Upload a new file from your computer: </h3>
     <form method="POST" action="/file_upload" enctype="multipart/form-data">
     <table class="table table-striped">
-        {{ form.csrf_token }}
+        {{ upload_form.csrf_token }}
         <thead>
             <tr>
             <th>File To Upload</th>
@@ -18,16 +18,47 @@
         </thead>
         <tbody>
             <tr>
-                <th>{{ form.file }}</th>
-                <th> {{ form.description }}</th>
-                <th>{{ form.locus  }}</th>
-                <th>{{ form.paired_partner }}</th>
-                <th>{{ form.dataset_id }}</th>
+                <th>{{ upload_form.file }}</th>
+                <th> {{ upload_form.description }}</th>
+                <th>{{ upload_form.locus  }}</th>
+                <th>{{ upload_form.paired_partner }}</th>
+                <th>{{ upload_form.dataset_id }}</th>
                 <th><input type="submit" value="Submit"></th>
             </tr>
         </tbody>
     </table>
     </form>
 </div>
+
+<br>
+
+<div class="container">
+<h3>Or download the data directly from your URL: </h3>
+    <form method="POST" action="/file_download" enctype="multipart/form-data">
+    <table class="table table-striped">
+        {{ download_form.csrf_token }}
+        <thead>
+            <tr>
+                <th>URL</th>
+                <th>Description</th>
+                <th>Locus (IgG,IgM,...)</th>
+                <th>Mate File ID</th>
+                <th>Dataset ID</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <th>{{ download_form.url }}</th>
+                <th> {{ download_form.description }}</th>
+                <th>{{ download_form.locus  }}</th>
+                <th>{{ download_form.paired_partner }}</th>
+                <th>{{ download_form.dataset_id }}</th>
+                <th><input type="submit" value="Submit"></th>
+            </tr>
+        </tbody>
+    </table>
+    </form>
+</div>
+
 
 {% endblock %}

@@ -12,6 +12,7 @@
 				<th>Dataset ID</th>
 				<th>File Type</th>
 				<th>Paired To</th>
+				<th>Available</th>
 				<th>Path</th>
 			</tr>
 		</thead>
@@ -24,6 +25,11 @@
 					<th>{{file.dataset_id}}</th>
 					<th>{{file.file_type}}</th>
 					<th>{{file.paired_partner}}</th>
+					{% if file.available %}
+						<th>YES</th>
+					{% else %}
+						<th>NO</th>
+					{% endif %}
 					<th>{{file.path}}</th>
 				</tr>
 			{% endfor %}

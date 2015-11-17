@@ -1,4 +1,5 @@
-
+import operator 
+import json 
 
 
 
@@ -68,5 +69,19 @@ def flatten_dictionary(d):
 def flatten_list(lst):
     return [item for sublist in lst for item in sublist]
 
+
+
+def demultiplex_tuple_counts(d, reverse=False, index=0): 
+    isotypes = [x for x in set(flatten_list([o[0] for o in d if o[0] != None])) if x != None]
+    isotype_counts = {}
+    for i in isotypes: 
+        isotype_counts[i] = 0 
+    for isos,c in d: 
+        if not isos == None: 
+            for i in isos: 
+                if i in isotypes: 
+                    isotype_counts[i] += c 
+    isotype_data = sorted(isotype_counts.items(), key=operator.itemgetter(index), reverse=reverse)
+    return isotype_data
 
 

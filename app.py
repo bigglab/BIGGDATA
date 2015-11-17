@@ -5,6 +5,7 @@ import os
 import time
 import random
 import operator
+import urllib
 from celery import Celery
 from collections import defaultdict, OrderedDict
 import collections
@@ -128,6 +129,8 @@ class File(db.Model):
         file_type = db.Column(db.String(128))
         path = db.Column(db.String(256))
         locus = db.Column(db.String(128))
+        url = db.Column(db.String(256))
+        available = db.Column(db.Boolean)
         created = db.Column(db.DateTime, default=db.func.now())
         paired_partner = db.Column(db.Integer, db.ForeignKey('file.id'))
         parent = db.Column(db.Integer, db.ForeignKey('file.id'))
@@ -529,21 +532,15 @@ nav.register_element('frontend_top', Navbar(
         Link('Share Files', 'under_construction'),
         ),
     Subgroup(
-        'Pipelines', 
-        Link('My Pipelines', 'under_construction'), 
-        Link('Public Pipelines', 'under_construction'), 
-        Link('Create New From Base', 'under_construction')
-        ),
-    Subgroup(
-        'Jobs',
+        'Run Analysis',
         Link('Dashboard', 'under_construction'), 
-        Link('My Jobs', 'under_construction'),
-        Link('My Tasks', 'under_construction'), 
+        Link('Start New', 'under_construction'),
+        Link('Other Tasks', 'under_construction'), 
         ),
     Subgroup(
         'Database', 
-        Link('Browse Mongo', 'under_construction'),
-        View('Browse Postgres', '.browse_postgres_database'),
+        View('Browse Experiments', '.browse_experiments'),
+        View('Browse Sequences', '.browse_sequences'),
         Link('Download', 'under_construction'),
         Link('Mass Spec', 'under_construction')
         ),
@@ -710,6 +707,13 @@ def parse_file_ext(path):
     ext_dict['sam'] = 'SAM'
     ext_dict['bam'] = 'BAM'
     ext_dict['imgt'] = 'IMGT'
+    ext_dict['gtf'] = 'GTF'
+    ext_dict['gff'] = 'GFF'
+    ext_dict['gff3'] = 'GFF3'
+    ext_dict['bed'] = 'BED'
+    ext_dict['wig'] = 'WIGGLE'
+    ext_dict['py'] = 'PYTHON'
+    ext_dict['rb'] = 'RUBY'
     file_type = ext_dict[ext]
     if isinstance(file_type, defaultdict):
         return None
@@ -741,13 +745,61 @@ def file_upload():
         file.user_id = current_user.id
         print 'Saving uploaded file to {}'.format(file.path)
         request_file.save(file.path)
+        file.available = True 
         print 'Saving File Metadata to Postgres: {}'.format(file.__dict__)
         db.session.add(file)
         db.session.commit()
         flash('file uploaded to {}'.format(file.path))
         return redirect(url_for('.files'))
     else:
-        return render_template("file_upload.html", form=form)
+        dl_form = FileDownloadForm()
+        return render_template("file_upload.html", upload_form=form, download_form=dl_form)
+
+
+
+@frontend.route('/file_download', methods=['GET', 'POST'])
+@login_required
+def file_download():
+    form = FileDownloadForm()
+    if request.method == 'POST':
+        file = File()
+        file.url = form.url.data
+        file.name = file.url.split('/')[-1].split('?')[0]
+        file.file_type = parse_file_ext(file.name)
+        file.description = form.description.data
+        file.locus = form.locus.data
+        file.paired_partner = form.paired_partner.data 
+        file.dataset_id = form.dataset_id.data
+        file.path = '{}/{}'.format(current_user.scratch_path, file.name) 
+        file.user_id = current_user.id
+        file.available = False 
+        print 'Saving File Metadata to Postgres: {}'.format(file.__dict__)
+        db.session.add(file)
+        db.session.commit()
+        status = ['Started background task to download file from {}'.format(file.url),
+        'Saving File To {}'.format(file.path),
+        'This file will be visible in "My Files", and available for use after the download completes.']
+        print status 
+        # result_id NOT WORKING - STILL REDUNDANT IF THEY CLICK TWICE!!
+        if not 'async_result_id' in session.__dict__:
+            result = download_file.delay(file.url, file.path, file.id)
+            flash('file downloading from {}'.format(file.url))
+            session['async_result_id'] = result.id
+        time.sleep(1)
+        async_result = add.AsyncResult(session['async_result_id'])
+        # r = async_result.info
+        r = result.__dict__
+        r['async_result.info'] = async_result.info 
+
+        db.session.commit()
+        flash('file uploaded to {}'.format(file.path))
+        return render_template("file_download.html", download_form=form, status=status, r=r)
+        # return redirect(url_for('.files'))
+    else:
+        status = ''
+        r=''
+        return render_template("file_download.html", download_form=form, status=status, r=r)
+
 
 
 
@@ -767,7 +819,7 @@ def link_file_to_user(path, user, name):
 @login_required
 def files():
     print request
-    files = current_user.files.all()
+    files = sorted(current_user.files.all(), key=lambda x: x.id, reverse=True)
     dropbox_file_paths = get_dropbox_files(current_user)
     form = Form()
     if request.method == 'POST' and os.path.isfile(request.form['submit']):
@@ -778,7 +830,7 @@ def files():
             if link_file_to_user(file_path, current_user, file_name):
                 flash('linked new file to your user: {}'.format(file_path), 'success')
                 dropbox_file_paths = dropbox_file_paths.remove(file_path)
-                files = current_user.files
+                files = sorted(current_user.files, key=lambda x: x.id, reverse=True)
         else: 
             flash('file metadata already created to your user')
             dropbox_file_paths = get_dropbox_files(current_user)
@@ -808,38 +860,38 @@ def datasets():
 
 
 
-@frontend.route('/browse_mongo_database', methods=['GET', 'POST'])
+# @frontend.route('/browse_mongo_database', methods=['GET', 'POST'])
+# @login_required
+# def browse_mongo_database():
+#     # print request.__dict__
+#     files = current_user.files.all()
+#     datasets = current_user.datasets.all()
+#     datadict = tree()
+#     for dataset in datasets:
+#         datadict[dataset] = dataset.files.all()
+#     form = Form()
+#     mongo_client = MongoClient(mongo_connection_uri)
+#     mongodb = mongo_client['appsoma']
+#     try: 
+#         exps = mongodb.exps.find_one()
+#     except pymongo.errors.OperationFailure as e:
+#         print e.code
+#         print e.details
+#         err = 'PyMongo connection error: {}'.format(e.details['errmsg'])
+#         exps = {}
+#     else:
+#         err = False
+#     # if request.method == 'POST' and os.path.isfile(request.form['submit']):
+#     #     do_nothing = ''
+#     # else: 
+#     golden = retrieve_golden()
+#     return render_template("browse_mongo_database.html", datadict=datadict, form=form, exps=exps, err=err, gif_path=golden)
+
+
+
+@frontend.route('/browse_experiments', methods=['GET', 'POST'])
 @login_required
-def browse_mongo_database():
-    # print request.__dict__
-    files = current_user.files.all()
-    datasets = current_user.datasets.all()
-    datadict = tree()
-    for dataset in datasets:
-        datadict[dataset] = dataset.files.all()
-    form = Form()
-    mongo_client = MongoClient(mongo_connection_uri)
-    mongodb = mongo_client['appsoma']
-    try: 
-        exps = mongodb.exps.find_one()
-    except pymongo.errors.OperationFailure as e:
-        print e.code
-        print e.details
-        err = 'PyMongo connection error: {}'.format(e.details['errmsg'])
-        exps = {}
-    else:
-        err = False
-    # if request.method == 'POST' and os.path.isfile(request.form['submit']):
-    #     do_nothing = ''
-    # else: 
-    golden = retrieve_golden()
-    return render_template("browse_mongo_database.html", datadict=datadict, form=form, exps=exps, err=err, gif_path=golden)
-
-
-
-@frontend.route('/browse_postgres_database', methods=['GET', 'POST'])
-@login_required
-def browse_postgres_database():
+def browse_experiments():
     # print request.__dict__
     files = current_user.files.all()
     datasets = current_user.datasets.all()
@@ -848,12 +900,48 @@ def browse_postgres_database():
         datadict[dataset] = dataset.files.all()
     form = Form()
     exps = db.session.query(Experiment).order_by(Experiment.curated.desc(), Experiment.experiment_creation_date.desc()).all()
+    species_data = sorted(db.engine.execute('select species, count(*) from experiment GROUP BY species;').fetchall(), key=lambda x: x[1], reverse=True)
+    chain_data = sorted(db.engine.execute('select chain_types_sequenced, count(*) from experiment GROUP BY chain_types_sequenced;').fetchall(), key=lambda x: x[1], reverse=True)
+    cell_data = sorted(db.engine.execute('select cell_types_sequenced, count(*) from experiment GROUP BY cell_types_sequenced;').fetchall(), key=lambda x: x[1], reverse=True)
+    primer_data = sorted(db.engine.execute('select primer_set_name, count(*) from experiment GROUP BY primer_set_name;').fetchall(), key=lambda x: x[1], reverse=True)
+    cell_marker_data = sorted(db.engine.execute('select cell_markers_used, count(*) from experiment GROUP BY cell_markers_used;').fetchall(), key=lambda x: x[1], reverse=True)
+    owner_query_data = sorted(db.engine.execute('select owners_of_experiment, count(*) from experiment GROUP BY owners_of_experiment;').fetchall(), key=lambda x: x[1], reverse=True)
+    owners = set(flatten_list([o[0] for o in owner_query_data]))
+    owner_data = {}
+    for o in owners: 
+        owner_data[o] = 0 
+    for os,c in owner_query_data: 
+        for o in os: 
+            owner_data[o] += c 
+    owner_data = sorted(owner_data.items(), key=operator.itemgetter(1), reverse=True)
+    isotype_query_data = sorted(db.engine.execute('select isotypes_sequenced, count(*) from experiment GROUP BY isotypes_sequenced;').fetchall(), key=lambda x: x[1], reverse=True)
+    isotype_data = demultiplex_tuple_counts(isotype_query_data)
+    # sorted(isotype_counts.items(), key=operator.itemgetter(0))
+    cell_marker_query_data = sorted(db.engine.execute('select cell_markers_used, count(*) from experiment GROUP BY cell_markers_used;').fetchall(), key=lambda x: x[1], reverse=True)
+    cell_marker_data=demultiplex_tuple_counts(cell_marker_query_data, index=1, reverse=True)
+    # print cell_marker_data 
     golden = retrieve_golden()
     err = False
-    return render_template("browse_postgres_database.html", datadict=datadict, form=form, exps=exps, err=err, gif_path=golden)
+    return render_template("browse_experiments.html", datadict=datadict, form=form, exps=exps, err=err, gif_path=golden, species_data=species_data, chain_data=chain_data, cell_data=cell_data, cell_marker_data=cell_marker_data, primer_data=primer_data, isotype_data=isotype_data, owner_data=owner_data)
 
 
 
+
+@frontend.route('/browse_sequences', methods=['GET', 'POST'])
+@login_required
+def browse_sequences():
+    # print request.__dict__
+    files = current_user.files.all()
+    datasets = current_user.datasets.all()
+    datadict = tree()
+    for dataset in datasets:
+        datadict[dataset] = dataset.files.all()
+    seq_count = db.session.query(Sequence).count()
+    ann_count = db.session.query(Annotation).count()
+    form = Form()
+    golden = retrieve_golden()
+    err = False
+    return render_template("browse_sequences.html", form=form, files=files, datasets=datasets, datadict=datadict, err=err, gif_path=golden, seq_count=seq_count, ann_count=ann_count)
 
 
 
@@ -956,13 +1044,26 @@ nav.init_app(app)
 
 
 
-
-
-
 # Celery configured for local RabbitMQ 
 celery = Celery(app.name, broker='amqp://')
 import celery_config 
 celery.config_from_object('celery_config')
+
+
+
+
+
+
+@celery.task
+def download_file(url, path, file_id):
+    url_opener = urllib.URLopener()
+    url_opener.retrieve(url, path)
+    f = db.session.query(File).filter(File.id==file_id).first()
+    f.available = True
+    db.session.commit()
+    return True 
+
+
 
 
 # should really break out tasks to celery_tasks.py or something 

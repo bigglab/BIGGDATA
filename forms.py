@@ -1,9 +1,9 @@
 
 
 from flask_wtf import Form
-from wtforms import TextField, PasswordField, SelectField
 import wtforms
 from wtforms.fields import * 
+from wtforms.widgets import * 
 validators = wtforms.validators 
 from wtforms.validators import DataRequired
 
@@ -29,7 +29,16 @@ class RegistrationForm(Form):
 class FileUploadForm(Form):
     file     = FileField(u'File Path', validators=[validators.input_required()])
     description  = TextAreaField(u'File Description')
-    locus  = TextAreaField(u'IG Loci')
+    locus  = TextField(u'IG Loci')
+    paired_partner  = IntegerField()
+    dataset_id = IntegerField()
+
+
+
+class FileDownloadForm(Form):
+    url     = TextField(u'File URL', validators=[validators.input_required()], widget=TextInput())
+    description  = TextAreaField(u'File Description')
+    locus  = TextField(u'IG Loci')
     paired_partner  = IntegerField()
     dataset_id = IntegerField()
 
