@@ -1,4 +1,10 @@
-# BIGGIG 
+# BIGGDATA 
+
+BIGGDATA is a web portal for analyzing IG and TCR repertoire data. 
+
+Users are able to run a variety of analysis programs (MixCR, IgBlast, etc) to annotate reads from Illumina instruments and generate useful insights into repretoire distribution, loci usage and interchain pairing (given interchain paired reads). 
+
+The stack consists of python/flask with celery + rabbitMQ to execute and distribute asynchronous jobs. 
 
 # Start Broker 
 rabbitmq-server
@@ -6,23 +12,10 @@ rabbitmq-server
 # Start Celery
 celery -A app.celery worker --loglevel=info
 
-# Start Celery Admin 
+# Start Celery Admin (if you want) 
 flower --port=5555  
 
 # Start Web Service 
-python app.py 
+python manage.py runserver
 
-# Check It Out 
-
-Current functionality only extends to the broader infrastructure. We have the ability to launch async jobs and distribute to the local node, and can easily extend to include other resources. 
-
-
-# Resources
-Props to the NPR apps team and Miguel Grinberg's Flask+Celery tutorials:  
-  - Tutorial
-    - [How to build a news app that never goes down and costs you practically nothing](http://blog.apps.npr.org/2013/02/14/app-template-redux.html)
-    - [Flask + Celery Example - Grinberg ](blog.miguelgrinberg.com/post/using-celery-with-flask)
-
-
-And a ton of other resources curated here: 
-https://github.com/humiaozuzu/awesome-flask
+# Check It Out At 0.0.0.0:5000
