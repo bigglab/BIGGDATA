@@ -28,7 +28,7 @@ from flask_nav import Nav
 from flask_nav.elements import Navbar, View, Subgroup, Link, Text, Separator
 from flask_sqlalchemy import SQLAlchemy
 from markupsafe import escape
-from render_utils import make_context, smarty_filter, urlencode_filter
+# from render_utils import make_context, smarty_filter, urlencode_filter
 import wtforms
 from flask_wtf import Form
 import random
@@ -41,10 +41,11 @@ from sqlalchemy.sql import select
 from sqlalchemy.orm import sessionmaker, scoped_session
 from pymongo import MongoClient
 import pymongo
-
+ 
 #Local Imports 
 from forms import *
-from igrep_functions import * 
+from functions import * 
+
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_pyfile('config.py')
@@ -62,8 +63,6 @@ login_manager.init_app(app)
 # load template environment for cleaner routes 
 templateLoader = jinja2.FileSystemLoader( searchpath="/Users/red/Desktop/GeorgiouProjects/BIGGIG/templates" )
 templateEnv = jinja2.Environment( loader=templateLoader, extensions=['jinja2.ext.with_'])
-
-
 
 # MODELS. Not abstracted to make alembic migrations easier 
 
@@ -456,6 +455,10 @@ def build_annotation_from_mongo_dict(d):
         return False
 
 
+def trim_ig_allele_name(long_name): 
+    if long_name == None: return ''
+    if '*' in long_name: long_name = [l for l in long_name.split('*') if 'IG' in l or 'TR' in l][0]
+    return long_name
 
 def trim_ig_locus_name(long_name): 
     # print 'trimming long name: {}'.format(long_name)
@@ -510,13 +513,13 @@ def build_annotations_from_mixcr_file(file_path, dataset_id=None, analysis_id=No
             if "All D hits" == k: ann.d_hits  = parse_alignments_from_mixcr_hits(fields[i])
             if "All J hits" == k: ann.j_hits  = parse_alignments_from_mixcr_hits(fields[i])
             if "All C hits" == k: ann.c_hits  = parse_alignments_from_mixcr_hits(fields[i])
-            if len(ann.v_hits): ann.v_top_hit = sorted(ann.v_hits.items(), key=lambda x: x[1], reverse=True)[0][0]
+            if len(ann.v_hits): ann.v_top_hit = trim_ig_allele_name(sorted(ann.v_hits.items(), key=lambda x: x[1], reverse=True)[0][0])
             if len(ann.v_hits): ann.v_top_hit_locus = trim_ig_locus_name(ann.v_top_hit)
-            if len(ann.d_hits): ann.d_top_hit = sorted(ann.d_hits.items(), key=lambda x: x[1], reverse=True)[0][0]
+            if len(ann.d_hits): ann.d_top_hit = trim_ig_allele_name(sorted(ann.d_hits.items(), key=lambda x: x[1], reverse=True)[0][0])
             if len(ann.d_hits): ann.d_top_hit_locus = trim_ig_locus_name(ann.d_top_hit)
-            if len(ann.j_hits): ann.j_top_hit = sorted(ann.j_hits.items(), key=lambda x: x[1], reverse=True)[0][0]
+            if len(ann.j_hits): ann.j_top_hit = trim_ig_allele_name(sorted(ann.j_hits.items(), key=lambda x: x[1], reverse=True)[0][0])
             if len(ann.j_hits): ann.j_top_hit_locus = trim_ig_locus_name(ann.j_top_hit)
-            if len(ann.c_hits): ann.c_top_hit = sorted(ann.c_hits.items(), key=lambda x: x[1], reverse=True)[0][0]
+            if len(ann.c_hits): ann.c_top_hit = trim_ig_allele_name(sorted(ann.c_hits.items(), key=lambda x: x[1], reverse=True)[0][0])
             if len(ann.c_hits): ann.c_top_hit_locus = trim_ig_locus_name(ann.c_top_hit)
             # if "All V alignments" == k: ann.   = fields[i]
             # if "All D alignments" == k: ann.   = fields[i]
@@ -774,7 +777,7 @@ def create_user():
         os.makedirs(new_user.scratch_path)
         print 'created new directory at {}'.format(new_user.dropbox_path)
     # COPY SOME EXAMPLE FILES TO PLAY WITH
-    share_root = '/Users/red/Desktop/GeorgiouProjects/BIGGIG/data/dropbox_root/shared'
+    share_root = app.config['SHARE_ROOT'] 
     files = os.listdir(share_root)
     print 'copying these files to new users dropbox: {}'.format(','.join(files))
     for f in files: 
@@ -1436,14 +1439,14 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     if set(responses) == [0]:
         analysis.status = 'SUCCESS'
         analysis.available = True
-    analysis.status = 'SUCCESS'
+    if not analysis.status == 'FAILED': analysis.status = 'SUCCESS'
     analysis.active_command = ''
     analysis.finished = 'now'
     db.session.commit()
     # KICK OFF ASYNC DB INSERTS FROM OUTPUT FILES
     parseable_mixcr_alignments_file_path = alignment_output_file.path
     db.session.commit()
-    result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
+    if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
     return True 
 
 

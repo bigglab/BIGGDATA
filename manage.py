@@ -10,9 +10,7 @@ from flask_sqlalchemy import SQLAlchemy
 from app import app, db
 # from app import pgdb as db
 # db = SQLAlchemy(app)
-
-import app_config
-app.config.from_object(app_config)
+app.config.from_pyfile('config.py')
 
 migrate = Migrate(app, db)
 manager = Manager(app)

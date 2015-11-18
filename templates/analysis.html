@@ -48,7 +48,7 @@
 								<th>File Name</th>
 								<th>Locus</th>
 								<th>File Type</th>
-								<th>Ready?</th>
+								<th>Available For Download?</th>
 							</tr>
 						</thead>
 						{% for file in analysis.files %}
@@ -56,7 +56,16 @@
 							<th>{{file.name}}</th>
 							<th>{{file.locus}}</th>
 							<th>{{file.file_type}}</th>
-							<th>{% if file.available %}<a href="{{url_for('.send_file_from_id', id=file.id)}}">YES</a>{% else %}NOT YET{% endif %}</th>
+							{% if file.available %}
+								<th><a href="{{url_for('.send_file_from_id', id=file.id)}}">YES - Click Here To Start Download</a></th>
+							{% else %}
+								{% if analysis.status == 'FAILED' %}
+									<th>-</th>
+								{% else %}
+									<th>Waiting</th>
+								{% endif %}
+							{% endif %}
+								</th>
 						</tr>
 						{% endfor %}	
 					</table>
