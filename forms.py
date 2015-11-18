@@ -4,6 +4,7 @@ from flask_wtf import Form
 import wtforms
 from wtforms.fields import * 
 from wtforms.widgets import * 
+from wtforms_components import SelectMultipleField 
 validators = wtforms.validators 
 from wtforms.validators import DataRequired
 
@@ -32,6 +33,12 @@ class FileUploadForm(Form):
     locus  = TextField(u'IG Loci')
     paired_partner  = IntegerField()
     dataset_id = IntegerField()
+
+
+class AssociateFilesToDatasetForm(Form):
+    file_ids  = SelectField(u'Files', coerce=int)
+    dataset_id = IntegerField()
+    submit = SubmitField()
 
 
 

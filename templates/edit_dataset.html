@@ -1,0 +1,82 @@
+{% extends '_base.html' %}
+
+{% block content %}
+<div class="container">
+<h1>Editing This Dataset: </h1>
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Name</th>
+				<th>Description</th>
+				<th>IG Type</th>
+				<th>Paired?</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for dataset, files in datadict.iteritems() %}
+				<tr>
+					<th>{{dataset.name}}</th>
+					<th>{{dataset.description}}</th>
+					<th>{{dataset.ig_type}}</th>
+					{% if dataset.paired %}
+						<th>YES</th>
+					{% else %}
+						<th></th>
+					{% endif %}
+					<th>
+					<table class='table table-striped'>
+						<thead>
+							<tr>
+								<th>File Name</th>
+								<th>File Type</th>
+								<th>Available</th>
+							</tr>
+						</thead>
+						{% for file in files %}
+						<tr>
+							<th>{{file.name}}</th>
+							<th>{{file.file_type}}</th>
+							{% if file.available %}
+								<th>YES</th>
+							{% else %}
+								<th>NO</th>
+							{% endif %}
+						</tr>
+						{% endfor %}	
+					</table>
+					</th>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+
+
+<br>
+
+<div class='container'>
+	<h4>Add An Unassociate Files To Your Dataset:</h4>
+	<form role='form' method='POST' action='/datasets/edit/{{id}}'>
+		<table class="table table-striped">
+			<tr>
+				<th>{{form.file_ids}}</th>
+				<th><input type='submit' name='submit' value='ASSOCIATE'></th>
+			</tr>
+		</table>
+	</form>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+{%endblock content %}
+
+

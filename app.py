@@ -918,6 +918,29 @@ def create_dataset():
         return render_template("create_dataset.html", datadict=datadict, form=form)
 
 
+@frontend.route('/datasets/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_dataset(id):
+    print request.__dict__
+    print 'finding dataset with {}'.format(id)
+    dataset = db.session.query(Dataset).filter(Dataset.id==id).first()
+    form = AssociateFilesToDatasetForm()
+    form.dataset_id.data = dataset.id 
+    file_choices = [f for f in db.session.query(File).filter(File.user_id==6).all() if f.dataset_id == None]
+    # file_choices = db.session.query(File).filter(File.user_id==6).all()
+    print 'choosing from these files: '.format(file_choices)
+    form.file_ids.choices = [(f.id, f.name) for f in file_choices]   
+    datadict = {dataset : dataset.files.all()}
+    if request.method == 'POST' and dataset:
+        print 'linking file id {} to dataset {}'.format(form.file_ids.data, dataset.__dict__)
+        f = db.session.query(File).filter(File.id==form.file_ids.data).first()
+        f.dataset_id = dataset.id 
+        db.session.commit()
+        flash('dataset saved')
+        return render_template("edit_dataset.html", datadict=datadict, form=form, id=id)
+    else: 
+        return render_template("edit_dataset.html", datadict=datadict, form=form, id=id)
+
 
 
 
