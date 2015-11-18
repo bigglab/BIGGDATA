@@ -19,18 +19,27 @@ class LoginForm(Form):
 
 
 class RegistrationForm(Form):
-	first_name = StringField(u'First Name', validators=[validators.input_required()])
-	last_name  = StringField(u'Last Name', validators=[validators.input_required()])
-	email = StringField('Email', validators=[validators.input_required()])
-	password = PasswordField('password', validators=[validators.input_required()])
+    username = StringField(u'Username', validators=[validators.input_required()])
+    first_name = StringField(u'First Name', validators=[validators.input_required()])
+    last_name  = StringField(u'Last Name', validators=[validators.input_required()])
+    email = StringField('Email', validators=[validators.input_required()])
+    password = PasswordField('password', validators=[validators.input_required()])
 
+
+class CreateMixcrAnalysisForm(Form): 
+	dataset_id = IntegerField()
+	name = TextField(u'Name', )
+	description = TextField(u'Description')
+	pair_overlaps = BooleanField(u'Pair Overlaps')
+	pair_interchain = BooleanField(u'Pair Interchain')
+	insert_into_db = BooleanField(u'Insert Into DB')
 
 
 
 class FileUploadForm(Form):
     file     = FileField(u'File Path', validators=[validators.input_required()])
     description  = TextAreaField(u'File Description')
-    locus  = TextField(u'IG Loci')
+    locus  = TextField(u'VDJ or VJ', validators=[validators.input_required()])
     paired_partner  = IntegerField()
     dataset_id = IntegerField()
 

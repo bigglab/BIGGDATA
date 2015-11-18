@@ -1,0 +1,171 @@
+{% extends '_base.html' %}
+
+{% block content %}
+
+<div class="container">
+	<h3>Analysis {{analysis.id}} Overview</h3>
+</div>
+<br>
+
+
+<div class='container'>
+{% if status != [] %}
+{% for ln in status %}
+    <h4>{{ln}}</h4>
+{% endfor %}
+{% endif %}
+<br>
+{% if async_task_id %}
+<p>Async Task ID: {{async_task_id}}</p>
+{% endif %}
+</div>
+
+
+<br>
+<div class="container">
+	<table class="table table-striped">
+		<tbody>
+				<tr>
+				<tr>
+					<table class='table table-striped'>
+					<tbody>
+						<tr>
+							<th>{{analysis.program}}</th>
+							<th>State: {{analysis.status}}</th>
+							<th>{% if analysis.active_command %}Running: {{' '.join(analysis.active_command.split(' ')[0:2])}} {% endif %}</th>
+							<th>{{analysis.name}}</th>
+							<th>{{analysis.description}}</th>
+							<th>{{analysis.started}}</th>
+						</tr>
+						</tbody>
+					</table>
+				</tr>
+				<tr>
+					<table class='table table-striped'>
+						<thead>
+						<tr>
+							<tr>
+								<th>File Name</th>
+								<th>Locus</th>
+								<th>File Type</th>
+								<th>Ready?</th>
+							</tr>
+						</thead>
+						{% for file in analysis.files %}
+						<tr>
+							<th>{{file.name}}</th>
+							<th>{{file.locus}}</th>
+							<th>{{file.file_type}}</th>
+							<th>{% if file.available %}<a href="{{url_for('.send_file_from_id', id=file.id)}}">YES</a>{% else %}NOT YET{% endif %}</th>
+						</tr>
+						{% endfor %}	
+					</table>
+					</tr>
+				</tr>
+		</tbody>
+	</table>
+</div>
+
+<br>
+<br>
+
+<div class="container">
+	<table class="table table-striped">
+		<tbody>
+			<tr>
+				<th>Total Annotations Produced:</th>
+				<th>{{analysis.total_count}}</th>
+			</tr>
+			<tr>
+				<th>DB Import Status:</th>
+				<th>{{analysis.db_status}}</th>
+			</tr>
+		</tbody>
+	</table>
+</div>
+
+<br>
+<br>
+
+{% if analysis.available %}
+
+<div class="container">
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Top 20 CDR3 AA Sequences</th>
+				<th># Sequences</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for cdr3_aa, count in cdr3_aa_counts[0:20] %}
+				<tr>
+					<th>{{cdr3_aa}}</th>
+					<th>{{count}}</th>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+
+<br>
+<br>
+
+
+<div class="container">
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Top 20 V Gene Usage</th>
+				<th># Sequences</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for v_hit, count in v_hit_counts[0:20] %}
+				<tr>
+					<th>{{v_hit}}</th>
+					<th>{{count}}</th>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+
+
+<br><br>
+
+
+<div class="container">
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>V Gene Loci Usage</th>
+				<th># Sequences</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for v_hit, count in v_hit_loci_counts %}
+				<tr>
+					<th>{{v_hit}}</th>
+					<th>{{count}}</th>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+
+
+{% endif %}
+<br>
+<br>
+
+<div class='container'>
+	<a href={{url_for('.analyses')}}><h4>Back To Analyses Dashboard</h4></a>
+</div>
+
+<br><br><br><br><br>
+
+
+{%endblock content %}
+
+

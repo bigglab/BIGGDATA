@@ -2,14 +2,17 @@
 
 {% block content %}
 <div class="container">
-<h1>Editing This Dataset: </h1>
+<h2>Showing information about dataset {{dataset.id}}: </h2>
+</div>
+<br>
+<div class="container">
 	<table class="table table-striped">
 		<thead>
 			<tr>
 				<th>Name</th>
 				<th>Description</th>
 				<th>IG Type</th>
-				<th>Paired?</th>
+				<th>Heavy/Light Paired?</th>
 				<th></th>
 			</tr>
 		</thead>
@@ -38,7 +41,7 @@
 							<th>{{file.name}}</th>
 							<th>{{file.file_type}}</th>
 							{% if file.available %}
-								<th>YES</th>
+								<th><a href="{{url_for('.send_file_from_id', id=file.id)}}">YES</a></th>
 							{% else %}
 								<th>NO</th>
 							{% endif %}
@@ -56,8 +59,8 @@
 <br>
 
 <div class='container'>
-	<h4>Add An Unassociate Files To Your Dataset:</h4>
-	<form role='form' method='POST' action='/datasets/edit/{{id}}'>
+	<h4>Add An Unassociate Files To This Dataset:</h4>
+	<form role='form' method='POST' action='/datasets/{{id}}'>
 		<table class="table table-striped">
 			<tr>
 				<th>{{form.file_ids}}</th>
@@ -65,6 +68,14 @@
 			</tr>
 		</table>
 	</form>
+</div>
+
+
+
+<br>
+
+<div class='container'>
+	<a href={{url_for('.datasets')}}><h4>Back To All Datasets</h4></a>
 </div>
 
 

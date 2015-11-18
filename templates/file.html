@@ -1,8 +1,18 @@
 {% extends '_base.html' %}
 
 {% block content %}
+
 <div class="container">
-<h1>Files Associated With User "{{current_user.username}}": </h1>
+<h1>Checking out file: {{file.name}}</h1>
+</div>
+
+
+<div class="container">
+<a href="{{url_for('.send_file_from_id', id=file.id)}}"><h4>DOWNLOAD THIS FILE</h4></a>
+</div>
+
+
+<div class="container">
 	<table class="table table-striped">
 		<thead>
 			<tr>
@@ -18,7 +28,6 @@
 			</tr>
 		</thead>
 		<tbody>
-			{% for file in files %}
 				<tr>
 					<th>{{file.id}}</th>
 					<th>{{file.name}}</th>
@@ -28,40 +37,19 @@
 					<th>{{file.file_type}}</th>
 					<th>{{file.paired_partner}}</th>
 					{% if file.available %}
-						<th><a href="{{url_for('.send_file_from_id', id=file.id)}}">YES</a></th>
+						<th>YES</th>
 					{% else %}
 						<th>NO</th>
 					{% endif %}
-					<!-- <th>{{file.path}}</th> -->
 				</tr>
-			{% endfor %}
-		</tbody>
-	</table>
-</div>
-
-
-<div class="container">
-<br>
-{% if dropbox_files %}
-	<h2>Or click to add any of these from your dropbox:</h2>
-	<table class="table table-striped">
-		<thead>
-			<tr>
-				<th></th>
-			</tr>
-		</thead>
-		<tbody>
-			{% for file in dropbox_files %}
 				<tr>
-					<form role='form' method='POST' action='/files'>
-					<th><input type='submit' name='submit' value={{file}}></th>
-					</form>
+					<th>{{file.path}}</th>
 				</tr>
-			{% endfor %}
 		</tbody>
 	</table>
-{% endif %}
 </div>
+
+
 {%endblock content %}
 
 

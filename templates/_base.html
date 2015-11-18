@@ -42,6 +42,10 @@
     </nav>
     {% endblock outer_content %}
 
+    
+
+    {% block messages %}
+    <div class="container">
     {% with messages = get_flashed_messages() %}
         {% if messages %}
             <ul class=flashes>
@@ -51,6 +55,8 @@
             </ul>
         {% endif %}
     {% endwith %}
+    </div>
+    {% endblock messages %}
 
 
     {% block header_content %}

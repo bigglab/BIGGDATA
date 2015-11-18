@@ -1,0 +1,87 @@
+{% extends '_base.html' %}
+
+{% block content %}
+
+<div class="container">
+	<h3>Analyses Dashboard</h3>
+</div>
+<br>
+<br>
+
+
+<div class='container'>
+{% if status != [] %}
+{% for ln in status %}
+    <h4>{{ln}}</h4>
+{% endfor %}
+{% endif %}
+<br>
+{% if async_task_id %}
+<p>Async Task ID: {{async_task_id}}</p>
+{% endif %}
+</div>
+
+
+<br>
+<br>
+
+
+{% for analysis, files in analysis_file_dict.items() %}
+<br>
+<div class="container">
+<a href="{{url_for('.analysis', id=analysis.id)}}"><h4>{{analysis.__repr__()}}</h4></a>
+	<table class="table table-striped">
+		<tbody>
+				<tr>
+				<tr>
+					<table class='table table-striped'>
+					<tbody>
+						<tr>
+							<th>{{analysis.program}}</th>
+							<th>State: {{analysis.status}}</th>
+							<th>{% if analysis.active_command %}Running: {{' '.join(analysis.active_command.split(' ')[0:2])}} {% endif %}</th>
+							<th>{{analysis.name}}</th>
+							<th>{{analysis.description}}</th>
+							<th>{{analysis.started}}</th>
+						</tr>
+						</tbody>
+					</table>
+				</tr>
+				<tr>
+					<table class='table table-striped'>
+						<thead>
+						<tr>
+							<tr>
+								<th>File Name</th>
+								<th>Locus</th>
+								<th>File Type</th>
+								<th>Ready?</th>
+							</tr>
+						</thead>
+						{% for file in files %}
+						<tr>
+							<th>{{file.name}}</th>
+							<th>{{file.locus}}</th>
+							<th>{{file.file_type}}</th>
+							<th>{% if file.available %}YES{% else %}NOT YET{% endif %}</th>
+						</tr>
+						{% endfor %}	
+					</table>
+					</tr>
+				</tr>
+		</tbody>
+	</table>
+</div>
+<br>
+
+{% endfor %}
+
+
+
+
+
+
+
+{%endblock content %}
+
+

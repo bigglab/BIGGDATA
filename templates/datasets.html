@@ -1,56 +1,86 @@
 {% extends '_base.html' %}
 
 {% block content %}
+
+
+
+
+
+	<div class="container">
+		<div class="container">
+		    <form method="POST" action="/datasets">
+		    <table class='table table-striped'> 
+		    <thead>
+			    <h4>Create A New Dataset:</h4>
+		    </thead>
+			    <tr>
+		        <th>{{ form.csrf_token }}</th>
+		        <th>{{ form.name.label }}: {{ form.name(size=20) }}</th>
+		        <th>{{ form.description.label }}: {{ form.description(size=40) }}</th>
+		        <th>Ig Type: {{ form.ig_type(size=10) }}</th>
+		        <th>VDJ+VJ Paired? : {{ form.paired }}</th>
+		        <th><input type="submit" value="Submit"></th>
+	        </tr>
+        </table>
+		    </form>
+		</div>
+	</div>
+
+
+{% for dataset, files in datadict.iteritems() %}
+
+<br>
 <div class="container">
-<h1>Your Datasets: </h1>
+<a href="{{url_for('.dataset', id=dataset.id)}}"><h3>Dataset {{dataset.id}} </h3></a>
 	<table class="table table-striped">
 		<thead>
 			<tr>
-				<th>Name</th>
+				<th>Dataset Name</th>
 				<th>Description</th>
 				<th>IG Type</th>
-				<th>Paired?</th>
-				<th></th>
+				<th>VDJ+VJ Paired</th>
+				<th>Run Analysis</th>
 			</tr>
 		</thead>
 		<tbody>
-			{% for dataset, files in datadict.iteritems() %}
-				<tr>
-					<th>{{dataset.name}}</th>
-					<th>{{dataset.description}}</th>
-					<th>{{dataset.ig_type}}</th>
-					{% if dataset.paired %}
-						<th>YES</th>
-					{% else %}
-						<th></th>
-					{% endif %}
-					<th>
-					<table class='table table-striped'>
-						<thead>
-							<tr>
-								<th>File Name</th>
-								<th>File Type</th>
-								<th>Available</th>
-							</tr>
-						</thead>
-						{% for file in files %}
-						<tr>
-							<th>{{file.name}}</th>
-							<th>{{file.file_type}}</th>
-							{% if file.available %}
-								<th>YES</th>
-							{% else %}
-								<th>NO</th>
-							{% endif %}
-						</tr>
-						{% endfor %}	
-					</table>
-					</th>
+			<tr>
+				<th><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></th>
+				<th>{{dataset.description}}</th>
+				<th>{{dataset.ig_type}}</th>
+				{% if dataset.paired %}
+					<th>YES</th>
+				{% else %}
+					<th></th>
+				{% endif %}
+				<th><a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">MIXCR</a></th>
 				</tr>
-			{% endfor %}
+				<tr>
+				<table class='table table-striped'>
+					<thead>
+						<tr>
+							<th> </th>
+							<th>Files In Dataset {{dataset.id}}:</th>
+							<th>File Name</th>
+							<th>File Type</th>
+						</tr>
+					</thead>
+					{% for file in files %}
+					<tr>
+						<th></th>
+						<th></th>
+						<th>{{file.name}}</th>
+						<th>{{file.file_type}}</th>
+					</tr>
+					{% endfor %}	
+				</table>
+				</th>
+			</tr>
 		</tbody>
 	</table>
-	</div>
+</div>
+{% endfor %}
+
+
 {%endblock content %}
 
 

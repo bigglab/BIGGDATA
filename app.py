@@ -5,6 +5,7 @@ import sys
 import os
 import time
 import random
+from shutil import copyfile
 import operator
 import urllib
 import itertools
@@ -15,7 +16,7 @@ import collections
 #Flask Imports
 from werkzeug import secure_filename
 from flask import Blueprint, render_template, flash, redirect, url_for
-from flask import Flask, Blueprint, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages
+from flask import Flask, Blueprint, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages, send_from_directory
 from flask.ext.bcrypt import Bcrypt
 from flask.ext.login import LoginManager, UserMixin, current_user, login_user, logout_user, login_required
 from flask.ext.mail import Mail, Message
@@ -137,7 +138,8 @@ class File(db.Model):
         available = db.Column(db.Boolean)
         created = db.Column(db.DateTime, default=db.func.now())
         paired_partner = db.Column(db.Integer, db.ForeignKey('file.id'))
-        parent = db.Column(db.Integer, db.ForeignKey('file.id'))
+        parent_id = db.Column(db.Integer, db.ForeignKey('file.id'))
+        analysis_id = db.Column(db.Integer, db.ForeignKey('analysis.id'))
 
         sequences = db.relationship('Sequence', backref='file', lazy='dynamic')
 
@@ -295,8 +297,8 @@ class Annotation(db.Model):
         cdr1_nt = Column(String(100))
         cdr2_aa = Column(String(100))
         cdr2_nt = Column(String(100))
-        cdr3_aa = Column(String(100))
-        cdr3_nt = Column(String(200))
+        cdr3_aa = Column(String(200))
+        cdr3_nt = Column(String(400))
         fr1_nt = Column(String(200))
         fr1_aa = Column(String(100))
         fr2_nt = Column(String(100))
@@ -338,7 +340,11 @@ class Annotation(db.Model):
         def __repr__(self): 
             return "< Annotation {} on Sequence {} : {} >".format(self.id, self.sequence_id, self.analysis_name)
 
-
+        def __init__(self):
+            self.v_hits = OrderedDict()
+            self.d_hits = OrderedDict()
+            self.j_hits = OrderedDict()
+            self.c_hits = OrderedDict()
 
 
 def build_annotation_from_mongo_dict(d): 
@@ -397,11 +403,7 @@ def build_annotation_from_mongo_dict(d):
                         ann.v_hits[v[i]] 
                 if len(ann.v_hits) > 0: 
                     ann.v_top_hit = ann.v_top_hit_locus = sorted(ann.v_hits, key=operator.itemgetter(1))[-1]
-                    if '-' in ann.v_top_hit_locus: ann.v_top_hit_locus = [l for l in ann.v_top_hit_locus.split('-') if 'IG' in l][0]
-                    if '*' in ann.v_top_hit_locus: ann.v_top_hit_locus = [l for l in ann.v_top_hit_locus.split('*') if 'IG' in l][0]
-                    if '.' in ann.v_top_hit_locus: ann.v_top_hit_locus = [l for l in ann.v_top_hit_locus.split('.') if 'IG' in l][0]
-                    if 'S' in ann.v_top_hit_locus: ann.v_top_hit_locus = [l for l in ann.v_top_hit_locus.split('S') if 'IG' in l][0]
-                    if ' ' in ann.v_top_hit_locus: ann.v_top_hit_locus = [l for l in ann.v_top_hit_locus.split(' ') if 'IG' in l][0]
+                    ann.v_top_hit_locus= trim_ig_locus_name(ann.v_top_hit_locus)
             if "data.dregion.dgenes" == k: 
                 if "data.dregion.dgene_scores" in d: 
                     for i in range(0,len(v)):
@@ -414,10 +416,7 @@ def build_annotation_from_mongo_dict(d):
                         ann.d_top_hit = ann.d_top_hit_locus = ann.d_hits.keys()[0]
                     else: 
                         ann.d_top_hit = ann.d_top_hit_locus = sorted(ann.d_hits, key=operator.itemgetter(1))[-1]
-                    if '-' in ann.d_top_hit_locus: ann.d_top_hit_locus = [l for l in ann.d_top_hit_locus.split('-') if 'IG' in l][0]
-                    if '*' in ann.d_top_hit_locus: ann.d_top_hit_locus = [l for l in ann.d_top_hit_locus.split('*') if 'IG' in l][0]
-                    if '.' in ann.d_top_hit_locus: ann.d_top_hit_locus = [l for l in ann.d_top_hit_locus.split('.') if 'IG' in l][0]
-                    if ' ' in ann.d_top_hit_locus: ann.d_top_hit_locus = [l for l in ann.d_top_hit_locus.split(' ') if 'IG' in l][0]
+                        ann.d_top_hit_locus= trim_ig_locus_name(ann.d_top_hit_locus)
             if "data.jregion.jgenes" == k: 
                 if "data.jregion.jgene_scores" in d: 
                     if len(v) == len(d["data.jregion.jgene_scores"]):
@@ -432,11 +431,7 @@ def build_annotation_from_mongo_dict(d):
                             ann.j_hits[v[i]] = True 
                 if len(ann.j_hits) > 0: 
                     ann.j_top_hit = ann.j_top_hit_locus = sorted(ann.j_hits, key=operator.itemgetter(1))[-1]
-                    if '-' in ann.j_top_hit_locus: ann.j_top_hit_locus = [l for l in ann.j_top_hit_locus.split('-') if 'IG' in l][0]
-                    if '*' in ann.j_top_hit_locus: ann.j_top_hit_locus = [l for l in ann.j_top_hit_locus.split('*') if 'IG' in l][0]
-                    if '.' in ann.j_top_hit_locus: ann.j_top_hit_locus = [l for l in ann.j_top_hit_locus.split('.') if 'IG' in l][0]
-                    if 'P' in ann.j_top_hit_locus: ann.j_top_hit_locus = [l for l in ann.j_top_hit_locus.split('P') if 'IG' in l][0]
-                    if ' ' in ann.j_top_hit_locus: ann.j_top_hit_locus = [l for l in ann.j_top_hit_locus.split(' ') if 'IG' in l][0]
+                    ann.j_top_hit_locus= trim_ig_locus_name(ann.j_top_hit_locus)
             # CONSTANT REGION FROM IMGT? 
             # if "data.cregion.cgenes" == k: 
             #     if "data.cregion.cgene_scores" in d: 
@@ -462,6 +457,113 @@ def build_annotation_from_mongo_dict(d):
 
 
 
+def trim_ig_locus_name(long_name): 
+    # print 'trimming long name: {}'.format(long_name)
+    if long_name == None: return ''
+    if long_name == '*': return ''
+    if long_name == '.': return ''
+    if long_name == 'P': return ''
+    if long_name == '-': return ''
+    if long_name == ' ': return ''
+    if '-' in long_name: long_name = [l for l in long_name.split('-') if 'IG' in l or 'TR' in l][0]
+    if '*' in long_name: long_name = [l for l in long_name.split('*') if 'IG' in l or 'TR' in l][0]
+    if '.' in long_name: long_name = [l for l in long_name.split('.') if 'IG' in l or 'TR' in l][0]
+    if 'P' in long_name: long_name = [l for l in long_name.split('P') if 'IG' in l or 'TR' in l][0]
+    if ' ' in long_name: long_name = [l for l in long_name.split(' ') if 'IG' in l or 'TR' in l][0]
+    return long_name
+
+
+
+def parse_alignments_from_mixcr_hits(hits): 
+    score_dict = OrderedDict()
+    hs = hits.split(',')
+    if len(hs) == 0: 
+        return score_dict
+    for h in hs: 
+        if len(h.split('(')) != 2: 
+            # print '!!!!!!! Empty h?:  {}'.format(h)
+            continue
+        gene,score = h.split('(')
+        # short_gene = trim_ig_locus_name(gene)
+        score = int(score.replace(')',''))
+        score_dict[gene] = score 
+    return score_dict 
+
+
+
+def build_annotations_from_mixcr_file(file_path, dataset_id=None, analysis_id=None): 
+    f = open(file_path)
+    headers = f.readline().split('\t')
+    annotations = []
+    for line in f.readlines():
+        fields = line.split('\t')
+        ann = Annotation() 
+        ann.analysis_name = 'MIXCR'
+        if dataset_id: ann.dataset_id = dataset_id 
+        if analysis_id: ann.analysis_id = analysis_id
+        for i,k in enumerate(headers): 
+
+            # COULD USE THIS TO BUILD SEQUENCE DOCUMENTS
+            # if "Read(s) sequence" == k: ann.   = fields[i]
+            # if "Read(s) sequence qualities" == k: ann.   = fields[i]
+            if "All V hits" == k: ann.v_hits  = parse_alignments_from_mixcr_hits(fields[i])
+            if "All D hits" == k: ann.d_hits  = parse_alignments_from_mixcr_hits(fields[i])
+            if "All J hits" == k: ann.j_hits  = parse_alignments_from_mixcr_hits(fields[i])
+            if "All C hits" == k: ann.c_hits  = parse_alignments_from_mixcr_hits(fields[i])
+            if len(ann.v_hits): ann.v_top_hit = sorted(ann.v_hits.items(), key=lambda x: x[1], reverse=True)[0][0]
+            if len(ann.v_hits): ann.v_top_hit_locus = trim_ig_locus_name(ann.v_top_hit)
+            if len(ann.d_hits): ann.d_top_hit = sorted(ann.d_hits.items(), key=lambda x: x[1], reverse=True)[0][0]
+            if len(ann.d_hits): ann.d_top_hit_locus = trim_ig_locus_name(ann.d_top_hit)
+            if len(ann.j_hits): ann.j_top_hit = sorted(ann.j_hits.items(), key=lambda x: x[1], reverse=True)[0][0]
+            if len(ann.j_hits): ann.j_top_hit_locus = trim_ig_locus_name(ann.j_top_hit)
+            if len(ann.c_hits): ann.c_top_hit = sorted(ann.c_hits.items(), key=lambda x: x[1], reverse=True)[0][0]
+            if len(ann.c_hits): ann.c_top_hit_locus = trim_ig_locus_name(ann.c_top_hit)
+            # if "All V alignments" == k: ann.   = fields[i]
+            # if "All D alignments" == k: ann.   = fields[i]
+            # if "All J alignments" == k: ann.   = fields[i]
+            # if "All C alignments" == k: ann.   = fields[i]
+            if "N. Seq. FR1" == k: ann.fr1_nt   = fields[i]
+            # if "Min. qual. FR1" == k: ann.   = fields[i]
+            if "N. Seq. CDR1" == k: ann.cdr1_nt   = fields[i]
+            # if "Min. qual. CDR1" == k: ann.   = fields[i]
+            if "N. Seq. FR2" == k: ann.fr2_nt   = fields[i]
+            # if "Min. qual. FR2" == k: ann.   = fields[i]
+            if "N. Seq. CDR2" == k: ann.cdr2_nt   = fields[i]
+            # if "Min. qual. CDR2" == k: ann.   = fields[i]
+            if "N. Seq. FR3" == k: ann.fr3_nt   = fields[i]
+            # if "Min. qual. FR3" == k: ann.   = fields[i]
+            if "N. Seq. CDR3" == k: ann.cdr3_nt   = fields[i]
+            # if "Min. qual. CDR3" == k: ann.   = fields[i]
+            if "N. Seq. FR4" == k: ann.fr4_nt   = fields[i]
+            # if "Min. qual. FR4" == k: ann.   = fields[i]
+            if "AA. Seq. FR1" == k: ann.fr1_aa   = fields[i]
+            if "AA. Seq. CDR1" == k: ann.cdr1_aa   = fields[i]
+            if "AA. Seq. FR2" == k: ann.fr2_aa   = fields[i]
+            if "AA. Seq. CDR2" == k: ann.cdr2_aa   = fields[i]
+            if "AA. Seq. FR3" == k: ann.fr3_aa   = fields[i]
+            if "AA. Seq. CDR3" == k: ann.cdr3_aa   = fields[i]
+            if "AA. Seq. FR4" == k: ann.fr4_aa   = fields[i]
+            # if "Ref. points" == k: ann.   = fields[i]
+
+
+            # if "data.productive" == k: 
+            #     if 'PRODUCTIVE' in v: 
+            #         ann.productive = True
+            #     else: 
+            #         ann.productive = False 
+
+        annotations.append(ann)
+    return annotations
+
+
+
+
+
+
+
+
+
+
 class Analysis(db.Model):  
 
         id = Column(Integer(), primary_key=True)
@@ -482,15 +584,19 @@ class Analysis(db.Model):
         total_count = Column(Integer)
         active_command = Column(String(512))
         status = Column(String(256))
+        db_status = Column(String(256))
         notes = Column(String(1000))
         available = Column(Boolean)
         inserted_into_db = Column(Boolean)
 
         annotations = db.relationship('Annotation', backref='analysis', lazy='dynamic')
+        files = db.relationship('File', backref='analysis', lazy='dynamic')
 
         def __repr__(self): 
             return "< Analysis {}: {} : {} : {}>".format(self.id, self.program, self.name, self.started)
 
+        def __init__(self):
+            self.available = False
 
 
 
@@ -559,15 +665,14 @@ nav.register_element('frontend_top', Navbar(
     Subgroup(
         'Files', 
         View('My Files', '.files'), 
-        View('My Datasets', '.datasets'),
-        View('New Dataset', '.create_dataset'),
         View('Upload File', '.file_upload'), 
         Link('Share Files', 'under_construction'),
+        View('My Datasets', '.datasets'),
         ),
     Subgroup(
         'Run Analysis',
-        Link('Dashboard', 'under_construction'), 
-        Link('Start New', 'under_construction'),
+        View('Dashboard', '.analyses'), 
+        View('Launch Analysis', '.datasets'),
         Link('Other Tasks', 'under_construction'), 
         ),
     Subgroup(
@@ -577,7 +682,7 @@ nav.register_element('frontend_top', Navbar(
         Link('Download', 'under_construction'),
         Link('Mass Spec', 'under_construction')
         ),
-    Link('Dashboard', 'under_construction'),
+    View('Dashboard', '.analyses'),
     Subgroup(
         'Documentation', 
         Link('Confluence', 'under_construction'), 
@@ -606,7 +711,8 @@ nav.register_element('frontend_top', Navbar(
 @frontend.route('/', methods=['GET', 'POST'])
 def index():
     results = db.session.query(User).all()
-    return render_template("users.html", results=results)
+    return render_template("index.html", results=results, user=current_user)
+
 
 
 @frontend.route("/login", methods=["GET", "POST"])
@@ -650,7 +756,10 @@ def create_user():
     new_user.first_name = form.first_name.data
     new_user.last_name = form.last_name.data 
     new_user.email = form.email.data
+    new_user.username = form.username.data
     new_user.password_hash = bcrypt.generate_password_hash(form.password.data)
+    # Just authorize automatically, for now
+    new_user.authenticated = True 
     new_user.dropbox_path = '{}/{}{}'.format(app.config['DROPBOX_ROOT'], form.first_name.data, form.last_name.data)
     new_user.scratch_path = '{}/{}{}'.format(app.config['SCRATCH_ROOT'], form.first_name.data, form.last_name.data)
     db.session.add(new_user)
@@ -664,8 +773,13 @@ def create_user():
     if not os.path.isdir(new_user.scratch_path):
         os.makedirs(new_user.scratch_path)
         print 'created new directory at {}'.format(new_user.dropbox_path)
-    # return redirect(url_for("index"))
-    return render_template("index.html")
+    # COPY SOME EXAMPLE FILES TO PLAY WITH
+    share_root = '/Users/red/Desktop/GeorgiouProjects/BIGGIG/data/dropbox_root/shared'
+    files = os.listdir(share_root)
+    print 'copying these files to new users dropbox: {}'.format(','.join(files))
+    for f in files: 
+        copyfile('{}/{}'.format(share_root, f), '{}/{}'.format(new_user.dropbox_path, f))
+    return redirect(url_for(".index"))
 
 
 @frontend.route("/logout", methods=["GET"])
@@ -873,6 +987,29 @@ def files():
         return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form)
 
 
+
+@frontend.route('/files/<int:id>', methods=['GET'])
+@login_required
+def file(id):
+    f = db.session.query(File).filter(File.id==id).first()
+    return render_template("file.html", file=f)
+
+
+
+@frontend.route('/files/download/<int:id>')
+@login_required
+def send_file_from_id(id):
+    print request.__dict__
+    files = sorted(current_user.files.all(), key=lambda x: x.id, reverse=True)
+    f = db.session.query(File).filter(File.id==id).first()  
+    f.dir = '/{}'.format('/'.join(f.path.split('/')[:-1]))
+    file_path = f.path
+    print 'trying to send {} from {}'.format(f.name, f.dir)
+    return send_from_directory(f.dir, f.name, mimetype='text/plain', as_attachment=True)
+    # return redirect(url_for('.files'))
+
+
+
 def get_user_dataset_dict(user): 
     datadict = OrderedDict()
     for dataset in sorted(user.datasets, key=lambda x: x.id, reverse=True):
@@ -887,21 +1024,6 @@ def datasets():
     print request.__dict__
     files = current_user.files.all()
     datasets = current_user.datasets.all()
-    form = Form()
-    datadict = get_user_dataset_dict(current_user)
-    if request.method == 'POST' and os.path.isfile(request.form['submit']):
-        do_nothing = ''
-    else: 
-        return render_template("datasets.html", datadict=datadict, form=form)
-
-
-
-@frontend.route('/datasets/create', methods=['GET', 'POST'])
-@login_required
-def create_dataset():
-    print request.__dict__
-    files = current_user.files.all()
-    datasets = current_user.datasets.all()
     datadict = get_user_dataset_dict(current_user)
     form = CreateDatasetForm()
     if request.method == 'POST':
@@ -910,23 +1032,25 @@ def create_dataset():
             d.name = form.name.data 
             d.description = form.description.data
             d.paired = form.paired.data 
+            d.ig_type = form.ig_type.data 
             d.user_id = current_user.id 
             db.session.add(d)
             db.session.commit()
         return redirect(url_for('.datasets')) # render_template("datasets.html", datadict=datadict, form=Form())
     else: 
-        return render_template("create_dataset.html", datadict=datadict, form=form)
+        return render_template("datasets.html", datadict=datadict, form=form)
 
 
-@frontend.route('/datasets/edit/<int:id>', methods=['GET', 'POST'])
+
+@frontend.route('/datasets/<int:id>', methods=['GET', 'POST'])
 @login_required
-def edit_dataset(id):
+def dataset(id):
     print request.__dict__
     print 'finding dataset with {}'.format(id)
     dataset = db.session.query(Dataset).filter(Dataset.id==id).first()
     form = AssociateFilesToDatasetForm()
     form.dataset_id.data = dataset.id 
-    file_choices = [f for f in db.session.query(File).filter(File.user_id==6).all() if f.dataset_id == None]
+    file_choices = [f for f in db.session.query(File).filter(File.user_id==current_user.id).all() if f.dataset_id == None]
     # file_choices = db.session.query(File).filter(File.user_id==6).all()
     print 'choosing from these files: '.format(file_choices)
     form.file_ids.choices = [(f.id, f.name) for f in file_choices]   
@@ -937,10 +1061,75 @@ def edit_dataset(id):
         f.dataset_id = dataset.id 
         db.session.commit()
         flash('dataset saved')
-        return render_template("edit_dataset.html", datadict=datadict, form=form, id=id)
+        return render_template("dataset.html", datadict=datadict, form=form, id=id, dataset=dataset)
     else: 
-        return render_template("edit_dataset.html", datadict=datadict, form=form, id=id)
+        return render_template("dataset.html", datadict=datadict, form=form, id=id, dataset=dataset)
 
+
+
+
+@frontend.route('/analysis', methods=['GET', 'POST'])
+@login_required
+def analyses(status=[]):
+    status = request.args.getlist('status')
+    analyses = current_user.analyses.all()
+    analysis_file_dict = OrderedDict()
+    for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
+        analysis_file_dict[analysis] = analysis.files.all() 
+    return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
+
+
+
+
+
+# @frontend.route('/analysis/<int:analysis_id>/export_to_msdb/<string(length=3):ig_type>')
+# @login_required
+# def export_analysis_to_msdb(analysis_id, ig_type=None):
+#     analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
+#     if ig_type: 
+#         aa_seqs = db.engine.execute("select  cdr3_aa, count(distinct aa) from annotation a WHERE a.analysis_id = {} GROUP BY cdr3_aa ORDER BY count(aa) DESC;".format(analysis.id)).fetchall()
+
+
+
+
+
+
+@frontend.route('/analysis/<int:id>', methods=['GET', 'POST'])
+@login_required
+def analysis(id):
+    analysis = db.session.query(Analysis).filter(Analysis.id==id).first()
+    cdr3_aa_counts = db.engine.execute("select  cdr3_aa, count(1) from annotation a WHERE a.analysis_id = {} GROUP BY cdr3_aa ORDER BY count(1) DESC;".format(analysis.id)).fetchall()
+    v_hit_counts = db.engine.execute("select  v_top_hit, count(1) from annotation a WHERE a.analysis_id = {} GROUP BY v_top_hit ORDER BY count(1) DESC;".format(analysis.id)).fetchall()
+    v_hit_loci_counts = db.engine.execute("select  v_top_hit_locus, count(1) from annotation a WHERE a.analysis_id = {} GROUP BY v_top_hit_locus ORDER BY count(1) DESC;".format(analysis.id)).fetchall()
+    return render_template("analysis.html", analysis=analysis, cdr3_aa_counts=cdr3_aa_counts, v_hit_counts=v_hit_counts, v_hit_loci_counts=v_hit_loci_counts)
+    
+
+
+
+
+
+
+@frontend.route('/analysis/mixcr/<int:dataset_id>', methods=['GET', 'POST'])
+@login_required
+def mixcr(dataset_id, status=[]):
+    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+    form = CreateMixcrAnalysisForm()
+    status = []
+    if request.method == 'POST' and dataset:
+        status.append('MIXCR Launch Detected')
+        result = run_mixcr_with_dataset_id.delay(dataset_id, analysis_name=form.name.data, analysis_description=form.description.data, user_id=current_user.id)
+        status.append(result.__repr__())
+        status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
+        time.sleep(1)
+        # return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
+        analyses = current_user.analyses.all()
+        analysis_file_dict = OrderedDict()
+        for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
+            analysis_file_dict[analysis] = analysis.files.all() 
+        return redirect(url_for('.analyses', status=status))
+        # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
+    else: 
+        return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
 
 
 
@@ -1089,12 +1278,6 @@ def taskstatus(task_id):
 
 
 
-app.register_blueprint(frontend)
-nav.init_app(app)
-
-
-
-
 
 
 
@@ -1133,9 +1316,15 @@ def download_file(url, path, file_id):
     return True 
 
 
-
-def run_mixcr_with_dataset(dataset):
-    print 'RUNNING MIXCR ON DATASET {}'.format(dataset.__dict__)
+@celery.task
+def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description='', user_id=6):
+    analysis = Analysis()
+    analysis.db_status = 'WAITING'
+    analysis.name = analysis_name
+    analysis.user_id = user_id
+    analysis.description = analysis_description
+    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+    print 'RUNNING MIXCR ON DATASET ID# {}: {}'.format(dataset_id, repr(dataset.__dict__))
     gzipped_fastqs = [f for f in dataset.files.all() if f.file_type=='GZIPPED_FASTQ']
     fastqs = [f for f in dataset.files.all() if f.file_type=='FASTQ']
     print 'FOUND THESE FASTQ FILES: GZIPPED_FASTQ: {} {}  FASTQ: {} {}'.format(len(gzipped_fastqs), gzipped_fastqs, len(fastqs), fastqs)
@@ -1145,12 +1334,7 @@ def run_mixcr_with_dataset(dataset):
     if len(fastqs) == 0 and len(gzipped_fastqs) != 0: 
         print 'PLEASE DECOMPRESS FASTQ.GZ AND RESUBMIT JOB'
         return False
-    analysis = Analysis()
     analysis.dataset_id = dataset.id
-    if getattr(current_user, 'id', True):
-        analysis.user_id = 6
-    else: 
-        analysis.user_id = current_user.id
     analysis.program = 'mixcr'
     analysis.started = 'now'
     analysis.params = {}
@@ -1166,7 +1350,7 @@ def run_mixcr_with_dataset(dataset):
             fastqs_by_locus[key] = list(values)
         print fastqs_by_locus
         for locus, fastqs in fastqs_by_locus.items(): 
-            print 'ABOUT TO RUN MIXCR ANAYSIS {} ON FILES FROM LOCUS {}'.format(analysis.__repr__, locus)
+            print 'ABOUT TO RUN MIXCR ANAYSIS {} ON FILES FROM LOCUS {}'.format(repr(analysis), locus)
             run_mixcr_analysis_id_with_files(analysis.id, fastqs)
         return True 
     # db.session.commit()
@@ -1179,43 +1363,47 @@ def run_mixcr_with_dataset(dataset):
 def run_mixcr_analysis_id_with_files(analysis_id, files):
     analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
     print 'RUNNING MIXCR ON THESE FILES: {}'.format(files)
+    scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
+    basename = files[0].path.split('/')[-1].split('.')[0]
+    basepath = '{}/{}'.format(scratch_path, basename)
+    print 'Writing output files to base name: {}'.format(basepath)
     commands = []
     output_files = []
-    alignment_file = File() 
-    alignment_file.path = '{}.aln.vdjca'.format(files[0].path.split('.')[:-1][0])
-    alignment_file.name = alignment_file.path.split('/')[-1]
+    alignment_file = File()
+    alignment_file.path = '{}.aln.vdjca'.format(basepath)
+    alignment_file.name = "{}.aln.vdjca".format(basename)
     alignment_file.command = 'mixcr align -f {} {}'.format(' '.join([f.path for f in files]), alignment_file.path)
     alignment_file.file_type = 'MIXCR_ALIGNMENTS'
     commands.append(alignment_file.command) 
     output_files.append(alignment_file)
     clone_file = File()
     clone_file.file_type = 'MIXCR_CLONES'
-    clone_file.path = '{}.aln.clns'.format(files[0].path.split('.')[:-1][0])
-    clone_file.name = clone_file.path.split('/')[-1]
+    clone_file.path = '{}.aln.clns'.format(basepath)
+    clone_file.name = '{}.aln.clns'.format(basename)
     clone_file.command = 'mixcr assemble -f {} {}'.format(alignment_file.path, clone_file.path)
     commands.append(clone_file.command)
     output_files.append(clone_file)
     clone_output_file = File()
     clone_output_file.path = '{}.txt'.format(clone_file.path)
     clone_output_file.file_type = 'MIXCR_CLONES_TEXT'
-    clone_output_file.name = clone_output_file.path.split('/')[-1]
+    clone_output_file.name = '{}.txt'.format(clone_file.name)
     clone_output_file.command = 'mixcr exportClones {} {}'.format(clone_file.path, clone_output_file.path)
     commands.append(clone_output_file.command) 
     output_files.append(clone_output_file)
     alignment_output_file = File()
     alignment_output_file.path = '{}.txt'.format(alignment_file.path)
     alignment_output_file.file_type = 'MIXCR_ALIGNMENT_TEXT'
-    alignment_output_file.name = alignment_output_file.path.split('/')[-1]
+    alignment_output_file.name = '{}.txt'.format(alignment_file.name)
     alignment_output_file.command = 'mixcr exportAlignments {} {}'.format(alignment_file.path, alignment_output_file.path)
     commands.append(alignment_output_file.command) 
     output_files.append(alignment_output_file)
-    pretty_alignment_file = File()
-    pretty_alignment_file.path = '{}.pretty.txt'.format(alignment_file.path)
-    pretty_alignment_file.file_type = 'MIXCR_PRETTY_ALIGNMENT_TEXT'
-    pretty_alignment_file.name = pretty_alignment_file.path.split('/')[-1]
-    pretty_alignment_file.command = 'mixcr exportAlignmentsPretty {} {}'.format(alignment_file.path, pretty_alignment_file.path)
-    commands.append(pretty_alignment_file.command)
-    output_files.append(pretty_alignment_file)
+    # pretty_alignment_file = File()
+    # pretty_alignment_file.path = '{}.pretty.txt'.format(alignment_file.path)
+    # pretty_alignment_file.file_type = 'MIXCR_PRETTY_ALIGNMENT_TEXT'
+    # pretty_alignment_file.name =  '{}.pretty.txt'.format(alignment_file.name)
+    # pretty_alignment_file.command = 'mixcr exportAlignmentsPretty {} {}'.format(alignment_file.path, pretty_alignment_file.path)
+    # commands.append(pretty_alignment_file.command)
+    # output_files.append(pretty_alignment_file)
     print 'running these commands:'
     print '\n'.join(commands)
     analysis.commands = commands 
@@ -1225,6 +1413,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
         f.command = f.command.encode('ascii')
         # f.command = str(f.command)
         f.dataset_id = analysis.dataset_id 
+        f.analysis_id = analysis.id 
         f.locus = files[0].locus 
         db.session.add(f)
         print 'Executing: {}'.format(f.command)
@@ -1239,17 +1428,68 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
         if response == 0: 
             f.available = True 
             db.session.commit()
+        else:
+            f.available = False
+            analysis.status = 'FAILED'
+            db.session.commit()
     print 'All commands in analysis {} have been executed.'.format(analysis)
+    if set(responses) == [0]:
+        analysis.status = 'SUCCESS'
+        analysis.available = True
     analysis.status = 'SUCCESS'
-    analysis.available = True
     analysis.active_command = ''
     analysis.finished = 'now'
     db.session.commit()
-    # KICK OFF ASYNC DB INSERTS FROM OUTPUT FILES 
+    # KICK OFF ASYNC DB INSERTS FROM OUTPUT FILES
+    parseable_mixcr_alignments_file_path = alignment_output_file.path
+    db.session.commit()
+    result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
     return True 
 
 
 
+@celery.task
+def parse_and_insert_mixcr_annotations_from_file_path(file_path, dataset_id=None, analysis_id=None):
+    print 'Building annotations from mixcr output at {}, then inserting into postgres in batches'.format(file_path)
+    if analysis_id: 
+        analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
+    else: 
+        analysis = None 
+    if analysis: analysis.db_status = 'BUILDING ANNOTATIONS'
+    if analysis: analysis.status = 'INSERTING TO DB'
+    db.session.commit()
+    annotations = build_annotations_from_mixcr_file(file_path, dataset_id=dataset_id, analysis_id=analysis_id)
+    total_count = len(annotations) 
+    if analysis: analysis.total_count = total_count
+    db.session.commit()
+    for i,a in enumerate(annotations): 
+        db.session.add(a)
+        if i % 1000 == 0:
+            print "Inserting # {} and the previous 1000 annotations to postgres. Here's what it looks like: {}".format(i, a.__dict__)
+            percent_done = float(i) / float(total_count)
+            if analysis: analysis.db_status = '{} Annotations Inserted in DB,  {} Percent Done'.format(i, int(percent_done * 100))
+            db.session.commit()
+    if analysis: 
+        analysis.db_status = 'Finished. {} Annotations Inserted'.format(len(annotations))
+    db.session.commit()
+    result = annotate_analysis_from_db.delay(analysis.id)
+    return len(annotations)
+
+
+
+@celery.task
+def annotate_analysis_from_db(analysis_id): 
+    analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
+    if not analysis: 
+        return False 
+    else: 
+        analysis.vdj_count = 0
+        analysis.vj_count = 0
+        analysis.tcra_count = 0
+        analysis.tcrb_count = 0
+        analysis.db_status = 'Inserted and Re-analyzed'
+        analysis.available = True 
+        db.session.commit()
 
 
 
@@ -1294,6 +1534,9 @@ def long_task(self):
 
 
 
+
+app.register_blueprint(frontend)
+nav.init_app(app)
 
 
 

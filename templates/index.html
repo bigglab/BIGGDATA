@@ -1,7 +1,14 @@
 {% extends '_base.html' %}
 
 {% block content %}
-<h1>{{r}}</h1>
+<div class="container">
+<h1>Welcome to the BIGG DATA Analysis Portal</h1>
+{% if user.is_authenticated() %}
+<h4>Good to see you here, {{user.first_name}}</h4>
+{% else %}
+<h4>Go To Login To Create A New User</h4>
+{% endif %}
+</div>
 {%endblock content %}
 
 

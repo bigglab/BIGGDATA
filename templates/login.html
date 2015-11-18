@@ -17,6 +17,7 @@
 <div class="container">
     <form method="POST" action="/users/create">
         {{ create_user_form.csrf_token }}
+        {{ create_user_form.username.label }} {{ create_user_form.username(size=10) }}
         {{ create_user_form.first_name.label }} {{ create_user_form.first_name(size=20) }}
         {{ create_user_form.last_name.label }} {{ create_user_form.last_name(size=20) }}
         <br>
