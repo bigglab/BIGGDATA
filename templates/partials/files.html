@@ -12,7 +12,7 @@
 		</tr>
 	</thead>
 	<tbody>
-		{% for file in files %}
+		{% for file in files|sort(attribute='id', reverse=True) %}
 			<tr>
 				<th>{{file.id}}</th>
 				<th>{{file.name}}</th>
