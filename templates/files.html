@@ -35,15 +35,19 @@
 						<th>NO</th>
 					{% endif %}
 					{% if file.s3_status == 'AVAILABLE' %}
-						<th><a href="http://s3.aws.com/biggdata/{{f.s3_path}}">Downloadable</a></th>
+						<th><a href="http://s3.aws.com/biggdata/{{file.s3_path}}">Downloadable</a></th>
 					{% else %}
 						{% if file.s3_status != 'AVAILABLE' and file.available %}
 							<th><a href="{{url_for('.transfer_to_s3', file_id=file.id)}}">Stage For Transfer</a></th>
 						{% else %}
-							{% if 'Transferring' in file.s3.status %}
+							{% if 'Transferring' in file.s3_status %}
 								<th>{{file.s3_status}}</th>
 							{% else %}
-								<th>Not gunna happen</th>
+								{% if 'Staging' in file.s3_status %}
+									<th>{{file.s3_status}}</th>
+								{% else %}
+										<th>Not gunna happen</th>
+								{% endif %}
 							{% endif %}
 						{% endif %}
 					{% endif %}

@@ -942,7 +942,7 @@ def file_upload():
         file.name = request_file.filename
         file.file_type = parse_file_ext(file.name)
         file.description = form.description.data
-        file.locus = form.locus.data
+        file.chain = form.chain.data
         file.paired_partner = form.paired_partner.data 
         file.dataset_id = form.dataset_id.data
         file.path = '{}/{}'.format(current_user.scratch_path, file.name) 
@@ -971,7 +971,7 @@ def file_download():
         file.name = file.url.split('/')[-1].split('?')[0]
         file.file_type = parse_file_ext(file.name)
         file.description = form.description.data
-        file.locus = form.locus.data
+        file.chain = form.chain.data
         file.paired_partner = form.paired_partner.data 
         file.dataset_id = form.dataset_id.data
         file.path = '{}/{}'.format(current_user.scratch_path, file.name) 
@@ -1051,6 +1051,9 @@ def transfer_file_to_s3(file_id):
 def transfer_to_s3(file_id): 
     f = db.session.query(File).filter(File.id==file_id).first()
     if f: 
+        f.s3_status = 'Staging'
+        db.session.add(f)
+        db.session.commit()
         result = transfer_file_to_s3.delay(f.id)
         return redirect(url_for('.files'))
 

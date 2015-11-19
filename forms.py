@@ -36,10 +36,19 @@ class CreateMixcrAnalysisForm(Form):
 
 
 
+
+class FileDownloadForm(Form):
+    url     = TextField(u'File URL', validators=[validators.input_required()], widget=TextInput())
+    description  = TextAreaField(u'File Description')
+    chain  = TextField(u'IG Loci')
+    paired_partner  = IntegerField()
+    dataset_id = IntegerField()
+
+
 class FileUploadForm(Form):
     file     = FileField(u'File Path', validators=[validators.input_required()])
     description  = TextAreaField(u'File Description')
-    locus  = TextField(u'VDJ or VJ', validators=[validators.input_required()])
+    chain  = TextField(u'VDJ or VJ', validators=[validators.input_required()])
     paired_partner  = IntegerField()
     dataset_id = IntegerField()
 
@@ -49,14 +58,6 @@ class AssociateFilesToDatasetForm(Form):
     dataset_id = IntegerField()
     submit = SubmitField()
 
-
-
-class FileDownloadForm(Form):
-    url     = TextField(u'File URL', validators=[validators.input_required()], widget=TextInput())
-    description  = TextAreaField(u'File Description')
-    locus  = TextField(u'IG Loci')
-    paired_partner  = IntegerField()
-    dataset_id = IntegerField()
 
 
 
