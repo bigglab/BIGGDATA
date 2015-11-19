@@ -35,7 +35,7 @@
 						<th>NO</th>
 					{% endif %}
 					{% if file.s3_status == 'AVAILABLE' %}
-						<th><a href="http://s3.aws.com/biggdata/{{file.s3_path}}">Downloadable</a></th>
+						<th><a href="https://s3.amazonaws.com/biggdata{{file.s3_path}}">Downloadable</a></th>
 					{% else %}
 						{% if file.s3_status != 'AVAILABLE' and file.available %}
 							<th><a href="{{url_for('.transfer_to_s3', file_id=file.id)}}">Stage For Transfer</a></th>

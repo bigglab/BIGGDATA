@@ -1038,8 +1038,9 @@ def transfer_file_to_s3(file_id):
         def cb(complete, total): 
             f.s3_status = 'Transferred {} of {} bytes'.format(complete, total)
             db.session.commit()
-        k = s3_bucket.new_key(f.s3_path)
-        result = k.set_contents_from_filename(f.path, cb=cb, num_cb=10)
+        key = s3_bucket.new_key(f.s3_path)
+        result = key.set_contents_from_filename(f.path, cb=cb, num_cb=10)
+        key.set_canned_acl('public-read')
         f.s3_status = "AVAILABLE"
         db.session.commit()
         print "Transfer complete. {} bytes transferred from {}  to  {}".format(result, f.path, f.s3_path)
