@@ -210,11 +210,19 @@ class Dataset(db.Model):
         annotations = db.relationship('Annotation', backref='dataset', lazy='dynamic')
         cell_types_sequenced = db.Column(postgresql.ARRAY(db.String(50)))
         chain_types_sequenced = db.Column(postgresql.ARRAY(db.String(20)))
-        primary_data_file_ids = Column(postgresql.ARRAY(db.Integer))
+        primary_data_files_ids = Column(postgresql.ARRAY(db.Integer))
 
 
         def __repr__(self): 
             return "<Dataset {} : {} : {}>".format(self.id, self.name, self.description)
+
+        def primary_data_files(self):
+            files = [f for f in self.files.all() if f.id in self.primary_data_files_ids]
+            return files 
+
+        # primary_data_files = db.relationship('File', primaryjoin="File.dataset_id == Dataset.id")
+
+
 
 
 class Experiment(db.Model):
@@ -1003,6 +1011,23 @@ def link_file_to_user(path, user, name):
     db.session.add(file)
     db.session.commit()
     return True
+
+
+@celery.task
+def transfer_file_to_s3(file_id): 
+    f = db.session.query(File).filter(File.id==file_id).first()
+    if not f: 
+        return False 
+    else: 
+        if f.path:
+            if f.s3_path: 
+                print 'transferring file from {} to {}'.format(f.path, f.s3_path)
+            else: 
+                s3_prefix = "{}/data".format(app.config['S3_BUCKET'])
+                f.s3_path = '{}/{}'.format(s3_prefix, f.path)
+                print 'transferring file from {} to {}'.format(f.path, f.s3_path)
+        print 'starting transfer' 
+        # boto transfer 
 
 
 @frontend.route('/files', methods=['GET', 'POST'])

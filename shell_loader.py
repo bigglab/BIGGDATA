@@ -18,7 +18,7 @@ c = db.session.commit
 # 	anns.append(b)
 
 
-# d = q(Dataset).all()[-1]
+d = q(Dataset).all()[-1]
 # fs = [f for f in d.files if f.file_type =='FASTQ']
 
 
