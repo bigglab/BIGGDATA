@@ -1503,7 +1503,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
         # f.command = str(f.command)
         f.dataset_id = analysis.dataset_id 
         f.analysis_id = analysis.id 
-        f.locus = files[0].locus 
+        f.chain = files[0].chain 
         db.session.add(f)
         print 'Executing: {}'.format(f.command)
         analysis.active_command = f.command
