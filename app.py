@@ -57,6 +57,8 @@ Bootstrap(app)
 # override DATABASE URI if environment variable is set: 
 if 'DATABASE_URL' in os.environ == True: 
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+
+print 'using db url: {}'.format(app.config['SQLALCHEMY_DATABASE_URI'])
 db = SQLAlchemy(app)
 # Mongo DB for Legacy Sequence Data
 mongo_connection_uri = 'mongodb://reader:cdrom@biotseq.icmb.utexas.edu:27017/'
