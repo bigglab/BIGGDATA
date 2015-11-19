@@ -7,7 +7,8 @@ DEBUG = True
 
 # Local Development-specific vars, override below if in production
 
-SQLALCHEMY_DATABASE_URI = "postgresql://localhost/biggig"
+# SQLALCHEMY_DATABASE_URI = "postgresql://localhost/biggig"
+SQLALCHEMY_DATABASE_URI = "postgres://uf8vm9gg6isrbk:p6iot5ksr6i60ff173l8f4v1ig@ec2-107-20-136-206.compute-1.amazonaws.com:6712/d30h3s4gmpmcuo"
 SQLALCHEMY_TRACK_MODIFICATIONS = True
 SQLALCHEMY_POOL_TIMEOUT = None
 
