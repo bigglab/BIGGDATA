@@ -210,6 +210,7 @@ class Dataset(db.Model):
         annotations = db.relationship('Annotation', backref='dataset', lazy='dynamic')
         cell_types_sequenced = db.Column(postgresql.ARRAY(db.String(50)))
         chain_types_sequenced = db.Column(postgresql.ARRAY(db.String(20)))
+        primary_data_file_ids = Column(postgresql.ARRAY(db.Integer))
 
 
         def __repr__(self): 
