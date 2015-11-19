@@ -12,7 +12,7 @@ SQLALCHEMY_DATABASE_URI = "postgres://uf8vm9gg6isrbk:p6iot5ksr6i60ff173l8f4v1ig@
 SQLALCHEMY_TRACK_MODIFICATIONS = True
 SQLALCHEMY_POOL_TIMEOUT = None
 
-HOME='/Users/red/Desktop/GeorgiouProjects/BIGGDATA/'
+HOME='/Users/red/Desktop/GeorgiouProjects/BIGGDATA'
 
 
 # File System configurations - file system is one machine on AWS so have to keep universal

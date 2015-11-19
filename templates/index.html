@@ -2,24 +2,46 @@
 
 {% block content %}
 <div class="container">
-<h1>Welcome to the BIGG DATA Analysis Portal</h1>
-{% if user.is_authenticated() %}
-	<h4>Good to see you here, {{user.first_name}}</h4>
-	<br>
-	{% if user.files.all() == [] %}
-		<h4>Looks like you need to <a href="{{url_for('.file_download')}}">import some files</a> to the system</h4>
-	{% else %}
-		{% if user.datasets.all() == [] %}
-			<h4><a href="{{url_for('.datasets')}}">Create a Dataset</a> and add some files to run an analysis</h4>
+	<h1>Welcome to the BIGG DATA Analysis Portal</h1>
+	{% if user.is_authenticated() %}
+		<h4>Good to see you here, {{user.first_name}}</h4>
+		<br>
+		{% if user.files.all() == [] %}
+			<h4>Looks like you need to <a href="{{url_for('.file_download')}}">import some files</a> to the system</h4>
 		{% else %}
-				<h4>Looks like you're up and running</h4>
+			{% if user.datasets.all() == [] %}
+				<h4><a href="{{url_for('.datasets')}}">Create a Dataset</a> and add some files to run an analysis</h4>
+			{% else %}
+					<h4>Looks like you're up and running:</h4>
+					<h4><a href="{{url_for('.datasets')}}">Go To My Datasets</a> <a href="{{url_for('.analyses')}}">Go To My Analyses</a></h4>
+			{% endif %}
 		{% endif %}
+	{% else %}
+			<h4>Go To <a href="{{url_for('.login')}}">Login</a> To Create A New User</h4>
 	{% endif %}
+</div>
 
-{% else %}
-		<h4>Go To <a href="{{url_for('.login')}}">Login</a> To Create A New User</h4>
-{% endif %}
+<br>
+<br>
 
+
+<div class="container">
+	<h2>Key Points On How To Use This Website</h2>
+	<br>
+	<h4>Datasets are the primary entity you should become accustomed to here on BIGG DATA.</h4>
+	<br>
+	<h4>Datasets represent single or paired-end sequencing file sets.</h4>
+	<br>
+	<h4>Files are annotated as coming from the HEAVY or LIGHT (or TCRA/TCRB) chains when imported.</h4> 
+	<br>
+	<h4>When running an analysis on a particular dataset, files coming from the same chain will be pre-processed for overlap alignments and the consensus sequences taken into analysis. If files come from alternative chains, we will assume you would like to do VH/VL pairing after the annotions are processed.</h4>
+</div>
+
+	<br>
+	<br>
+
+<div class="container">
+	<h4>We're just getting started here, but we're heading toward <b>multi-dataset comparisons</b> to generate the plots we all want and need.</h4>
 </div>
 
 {%endblock content %}

@@ -739,6 +739,7 @@ nav.register_element('frontend_top', Navbar(
     View('Dashboard', '.analyses'),
     Subgroup(
         'Documentation', 
+        View('BIGG DATA Schema', '.schema'), 
         Link('Confluence', 'under_construction'), 
         Link('How To Write A Pipeline', 'under_construction'),
         Separator(),
@@ -1299,7 +1300,10 @@ def browse_sequences():
     return render_template("browse_sequences.html", form=form, files=files, datasets=datasets, datadict=datadict, err=err, gif_path=golden, seq_count=seq_count, ann_count=ann_count)
 
 
-
+@frontend.route('/developers/schema', methods=['GET'])
+def schema():
+    schema_url = url_for('static', filename='schema.png')
+    return render_template("schema.html", schema_url=schema_url)
 
 
 
