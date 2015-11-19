@@ -55,10 +55,13 @@ nav = Nav()
 Bootstrap(app) 
 # Postgres DB for Admin and File Tracking Purposes 
 # override DATABASE URI if environment variable is set: 
-if 'DATABASE_URL' in os.environ == True: 
+if 'DATABASE_URL' in os.environ.keys() == True: 
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 
 print 'using db url: {}'.format(app.config['SQLALCHEMY_DATABASE_URI'])
+print 'here are the environment keys and values:'
+for k,v in os.environ.items():
+    print '{} : {}'.format(k,v)
 db = SQLAlchemy(app)
 # Mongo DB for Legacy Sequence Data
 mongo_connection_uri = 'mongodb://reader:cdrom@biotseq.icmb.utexas.edu:27017/'
