@@ -2,7 +2,7 @@ import os
 import sys 
 
 if 'RABBITMQ_BIGWIG_URL' in os.environ.keys(): 
-	BROKER_URL = os.environ(RABBITMQ_BIGWIG_URL)
+	BROKER_URL = os.environ('RABBITMQ_BIGWIG_URL')
 else: 
 	BROKER_URL = 'amqp://'
 
