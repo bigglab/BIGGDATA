@@ -154,10 +154,13 @@ class File(db.Model):
         description =db.Column(db.String(512))
         file_type = db.Column(db.String(128))
         path = db.Column(db.String(256))
+        s3_path = db.Column(db.String(256))
         locus = db.Column(db.String(128))
         url = db.Column(db.String(256))
         command = db.Column(db.String(1024))
         available = db.Column(db.Boolean)
+        in_use = db.Column(db.Boolean)
+        transfer_status = db.Column(db.String)
         created = db.Column(db.DateTime, default=db.func.now())
         paired_partner = db.Column(db.Integer, db.ForeignKey('file.id'))
         parent_id = db.Column(db.Integer, db.ForeignKey('file.id'))
@@ -691,13 +694,12 @@ nav.register_element('frontend_top', Navbar(
     Subgroup(
         'Files', 
         View('My Files', '.files'), 
-        View('Upload File', '.file_upload'), 
+        View('Import File', '.file_download'), 
         Link('Share Files', 'under_construction'),
-        View('My Datasets', '.datasets'),
         ),
     Subgroup(
         'Run Analysis',
-        View('Dashboard', '.analyses'), 
+        View('My Datasets', '.datasets'),
         View('Launch Analysis', '.datasets'),
         Link('Other Tasks', 'under_construction'), 
         ),

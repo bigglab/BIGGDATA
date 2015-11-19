@@ -11,18 +11,14 @@
             <tr>
                 <th>File URL</th>
                 <th>Description</th>
-                <th>Locus (IgG,IgM,...)</th>
-                <th>Mate File ID</th>
-                <th>Dataset ID</th>
+                <th>Chain (VDJ,VJ,TCRA,TCRB)</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <th>{{ download_form.url }}</th>
+                <th>{{ download_form.url(size=60) }}</th>
                 <th> {{ download_form.description }}</th>
                 <th>{{ download_form.locus  }}</th>
-                <th>{{ download_form.paired_partner }}</th>
-                <th>{{ download_form.dataset_id }}</th>
                 <th><input type="submit" value="Submit"></th>
             </tr>
         </tbody>

@@ -12,7 +12,10 @@ SQLALCHEMY_DATABASE_URI = "postgres://uf8vm9gg6isrbk:p6iot5ksr6i60ff173l8f4v1ig@
 SQLALCHEMY_TRACK_MODIFICATIONS = True
 SQLALCHEMY_POOL_TIMEOUT = None
 
-HOME = '/data'
+HOME='/Users/red/Desktop/GeorgiouProjects/BIGGDATA/'
+
+
+# File System configurations - file system is one machine on AWS so have to keep universal
 DROPBOX_ROOT='/dropboxes'
 SCRATCH_ROOT='/data'
 SHARE_ROOT = '/dropboxes/shared'
@@ -23,7 +26,7 @@ SHARE_ROOT = '/dropboxes/shared'
 # Heroku-specific vars 
 if 'DATABASE_URL' in os.environ.keys():  # HACK TO CHECK IF WE'RE IN PRODUCTION ON HEROKU: 
 	SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
-	# HOME = os.environ['HOME']
+	HOME = os.environ['HOME']
 	# DROPBOX_ROOT='{}/data/dropbox_root'.format(HOME)
 	# SCRATCH_ROOT='{}/data/scratch_root'.format(HOME)
 	DROPBOX_ROOT='/dropboxes'
@@ -40,6 +43,7 @@ if 'LESSOPEN' in os.environ.keys():  # HACK TO CHECK IF WE'RE ON AWS INSTANCE:
 	DROPBOX_ROOT='/dropboxes'
 	SCRATCH_ROOT='/data'
 	SHARE_ROOT = '/dropboxes/shared'
+	HOME = '/home/ubuntu/BIGGDATA'
 
 
 
