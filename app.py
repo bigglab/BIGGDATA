@@ -126,6 +126,11 @@ class User(db.Model):
             return "<  User {}: {}  {}  {}  >".format(self.username, self.first_name, self.last_name, self.email)
 
 
+
+        def __init__(self): 
+            self.user_type = 'researcher'
+
+
         def create_resources(self): 
             if self.first_name != None & self.last_name != None: 
                 self.dropbox_path = '{}/{}{}'.format(app.config['DROPBOX_ROOT'], self.first_name, self.last_name)
@@ -1517,6 +1522,7 @@ def annotate_analysis_from_db(analysis_id):
         analysis.vj_count = 0
         analysis.tcra_count = 0
         analysis.tcrb_count = 0
+        analysis.status = 'FINISHED'
         analysis.db_status = 'Inserted and Re-analyzed'
         analysis.available = True 
         db.session.commit()
