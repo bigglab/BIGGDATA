@@ -1,4 +1,10 @@
-BROKER_URL = 'amqp://'
+
+if 'RABBITMQ_BIGWIG_URL' in os.environ.keys(): 
+	BROKER_URL = os.environ(RABBITMQ_BIGWIG_URL)
+else: 
+	BROKER_URL = 'amqp://'
+
+
 CELERY_RESULT_BACKEND = 'rpc://'
 
 CELERY_TASK_SERIALIZER = 'json'
