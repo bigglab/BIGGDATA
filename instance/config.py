@@ -16,7 +16,7 @@ SQLALCHEMY_POOL_TIMEOUT = None
 # Heroku - specific vars :   
 if 'DATABASE_URL' in os.environ.keys():  # HACK TO CHECK IF WE'RE IN PRODUCTION: 
     SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
-    HOME = os.environ('HOME')
+    HOME = os.environ['HOME']
 
 # Heroku postgres:   postgres://uf8vm9gg6isrbk:p6iot5ksr6i60ff173l8f4v1ig@ec2-107-20-136-206.compute-1.amazonaws.com:6712/d30h3s4gmpmcuo 
 
