@@ -55,12 +55,7 @@ nav = Nav()
 Bootstrap(app) 
 # Postgres DB for Admin and File Tracking Purposes 
 # override DATABASE URI if environment variable is set: 
-if 'DATABASE_URL' in os.environ.keys(): 
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
-    print 'changed db url to: {}'.format(app.config['SQLALCHEMY_DATABASE_URI'])
-
-print 'using db url: {}'.format(app.config['SQLALCHEMY_DATABASE_URI'])
-print 'here are the environment keys and values:'
+print 'DEBUG ENVIRON keys:'
 for k,v in os.environ.items():
     print '{} : {}'.format(k,v)
 db = SQLAlchemy(app)
@@ -70,7 +65,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 
 # load template environment for cleaner routes 
-templateLoader = jinja2.FileSystemLoader( searchpath="/Users/red/Desktop/GeorgiouProjects/BIGGDATA/templates" )
+templateLoader = jinja2.FileSystemLoader( searchpath="{}/templates".format(app.config['HOME']) )
 templateEnv = jinja2.Environment( loader=templateLoader, extensions=['jinja2.ext.with_'])
 
 # MODELS. Not abstracted to make alembic migrations easier 
@@ -812,7 +807,7 @@ def logout():
 
 
 def retrieve_golden():
-    gifs_dir = '/Users/red/Desktop/GeorgiouProjects/BIGGDATA/static/goldens'
+    gifs_dir = '{}/static/goldens'.format(app.config['HOME'])
     gifs = os.listdir(gifs_dir)
     gif = random.choice(gifs)
     gif_path = url_for('static', filename='goldens/{}'.format(gif))
