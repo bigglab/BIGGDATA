@@ -1,1 +1,1 @@
-ssh ubuntu@75.101.130.27
+ssh ubuntu@54.83.15.57

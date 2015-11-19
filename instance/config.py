@@ -23,9 +23,12 @@ SHARE_ROOT = '/dropboxes/shared'
 # Heroku-specific vars 
 if 'DATABASE_URL' in os.environ.keys():  # HACK TO CHECK IF WE'RE IN PRODUCTION ON HEROKU: 
 	SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
-	HOME = os.environ['HOME']
-	DROPBOX_ROOT='{}/data/dropbox_root'.format(HOME)
-	SCRATCH_ROOT='{}/data/scratch_root'.format(HOME)
+	# HOME = os.environ['HOME']
+	# DROPBOX_ROOT='{}/data/dropbox_root'.format(HOME)
+	# SCRATCH_ROOT='{}/data/scratch_root'.format(HOME)
+	DROPBOX_ROOT='/dropboxes'
+	SCRATCH_ROOT='/data'
+	SHARE_ROOT = '/dropboxes/shared'
 # Heroku postgres:   postgres://uf8vm9gg6isrbk:p6iot5ksr6i60ff173l8f4v1ig@ec2-107-20-136-206.compute-1.amazonaws.com:6712/d30h3s4gmpmcuo 
 
 
