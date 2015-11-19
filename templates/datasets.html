@@ -64,6 +64,12 @@
 							<th>File Type</th>
 						</tr>
 					</thead>
+					<tbody>
+					{% if files == [] %}
+					<tr>
+						<th><a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files</a></th>
+					</tr>
+					{% else %}
 					{% for file in files %}
 					<tr>
 						<th></th>
@@ -72,6 +78,8 @@
 						<th>{{file.file_type}}</th>
 					</tr>
 					{% endfor %}	
+					{% endif %}
+					</tbody>
 				</table>
 				</th>
 			</tr>

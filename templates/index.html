@@ -4,11 +4,24 @@
 <div class="container">
 <h1>Welcome to the BIGG DATA Analysis Portal</h1>
 {% if user.is_authenticated() %}
-<h4>Good to see you here, {{user.first_name}}</h4>
+	<h4>Good to see you here, {{user.first_name}}</h4>
+	<br>
+	{% if user.files.all() == [] %}
+		<h4>Looks like you need to <a href="{{url_for('.file_download')}}">import some files</a> to the system</h4>
+	{% else %}
+		{% if user.datasets.all() == [] %}
+			<h4><a href="{{url_for('.datasets')}}">Add your files to a dataset</a> to run an analysis</h4>
+		{% else %}
+				<h4>Looks like you're up and running</h4>
+		{% endif %}
+	{% endif %}
+
 {% else %}
-<h4>Go To Login To Create A New User</h4>
+		<h4>Go To <a href="{{url_for('.login')}}">Login</a> To Create A New User</h4>
 {% endif %}
+
 </div>
+
 {%endblock content %}
 
 
