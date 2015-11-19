@@ -58,7 +58,18 @@ Bootstrap(app)
 #print 'DEBUG ENVIRON keys:'
 #for k,v in os.environ.items():
 #    print '{} : {}'.format(k,v)
+
+
 db = SQLAlchemy(app)
+
+
+
+# Celery configured for local RabbitMQ 
+celery = Celery(app.name, broker='amqp://')
+import celery_config 
+celery.config_from_object('celery_config')
+
+
 # Mongo DB for Legacy Sequence Data
 mongo_connection_uri = 'mongodb://reader:cdrom@biotseq.icmb.utexas.edu:27017/'
 login_manager = LoginManager()
@@ -67,6 +78,14 @@ login_manager.init_app(app)
 # load template environment for cleaner routes 
 templateLoader = jinja2.FileSystemLoader( searchpath="{}/templates".format(app.config['HOME']) )
 templateEnv = jinja2.Environment( loader=templateLoader, extensions=['jinja2.ext.with_'])
+
+
+
+
+
+
+
+
 
 # MODELS. Not abstracted to make alembic migrations easier 
 
@@ -774,6 +793,13 @@ def create_user():
     login_user(new_user, remember=True)
     flash("new user created and logged in", 'success')
     #create home and scratch if necessary 
+    result = instantiate_user_with_directories.delay(new_user.id)
+    return redirect(url_for(".index"))
+
+
+@celery.task
+def instantiate_user_with_directories(new_user_id):
+    new_user = db.session.query(User).filter(User.id==new_user_id).first()
     if not os.path.isdir(new_user.dropbox_path):
         os.makedirs(new_user.dropbox_path)
         print 'created new directory at {}'.format(new_user.dropbox_path)
@@ -786,7 +812,7 @@ def create_user():
     print 'copying these files to new users dropbox: {}'.format(','.join(files))
     for f in files: 
         copyfile('{}/{}'.format(share_root, f), '{}/{}'.format(new_user.dropbox_path, f))
-    return redirect(url_for(".index"))
+    return True 
 
 
 @frontend.route("/logout", methods=["GET"])
@@ -1303,13 +1329,6 @@ def taskstatus(task_id):
 
 
 
-# Celery configured for local RabbitMQ 
-celery = Celery(app.name, broker='amqp://')
-import celery_config 
-celery.config_from_object('celery_config')
-
-
-
 
 
 
@@ -1481,6 +1500,8 @@ def parse_and_insert_mixcr_annotations_from_file_path(file_path, dataset_id=None
     db.session.commit()
     result = annotate_analysis_from_db.delay(analysis.id)
     return len(annotations)
+
+
 
 
 
