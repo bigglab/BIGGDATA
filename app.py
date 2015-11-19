@@ -188,7 +188,12 @@ class File(db.Model):
                 p = ''
             return "<File {}: _{}_  {}  {}>".format(self.id, self.file_type, self.name, p)
 
-
+        def __init_(self): 
+            self.s3_status = ''
+            self.status = '' 
+            self.available = False 
+            self.created = 'now'
+                
         def pair(self, f): 
             if self.file_type == f.file_type: 
                 self.paired_partner = f.id 
@@ -967,7 +972,7 @@ def file_download():
     form = FileDownloadForm()
     if request.method == 'POST':
         file = File()
-        file.url = form.url.data
+        file.url = form.url.data.rstrip()
         file.name = file.url.split('/')[-1].split('?')[0]
         file.file_type = parse_file_ext(file.name)
         file.description = form.description.data
