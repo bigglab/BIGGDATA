@@ -1434,12 +1434,12 @@ def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description
     db.session.add(analysis)
     db.session.commit()
     if len(fastqs) != 0: 
-        fastqs_by_locus = {}
-        for key, values in itertools.groupby(fastqs, lambda x: x.locus): 
-            fastqs_by_locus[key] = list(values)
-        print fastqs_by_locus
-        for locus, fastqs in fastqs_by_locus.items(): 
-            print 'ABOUT TO RUN MIXCR ANAYSIS {} ON FILES FROM LOCUS {}'.format(repr(analysis), locus)
+        fastqs_by_chain = {}
+        for key, values in itertools.groupby(fastqs, lambda x: x.chain): 
+            fastqs_by_chain[key] = list(values)
+        print fastqs_by_chain
+        for chain, fastqs in fastqs_by_chain.items(): 
+            print 'ABOUT TO RUN MIXCR ANAYSIS {} ON FILES FROM CHAIN {}'.format(repr(analysis), chain)
             run_mixcr_analysis_id_with_files(analysis.id, fastqs)
         return True 
     # db.session.commit()
