@@ -55,9 +55,11 @@ nav = Nav()
 Bootstrap(app) 
 # Postgres DB for Admin and File Tracking Purposes 
 # override DATABASE URI if environment variable is set: 
-# print 'DEBUG ENVIRON keys:'
-# for k,v in os.environ.items():
-#     print '{} : {}'.format(k,v)
+#print 'DEBUG ENVIRON keys:'
+#for k,v in os.environ.items():
+#    print '{} : {}'.format(k,v)
+
+
 db = SQLAlchemy(app)
 
 
