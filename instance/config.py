@@ -51,7 +51,7 @@ mongo_config = {"reader":"cdrom","writer":"rag1rag2","dbpath":"biotseq.icmb.utex
  # 'SESSION_COOKIE_HTTPONLY': True, 
  # 'SEND_FILE_MAX_AGE_DEFAULT': 43200, 
  # 'PRESERVE_CONTEXT_ON_EXCEPTION': None, 
- # 'S3_BUCKET': 's3://biggig',
+ # 'S3_BUCKET': 's3://BIGGDATA',
  #  'SESSION_COOKIE_SECURE': False, 
  #  'TRAP_HTTP_EXCEPTIONS': False
 

@@ -64,7 +64,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 
 # load template environment for cleaner routes 
-templateLoader = jinja2.FileSystemLoader( searchpath="/Users/red/Desktop/GeorgiouProjects/BIGGIG/templates" )
+templateLoader = jinja2.FileSystemLoader( searchpath="/Users/red/Desktop/GeorgiouProjects/BIGGDATA/templates" )
 templateEnv = jinja2.Environment( loader=templateLoader, extensions=['jinja2.ext.with_'])
 
 # MODELS. Not abstracted to make alembic migrations easier 
@@ -806,7 +806,7 @@ def logout():
 
 
 def retrieve_golden():
-    gifs_dir = '/Users/red/Desktop/GeorgiouProjects/BIGGIG/static/goldens'
+    gifs_dir = '/Users/red/Desktop/GeorgiouProjects/BIGGDATA/static/goldens'
     gifs = os.listdir(gifs_dir)
     gif = random.choice(gifs)
     gif_path = url_for('static', filename='goldens/{}'.format(gif))
