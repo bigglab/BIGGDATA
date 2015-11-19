@@ -11,11 +11,10 @@ SQLALCHEMY_DATABASE_URI = "postgresql://localhost/biggig"
 SQLALCHEMY_TRACK_MODIFICATIONS = True
 SQLALCHEMY_POOL_TIMEOUT = None
 
-HOME = '/Users/red/Desktop/GeorgiouProjects/BIGGDATA'
-DROPBOX_ROOT='{}/data/dropbox_root'.format(HOME)
-SCRATCH_ROOT='{}/data/scratch_root'.format(HOME)
+HOME = '/data'
+DROPBOX_ROOT='/dropboxes'
+SCRATCH_ROOT='/data'
 SHARE_ROOT = '/dropboxes/shared'
-
 
 
 
