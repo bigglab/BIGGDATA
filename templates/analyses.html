@@ -22,14 +22,9 @@
 </div>
 
 
-<br>
-<br>
-
-
 {% for analysis, files in analysis_file_dict.items() %}
 <br>
 <div class="container">
-<a href="{{url_for('.analysis', id=analysis.id)}}"><h4>{{analysis.__repr__()}} - Click Here For Details</h4></a>
 	<table class="table table-striped">
 		<tbody>
 				<tr>
@@ -37,7 +32,8 @@
 					<table class='table table-striped'>
 					<tbody>
 						<tr>
-							<th>{{analysis.program}}</th>
+							<th>{{analysis.program}} Analysis</th>
+							<th><a href="{{url_for('.analysis', id=analysis.id)}}">Click Here For A Detailed Analysis</a></th>
 							<th>State: {{analysis.status}}</th>
 							<th>{% if analysis.active_command %}Running: {{' '.join(analysis.active_command.split(' ')[0:2])}} {% endif %}</th>
 							<th>{{analysis.name}}</th>
@@ -48,26 +44,8 @@
 					</table>
 				</tr>
 				<tr>
-					<table class='table table-striped'>
-						<thead>
-						<tr>
-							<tr>
-								<th>File Name</th>
-								<th>Locus</th>
-								<th>File Type</th>
-								<th>Ready?</th>
-							</tr>
-						</thead>
-						{% for file in files %}
-						<tr>
-							<th>{{file.name}}</th>
-							<th>{{file.locus}}</th>
-							<th>{{file.file_type}}</th>
-							<th>{% if file.available %}YES{% else %}NOT YET{% endif %}</th>
-						</tr>
-						{% endfor %}	
-					</table>
-					</tr>
+					{% set files = files %}
+					{% include "partials/files.html" with context %}
 				</tr>
 		</tbody>
 	</table>

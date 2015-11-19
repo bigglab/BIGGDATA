@@ -722,12 +722,10 @@ nav.register_element('frontend_top', Navbar(
         'Files', 
         View('My Files', '.files'), 
         View('Import File', '.file_download'), 
-        Link('Share Files', 'under_construction'),
         ),
     Subgroup(
         'Run Analysis',
         View('My Datasets', '.datasets'),
-        View('Launch Analysis', '.datasets'),
         View('Analysis Dashboard', '.analyses'),
         Link('Other Tasks', 'under_construction'), 
         ),
@@ -735,8 +733,8 @@ nav.register_element('frontend_top', Navbar(
         'Database', 
         View('Browse Experiments', '.browse_experiments'),
         View('Browse Sequences', '.browse_sequences'),
-        Link('Download', 'under_construction'),
-        Link('Mass Spec', 'under_construction')
+        Link('Download Lots of Data', 'under_construction'),
+        Link('Download For Mass Spec', 'under_construction')
         ),
     View('Dashboard', '.analyses'),
     Subgroup(
