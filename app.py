@@ -1029,7 +1029,7 @@ def transfer_file_to_s3(file_id):
             if f.s3_path: 
                 print 'transferring file from {} to {}'.format(f.path, f.s3_path)
             else: 
-                s3_prefix = "{}/data".format(app.config['S3_BUCKET'])
+                s3_prefix = "{}/".format(app.config['S3_BUCKET'])
                 f.s3_path = '{}/{}'.format(s3_prefix, f.path)
                 print 'transferring file from {} to {}'.format(f.path, f.s3_path)
                 f.s3_status = 'TRANSFERRING'
@@ -1041,6 +1041,7 @@ def transfer_file_to_s3(file_id):
             db.session.commit()
         k = s3_bucket.new_key(f.s3_path)
         result = k.set_contents_from_filename(f.path, cb=cb, num_cb=10)
+        print result 
         return result 
 
 
