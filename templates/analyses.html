@@ -25,11 +25,15 @@
 <br>
 <br>
 
+{% if analysis_file_dict == {} %}
+<h4>Create a Dataset and add some files to run analyses.</h4>
+{% endif %}
+
 
 {% for analysis, files in analysis_file_dict.items() %}
 <br>
 <div class="container">
-<a href="{{url_for('.analysis', id=analysis.id)}}"><h4>{{analysis.__repr__()}}</h4></a>
+<a href="{{url_for('.analysis', id=analysis.id)}}"><h4>{{analysis.__repr__()}} - Click Here For Details</h4></a>
 	<table class="table table-striped">
 		<tbody>
 				<tr>
