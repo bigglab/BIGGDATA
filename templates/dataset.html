@@ -58,6 +58,23 @@
 
 <br>
 
+{% if datset.files.all() != [] %}
+	<div class='container'>
+		<h4>There are files available... let's run some analysis!</h4>
+		<table class="table table-striped">
+			<tr>
+				<th><a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">RUN MIXCR</a></th>				
+			</tr>
+		</table>
+	</div>
+{% endif %}
+
+				
+
+
+
+
+
 <div class='container'>
 	<h4>Add An Unassociate Files To This Dataset:</h4>
 	<form role='form' method='POST' action='/datasets/{{id}}'>

@@ -67,7 +67,7 @@
 					<tbody>
 					{% if files == [] %}
 					<tr>
-						<th><a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files</a></th>
+						<th><a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a></th>
 					</tr>
 					{% else %}
 					{% for file in files %}

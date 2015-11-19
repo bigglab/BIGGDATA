@@ -10,7 +10,7 @@
 		<h4>Looks like you need to <a href="{{url_for('.file_download')}}">import some files</a> to the system</h4>
 	{% else %}
 		{% if user.datasets.all() == [] %}
-			<h4><a href="{{url_for('.datasets')}}">Add your files to a dataset</a> to run an analysis</h4>
+			<h4><a href="{{url_for('.datasets')}}">Create a Dataset</a> and add some files to run an analysis</h4>
 		{% else %}
 				<h4>Looks like you're up and running</h4>
 		{% endif %}
