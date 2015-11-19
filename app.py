@@ -1029,10 +1029,9 @@ def transfer_file_to_s3(file_id):
             if f.s3_path: 
                 print 'transferring file from {} to {}'.format(f.path, f.s3_path)
             else: 
-                s3_prefix = "{}/".format(app.config['S3_BUCKET'])
-                f.s3_path = '{}/{}'.format(s3_prefix, f.path)
-                print 'transferring file from {} to {}'.format(f.path, f.s3_path)
-                f.s3_status = 'TRANSFERRING'
+                f.s3_path = '{}'.format(f.path)
+                print 'transferring file from {} to s3://{}/{}'.format(f.path, app.config['S3_BUCKET'], f.s3_path)
+                f.s3_status = 'Staging'
                 db.session.commit()
         file_size = os.stat(f.path).st_size
         print 'starting transfer of {} byte file'.format(file_size)
@@ -1041,11 +1040,19 @@ def transfer_file_to_s3(file_id):
             db.session.commit()
         k = s3_bucket.new_key(f.s3_path)
         result = k.set_contents_from_filename(f.path, cb=cb, num_cb=10)
-        print result 
-        return result 
+        f.s3_status = "AVAILABLE"
+        db.session.commit()
+        print "Transfer complete. {} bytes transferred from {}  to  {}".format(result, f.path, f.s3_path)
+        return True 
 
 
-        # boto transfer 
+@frontend.route('/files/transfer_to_s3/<int:file_id>', methods=['GET'])
+@login_required
+def transfer_to_s3(file_id): 
+    f = db.session.query(File).filter(File.id==file_id).first()
+    if f: 
+        result = transfer_file_to_s3.delay(f.id)
+        return redirect(url_for('.files'))
 
 
 @frontend.route('/files', methods=['GET', 'POST'])
