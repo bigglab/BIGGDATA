@@ -55,38 +55,22 @@
 				<th><a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">MIXCR</a></th>
 				</tr>
 				<tr>
-				<table class='table table-striped'>
-					<thead>
-						<tr>
-							<th> </th>
-							<th>Files In Dataset {{dataset.id}}:</th>
-							<th>File Name</th>
-							<th>File Type</th>
-						</tr>
-					</thead>
-					<tbody>
-					{% if files == [] %}
-					<tr>
+					{% set files = dataset.files %}
+					{% include "partials/files.html" with context %}
+				</tr>
+				<tr>
+					{% if dataset.files.all() == []%}
 						<th><a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a></th>
-					</tr>
-					{% else %}
-					{% for file in files %}
-					<tr>
-						<th></th>
-						<th></th>
-						<th>{{file.name}}</th>
-						<th>{{file.file_type}}</th>
-					</tr>
-					{% endfor %}	
 					{% endif %}
-					</tbody>
-				</table>
-				</th>
+				</tr>				
 			</tr>
 		</tbody>
 	</table>
 </div>
+
 {% endfor %}
+
+
 
 
 {%endblock content %}

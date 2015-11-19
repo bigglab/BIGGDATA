@@ -193,7 +193,7 @@ class File(db.Model):
             self.status = '' 
             self.available = False 
             self.created = 'now'
-                
+
         def pair(self, f): 
             if self.file_type == f.file_type: 
                 self.paired_partner = f.id 
@@ -728,6 +728,7 @@ nav.register_element('frontend_top', Navbar(
         'Run Analysis',
         View('My Datasets', '.datasets'),
         View('Launch Analysis', '.datasets'),
+        View('Analysis Dashboard', '.analyses'),
         Link('Other Tasks', 'under_construction'), 
         ),
     Subgroup(
@@ -982,6 +983,8 @@ def file_download():
         file.path = '{}/{}'.format(current_user.scratch_path, file.name) 
         file.user_id = current_user.id
         file.available = False 
+        file.s3_status = ''
+        file.status = ''
         print 'Saving File Metadata to Postgres: {}'.format(file.__dict__)
         db.session.add(file)
         db.session.commit()
@@ -1083,10 +1086,10 @@ def files():
         else: 
             flash('file metadata already created to your user')
             dropbox_file_paths = get_dropbox_files(current_user)
-        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form)
+        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user)
     else: 
         dropbox_file_paths = get_dropbox_files(current_user)
-        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form)
+        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user)
 
 
 

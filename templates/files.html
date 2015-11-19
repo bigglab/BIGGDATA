@@ -1,61 +1,32 @@
 {% extends '_base.html' %}
 
 {% block content %}
+
+
 <div class="container">
-<h1>Files Associated With User "{{current_user.username}}": </h1>
-	<table class="table table-striped">
-		<thead>
-			<tr>
-				<th>ID</th>
-				<th>Name</th>
-				<th>Description</th>
-				<th>Chain</th>
-				<th>Dataset ID</th>
-				<th>File Type</th>
-				<th>Paired To</th>
-				<th>Available</th>
-				<th>Downloadable</th>
-				<!-- <th>Path</th> -->
-			</tr>
-		</thead>
-		<tbody>
-			{% for file in files %}
-				<tr>
-					<th>{{file.id}}</th>
-					<th>{{file.name}}</th>
-					<th>{{file.description}}</th>
-					<th>{{file.locus}}</th>
-					<th>{% if file.dataset_id %}{{file.dataset_id}}{% endif %}</th>
-					<th>{{file.file_type}}</th>
-					<th>{{file.paired_partner}}</th>
-					{% if file.available %}
-						<!-- <th><a href="{{url_for('.send_file_from_id', id=file.id)}}">YES</a></th> -->
-						<th>YES</th>
-					{% else %}
-						<th>NO</th>
-					{% endif %}
-					{% if file.s3_status == 'AVAILABLE' %}
-						<th><a href="https://s3.amazonaws.com/biggdata{{file.s3_path}}">Downloadable</a></th>
-					{% else %}
-						{% if file.s3_status != 'AVAILABLE' and file.available %}
-							<th><a href="{{url_for('.transfer_to_s3', file_id=file.id)}}">Stage For Transfer</a></th>
-						{% else %}
-							{% if 'Transferring' in file.s3_status %}
-								<th>{{file.s3_status}}</th>
-							{% else %}
-								{% if 'Staging' in file.s3_status %}
-									<th>{{file.s3_status}}</th>
-								{% else %}
-										<th>Not gunna happen</th>
-								{% endif %}
-							{% endif %}
-						{% endif %}
-					{% endif %}
-				</tr>
-			{% endfor %}
-		</tbody>
-	</table>
+	<h4>Files Associated Directly With Your User:</h4>
+	<br>
+	{% set files = files %}
+	{% include "partials/files.html" with context %}
 </div>
+
+<br>
+<br>
+
+
+<div class="container">
+	<h4>These Files Are Associated Through Dataset Analyses:</h4>
+	{% for dataset in current_user.datasets %}
+		{% if dataset.files.all() != [] %}
+			<br>
+			<h4>Dataset {{dataset.id}} {{dataset.name}}</h4>
+			{% set files = dataset.files %}
+			{% include "partials/files.html" with context %}
+			{% endif %}
+	{% endfor %}
+</div>
+
+
 
 
 <div class="container">

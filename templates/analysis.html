@@ -24,59 +24,33 @@
 <br>
 <div class="container">
 	<table class="table table-striped">
-		<tbody>
-				<tr>
-				<tr>
-					<table class='table table-striped'>
-					<tbody>
-						<tr>
-							<th>{{analysis.program}}</th>
-							<th>State: {{analysis.status}}</th>
-							<th>{% if analysis.active_command %}Running: {{' '.join(analysis.active_command.split(' ')[0:2])}} {% endif %}</th>
-							<th>{{analysis.name}}</th>
-							<th>{{analysis.description}}</th>
-							<th>{{analysis.started}}</th>
-						</tr>
-						</tbody>
-					</table>
-				</tr>
-				<tr>
-					<table class='table table-striped'>
-						<thead>
-						<tr>
-							<tr>
-								<th>File Name</th>
-								<th>Locus</th>
-								<th>File Type</th>
-								<th>Available For Download?</th>
-							</tr>
-						</thead>
-						{% for file in analysis.files %}
-						<tr>
-							<th>{{file.name}}</th>
-							<th>{{file.locus}}</th>
-							<th>{{file.file_type}}</th>
-							{% if file.available %}
-								<th><a href="{{url_for('.send_file_from_id', id=file.id)}}">YES - Click Here To Start Download</a></th>
-							{% else %}
-								{% if analysis.status == 'FAILED' %}
-									<th>-</th>
-								{% else %}
-									<th>Waiting</th>
-								{% endif %}
-							{% endif %}
-								</th>
-						</tr>
-						{% endfor %}	
-					</table>
-					</tr>
-				</tr>
-		</tbody>
+		<tr>
+			<th>{{analysis.program}}</th>
+			<th>State: {{analysis.status}}</th>
+			<th>{% if analysis.active_command %}Running: {{' '.join(analysis.active_command.split(' ')[0:2])}} {% endif %}</th>
+			<th>{{analysis.name}}</th>
+			<th>{{analysis.description}}</th>
+			<th>{{analysis.started}}</th>
+		</tr>
 	</table>
 </div>
 
+
 <br>
 <br>
+
+
+<div class="container">
+	<h4>Files Produced In This Analysis:</h4>
+	<br>
+	{% set files = analysis.files %}
+	{% include "partials/files.html" with context %}
+</div>
+
+
+<br>
+<br>
+
 
 <div class="container">
 	<table class="table table-striped">
@@ -173,6 +147,12 @@
 </div>
 
 <br><br><br><br><br>
+
+
+
+
+
+
 
 
 {%endblock content %}
