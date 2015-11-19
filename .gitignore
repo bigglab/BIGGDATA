@@ -1,4 +1,6 @@
-data/* 
+data/from_appsoma
+data/dropbox_root/*
+data/scratch_root/* 
 *.pyc
 *.pyo
 legacy/* 
