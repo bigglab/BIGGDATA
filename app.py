@@ -10,6 +10,9 @@ import operator
 import urllib
 import itertools
 import subprocess
+import boto 
+import math 
+# from filechunkio import FileChunkIO 
 from celery import Celery
 from collections import defaultdict, OrderedDict
 import collections
@@ -68,6 +71,9 @@ db = SQLAlchemy(app)
 celery = Celery(app.name, broker='amqp://')
 import celery_config 
 celery.config_from_object('celery_config')
+
+s3 = boto.connect_s3(app.config['AWSACCESSKEYID'], app.config['AWSSECRETKEY'])
+s3_bucket = s3.get_bucket(app.config['S3_BUCKET'])
 
 
 # Mongo DB for Legacy Sequence Data
@@ -1026,7 +1032,18 @@ def transfer_file_to_s3(file_id):
                 s3_prefix = "{}/data".format(app.config['S3_BUCKET'])
                 f.s3_path = '{}/{}'.format(s3_prefix, f.path)
                 print 'transferring file from {} to {}'.format(f.path, f.s3_path)
-        print 'starting transfer' 
+                f.s3_status = 'TRANSFERRING'
+                db.session.commit()
+        file_size = os.stat(f.path).st_size
+        print 'starting transfer of {} byte file'.format(file_size)
+        def cb(complete, total): 
+            f.s3_status = 'Transferred {} of {} bytes'.format(complete, total)
+            db.session.commit()
+        k = s3_bucket.new_key(f.s3_path)
+        result = k.set_contents_from_filename(f.path, cb=cb, num_cb=10)
+        return result 
+
+
         # boto transfer 
 
 
