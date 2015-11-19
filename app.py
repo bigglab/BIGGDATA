@@ -55,8 +55,9 @@ nav = Nav()
 Bootstrap(app) 
 # Postgres DB for Admin and File Tracking Purposes 
 # override DATABASE URI if environment variable is set: 
-if 'DATABASE_URL' in os.environ.keys() == True: 
+if 'DATABASE_URL' in os.environ.keys(): 
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+    print 'changed db url to: {}'.format(app.config['SQLALCHEMY_DATABASE_URI'])
 
 print 'using db url: {}'.format(app.config['SQLALCHEMY_DATABASE_URI'])
 print 'here are the environment keys and values:'
