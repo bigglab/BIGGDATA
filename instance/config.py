@@ -5,34 +5,44 @@ DEBUG = True
 
 
 
-# Development-specific vars, override below if in production
+# Local Development-specific vars, override below if in production
 
 SQLALCHEMY_DATABASE_URI = "postgresql://localhost/biggig"
 SQLALCHEMY_TRACK_MODIFICATIONS = True
 SQLALCHEMY_POOL_TIMEOUT = None
 
+HOME = '/Users/red/Desktop/GeorgiouProjects/BIGGDATA'
+DROPBOX_ROOT='{}/data/dropbox_root'.format(HOME)
+SCRATCH_ROOT='{}/data/scratch_root'.format(HOME)
+SHARE_ROOT = '/dropboxes/shared'
 
 
-# Heroku - specific vars :   
-if 'DATABASE_URL' in os.environ.keys():  # HACK TO CHECK IF WE'RE IN PRODUCTION: 
+
+
+
+# Heroku-specific vars 
+if 'DATABASE_URL' in os.environ.keys():  # HACK TO CHECK IF WE'RE IN PRODUCTION ON HEROKU: 
     SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
     HOME = os.environ['HOME']
-
+		DROPBOX_ROOT='{}/data/dropbox_root'.format(HOME)
+		SCRATCH_ROOT='{}/data/scratch_root'.format(HOME)
 # Heroku postgres:   postgres://uf8vm9gg6isrbk:p6iot5ksr6i60ff173l8f4v1ig@ec2-107-20-136-206.compute-1.amazonaws.com:6712/d30h3s4gmpmcuo 
 
 
 
-DROPBOX_ROOT='{}/data/dropbox_root'.format(HOME)
-SCRATCH_ROOT='{}/data/scratch_root'.format(HOME)
-SHARE_ROOT = '{}/data/dropbox_root/shared'.format(HOME)
+# AWS-specifc vars 
+if 'LESSOPEN' in os.environ.keys():  # HACK TO CHECK IF WE'RE ON AWS INSTANCE: 
+	SQLALCHEMY_DATABASE_URI = "postgres://uf8vm9gg6isrbk:p6iot5ksr6i60ff173l8f4v1ig@ec2-107-20-136-206.compute-1.amazonaws.com:6712/d30h3s4gmpmcuo"
+	# Local instance stores, for speed 
+	DROPBOX_ROOT='/dropboxes'
+	SCRATCH_ROOT='/data'
+	SHARE_ROOT = '/dropboxes/shared'
+
+
+
 S3_BUCKET = 's3://biggdata'
 
-
 SECRET_KEY = '\x95\x90+\x1c\xd36\xa3\x94\x99\xaeA\xac\xd3M5\x0b\xc7\xefF\xf3\x08\x05t\xd9'
-
-
-
-
 
 
 MONGO_DATABASE_URI = "biotseq.icmb.utexas.edu"
