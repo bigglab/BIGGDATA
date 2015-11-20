@@ -60,7 +60,7 @@
 				<th>{{analysis.total_count}}</th>
 			</tr>
 			<tr>
-				<th>DB Import Status:</th>
+				<th>Database Import Status:</th>
 				<th>{{analysis.db_status}}</th>
 			</tr>
 		</tbody>
@@ -71,6 +71,12 @@
 <br>
 
 {% if analysis.available %}
+
+<div class="container">
+	<h2>Now here's some data gathered from these annotations:</h2>
+</div>
+
+<br>
 
 <div class="container">
 	<table class="table table-striped">

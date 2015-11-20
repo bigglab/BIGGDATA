@@ -137,21 +137,6 @@ class User(db.Model):
             self.user_type = 'researcher'
 
 
-        def create_resources(self): 
-            if self.first_name != None & self.last_name != None: 
-                self.dropbox_path = '{}/{}{}'.format(app.config['DROPBOX_ROOT'], self.first_name, self.last_name)
-                self.scratch_path = '{}/{}{}'.format(app.config['SCRATCH_ROOT'], self.first_name, self.last_name)
-                if not os.path.isdir(self.dropbox_path):
-                    os.makedirs(self.dropbox_path)
-                    print 'created new directory at {}'.format(self.dropbox_path)
-                if not os.path.isdir(self.scratch_path):
-                    os.makedirs(self.scratch_path)
-                    print 'created new directory at {}'.format(self.dropbox_path)
-                return True 
-            else: 
-                print 'USER FIRST AND LAST NAMES NOT SET!'
-                return False 
-
 
 
 
@@ -842,7 +827,11 @@ def instantiate_user_with_directories(new_user_id):
     print 'copying these files to new users dropbox: {}'.format(','.join(files))
     for f in files: 
         copyfile('{}/{}'.format(share_root, f), '{}/{}'.format(new_user.dropbox_path, f))
+        link_file_to_user(new_user.dropbox_path, new_user, f)
     return True 
+
+
+
 
 
 @frontend.route("/logout", methods=["GET"])
