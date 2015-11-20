@@ -1,31 +1,67 @@
 {% extends "_base.html" %}
 {% block content %}
-<div class="container">
+
 <br>
-<h2>Enter your email and password to login:</h2>
+<br>
+
 <div class="container">
     <form method="POST" action="/login">
-        {{ login_form.csrf_token }}
-        {{ login_form.email.label }} {{ login_form.email(size=20) }}
-        {{ login_form.password.label }} {{ login_form.password(size=20) }}
-        <input type="submit" value="Login">
+    <table class="table table-striped">
+    <thead>
+        <h4>Enter your email and password to login:</h4>
+    </thead>
+    <tbody>
+        <tr>
+            <th>{{ login_form.csrf_token }}</th>
+            <th>{{ login_form.email.label }} {{ login_form.email(size=20) }}</th>
+            <th>{{ login_form.password.label }} {{ login_form.password(size=20) }}</th>
+            <th><input type="submit" value="Login"></th>
+        </tr>
+    </tbody>
+    </table>
     </form>
+
 </div>
 
 <br>
-<h3>Or register here if you're new: </h3>
+<br>
+
 <div class="container">
+
     <form method="POST" action="/users/create">
-        {{ create_user_form.csrf_token }}
-        {{ create_user_form.username.label }} {{ create_user_form.username(size=10) }}
-        {{ create_user_form.first_name.label }} {{ create_user_form.first_name(size=20) }}
-        {{ create_user_form.last_name.label }} {{ create_user_form.last_name(size=20) }}
-        <br>
-        {{ create_user_form.email.label }} {{ create_user_form.email(size=40) }}
-        {{ create_user_form.password.label }} {{ create_user_form.password(size=20) }}
-        <input type="submit" value="Submit">
+    {{ create_user_form.csrf_token }}
+    <table class="table table-striped">
+    <thead>
+        <h4>Or Create A New User Here:</h4>
+    </thead>
+    <tbody>
+        <tr>
+            <th>{{ create_user_form.username.label }}:  {{ create_user_form.username(size=10) }}</th>
+            <th>{{ create_user_form.email.label }}: {{ create_user_form.email(size=40) }}</th>
+            <th></th>
+            <th></th>
+        </tr>
+        <tr>
+            <th>{{ create_user_form.first_name.label }}:  {{ create_user_form.first_name(size=20) }}</th>
+            <th>{{ create_user_form.last_name.label }}:  {{ create_user_form.last_name(size=20) }}</th>
+            <th>Password: {{ create_user_form.password(size=20) }}</th>
+            <th><input type="submit" value="Create User"></th>
+        </tr>
+    </tbody>
+    </table>
     </form>
+
 </div>
+
+<br>
+<br>
+
+<div class="container">
+    <br>
+    <h4>Logged in as {{current_user.first_name}} {{current_user.last_name}}</h4>
+    <h4><a href="{{url_for('.logout')}}">Click here to logout</a>
+    <br>
+    </h4>
 </div>
 
 {% endblock %}

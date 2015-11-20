@@ -168,6 +168,7 @@ class File(db.Model):
         in_use = db.Column(db.Boolean)
         status = db.Column(db.String(50))
         path = db.Column(db.String(256))
+        file_size = db.Column(db.Integer)
         s3_available = db.Column(db.Boolean)
         s3_status = db.Column(db.String(50))
         s3_path = db.Column(db.String(256))
@@ -791,7 +792,7 @@ def login():
             flash("couldn't find that user... try registering a new user", 'normal')
     #also supply create_user_form here for convenience
     create_user_form = RegistrationForm()
-    return render_template("login.html", login_form=login_form, create_user_form=create_user_form)
+    return render_template("login.html", login_form=login_form, create_user_form=create_user_form, current_user=current_user)
 
 
 @frontend.route("/users/create", methods=["POST"])
@@ -854,10 +855,10 @@ def logout():
         db.session.commit()
         logout_user()
         flash('you have been logged out', 'success')
-        return redirect(url_for('.index'))
+        return redirect(url_for('.login'))
     else: 
         flash('no user logged in')
-        return redirect(url_for('.index'))
+        return redirect(url_for('.login'))
         # return render_template("index.html")
 
 
