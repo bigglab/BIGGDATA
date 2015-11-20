@@ -20,7 +20,7 @@ DROPBOX_ROOT='/dropboxes'
 SCRATCH_ROOT='/data'
 SHARE_ROOT = '/dropboxes/shared'
 
-
+QUOTAGUARD_URL = 'http://quotaguard4189:013877db0c3e@proxy.quotaguard.com:9292'
 
 
 # Heroku-specific vars 
