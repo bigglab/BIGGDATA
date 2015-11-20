@@ -1012,6 +1012,8 @@ def link_file_to_user(path, user_id, name):
     file.user_id = user_id
     file.description = ''
     file.file_type = parse_file_ext(file.path)
+    file.available = True 
+    file.s3_status = ''
     db.session.add(file)
     db.session.commit()
     return True
