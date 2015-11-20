@@ -698,7 +698,7 @@ frontend = Blueprint('frontend', __name__)
 # navbar has an usual amount of Link-Elements, more commonly you will have a
 # lot more View instances.
 nav.register_element('frontend_top', Navbar(
-    Link('BIGG DATA', 'https://github.com/russelldurrett/BIGGDATA'),
+    View('BIGG DATA', '.index'),
     View('Home', '.index'),
     Subgroup(
         'Login',
