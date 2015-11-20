@@ -826,8 +826,9 @@ def instantiate_user_with_directories(new_user_id):
     files = os.listdir(share_root)
     print 'copying these files to new users dropbox: {}'.format(','.join(files))
     for f in files: 
+        fullfilepath = '{}/{}'.format(new_user.dropbox_path, f)
         copyfile('{}/{}'.format(share_root, f), '{}/{}'.format(new_user.dropbox_path, f))
-        link_file_to_user(new_user.dropbox_path, new_user, f)
+        link_file_to_user(fullfilepath, new_user.id, f)
     return True 
 
 
@@ -1004,11 +1005,11 @@ def file_download():
 
 
 
-def link_file_to_user(path, user, name):
+def link_file_to_user(path, user_id, name):
     file = File()
     file.name = name 
     file.path = path 
-    file.user_id = user.id
+    file.user_id = user_id
     file.description = ''
     file.file_type = parse_file_ext(file.path)
     db.session.add(file)
