@@ -697,7 +697,7 @@ frontend = Blueprint('frontend', __name__)
 # navbar has an usual amount of Link-Elements, more commonly you will have a
 # lot more View instances.
 nav.register_element('frontend_top', Navbar(
-    View('BIGG DATA', '.index'),
+    Link('BIGG DATA', 'https://github.com/russelldurrett/BIGGDATA'),
     View('Home', '.index'),
     Subgroup(
         'Login',
@@ -864,6 +864,13 @@ def retrieve_golden():
 def under_construction():
     gif_path=retrieve_golden()
     return render_template("under_construction.html", gif_path=gif_path)
+
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    gif_path=retrieve_golden()
+    return render_template("unauthorized.html", git_path=gif_path)
+
 
 
 

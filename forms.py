@@ -40,7 +40,7 @@ class CreateMixcrAnalysisForm(Form):
 class FileDownloadForm(Form):
     url     = TextField(u'File URL', validators=[validators.input_required()], widget=TextInput())
     description  = TextAreaField(u'File Description')
-    chain  = TextField(u'IG Loci')
+    chain  = TextField(u'Chain HEAVY/LIGHT')
     paired_partner  = IntegerField()
     dataset_id = IntegerField()
 
@@ -48,7 +48,7 @@ class FileDownloadForm(Form):
 class FileUploadForm(Form):
     file     = FileField(u'File Path', validators=[validators.input_required()])
     description  = TextAreaField(u'File Description')
-    chain  = TextField(u'VDJ or VJ', validators=[validators.input_required()])
+    chain  = TextField(u'Chain HEAVY/LIGHT', validators=[validators.input_required()])
     paired_partner  = IntegerField()
     dataset_id = IntegerField()
 
