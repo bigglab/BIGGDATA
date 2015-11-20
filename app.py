@@ -91,7 +91,9 @@ def include_file(name):
     return jinja2.Markup(loader.get_source(env, name)[0])
 app.jinja_env.globals['include_file'] = include_file
 
-
+proxy = urllib2.ProxyHandler({})
+opener = urllib2.build_opener(proxy)
+urllib2.install_opener(opener)
 
 def include_external_html(url):
     print 'requesting url: {}'.format(url)
