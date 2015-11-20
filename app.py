@@ -8,6 +8,7 @@ import random
 from shutil import copyfile
 import operator
 import urllib
+import urllib2
 import itertools
 import subprocess
 import boto 
@@ -1404,16 +1405,20 @@ def taskstatus(task_id):
 
 
 
-
-
 @celery.task
 def download_file(url, path, file_id):
-    url_opener = urllib.URLopener()
-    url_opener.retrieve(url, path)
+    response = urllib2.urlopen(url)
+    CHUNK = 16 * 1024
+    with open(path, 'wb') as outfile: 
+        while True: 
+            chunk = response.read(CHUNK)
+            if not chunk: break 
+            outfile.write(chunk)
     f = db.session.query(File).filter(File.id==file_id).first()
     f.available = True
     db.session.commit()
     return True 
+
 
 
 @celery.task

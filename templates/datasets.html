@@ -12,13 +12,17 @@
 		    <table class='table table-striped'> 
 		    <thead>
 			    <h4>Create A New Dataset:</h4>
+			    <tr>
+			    <!-- <th>{{ form.csrf_token }}</th> -->
+		    	<th>{{ form.name.label }}:</th>
+		    	<th>Description (Ig Type, Cell Sorting Marker, etc)</th>
 		    </thead>
 			    <tr>
-		        <th>{{ form.csrf_token }}</th>
-		        <th>{{ form.name.label }}: {{ form.name(size=20) }}</th>
-		        <th>{{ form.description.label }}: {{ form.description(size=40) }}</th>
-		        <th>Ig Type: {{ form.ig_type(size=10) }}</th>
-		        <th>VDJ+VJ Paired? : {{ form.paired }}</th>
+		        <!-- <th></th> -->
+		        <th>{{ form.name(size=20) }}</th>
+		        <th>{{ form.description(size=50) }}</th>
+		        <!-- <th>Ig Type: {{ form.ig_type(size=10) }}</th> -->
+		        <th>Expect VH/VL Paired Data? : {{ form.paired }}</th>
 		        <th><input type="submit" value="Submit"></th>
 	        </tr>
         </table>
