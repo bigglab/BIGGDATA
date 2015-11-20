@@ -983,6 +983,7 @@ def file_download():
         file.available = False 
         file.s3_status = ''
         file.status = ''
+        file.chain = parse_name_for_chain_type(file.name)
         print 'Saving File Metadata to Postgres: {}'.format(file.__dict__)
         db.session.add(file)
         db.session.commit()
@@ -1012,6 +1013,21 @@ def file_download():
 
 
 
+def parse_name_for_chain_type(name):
+    if 'tcra' in name.lower() or 'alpha' in name.lower(): 
+        chain = 'TCRA'
+    if 'tcrb' in name.lower() or 'beta' in name.lower(): 
+        chain = 'TCRB'
+    if 'igh' in name.lower() or 'heavy' in name.lower(): 
+        chain = 'HEAVY'
+    if 'igl' in name.lower() or 'igk' in name.lower() or 'light' in name.lower(): 
+        chain = 'LIGHT'
+    try: 
+        chain
+    except NameError: 
+        chain = '' 
+    return chain 
+
 
 def link_file_to_user(path, user_id, name):
     file = File()
@@ -1022,6 +1038,7 @@ def link_file_to_user(path, user_id, name):
     file.file_type = parse_file_ext(file.path)
     file.available = True 
     file.s3_status = ''
+    file.chain = parse_name_for_chain_type(name)
     db.session.add(file)
     db.session.commit()
     return True
