@@ -1532,7 +1532,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     clone_output_file.command = 'mixcr exportClones {} {}'.format(clone_file.path, clone_output_file.path)
     files_to_execute.append(clone_output_file)
     alignment_output_file = File()
-    alignment_output_file = alignment_file.id
+    alignment_output_file.parent_id = alignment_file.id
     alignment_output_file.path = '{}.txt'.format(alignment_file.path)
     alignment_output_file.file_type = 'MIXCR_ALIGNMENT_TEXT'
     alignment_output_file.name = '{}.txt'.format(alignment_file.name)
