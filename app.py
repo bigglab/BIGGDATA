@@ -1500,15 +1500,11 @@ def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description
 def run_mixcr_analysis_id_with_files(analysis_id, files):
     analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
     dataset = analysis.dataset
-    
+    files_to_execute = []
     print 'RUNNING MIXCR ON THESE FILES: {}'.format(files)
-  
     scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
     basename = files[0].path.split('/')[-1].split('.')[0]
     basepath = '{}/{}'.format(scratch_path, basename)
-
-
-
     print 'Writing output files to base name: {}'.format(basepath)
     output_files = []
     # Instantiate Source Files
