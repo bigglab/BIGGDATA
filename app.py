@@ -95,8 +95,12 @@ app.jinja_env.globals['include_file'] = include_file
 
 def include_external_html(url):
     print 'requesting url: {}'.format(url)
-    response = urllib2.urlopen(url).read()
-    print 'response: {}'.format(response)
+    try: 
+        response = urllib2.urlopen(url)
+        contents = response.read()
+    except urllib2.URLError, error: 
+        print "ERROR: {}".format(error)
+        print "CONTENTS: {}".format(contents)
     return response  
 
 app.jinja_env.globals['include_external_html'] = include_external_html
