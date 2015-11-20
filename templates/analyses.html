@@ -5,9 +5,6 @@
 <div class="container">
 	<h3>Analyses Dashboard</h3>
 </div>
-<br>
-<br>
-
 
 <div class='container'>
 {% if status != [] %}
@@ -21,6 +18,13 @@
 {% endif %}
 </div>
 
+<div class="container">
+<br>
+<h4>Run A New Analysis By <a href="{{url_for('.datasets')}}">Selecting A Dataset</a></h4>
+</div>
+
+
+
 
 {% for analysis, files in analysis_file_dict.items() %}
 <br>
@@ -32,7 +36,7 @@
 					<table class='table table-striped'>
 					<tbody>
 						<tr>
-							<th>{{analysis.program}} Analysis</th>
+							<th>{{analysis.program}} Analysis on Dataset {{analysis.dataset.id}}</th>
 							<th><a href="{{url_for('.analysis', id=analysis.id)}}">Click Here For A Detailed Analysis</a></th>
 							<th>State: {{analysis.status}}</th>
 							<th>{% if analysis.active_command %}Running: {{' '.join(analysis.active_command.split(' ')[0:2])}} {% endif %}</th>

@@ -14,12 +14,12 @@
 <br>
 
 
+
 <div class="container">
-	<h4>These Files Are Associated Through Dataset Analyses:</h4>
 	{% for dataset in current_user.datasets %}
 		{% if dataset.files.all() != [] %}
 			<br>
-			<h4>Dataset {{dataset.id}} {{dataset.name}}</h4>
+			<h4>Files Associated With Your Dataset {{dataset.id}} {{dataset.name}}</h4>
 			{% set files = dataset.files %}
 			{% include "partials/files.html" with context %}
 			{% endif %}
