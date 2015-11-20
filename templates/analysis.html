@@ -69,11 +69,26 @@
 
 <br>
 <br>
+<!-- 
+{{ include_external_html('http://vdjviz.rsldrt.com:9000/') }}
+ -->
 
 {% if analysis.available %}
 
+ <div class="container">
+ <h4>Use our instance of VDJVIZ to visualize your results. For now you have to download the MIXCR_CLONES_TEXT file (may need to right click and Save As...), and then <b>click the "Browser" below</b> and upload the file:</h4>
+ <iframe style='width: inherit; height: 900px;' src="http://vdjviz.rsldrt.com:9000/"></iframe>
+ <p>In case our session is outdated, login with these credentials:  Email:  vdjviz1@vdjviz.com  Password:  vdjviz1 </p>
+ </div>
+
+
+<br><br>
+
+
+
+
 <div class="container">
-	<h2>Now here's some data gathered from these annotations:</h2>
+	<h2>Here's some data gathered directly from our database:</h2>
 </div>
 
 <br>
@@ -145,14 +160,27 @@
 
 
 {% endif %}
+
+
+
+
+
+
+
 <br>
 <br>
+
+
+
 
 <div class='container'>
 	<a href={{url_for('.analyses')}}><h4>Back To Analyses Dashboard</h4></a>
 </div>
 
 <br><br><br><br><br>
+
+
+
 
 
 

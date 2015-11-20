@@ -86,7 +86,14 @@ login_manager.init_app(app)
 templateLoader = jinja2.FileSystemLoader( searchpath="{}/templates".format(app.config['HOME']) )
 templateEnv = jinja2.Environment( loader=templateLoader, extensions=['jinja2.ext.with_'])
 
+def include_file(name):
+    return jinja2.Markup(loader.get_source(env, name)[0])
+app.jinja_env.globals['include_file'] = include_file
 
+def include_external_html(url):
+    return  urllib2.urlopen(url).read()
+
+app.jinja_env.globals['include_external_html'] = include_external_html
 
 
 
