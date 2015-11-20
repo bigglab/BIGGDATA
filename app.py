@@ -91,14 +91,19 @@ def include_file(name):
     return jinja2.Markup(loader.get_source(env, name)[0])
 app.jinja_env.globals['include_file'] = include_file
 
-proxy = urllib2.ProxyHandler({})
-opener = urllib2.build_opener(proxy)
-urllib2.install_opener(opener)
+# proxy = urllib2.ProxyHandler({})
+# opener = urllib2.build_opener(proxy)
+# urllib2.install_opener(opener)
+
 
 def include_external_html(url):
     print 'requesting url: {}'.format(url)
+    opener = urllib2.build_opener()
+    opener.addheaders.append(('Cookie', 'cookiename=__utma=155377080.1895388295.1442627799.1442815913.1442970404.3; __utmz=155377080.1442627799.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); id=96cdd2161cf9a85c336805d9c86517ef93c828c8e9b2d64ce2ca4ef6551c8c882c8c3eec8cdc7c3ecf1b49a67dce8cc611285b76fe225965d9fc4933264ed92b48410022ed3a6103f2b5498af0924b3ea2f5e197f83e63df5014054beadb7a500cf2772ab20b8e23bdc7dd426d266f9f6dee375ea3fff44d357f638821acfda3'))
+    f = opener.open("http://example.com/")
     try: 
-        response = urllib2.urlopen(url)
+        response = opener.open(url)
+        # response = urllib2.urlopen(url)
         contents = response.read()
     except urllib2.URLError, error: 
         print "ERROR: {}".format(error)
