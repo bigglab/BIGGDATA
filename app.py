@@ -7,7 +7,8 @@ import time
 import random
 from shutil import copyfile
 import operator
-import urllib
+# import urllib
+os.environ['http_proxy']=''
 import urllib2
 import itertools
 import subprocess
@@ -89,6 +90,8 @@ templateEnv = jinja2.Environment( loader=templateLoader, extensions=['jinja2.ext
 def include_file(name):
     return jinja2.Markup(loader.get_source(env, name)[0])
 app.jinja_env.globals['include_file'] = include_file
+
+
 
 def include_external_html(url):
     print 'requesting url: {}'.format(url)
