@@ -69,18 +69,15 @@
 
 <br>
 <br>
-<!-- 
-{{ include_external_html('http://vdjviz.rsldrt.com:9000/') }}
- -->
+
 
 {% if analysis.available %}
 
- <div class="container">
- <h4>Visualize your results! For now, download the MIXCR_CLONES_TEXT File (right click and Save As), and then <b>Upload new sample</b>:</h4>
- <br>
- <iframe style='width: inherit; height: 900px;' src="http://vdjviz.rsldrt.com:9000/account"></iframe>
- <p>In case our session is outdated, login with these credentials:  Email:  vdjviz1@vdjviz.com  Password:  vdjviz1 </p>
- </div>
+
+<div class="container">
+<h4>Visualize your results! For now, download the MIXCR_CLONES_TEXT File (right click and Save As), and then <b>Upload new sample</b>:</h4>
+{% include "partials/vdjviz.html" with context %}
+</div>
 
 
 <br><br>

@@ -766,6 +766,7 @@ nav.register_element('frontend_top', Navbar(
         'Run Analysis',
         View('My Datasets', '.datasets'),
         View('Analysis Dashboard', '.analyses'),
+        View('VDJ VIZualizer', '.vdj_visualizer'),
         Link('Other Tasks', 'under_construction'), 
         ),
     Subgroup(
@@ -1375,6 +1376,12 @@ def schema():
     schema_url = url_for('static', filename='schema.png')
     return render_template("schema.html", schema_url=schema_url)
 
+
+
+@frontend.route('/vdjviz', methods=['GET'])
+def vdj_visualizer():
+    vdjviz_url = 'http://vdjviz.rsldrt.com:9000/account'
+    return render_template("vdjviz.html", vdjviz_url=vdjviz_url)
 
 
 
