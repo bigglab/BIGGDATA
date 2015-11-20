@@ -13,8 +13,8 @@
     <tbody>
         <tr>
             <th>{{ login_form.csrf_token }}</th>
-            <th>{{ login_form.email.label }} {{ login_form.email(size=20) }}</th>
-            <th>{{ login_form.password.label }} {{ login_form.password(size=20) }}</th>
+            <th>{{ login_form.email.label }}: {{ login_form.email(size=20) }}</th>
+            <th>Password: {{ login_form.password(size=20) }}</th>
             <th><input type="submit" value="Login"></th>
         </tr>
     </tbody>

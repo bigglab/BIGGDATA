@@ -214,10 +214,22 @@ class Dataset(db.Model):
         def __repr__(self): 
             return "<Dataset {} : {} : {}>".format(self.id, self.name, self.description)
 
+        def __init__(self):
+            self.primary_data_files_ids = []
+
+
+
         def primary_data_files(self):
-            files = [f for f in self.files.all() if f.id in self.primary_data_files_ids]
+            all_files = self.files.all()
+            if all_files == None: return []
+            files = [f for f in all_files if f.id in self.primary_data_files_ids]
             return files 
 
+        def files_by_type(type_string):
+            all_files = self.files.all()
+            if all_files == None: return []
+            files =  [f for f in dataset.files.all() if f.file_type==type_string]
+            return files 
         # primary_data_files = db.relationship('File', primaryjoin="File.dataset_id == Dataset.id")
 
 
@@ -1440,22 +1452,27 @@ def download_file(url, path, file_id):
 
 @celery.task
 def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description='', user_id=6):
+    dataset = db.query(Dataset).find(Dataset.id==dataset_id).first()
+    print 'RUNNING MIXCR ON DATASET ID# {}: {}'.format(dataset_id, repr(dataset.__dict__))
+    if dataset.primary_data_files() == []: 
+        print 'No Data Files Associated with Dataset {}'.format(dataset.id)
+        gzipped_fastqs = dataset.files_by_type('GZIPPED_FASTQ')
+        fastqs = dataset.files_by_type('FASTQ')
+        print 'FOUND THESE FASTQ FILES: GZIPPED_FASTQ: {} {}  FASTQ: {} {}'.format(len(gzipped_fastqs), gzipped_fastqs, len(fastqs), fastqs)
+        if len(fastqs) == 0 and len(gzipped_fastqs) == 0:
+            print 'NO FASTQ DATA ASSOCIATED WITH DATASET'
+            return False 
+        if len(fastqs) == 0 and len(gzipped_fastqs) != 0:
+            dataset.primary_data_files_ids = map(lambda f: f.id, gzipped_fastqsp)
+            db.session.commit()
+        if len(fastqs) != 0: 
+            dataset.primary_data_files_ids = map(lambda f: f.id, fastqs)
+            db.session.commit()
     analysis = Analysis()
     analysis.db_status = 'WAITING'
     analysis.name = analysis_name
-    analysis.user_id = user_id
     analysis.description = analysis_description
-    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
-    print 'RUNNING MIXCR ON DATASET ID# {}: {}'.format(dataset_id, repr(dataset.__dict__))
-    gzipped_fastqs = [f for f in dataset.files.all() if f.file_type=='GZIPPED_FASTQ']
-    fastqs = [f for f in dataset.files.all() if f.file_type=='FASTQ']
-    print 'FOUND THESE FASTQ FILES: GZIPPED_FASTQ: {} {}  FASTQ: {} {}'.format(len(gzipped_fastqs), gzipped_fastqs, len(fastqs), fastqs)
-    if len(fastqs) == 0 and len(gzipped_fastqs) == 0: 
-        print 'NO FASTQ DATA ASSOCIATED WITH DATASET'
-        return False 
-    if len(fastqs) == 0 and len(gzipped_fastqs) != 0: 
-        print 'PLEASE DECOMPRESS FASTQ.GZ AND RESUBMIT JOB'
-        return False
+    analysis.user_id = user_id
     analysis.dataset_id = dataset.id
     analysis.program = 'mixcr'
     analysis.started = 'now'
@@ -1466,17 +1483,14 @@ def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description
     analysis.inserted_into_db = False
     db.session.add(analysis)
     db.session.commit()
-    if len(fastqs) != 0: 
-        fastqs_by_chain = {}
-        for key, values in itertools.groupby(fastqs, lambda x: x.chain): 
-            fastqs_by_chain[key] = list(values)
-        print fastqs_by_chain
-        for chain, fastqs in fastqs_by_chain.items(): 
-            print 'ABOUT TO RUN MIXCR ANAYSIS {} ON FILES FROM CHAIN {}'.format(repr(analysis), chain)
-            run_mixcr_analysis_id_with_files(analysis.id, fastqs)
-        return True 
-    # db.session.commit()
-    return False 
+    data_files_by_chain = {}
+    for key, values in itertools.groupby(dataset.primary_data_files(), lambda x: x.chain): 
+        data_files_by_chain[key] = list(values)
+    print "Runninx mixcr in these batches of files (sorted by file.chain): {}".format(data_files_by_chain)
+    for chain, files in data_files_by_chain.items(): 
+        print 'ABOUT TO RUN MIXCR ANAYSIS {} ON FILES FROM CHAIN {}'.format(repr(analysis), chain)
+        run_mixcr_analysis_id_with_files(analysis.id, files)
+    return True 
 
 
 
@@ -1484,71 +1498,74 @@ def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description
 @celery.task
 def run_mixcr_analysis_id_with_files(analysis_id, files):
     analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
+    dataset = analysis.dataset
+    
     print 'RUNNING MIXCR ON THESE FILES: {}'.format(files)
+  
     scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
     basename = files[0].path.split('/')[-1].split('.')[0]
     basepath = '{}/{}'.format(scratch_path, basename)
+
+
+
     print 'Writing output files to base name: {}'.format(basepath)
-    commands = []
     output_files = []
+    # Instantiate Source Files
     alignment_file = File()
     alignment_file.path = '{}.aln.vdjca'.format(basepath)
     alignment_file.name = "{}.aln.vdjca".format(basename)
     alignment_file.command = 'mixcr align -f {} {}'.format(' '.join([f.path for f in files]), alignment_file.path)
     alignment_file.file_type = 'MIXCR_ALIGNMENTS'
-    commands.append(alignment_file.command) 
-    output_files.append(alignment_file)
+    files_to_execute.append(alignment_file)
     clone_file = File()
     clone_file.file_type = 'MIXCR_CLONES'
     clone_file.path = '{}.aln.clns'.format(basepath)
     clone_file.name = '{}.aln.clns'.format(basename)
     clone_file.command = 'mixcr assemble -f {} {}'.format(alignment_file.path, clone_file.path)
-    commands.append(clone_file.command)
-    output_files.append(clone_file)
+    files_to_execute.append(clone_file)
+    db.session.add(alignment_file)
+    db.session.add(clone_file)
+    db.session.commit()
+    # Commit To Get Parent IDs
     clone_output_file = File()
+    clone_output_file.parent_id = clone_file.id 
     clone_output_file.path = '{}.txt'.format(clone_file.path)
     clone_output_file.file_type = 'MIXCR_CLONES_TEXT'
     clone_output_file.name = '{}.txt'.format(clone_file.name)
     clone_output_file.command = 'mixcr exportClones {} {}'.format(clone_file.path, clone_output_file.path)
-    commands.append(clone_output_file.command) 
-    output_files.append(clone_output_file)
+    files_to_execute.append(clone_output_file)
     alignment_output_file = File()
+    alignment_output_file = alignment_file.id
     alignment_output_file.path = '{}.txt'.format(alignment_file.path)
     alignment_output_file.file_type = 'MIXCR_ALIGNMENT_TEXT'
     alignment_output_file.name = '{}.txt'.format(alignment_file.name)
     alignment_output_file.command = 'mixcr exportAlignments {} {}'.format(alignment_file.path, alignment_output_file.path)
-    commands.append(alignment_output_file.command) 
-    output_files.append(alignment_output_file)
-    # pretty_alignment_file = File()
-    # pretty_alignment_file.path = '{}.pretty.txt'.format(alignment_file.path)
-    # pretty_alignment_file.file_type = 'MIXCR_PRETTY_ALIGNMENT_TEXT'
-    # pretty_alignment_file.name =  '{}.pretty.txt'.format(alignment_file.name)
-    # pretty_alignment_file.command = 'mixcr exportAlignmentsPretty {} {}'.format(alignment_file.path, pretty_alignment_file.path)
-    # commands.append(pretty_alignment_file.command)
-    # output_files.append(pretty_alignment_file)
-    print 'running these commands:'
-    print '\n'.join(commands)
-    analysis.commands = commands 
+    files_to_execute.append(alignment_output_file)
+    pretty_alignment_file = File()
+    pretty_alignment_file.parent_id = alignment_file.id 
+    pretty_alignment_file.path = '{}.pretty.txt'.format(alignment_file.path)
+    pretty_alignment_file.file_type = 'MIXCR_PRETTY_ALIGNMENT_TEXT'
+    pretty_alignment_file.name =  '{}.pretty.txt'.format(alignment_file.name)
+    pretty_alignment_file.command = 'mixcr exportAlignmentsPretty {} {}'.format(alignment_file.path, pretty_alignment_file.path)
+    files_to_execute.append(pretty_alignment_file)
     analysis.status = 'EXECUTING'
     db.session.commit()
-    for f in output_files:
+    for f in files_to_execute:
         f.command = f.command.encode('ascii')
-        # f.command = str(f.command)
         f.dataset_id = analysis.dataset_id 
         f.analysis_id = analysis.id 
-        f.chain = files[0].chain 
-        db.session.add(f)
+        f.chain = files[0].chain
         print 'Executing: {}'.format(f.command)
         analysis.active_command = f.command
+        f.in_use = True 
+        db.session.add(f)
         db.session.commit()
+        # MAKE THE CALL 
         response = os.system(f.command)
-        responses = analysis.responses
-        responses.append(response)
-        analysis.responses = responses 
-        db.session.commit()
         print 'Response: {}'.format(response)
         if response == 0: 
             f.available = True 
+            f.file_size = os.path.getsize(f.path)
             db.session.commit()
         else:
             f.available = False
@@ -1564,7 +1581,6 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     db.session.commit()
     # KICK OFF ASYNC DB INSERTS FROM OUTPUT FILES
     parseable_mixcr_alignments_file_path = alignment_output_file.path
-    db.session.commit()
     if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
     return True 
 
