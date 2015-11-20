@@ -1569,7 +1569,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
             analysis.status = 'FAILED'
             db.session.commit()
     print 'All commands in analysis {} have been executed.'.format(analysis)
-    if set(map(lambda f: f.available, files_to_execute) == [True]):
+    if set(map(lambda f: f.available, files_to_execute)) == {True}:
         analysis.status = 'SUCCESS'
         analysis.available = True
     if not analysis.status == 'FAILED': analysis.status = 'SUCCESS'
