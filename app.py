@@ -222,13 +222,28 @@ class Dataset(db.Model):
         def primary_data_files(self):
             all_files = self.files.all()
             if all_files == None: return []
-            files = [f for f in all_files if f.id in self.primary_data_files_ids]
+            dataset = self 
+            if len(self.primary_data_files_ids) == 0:
+                print 'No Data Files Associated with Dataset {}'.format(dataset.id)
+                gzipped_fastqs = dataset.files_by_type('GZIPPED_FASTQ')
+                fastqs = dataset.files_by_type('FASTQ')
+                print 'FOUND THESE DATA FILES: GZIPPED_FASTQ: {} {}  FASTQ: {} {}'.format(len(gzipped_fastqs), gzipped_fastqs, len(fastqs), fastqs)
+                if len(fastqs) == 0 and len(gzipped_fastqs) == 0:
+                    print 'NO FASTQ DATA ASSOCIATED WITH DATASET'
+                    files = [] 
+                if len(fastqs) == 0 and len(gzipped_fastqs) != 0:
+                    files = gzipped_fastqs
+                if len(fastqs) != 0: 
+                    files = fastqs 
+            else: 
+                files = [f for f in all_files if f.id in self.primary_data_files_ids]
             return files 
 
-        def files_by_type(type_string):
+
+        def files_by_type(self, type_string):
             all_files = self.files.all()
             if all_files == None: return []
-            files =  [f for f in dataset.files.all() if f.file_type==type_string]
+            files =  [f for f in self.files.all() if f.file_type==type_string]
             return files 
         # primary_data_files = db.relationship('File', primaryjoin="File.dataset_id == Dataset.id")
 
@@ -1454,20 +1469,6 @@ def download_file(url, path, file_id):
 def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description='', user_id=6):
     dataset = db.session.query(Dataset).find(Dataset.id==dataset_id).first()
     print 'RUNNING MIXCR ON DATASET ID# {}: {}'.format(dataset_id, repr(dataset.__dict__))
-    if dataset.primary_data_files() == []: 
-        print 'No Data Files Associated with Dataset {}'.format(dataset.id)
-        gzipped_fastqs = dataset.files_by_type('GZIPPED_FASTQ')
-        fastqs = dataset.files_by_type('FASTQ')
-        print 'FOUND THESE FASTQ FILES: GZIPPED_FASTQ: {} {}  FASTQ: {} {}'.format(len(gzipped_fastqs), gzipped_fastqs, len(fastqs), fastqs)
-        if len(fastqs) == 0 and len(gzipped_fastqs) == 0:
-            print 'NO FASTQ DATA ASSOCIATED WITH DATASET'
-            return False 
-        if len(fastqs) == 0 and len(gzipped_fastqs) != 0:
-            dataset.primary_data_files_ids = map(lambda f: f.id, gzipped_fastqsp)
-            db.session.commit()
-        if len(fastqs) != 0: 
-            dataset.primary_data_files_ids = map(lambda f: f.id, fastqs)
-            db.session.commit()
     analysis = Analysis()
     analysis.db_status = 'WAITING'
     analysis.name = analysis_name
