@@ -1467,7 +1467,7 @@ def download_file(url, path, file_id):
 
 @celery.task
 def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description='', user_id=6):
-    dataset = db.session.query(Dataset).find(Dataset.id==dataset_id).first()
+    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
     print 'RUNNING MIXCR ON DATASET ID# {}: {}'.format(dataset_id, repr(dataset.__dict__))
     analysis = Analysis()
     analysis.db_status = 'WAITING'
