@@ -8,9 +8,9 @@ from kombu.common import Broadcast
 
 
 
-CELERY_TASK_SERIALIZER = 'pickle'
-CELERY_RESULT_SERIALIZER = 'pickle'
-CELERY_ACCEPT_CONTENT=['pickle']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT=['json']
 CELERY_TIMEZONE = 'America/Chicago'
 CELERY_ENABLE_UTC = True
 
