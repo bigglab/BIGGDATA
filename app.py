@@ -862,7 +862,7 @@ def create_user():
     login_user(new_user, remember=True)
     flash("new user created and logged in", 'success')
     #create home and scratch if necessary 
-    result = instantiate_user_with_directories.delay(new_user.id)
+    result = instantiate_user_with_directories.apply_async((new_user.id, ), queue='default')
     return redirect(url_for(".index"))
 
 
@@ -1046,7 +1046,7 @@ def file_download():
         print status 
         # result_id NOT WORKING - STILL REDUNDANT IF THEY CLICK TWICE!!
         if not 'async_result_id' in session.__dict__:
-            result = download_file.delay(file.url, file.path, file.id)
+            result = download_file.apply_async((file.url, file.path, file.id), queue='default')
             flash('file downloading from {}'.format(file.url))
             session['async_result_id'] = result.id
         time.sleep(1)
@@ -1133,7 +1133,7 @@ def transfer_to_s3(file_id):
         f.s3_status = 'Staging'
         db.session.add(f)
         db.session.commit()
-        result = transfer_file_to_s3.delay(f.id)
+        result = transfer_file_to_s3.apply_async((f.id,), queue='default')
         return redirect(url_for('.files'))
 
 
@@ -1292,7 +1292,7 @@ def mixcr(dataset_id, status=[]):
     status = []
     if request.method == 'POST' and dataset:
         status.append('MIXCR Launch Detected')
-        result = run_mixcr_with_dataset_id.delay(dataset_id, analysis_name=form.name.data, analysis_description=form.description.data, user_id=current_user.id)
+        result = run_mixcr_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id}, queue='default')
         status.append(result.__repr__())
         status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
         time.sleep(1)
@@ -1498,7 +1498,7 @@ def download_file(url, path, file_id):
 
 
 @celery.task
-def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description='', user_id=6, queue='aws'):
+def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description='', user_id=6):
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
     print 'RUNNING MIXCR ON DATASET ID# {}: {}'.format(dataset_id, repr(dataset.__dict__))
     analysis = Analysis()
@@ -1639,7 +1639,7 @@ def parse_and_insert_mixcr_annotations_from_file_path(file_path, dataset_id=None
     if analysis: 
         analysis.db_status = 'Finished. {} Annotations Inserted'.format(len(annotations))
     db.session.commit()
-    result = annotate_analysis_from_db.delay(analysis.id)
+    result = annotate_analysis_from_db.apply_async((analysis.id, ), queue='default')
     return len(annotations)
 
 
