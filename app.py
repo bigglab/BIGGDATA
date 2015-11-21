@@ -1496,6 +1496,29 @@ def taskstatus(task_id):
 
 
 
+@celery.task 
+def import_from_sra(accession, name=None, user_id=57):
+    user = db.session.query(User).filter(User.id==user_id).first()
+    if not name: 
+        name = accession 
+    print 'Fetching SRA data from NCBI {}'.format(accession)
+    command = 'fastq-dump --gzip --split-files -T --outdir {} {}'.format(user.scratch_path, accession) 
+    response = os.system(command)
+    if response == 0: 
+        file_paths = []
+        dirs = os.listdir('{}/{}'.format(user.scratch_path, accession))
+        if dirs == ['1']:
+            file_paths = ['{}/{}/1/fastq.gz'.format(user.scratch_path, accession)]
+            filename_array = [accession]
+        if dirs == ['1','2']:
+            file_paths = ['{}/{}/1/fastq.gz'.format(user.scratch_path, accession), '{}/{}/2/fastq.gz'.format(user.scratch_path, accession)]
+            filename_array = ['{}.R1.fastq.gz'.format(accession), '{}.R2.fastq.gz'.format(accession)]
+        else: 
+            print 'Number of files from SRA export not one or two...'
+            return False 
+    print 'Writing sra output files to {}'.format(user.scratch_path)
+    dataset = import_files_as_dataset(file_paths, filename_array=filename_array, user_id=user_id, name=name)
+    return dataset 
 
 
 
@@ -1503,6 +1526,50 @@ def taskstatus(task_id):
 
 
 
+@celery.task 
+def import_files_as_dataset(filepath_array, filename_array=None, chain=None, user_id=57, name=None):
+    d = Dataset()
+    d.user_id = user_id
+    d.name = name
+    d.description = 'autogen dataset from file import'
+    d.chain_types_sequenced = [chain]
+    db.session.add(d)
+    db.session.commit()
+    if len(filepath_array) == 2: 
+        d.paired = True
+    files = []
+    for index, filepath in enumerate(filepath_array):
+        f = File()
+        f.user_id = user_id 
+        if filename_array and len(filename_array) == len(filepath_array):
+            f.name = filename_array[index]
+        else:
+            f.name = filepath.split('/')[-1]
+        f.file_type = parse_file_ext(f.name) 
+        f.dataset_id = d.id
+        # description = 
+        f.available = True
+        f.in_use = False
+        f.status = 'AVAILABLE'
+        f.path = filepath
+        f.file_size = os.path.getsize(f.path)
+        f.s3_available = False
+        f.s3_status = ''
+        f.s3_path = ''
+        f.chain = chain
+        # url = db.Column(db.String(256))
+        f.command = 'metadata created to link existing file'
+        f.created = 'now'
+        # paired_partner = db.Column(db.Integer, db.ForeignKey('file.id'))
+        # parent_id = db.Column(db.Integer, db.ForeignKey('file.id'))
+        # analysis_id = db.Column(db.Integer, db.ForeignKey('analysis.id'))
+        files.append(f)
+    for f in files: 
+        db.session.add(f)
+    db.session.commit()
+    d.primary_data_files_ids = map(lambda f: f.id, files)
+    db.session.commit()
+    return d 
 
 
 
