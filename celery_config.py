@@ -27,6 +27,8 @@ CELERY_DEFAULT_QUEUE = 'default'
 CELERY_QUEUES = (
 	Broadcast('broadcast_tasks'),
   Queue('default', default_exchange, routing_key='default'),
+  Queue('ut', default_exchange, routing_key='ut'),
+  Queue('aws', default_exchange, routing_key='aws'),
 )
 
 
