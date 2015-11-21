@@ -1510,7 +1510,7 @@ def import_from_sra(accession, name=None, user_id=57):
         if dirs == ['1']:
             file_paths = ['{}/{}/1/fastq.gz'.format(user.scratch_path, accession)]
             filename_array = [accession]
-        if dirs == ['1','2']:
+        if dirs == ['1','2'] or dirs == ['2','1']:
             file_paths = ['{}/{}/1/fastq.gz'.format(user.scratch_path, accession), '{}/{}/2/fastq.gz'.format(user.scratch_path, accession)]
             filename_array = ['{}.R1.fastq.gz'.format(accession), '{}.R2.fastq.gz'.format(accession)]
         else: 
