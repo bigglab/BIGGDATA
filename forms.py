@@ -35,12 +35,18 @@ class CreateMixcrAnalysisForm(Form):
 	insert_into_db = BooleanField(u'Insert Into DB')
 
 
+class CreatePandaseqAnalysisForm(Form): 
+    dataset_id = IntegerField()
+    name = TextField(u'Name', )
+    description = TextField(u'Description')
+    algorithm = SelectField(u'Algorithm', choices=(['ea_util', 'ea_util'], ['flash', 'flash'], ['pear', 'pear'], ['rdp_mle', 'rdp_mle'],  ['simple_bayesian', 'simple_bayesian'], ['stitch', 'stitch'], ['uparse', 'uparse']), validators=[validators.input_required()])
+
 
 
 class FileDownloadForm(Form):
     url     = TextField(u'File URL', validators=[validators.input_required()], widget=TextInput())
     description  = TextAreaField(u'File Description')
-    chain  = TextField(u'Chain HEAVY/LIGHT')
+    chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB']), validators=[validators.input_required()])
     paired_partner  = IntegerField()
     dataset_id = IntegerField()
 
@@ -48,7 +54,7 @@ class FileDownloadForm(Form):
 class FileUploadForm(Form):
     file     = FileField(u'File Path', validators=[validators.input_required()])
     description  = TextAreaField(u'File Description')
-    chain  = TextField(u'Chain HEAVY/LIGHT', validators=[validators.input_required()])
+    chain  = SelectField(u'Chain', choices=(['HEAVY', 'LIGHT', 'TCRA', 'TCRB'], ['HEAVY', 'LIGHT', 'TCRA', 'TCRB']), validators=[validators.input_required()])
     paired_partner  = IntegerField()
     dataset_id = IntegerField()
 
@@ -57,7 +63,6 @@ class AssociateFilesToDatasetForm(Form):
     file_ids  = SelectField(u'Files', coerce=int)
     dataset_id = IntegerField()
     submit = SubmitField()
-
 
 
 

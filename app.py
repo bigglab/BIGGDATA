@@ -1309,6 +1309,32 @@ def mixcr(dataset_id, status=[]):
 
 
 
+@frontend.route('/analysis/pandaseq/<int:dataset_id>', methods=['GET', 'POST'])
+@login_required
+def pandaseq(dataset_id, status=[]):
+    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+    form = CreatePandaseqAnalysisForm()
+    status = []
+    if request.method == 'POST' and dataset:
+        status.append('PANDASEQ Launch Detected')
+        result = run_pandaseq_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'algorithm': form.algorithm.data}, queue='default')
+        status.append(result.__repr__())
+        status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
+        time.sleep(1)
+        # return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
+        analyses = current_user.analyses.all()
+        analysis_file_dict = OrderedDict()
+        for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
+            analysis_file_dict[analysis] = analysis.files.all() 
+        return redirect(url_for('.analyses', status=status))
+        # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
+    else: 
+        return render_template("pandaseq.html", dataset=dataset, form=form, status=status) 
+
+
+
+
+
 
 
 
@@ -1519,12 +1545,11 @@ def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description
     data_files_by_chain = {}
     for key, values in itertools.groupby(dataset.primary_data_files(), lambda x: x.chain): 
         data_files_by_chain[key] = list(values)
-    print "Runninx mixcr in these batches of files (sorted by file.chain): {}".format(data_files_by_chain)
+    print "Running mixcr in these batches of files (sorted by file.chain): {}".format(data_files_by_chain)
     for chain, files in data_files_by_chain.items(): 
         print 'ABOUT TO RUN MIXCR ANAYSIS {} ON FILES FROM CHAIN {}'.format(repr(analysis), chain)
         run_mixcr_analysis_id_with_files(analysis.id, files)
     return True 
-
 
 
 
@@ -1644,8 +1669,6 @@ def parse_and_insert_mixcr_annotations_from_file_path(file_path, dataset_id=None
 
 
 
-
-
 @celery.task
 def annotate_analysis_from_db(analysis_id): 
     analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
@@ -1660,6 +1683,110 @@ def annotate_analysis_from_db(analysis_id):
         analysis.db_status = 'Inserted and Re-analyzed'
         analysis.available = True 
         db.session.commit()
+
+
+
+
+
+@celery.task
+def run_pandaseq_with_dataset_id(dataset_id, analysis_name='', analysis_description='', user_id=6, algorithm='pear'):
+    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+    print 'RUNNING MIXCR ON DATASET ID# {}: {}'.format(dataset_id, repr(dataset.__dict__))
+    analysis = Analysis()
+    analysis.db_status = 'WAITING'
+    analysis.name = analysis_name
+    analysis.description = analysis_description
+    analysis.user_id = user_id
+    analysis.dataset_id = dataset.id
+    analysis.program = 'pandaseq'
+    analysis.started = 'now'
+    analysis.params = {}
+    analysis.status = 'QUEUED'
+    analysis.responses = []
+    analysis.available = False
+    analysis.inserted_into_db = False
+    db.session.add(analysis)
+    db.session.commit()
+    data_files_by_chain = {}
+    for key, values in itertools.groupby(dataset.primary_data_files(), lambda x: x.chain): 
+        data_files_by_chain[key] = list(values)
+    print "Running pandaseq in these batches of files (sorted by file.chain): {}".format(data_files_by_chain)
+    for chain, files in data_files_by_chain.items(): 
+        if len(files) == 2: 
+            print 'ABOUT TO RUN PANDASEQ CONCATENATION ON {} FILES FROM CHAIN {}'.format(len(files), chain)
+            run_pandaseq_analysis_with_files(analysis, files, algorithm=algorithm)
+        else: 
+            print 'bad request for pandaseq alignment of only {} files'.format(len(files))
+    return True 
+
+
+
+@celery.task
+def run_pandaseq_analysis_id_with_files(analysis, files, algorithm='pear'):
+    dataset = analysis.dataset
+    files_to_execute = []
+    print 'RUNNING PANDASEQ ON THESE FILES: {}'.format(files)
+    scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
+    basename = files[0].path.split('/')[-1].split('.')[0]
+    basepath = '{}/{}'.format(scratch_path, basename)
+    print 'Writing output files to base name: {}'.format(basepath)
+    output_files = []
+    # Instantiate Source Files
+    alignment_file = File()
+    alignment_file.path = '{}.pandaseq_{}.fastq'.format(basepath, algorithm)
+    alignment_file.name = "{}.pandaseq_{}.fastq".format(basename, algorithm)
+    alignment_file.command = 'pandaseq -f {} -r {} -F -T 4 -A {} -w {} 2> {}.log'.format(files[0].path, files[1].path, algorithm, alignment_file.path, alignment_file.path)
+    alignment_file.file_type = 'PANDASEQ_ALIGNED_FASTQ'
+    files_to_execute.append(alignment_file)
+    analysis.status = 'EXECUTING'
+    db.session.commit()
+    for f in files_to_execute:
+        f.command = f.command.encode('ascii')
+        f.dataset_id = analysis.dataset_id 
+        f.analysis_id = analysis.id 
+        f.chain = files[0].chain
+        print 'Executing: {}'.format(f.command)
+        analysis.active_command = f.command
+        f.in_use = True 
+        db.session.add(f)
+        db.session.commit()
+        # MAKE THE CALL 
+        response = os.system(f.command)
+        print 'Response: {}'.format(response)
+        if response == 0: 
+            f.available = True 
+            f.file_size = os.path.getsize(f.path)
+            db.session.commit()
+        else:
+            f.available = False
+            analysis.status = 'FAILED'
+            db.session.commit()
+    print 'All commands in analysis {} have been executed.'.format(analysis)
+    if set(map(lambda f: f.available, files_to_execute)) == {True}:
+        analysis.status = 'SUCCESS'
+        analysis.available = True
+    if not analysis.status == 'FAILED': analysis.status = 'SUCCESS'
+    analysis.active_command = ''
+    analysis.finished = 'now'
+    db.session.commit()
+    # Make PandaSeq Alignment Primary Dataset Data Files! Currently done in dataset.primary_data_files() 
+    return True 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
