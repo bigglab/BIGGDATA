@@ -22,30 +22,34 @@ CELERY_RESULT_PERSISTENT = True
 
 
 default_exchange = Exchange('default', type='direct')
+ut_exchange = Exchange('ut', type='direct')
+aws_exchange = Exchange('aws', type='direct')
+
 
 CELERY_DEFAULT_QUEUE = 'default'
 CELERY_QUEUES = (
 	Broadcast('broadcast_tasks'),
   Queue('default', default_exchange, routing_key='default'),
-  Queue('ut', default_exchange, routing_key='ut'),
-  Queue('aws', default_exchange, routing_key='aws'),
+  Queue('ut', ut_exchange, routing_key='ut'),
+  Queue('aws', aws_exchange, routing_key='aws'),
 )
 
 
 class TaskRouter(object):
 
     def route_for_task(self, task, args=None, kwargs=None):
-        if 'queue' in kwargs.keys(): 
-					queue = kwargs['queue'] 
-					return {'exchange': 'default',
-					        'exchange_type': 'direct',
-					        'routing_key': queue}
-        # else: 
-        # 	return {'exchange': 'default'
-        # 					'exchange_type': 'default'
-        # 					'routing_key': 'default'
-        # 	}
-        return None
+			print 'figuring out how to parse: {}'.format(task.__dict__)
+			if 'queue' in kwargs.keys(): 
+				queue = kwargs['queue'] 
+				return {'exchange': queue,
+								'exchange_type': 'direct',
+								'routing_key': queue}
+			# else: 
+			# 	return {'exchange': 'default'
+			# 					'exchange_type': 'default'
+			# 					'routing_key': 'default'
+			# 	}
+			return None
 
 
 
