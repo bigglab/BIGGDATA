@@ -71,25 +71,10 @@
 					{% else %}
 						<th>NO</th>
 					{% endif %}
-					<th>
-					<table class='table table-striped'>
-						<thead>
-							<tr>
-								<th>File Name</th>
-								<th>File Type</th>
-								<th>Available</th>
-							</tr>
-						</thead>
-						{% for file in dataset.files %}
-						<tr>
-							<th>{{file.name}}</th>
-							<th>{{file.file_type}}</th>
-
-							<th>{% if file.available %}YES{% else %}NO{% endif %}</th>
-						</tr>
-						{% endfor %}	
-					</table>
-					</th>
+				</tr>
+				<tr>
+				{% set files = dataset.files %}
+				{% include "partials/files.html" with context %}
 				</tr>
 		</tbody>
 	</table>
