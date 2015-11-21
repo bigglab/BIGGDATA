@@ -1495,7 +1495,7 @@ def taskstatus(task_id):
 
 
 
-@frontend.route('/import_sra/', methods=['GET', 'POST'])
+@frontend.route('/files/import_sra', methods=['GET', 'POST'])
 @login_required
 def import_sra():
     form = ImportSraAsDatasetForm()
@@ -1503,9 +1503,9 @@ def import_sra():
     status = []
     if request.method == 'POST':
         if 'SRR' in form.accession.data: 
-            staus.append('Import SRA Started for Accession {}'.format(form.accession.data))
-            result = import_from_sra.apply_async((form.accession.data,), {'name': form.name.data, 'user_id': current_user.id}, queue='default')
-            status.append(result.__dict__)
+            status.append('Import SRA Started for Accession {}'.format(form.accession.data))
+            result = import_from_sra.apply_async((form.accession.data,), {'name': form.accession.data, 'user_id': current_user.id}, queue='default')
+            # status.append(result.__dict__)
         else: 
             status.append('Accession does not start with SRR or ERR?')
     return render_template('sra_import.html', status=status, form=form, result=result)
