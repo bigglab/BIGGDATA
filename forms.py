@@ -54,7 +54,7 @@ class FileDownloadForm(Form):
 class FileUploadForm(Form):
     file     = FileField(u'File Path', validators=[validators.input_required()])
     description  = TextAreaField(u'File Description')
-    chain  = SelectField(u'Chain', choices=(['HEAVY', 'LIGHT', 'TCRA', 'TCRB'], ['HEAVY', 'LIGHT', 'TCRA', 'TCRB']), validators=[validators.input_required()])
+    chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB']), validators=[validators.input_required()])
     paired_partner  = IntegerField()
     dataset_id = IntegerField()
 
@@ -79,7 +79,10 @@ class CreateDatasetForm(Form):
     # annotations = db.relationship('Annotation', backref='dataset', lazy='dynamic')
 
 
-
+class ImportSraAsDatasetForm(Form):
+    accession = TextField()
+    description = TextField()
+    chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB']), validators=[validators.input_required()])
 
 
 

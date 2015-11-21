@@ -2,23 +2,24 @@
 {% block content %}
 <br>
 
+
 <div class="container">
-<h3>Download a file from a URL: </h3>
-    <form method="POST" action="/file_download" enctype="multipart/form-data">
+<h3>Import from an SRA Accession: </h3>
+    <form method="POST" action="/import_sra" enctype="multipart/form-data">
     <table class="table table-striped">
-        {{ download_form.csrf_token }}
+        {{ form.csrf_token }}
         <thead>
             <tr>
-                <th>File URL</th>
+                <th>Accession (SRR...)</th>
                 <th>Description</th>
                 <th>Chain</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <th>{{ download_form.url(size=60) }}</th>
-                <th> {{ download_form.description }}</th>
-                <th>{{ download_form.chain  }}</th>
+                <th>{{ form.accession(size=60) }}</th>
+                <th> {{ form.description }}</th>
+                <th>{{ form.chain  }}</th>
                 <th><input type="submit" value="Submit"></th>
             </tr>
         </tbody>
@@ -28,13 +29,29 @@
 
 <br>
 
+
+{% if status %}
 <div class='container'>
 {% for ln in status %}
     <h4>{{ln}}</h4>
 {% endfor %}
 <br>
-<p>Async Task ID: {{r.id}}</p>
+{% if result %}
+<p>Async Task ID: {{result.id}}</p>
+{% endif %}
 </div>
+{% endif %}
+
+<br>
+
+<div class="container" >
+<h4>Here's an iframe of the NCBI Run Selector:</h4>
+<iframe style='width: inherit; height: 950px;' src="http://www.ncbi.nlm.nih.gov/Traces/study/?go=home"></iframe>
+</div>
+
+
+<br><br>
+
 
 <div class="container">
 <a href="{{url_for('.files')}}"><h4>Back To My Files</h4></a>

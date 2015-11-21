@@ -761,6 +761,7 @@ nav.register_element('frontend_top', Navbar(
         'Files', 
         View('My Files', '.files'), 
         View('Import File', '.file_download'), 
+        View('Import From NCBI', '.import_sra'), 
         ),
     Subgroup(
         'Run Analysis',
@@ -1140,7 +1141,7 @@ def transfer_to_s3(file_id):
 @frontend.route('/files', methods=['GET', 'POST'])
 @login_required
 def files():
-    print request
+    # print request
     files = sorted(current_user.files.all(), key=lambda x: x.id, reverse=True)
     dropbox_file_paths = get_dropbox_files(current_user)
     form = Form()
@@ -1494,6 +1495,21 @@ def taskstatus(task_id):
 
 
 
+@frontend.route('/import_sra/', methods=['GET', 'POST'])
+@login_required
+def import_sra():
+    form = ImportSraAsDatasetForm()
+    result = None
+    status = []
+    if request.method == 'POST':
+        if 'SRR' in form.accession.data: 
+            staus.append('Import SRA Started for Accession {}'.format(form.accession.data))
+            result = import_from_sra.apply_async((form.accession.data,), {'name': form.name.data, 'user_id': current_user.id}, queue='default')
+            status.append(result.__dict__)
+        else: 
+            status.append('Accession does not start with SRR or ERR?')
+    return render_template('sra_import.html', status=status, form=form, result=result)
+
 
 
 @celery.task 
@@ -1509,7 +1525,7 @@ def import_from_sra(accession, name=None, user_id=57):
         dirs = os.listdir('{}/{}'.format(user.scratch_path, accession))
         if dirs == ['1']:
             file_paths = ['{}/{}/1/fastq.gz'.format(user.scratch_path, accession)]
-            filename_array = [accession]
+            filename_array = ['{}.fastq.gz'.format(accession)]
         if dirs == ['1','2'] or dirs == ['2','1']:
             file_paths = ['{}/{}/1/fastq.gz'.format(user.scratch_path, accession), '{}/{}/2/fastq.gz'.format(user.scratch_path, accession)]
             filename_array = ['{}.R1.fastq.gz'.format(accession), '{}.R2.fastq.gz'.format(accession)]
@@ -1518,7 +1534,8 @@ def import_from_sra(accession, name=None, user_id=57):
             return False 
     print 'Writing sra output files to {}'.format(user.scratch_path)
     dataset = import_files_as_dataset(file_paths, filename_array=filename_array, user_id=user_id, name=name)
-    return dataset 
+    print 'Dataset from SRA Accession {} created for user {}'.format(accession, user.username) 
+    return True
 
 
 
@@ -1535,8 +1552,6 @@ def import_files_as_dataset(filepath_array, filename_array=None, chain=None, use
     d.chain_types_sequenced = [chain]
     db.session.add(d)
     db.session.commit()
-    if len(filepath_array) == 2: 
-        d.paired = True
     files = []
     for index, filepath in enumerate(filepath_array):
         f = File()
@@ -1569,7 +1584,7 @@ def import_files_as_dataset(filepath_array, filename_array=None, chain=None, use
     db.session.commit()
     d.primary_data_files_ids = map(lambda f: f.id, files)
     db.session.commit()
-    return d 
+    return True 
 
 
 
