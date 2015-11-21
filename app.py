@@ -1722,7 +1722,7 @@ def run_pandaseq_with_dataset_id(dataset_id, analysis_name='', analysis_descript
 
 
 @celery.task
-def run_pandaseq_analysis_id_with_files(analysis, files, algorithm='pear'):
+def run_pandaseq_analysis_with_files(analysis, files, algorithm='pear'):
     dataset = analysis.dataset
     files_to_execute = []
     print 'RUNNING PANDASEQ ON THESE FILES: {}'.format(files)

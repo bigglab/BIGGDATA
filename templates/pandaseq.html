@@ -16,13 +16,13 @@
 <h4>PandaSeq Analysis Configuration:</h4>
 </thead>
 <tbody>
-	<form method="POST" action="/analysis/mixcr/{{dataset.id}}">
+	<form method="POST" action="/analysis/pandaseq/{{dataset.id}}">
     {{ form.csrf_token }}
     <tr>
 	    <th>{{ form.name.label }} {{ form.name(size=20) }}</th>
 	    <th>{{ form.description.label }} {{ form.description(size=40) }}</th>
 	    <th>{{ form.algorithm.label }}: {{ form.algorithm }}</th>
-	    <th><input type="submit" value="RUN MIXCR PIPELINE"></th>
+	    <th><input type="submit" value="RUN PANDASEQ"></th>
     </tr>
   </form>
 </tbody>
