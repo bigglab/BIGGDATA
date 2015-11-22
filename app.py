@@ -1782,7 +1782,7 @@ def run_pandaseq_with_dataset_id(dataset_id, analysis_name='', analysis_descript
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
     print 'RUNNING MIXCR ON DATASET ID# {}: {}'.format(dataset_id, repr(dataset.__dict__))
     analysis = Analysis()
-    analysis.db_status = 'We Dont Insert Pandaseq FASTQ Data'
+    analysis.db_status = "We dont currently import raw or pandaseq'd FASTQ Data"
     analysis.name = analysis_name
     analysis.description = analysis_description
     analysis.user_id = user_id
