@@ -780,7 +780,8 @@ nav.register_element('frontend_top', Navbar(
     View('Dashboard', '.analyses'),
     Subgroup(
         'Documentation', 
-        View('BIGG DATA Schema', '.schema'), 
+        View('BIGG DATA Overview', '.overview'), 
+        View('BIGG DB Schema', '.schema'), 
         Link('Confluence', 'under_construction'), 
         Link('How To Write A Pipeline', 'under_construction'),
         Separator(),
@@ -1403,6 +1404,11 @@ def schema():
     schema_url = url_for('static', filename='schema.png')
     return render_template("schema.html", schema_url=schema_url)
 
+@frontend.route('/developers/overview', methods=['GET'])
+def overview():
+    schema_url = url_for('static', filename='schema.png')
+    infrastructure_image_url = url_for('static', filename='bigg_data_infrastructure.png')
+    return render_template("infrastructure.html", schema_url=schema_url, infrastructure_image_url=infrastructure_image_url)
 
 
 @frontend.route('/vdjviz', methods=['GET'])
@@ -1504,6 +1510,7 @@ def import_sra():
     if request.method == 'POST':
         if 'SRR' in form.accession.data: 
             status.append('Import SRA Started for Accession {}'.format(form.accession.data))
+            status.append('Once complete, a dataset named {} will automatically be created containing these single or paired-end read files'.format(form.accession.data))
             result = import_from_sra.apply_async((form.accession.data,), {'name': form.accession.data, 'user_id': current_user.id}, queue='default')
             # status.append(result.__dict__)
         else: 
