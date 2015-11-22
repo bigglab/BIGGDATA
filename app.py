@@ -1176,7 +1176,7 @@ def file(id):
 @frontend.route('/files/download/<int:id>')
 @login_required
 def send_file_from_id(id):
-    print request.__dict__
+    # print request.__dict__
     files = sorted(current_user.files.all(), key=lambda x: x.id, reverse=True)
     f = db.session.query(File).filter(File.id==id).first()  
     f.dir = '/{}'.format('/'.join(f.path.split('/')[:-1]))
@@ -1198,7 +1198,7 @@ def get_user_dataset_dict(user):
 @frontend.route('/datasets', methods=['GET', 'POST'])
 @login_required
 def datasets():
-    print request.__dict__
+    # print request.__dict__
     files = current_user.files.all()
     datasets = current_user.datasets.all()
     datadict = get_user_dataset_dict(current_user)
@@ -1222,7 +1222,7 @@ def datasets():
 @frontend.route('/datasets/<int:id>', methods=['GET', 'POST'])
 @login_required
 def dataset(id):
-    print request.__dict__
+    # print request.__dict__
     print 'finding dataset with {}'.format(id)
     dataset = db.session.query(Dataset).filter(Dataset.id==id).first()
     form = AssociateFilesToDatasetForm()
