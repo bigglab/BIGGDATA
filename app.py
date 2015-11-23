@@ -91,6 +91,14 @@ def include_file(name):
     return jinja2.Markup(loader.get_source(env, name)[0])
 app.jinja_env.globals['include_file'] = include_file
 
+
+def round_to_two(flt):
+    out = round(flt, 2) 
+    return out
+app.jinja_env.globals['round_to_two'] = round_to_two
+
+
+
 # urllib2.install_opener(opener)
 
 

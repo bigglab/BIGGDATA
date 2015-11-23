@@ -5,8 +5,8 @@
 			<th>Name</th>
 			<th>Chain</th>
 			<th>File Type</th>
-			<!-- <th>Paired To</th> -->
 			<th>Available</th>
+			<th>File Size</th>
 			<th>Downloadable</th>
 			<!-- <th>Path</th> -->
 		</tr>
@@ -18,12 +18,16 @@
 				<th>{{file.name}}</th>
 				<th>{{file.chain}}</th>
 				<th>{{file.file_type}}</th>
-				<!-- <th>{{file.paired_partner}}</th> -->
 				{% if file.available %}
 					<!-- <th><a href="{{url_for('.send_file_from_id', id=file.id)}}">YES</a></th> -->
 					<th>YES</th>
 				{% else %}
 					<th>NO</th>
+				{% endif %}
+				{% if file.file_size %}
+					<th>{{round_to_two(file.file_size/1000000)}} Mb</th>
+				{% else %}
+					<th></th>
 				{% endif %}
 				{% if file.s3_status == 'AVAILABLE' %}
 					<th><a href="https://s3.amazonaws.com/biggdata{{file.s3_path.replace('//','/',10)}}">Downloadable</a></th>
