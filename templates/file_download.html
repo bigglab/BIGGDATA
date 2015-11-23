@@ -2,6 +2,23 @@
 {% block content %}
 <br>
 
+
+
+{% if status %}
+<div class='container'>
+{% for ln in status %}
+    <h4>{{ln}}</h4>
+{% endfor %}
+<br>
+<p>Async Task ID: {{r.id}}</p>
+</div>
+{% endif %}
+
+<br>
+<br>
+
+
+
 <div class="container">
 <h3>Download a file from a URL: </h3>
     <form method="POST" action="/file_download" enctype="multipart/form-data">
@@ -27,14 +44,29 @@
 </div>
 
 <br>
-
-<div class='container'>
-{% for ln in status %}
-    <h4>{{ln}}</h4>
-{% endfor %}
 <br>
-<p>Async Task ID: {{r.id}}</p>
+
+
+<div class="container">
+<h4>If you need to upload from your computer, upload to Amazon S3 File Storage through here, and then download to our system above:</h4>
+<form action="http://biggdata_uploads.s3.amazonaws.com/" method="post" enctype="multipart/form-data">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<input type="hidden" name="acl" value="public-read" />
+<input type="hidden" name="success_action_redirect" value="http://biggdata.rsldrt.com/files" />
+<table>
+<tr>
+    <th>Enter Unique File Key: <input type="input" name="key" value="" /> </th>
+    <th><input type="file" name="file" /></th>
+    <th><input type="submit" name="submit" value="Upload to Amazon S3" /></th>
+</tr>
+</table> 
+</form>
 </div>
+
+
+<br>
+<br>
+
 
 <div class="container">
 <a href="{{url_for('.files')}}"><h4>Back To My Files</h4></a>
