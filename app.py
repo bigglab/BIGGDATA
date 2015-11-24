@@ -52,18 +52,16 @@ from forms import *
 from functions import * 
 
 
+
+
+
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_pyfile('config.py')
 # Initialize extensions
 bcrypt = Bcrypt(app)
 nav = Nav() 
 Bootstrap(app) 
-# Postgres DB for Admin and File Tracking Purposes 
-# override DATABASE URI if environment variable is set: 
-#print 'DEBUG ENVIRON keys:'
-#for k,v in os.environ.items():
-#    print '{} : {}'.format(k,v)
-
+cache = Cache(app)
 
 db = SQLAlchemy(app)
 
@@ -1076,6 +1074,18 @@ def file_download():
 
 
 
+
+@frontend.route('/file_download?', methods=['GET'])
+@login_required
+
+files?bucket=biggdata_uploads&key=test&etag="858a6562f0f6c82805644e0f8db8d7f0"
+
+
+
+
+
+
+
 def parse_name_for_chain_type(name):
     if 'tcra' in name.lower() or 'alpha' in name.lower(): 
         chain = 'TCRA'
@@ -1615,6 +1625,7 @@ def download_file(url, path, file_id):
             outfile.write(chunk)
     f = db.session.query(File).filter(File.id==file_id).first()
     f.available = True
+    f.file_size = os.path.getsize(f.path)
     db.session.commit()
     return True 
 
@@ -1665,6 +1676,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     alignment_file = File()
     alignment_file.path = '{}.aln.vdjca'.format(basepath)
     alignment_file.name = "{}.aln.vdjca".format(basename)
+    # MIGHT NEED TO ADD THIS ARGUMENT to align   -OjParameters.parameters.mapperMaxSeedsDistance=5
     alignment_file.command = 'mixcr align -f {} {}'.format(' '.join([f.path for f in files]), alignment_file.path)
     alignment_file.file_type = 'MIXCR_ALIGNMENTS'
     files_to_execute.append(alignment_file)
@@ -1690,7 +1702,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     alignment_output_file.path = '{}.txt'.format(alignment_file.path)
     alignment_output_file.file_type = 'MIXCR_ALIGNMENT_TEXT'
     alignment_output_file.name = '{}.txt'.format(alignment_file.name)
-    alignment_output_file.command = 'mixcr exportAlignments {} {}'.format(alignment_file.path, alignment_output_file.path)
+    alignment_output_file.command = 'mixcr exportAlignments  -readId -descrR1 --preset full  {} {}'.format(alignment_file.path, alignment_output_file.path)
     files_to_execute.append(alignment_output_file)
     pretty_alignment_file = File()
     pretty_alignment_file.parent_id = alignment_file.id 
