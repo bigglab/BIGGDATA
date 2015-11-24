@@ -1611,8 +1611,8 @@ def import_files_as_dataset(filepath_array, filename_array=None, chain=None, use
 
 @celery.task
 def download_file(url, path, file_id):
-    response = urllib2.urlopen(url)
     print 'urllib2 downloading file from {}'.format(url)
+    response = urllib2.urlopen(url)
     CHUNK = 16 * 1024
     with open(path, 'wb') as outfile: 
         while True: 
