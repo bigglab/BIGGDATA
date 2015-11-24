@@ -9,7 +9,13 @@
 {% for ln in status %}
     <h4>{{ln}}</h4>
 {% endfor %}
+</div>
+{% endif %}
+
 <br>
+
+{% if r != '' %}
+<div class="container">
 <p>Async Task ID: {{r.id}}</p>
 </div>
 {% endif %}
@@ -48,12 +54,14 @@
 
 
 <div class="container">
-<h4>If you need to upload from your computer, upload to Amazon S3 File Storage through here, and then download to our system above:</h4>
+<h4>If you want to use a local file, upload it here first and then import to our system with the form above:</h4>
+<br>
 <form action="http://biggdata_uploads.s3.amazonaws.com/" method="post" enctype="multipart/form-data">
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <input type="hidden" name="acl" value="public-read" />
-<input type="hidden" name="success_action_redirect" value="http://biggdata.rsldrt.com/files" />
-<table>
+<!-- <input type="hidden" name="success_action_redirect" value="http://biggdata.rsldrt.com/file_download" /> -->
+<input type="hidden" name="success_action_redirect" value="http://0.0.0.0:5000/file_download" />
+<table style="table table-striped">
 <tr>
     <th>Enter A Unique File Name: <input type="input" name="key" value="" /> </th>
     <th><input type="file" name="file" /></th>

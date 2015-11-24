@@ -61,7 +61,6 @@ app.config.from_pyfile('config.py')
 bcrypt = Bcrypt(app)
 nav = Nav() 
 Bootstrap(app) 
-cache = Cache(app)
 
 db = SQLAlchemy(app)
 
@@ -1028,7 +1027,7 @@ def file_upload():
 
 @frontend.route('/file_download', methods=['GET', 'POST'])
 @login_required
-def file_download():
+def file_download(status=[], bucket='', key=''):
     form = FileDownloadForm()
     if request.method == 'POST':
         file = File()
@@ -1044,13 +1043,12 @@ def file_download():
         file.available = False 
         file.s3_status = ''
         file.status = ''
-        file.chain = parse_name_for_chain_type(file.name)
         print 'Saving File Metadata to Postgres: {}'.format(file.__dict__)
         db.session.add(file)
         db.session.commit()
-        status = ['Started background task to download file from {}'.format(file.url),
-        'Saving File To {}'.format(file.path),
-        'This file will be visible in "My Files", and available for use after the download completes.']
+        status.append('Started background task to download file from {}'.format(file.url))
+        status.append('Saving File To {}'.format(file.path))
+        status.append('This file will be visible in "My Files", and available for use after the download completes.')
         print status 
         # result_id NOT WORKING - STILL REDUNDANT IF THEY CLICK TWICE!!
         if not 'async_result_id' in session.__dict__:
@@ -1062,23 +1060,18 @@ def file_download():
         # r = async_result.info
         r = result.__dict__
         r['async_result.info'] = async_result.info 
-
         db.session.commit()
         flash('file uploaded to {}'.format(file.path))
-        return render_template("file_download.html", download_form=form, status=status, r=r)
-        # return redirect(url_for('.files'))
     else:
-        status = ''
         r=''
-        return render_template("file_download.html", download_form=form, status=status, r=r)
-
-
-
-
-@frontend.route('/file_download?', methods=['GET'])
-@login_required
-
-files?bucket=biggdata_uploads&key=test&etag="858a6562f0f6c82805644e0f8db8d7f0"
+    bucket = request.args.get('bucket')
+    key = request.args.get('key')
+    print bucket 
+    print 'bucket?'
+    if bucket: 
+        status.append('Your file will be available for download at the following URL:')
+        status.append('https://s3.amazon.com/{}/{}'.format(bucket, key))
+    return render_template("file_download.html", download_form=form, status=status, r=r)
 
 
 
@@ -1159,11 +1152,13 @@ def transfer_to_s3(file_id):
 
 @frontend.route('/files', methods=['GET', 'POST'])
 @login_required
-def files():
+def files(status=[], bucket=None, key=None):
     # print request
     files = sorted(current_user.files.all(), key=lambda x: x.id, reverse=True)
     dropbox_file_paths = get_dropbox_files(current_user)
     form = Form()
+    if bucket and key: 
+        status.append('https://s3.amazon.com/{}/{}'.format(bucket, key))
     if request.method == 'POST' and os.path.isfile(request.form['submit']):
         file_path = request.form['submit'] 
         file_name = file_path.split('/')[-1]
@@ -1176,10 +1171,10 @@ def files():
         else: 
             flash('file metadata already created to your user')
             dropbox_file_paths = get_dropbox_files(current_user)
-        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user)
+        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status)
     else: 
         dropbox_file_paths = get_dropbox_files(current_user)
-        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user)
+        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status)
 
 
 
