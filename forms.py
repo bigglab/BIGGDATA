@@ -34,6 +34,7 @@ class CreateMixcrAnalysisForm(Form):
     pair_overlaps = BooleanField(u'Pair Overlaps')
     pair_interchain = BooleanField(u'Pair Interchain')
     insert_into_db = BooleanField(u'Insert Into DB')
+    cluster = BooleanField(u'Cluster Sequences')
 
 
 class CreatePandaseqAnalysisForm(Form): 

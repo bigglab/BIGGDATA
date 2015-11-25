@@ -1308,7 +1308,7 @@ def mixcr(dataset_id, status=[]):
     status = []
     if request.method == 'POST' and dataset:
         status.append('MIXCR Launch Detected')
-        result = run_mixcr_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'trim': form.trim.data}, queue='default')
+        result = run_mixcr_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'trim': form.trim.data, 'cluster': form.cluster.data}, queue='default')
         status.append(result.__repr__())
         status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
         time.sleep(1)
@@ -1629,7 +1629,7 @@ def download_file(url, path, file_id):
 
 
 @celery.task
-def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description='', user_id=6, trim=False):
+def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description='', user_id=6, trim=False, cluster=False):
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
     print 'RUNNING MIXCR ON DATASET ID# {}: {}'.format(dataset_id, repr(dataset.__dict__))
     analysis = Analysis()
@@ -1657,6 +1657,10 @@ def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description
             files = run_trim_analysis_with_files(analysis, files)
         print 'ABOUT TO RUN MIXCR ANAYSIS {} ON FILES FROM CHAIN {}'.format(repr(analysis), chain)
         run_mixcr_analysis_id_with_files(analysis.id, files)
+        if cluster: 
+            print 'Clustering Output Files'
+            for file in files: 
+                result = run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9)
     return True 
 
 
@@ -1886,9 +1890,6 @@ def run_pandaseq_analysis_with_files(analysis, files, algorithm='pear'):
 
 
 
-
-
-@celery.task
 def run_trim_analysis_with_files(analysis, files):
     dataset = analysis.dataset
     files_to_execute = []
@@ -1951,6 +1952,62 @@ def run_trim_analysis_with_files(analysis, files):
 
 
 
+
+def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
+    dataset = analysis.dataset
+    files_to_execute = []
+    print 'RUNNING USEARCH CLUSTERING ON THIS FILE: {}'.format(file)
+    scratch_path = '/{}'.format('/'.join(file.path.split('/')[:-1]))
+    basename = file.path.split('/')[-1].split('.')[0]
+    basepath = '{}/{}'.format(scratch_path, basename)
+    print 'Writing output files to base name: {}'.format(basepath)
+    output_files = []
+    # Instantiate Source Files
+    consensus_output_file = File()
+    consensus_output_file.path = '{}.uclust_consensus.fasta'.format(basepath)
+    consensus_output_file.name = "{}.uclust_consensus.fasta".format(basename)
+    consensus_output_file.command = ""
+    consensus_output_file.file_type = 'CLUSTERED_CONSENSUS_FASTA'
+    uclust_output_file = File()
+    uclust_output_file.path = '{}.uclust.tab'.format(basepath)
+    uclust_output_file.name = "{}.uclust.tab".format(basename)
+    uclust_output_file.command = ""
+    uclust_output_file.file_type = 'UCLUST_OUTPUT_TAB_TEXT'
+    centroid_output_file = File()
+    centroid_output_file.path = '{}.uclust_centroids.fasta'.format(basepath)
+    centroid_output_file.name = "{}.uclust_centroids.fasta".format(basename)
+    centroid_output_file.file_type = 'CLUSTERED_CENTROIDS_FASTA'
+    centroid_output_file.command = "usearch -cluster_fast {} -id {} -centroids {} -consout {} -uc {}".format(file.path, identity, centroid_output_file.path, consensus_output_file.path, uclust_output_file.path)
+    files_to_execute.append(centroid_output_file)
+    files_to_execute.append(consensus_output_file)
+    files_to_execute.append(uclust_output_file)
+    analysis.status = 'EXECUTING USEARCH'
+    db.session.commit()
+    for f in files_to_execute:
+        f.command = f.command.encode('ascii')
+        f.dataset_id = analysis.dataset_id 
+        f.analysis_id = analysis.id 
+        f.chain = files[0].chain
+        print 'Executing: {}'.format(f.command)
+        analysis.active_command = f.command
+        f.in_use = True 
+        db.session.add(f)
+        db.session.commit()
+        # MAKE THE CALL 
+        response = os.system(f.command)
+        print 'Response: {}'.format(response)
+        if response == 0: 
+            f.available = True 
+            f.in_use = False
+            f.file_size = os.path.getsize(f.path)
+            db.session.commit()
+        else:
+            f.available = False
+            f.in_use = False 
+            analysis.status = 'FAILED'
+            db.session.commit()
+    print 'Uclust job for analysis {} has been executed.'.format(analysis)
+    return files 
 
 
 
