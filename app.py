@@ -1904,7 +1904,6 @@ def run_trim_analysis_with_files(analysis, files):
     log_file.name = "{}.trim.log".format(basename)
     log_file.command = ""
     log_file.file_type = 'LOG'
-    files_to_execute.append(log_file)
     if len(files) == 1: 
         output_file = File()
         output_file.path = '{}.trimmed.fastq'.format(basepath)
@@ -1925,6 +1924,7 @@ def run_trim_analysis_with_files(analysis, files):
         r2_output_file.command = ''
         files_to_execute.append(r1_output_file)
         files_to_execute.append(r2_output_file)
+    files_to_execute.append(log_file)
     analysis.status = 'EXECUTING TRIM'
     db.session.commit()
     for f in files_to_execute:
