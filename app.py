@@ -1070,7 +1070,7 @@ def file_download(status=[], bucket='', key=''):
     print 'bucket?'
     if bucket: 
         status.append('Your file will be available for download at the following URL:')
-        status.append('https://s3.amazon.com/{}/{}'.format(bucket, key))
+        status.append('https://s3.amazonaws.com/{}/{}'.format(bucket, key))
     return render_template("file_download.html", download_form=form, status=status, r=r)
 
 
