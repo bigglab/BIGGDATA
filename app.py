@@ -1916,14 +1916,14 @@ def run_trim_analysis_with_files(analysis, files):
         r1_output_file = File()
         r1_output_file.path = '{}.trimmed.fastq'.format(basepath)
         r1_output_file.name = "{}.trimmed.fastq".format(basename)
-        r1_output_file.command = 'java -jar {} PE -phred33 -threads 4 -trimlog {} {} {} {} {} {} {} ILLUMINACLIP:{}/TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMAMATIC_JAR'], log_file.path, files[0].path, files[1].path, r1_output_file.path, '/dev/null', r2_output_file.path, '/dev/null', app.config['TRIMMAMATIC_ADAPTERS'])
         r1_output_file.file_type = 'TRIMMED_FASTQ'
-        files_to_execute.append(r1_output_file)
         r2_output_file = File()
         r2_output_file.path = '{}.trimmed.fastq'.format(basepath)
         r2_output_file.name = "{}.trimmed.fastq".format(basename)
-        r2_output_file.command = ''
         r1_output_file.file_type = 'TRIMMED_FASTQ'
+        r1_output_file.command = 'java -jar {} PE -phred33 -threads 4 -trimlog {} {} {} {} {} {} {} ILLUMINACLIP:{}/TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMAMATIC_JAR'], log_file.path, files[0].path, files[1].path, r1_output_file.path, '/dev/null', r2_output_file.path, '/dev/null', app.config['TRIMMAMATIC_ADAPTERS'])
+        r2_output_file.command = ''
+        files_to_execute.append(r1_output_file)
         files_to_execute.append(r2_output_file)
     analysis.status = 'EXECUTING TRIM'
     db.session.commit()
