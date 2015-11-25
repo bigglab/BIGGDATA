@@ -27,12 +27,13 @@ class RegistrationForm(Form):
 
 
 class CreateMixcrAnalysisForm(Form): 
-	dataset_id = IntegerField()
-	name = TextField(u'Name', )
-	description = TextField(u'Description')
-	pair_overlaps = BooleanField(u'Pair Overlaps')
-	pair_interchain = BooleanField(u'Pair Interchain')
-	insert_into_db = BooleanField(u'Insert Into DB')
+    dataset_id = IntegerField()
+    name = TextField(u'Name')
+    description = TextField(u'Description')
+    trim = BooleanField(u'Trim Illumina Adapters')
+    pair_overlaps = BooleanField(u'Pair Overlaps')
+    pair_interchain = BooleanField(u'Pair Interchain')
+    insert_into_db = BooleanField(u'Insert Into DB')
 
 
 class CreatePandaseqAnalysisForm(Form): 
@@ -67,7 +68,6 @@ class AssociateFilesToDatasetForm(Form):
 
 
 class CreateDatasetForm(Form):
-
     name = TextField()
     description = TextField()
     paired = BooleanField()

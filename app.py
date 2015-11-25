@@ -1028,7 +1028,14 @@ def file_upload():
 @frontend.route('/file_download', methods=['GET', 'POST'])
 @login_required
 def file_download(status=[], bucket='', key=''):
-    form = FileDownloadForm()
+    bucket = request.args.get('bucket')
+    key = request.args.get('key')
+    if bucket: 
+        status.append('Your file is available for download at the following URL:')
+        status.append('https://s3.amazonaws.com/{}/{}'.format(bucket, key))
+        form = FileDownloadForm(data={'url':'https://s3.amazonaws.com/{}/{}'.format(bucket, key)})
+    else: 
+        form = FileDownloadForm()
     if request.method == 'POST':
         file = File()
         file.url = form.url.data.rstrip()
@@ -1064,13 +1071,6 @@ def file_download(status=[], bucket='', key=''):
         flash('file uploaded to {}'.format(file.path))
     else:
         r=''
-    bucket = request.args.get('bucket')
-    key = request.args.get('key')
-    print bucket 
-    print 'bucket?'
-    if bucket: 
-        status.append('Your file will be available for download at the following URL:')
-        status.append('https://s3.amazonaws.com/{}/{}'.format(bucket, key))
     return render_template("file_download.html", download_form=form, status=status, r=r)
 
 
@@ -1143,7 +1143,7 @@ def transfer_file_to_s3(file_id):
 def transfer_to_s3(file_id): 
     f = db.session.query(File).filter(File.id==file_id).first()
     if f: 
-        f.s3_status = 'Staging'
+        f.s3_status = 'Staging On S3'
         db.session.add(f)
         db.session.commit()
         result = transfer_file_to_s3.apply_async((f.id,), queue='default')
@@ -1154,6 +1154,7 @@ def transfer_to_s3(file_id):
 @login_required
 def files(status=[], bucket=None, key=None):
     # print request
+    db.session.expire_all()
     files = sorted(current_user.files.all(), key=lambda x: x.id, reverse=True)
     dropbox_file_paths = get_dropbox_files(current_user)
     form = Form()
@@ -1307,7 +1308,7 @@ def mixcr(dataset_id, status=[]):
     status = []
     if request.method == 'POST' and dataset:
         status.append('MIXCR Launch Detected')
-        result = run_mixcr_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id}, queue='default')
+        result = run_mixcr_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'trim': form.trim.data}, queue='default')
         status.append(result.__repr__())
         status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
         time.sleep(1)
@@ -1628,7 +1629,7 @@ def download_file(url, path, file_id):
 
 
 @celery.task
-def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description='', user_id=6):
+def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description='', user_id=6, trim=False):
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
     print 'RUNNING MIXCR ON DATASET ID# {}: {}'.format(dataset_id, repr(dataset.__dict__))
     analysis = Analysis()
@@ -1651,6 +1652,9 @@ def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description
         data_files_by_chain[key] = list(values)
     print "Running mixcr in these batches of files (sorted by file.chain): {}".format(data_files_by_chain)
     for chain, files in data_files_by_chain.items(): 
+        if trim: 
+            print 'Running Trim on Files in Analysis {} before executing MixCR'.format(analysis.id)
+            files = run_trim_analysis_with_files(analysis, files)
         print 'ABOUT TO RUN MIXCR ANAYSIS {} ON FILES FROM CHAIN {}'.format(repr(analysis), chain)
         run_mixcr_analysis_id_with_files(analysis.id, files)
     return True 
@@ -1876,6 +1880,78 @@ def run_pandaseq_analysis_with_files(analysis, files, algorithm='pear'):
     db.session.commit()
     # Make PandaSeq Alignment Primary Dataset Data Files! Currently done in dataset.primary_data_files() 
     return True 
+
+
+
+
+
+
+
+
+@celery.task
+def run_trim_analysis_with_files(analysis, files):
+    dataset = analysis.dataset
+    files_to_execute = []
+    print 'RUNNING TRIMMAMATIC ON THESE FILES: {}'.format(files)
+    scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
+    basename = files[0].path.split('/')[-1].split('.')[0]
+    basepath = '{}/{}'.format(scratch_path, basename)
+    print 'Writing output files to base name: {}'.format(basepath)
+    output_files = []
+    # Instantiate Source Files
+    log_file = File()
+    log_file.path = '{}.trim.log'.format(basepath)
+    log_file.name = "{}.trim.log".format(basename)
+    log_file.command = ""
+    log_file.file_type = 'LOG'
+    files_to_execute.append(log_file)
+    if len(files) == 1: 
+        output_file = File()
+        output_file.path = '{}.trimmed.fastq'.format(basepath)
+        output_file.name = "{}.trimmed.fastq".format(basename)
+        output_file.command = 'java -jar {} SE -phred33 -threads 4 -trimlog {} {} {} ILLUMINACLIP:{}/TruSeq3-SE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMAMATIC_JAR'], log_file.path, files[0].path, output_file.path, app.config['TRIMMAMATIC_ADAPTERS'])
+        output_file.file_type = 'TRIMMED_FASTQ'
+        files_to_execute.append(output_file)
+    if len(files) == 2: 
+        r1_output_file = File()
+        r1_output_file.path = '{}.trimmed.fastq'.format(basepath)
+        r1_output_file.name = "{}.trimmed.fastq".format(basename)
+        r1_output_file.command = 'java -jar {} PE -phred33 -threads 4 -trimlog {} {} {} {} {} {} {} ILLUMINACLIP:{}/TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMAMATIC_JAR'], log_file.path, files[0].path, files[1].path, r1_output_file.path, '/dev/null', r2_output_file.path, '/dev/null', app.config['TRIMMAMATIC_ADAPTERS'])
+        r1_output_file.file_type = 'TRIMMED_FASTQ'
+        files_to_execute.append(r1_output_file)
+        r2_output_file = File()
+        r2_output_file.path = '{}.trimmed.fastq'.format(basepath)
+        r2_output_file.name = "{}.trimmed.fastq".format(basename)
+        r2_output_file.command = ''
+        r1_output_file.file_type = 'TRIMMED_FASTQ'
+        files_to_execute.append(r2_output_file)
+    analysis.status = 'EXECUTING TRIM'
+    db.session.commit()
+    for f in files_to_execute:
+        f.command = f.command.encode('ascii')
+        f.dataset_id = analysis.dataset_id 
+        f.analysis_id = analysis.id 
+        f.chain = files[0].chain
+        print 'Executing: {}'.format(f.command)
+        analysis.active_command = f.command
+        f.in_use = True 
+        db.session.add(f)
+        db.session.commit()
+        # MAKE THE CALL 
+        response = os.system(f.command)
+        print 'Response: {}'.format(response)
+        if response == 0: 
+            f.available = True 
+            f.in_use = False
+            f.file_size = os.path.getsize(f.path)
+            db.session.commit()
+        else:
+            f.available = False
+            f.in_use = False 
+            analysis.status = 'FAILED'
+            db.session.commit()
+    print 'Trim job for analysis {} has been executed.'.format(analysis)
+    return files 
 
 
 

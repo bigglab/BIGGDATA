@@ -32,10 +32,14 @@
 				{% if file.s3_status == 'AVAILABLE' %}
 					<th><a href="https://s3.amazonaws.com/biggdata{{file.s3_path.replace('//','/',10)}}">Downloadable</a></th>
 				{% else %}
-					{% if file.s3_status != 'AVAILABLE' and file.available %}
-						<th><a href="{{url_for('.transfer_to_s3', file_id=file.id)}}">Stage For Transfer</a></th>
+					{% if file.s3_status == 'Staging On S3' %}
+						<th>Staging On S3</th>
 					{% else %}
-						<th>{{ file.s3_status }}</th>
+						{% if file.s3_status != 'AVAILABLE' and file.available %}
+							<th><a href="{{url_for('.transfer_to_s3', file_id=file.id)}}">Stage For Transfer</a></th>
+						{% else %}
+							<th>{{ file.s3_status }}</th>
+						{% endif %}
 					{% endif %}
 				{% endif %}
 			</tr>

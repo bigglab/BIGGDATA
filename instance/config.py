@@ -52,9 +52,18 @@ S3_BUCKET = 'biggdata'
 AWSACCESSKEYID = os.environ['AWSACCESSKEYID'] 
 AWSSECRETKEY = os.environ['AWSSECRETKEY']
 
-
-
 SECRET_KEY = '\x95\x90+\x1c\xd36\xa3\x94\x99\xaeA\xac\xd3M5\x0b\xc7\xefF\xf3\x08\x05t\xd9'
+
+
+
+
+
+# BINARIES ETC
+
+TRIMMAMATIC_JAR = '/home/ubuntu/install/Trimmomatic-0.35/trimmomatic-0.35.jar'
+TRIMMAMATIC_ADAPTERS = '/home/ubuntu/install/Trimmomatic-0.35/adapters'
+
+
 
 
 MONGO_DATABASE_URI = "biotseq.icmb.utexas.edu"
