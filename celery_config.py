@@ -28,7 +28,7 @@ aws_exchange = Exchange('aws', type='direct')
 
 CELERY_DEFAULT_QUEUE = 'default'
 CELERY_QUEUES = (
-	Broadcast('broadcast'),
+	#Broadcast('broadcast'),
   Queue('default', default_exchange, routing_key='default'),
   Queue('ut', ut_exchange, routing_key='ut'),
   Queue('aws', aws_exchange, routing_key='aws'),

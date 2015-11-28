@@ -1681,7 +1681,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     alignment_file.path = '{}.aln.vdjca'.format(basepath)
     alignment_file.name = "{}.aln.vdjca".format(basename)
     # MIGHT NEED TO ADD THIS ARGUMENT to align   -OjParameters.parameters.mapperMaxSeedsDistance=5
-    alignment_file.command = 'mixcr align -f {} {}'.format(' '.join([f.path for f in files]), alignment_file.path)
+    alignment_file.command = 'mixcr align --save-description -f {} {}'.format(' '.join([f.path for f in files]), alignment_file.path)
     alignment_file.file_type = 'MIXCR_ALIGNMENTS'
     files_to_execute.append(alignment_file)
     clone_file = File()
@@ -1904,7 +1904,7 @@ def run_trim_analysis_with_files(analysis, files):
         output_file = File()
         output_file.path = '{}.trimmed.fastq'.format(basepath)
         output_file.name = "{}.trimmed.fastq".format(basename)
-        output_file.command = 'java -jar {} SE -phred33 -threads 4 {} {} ILLUMINACLIP:{}/TruSeq3-SE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMAMATIC_JAR'], files[0].path, output_file.path, app.config['TRIMMAMATIC_ADAPTERS'])
+        output_file.command = '{} SE -phred33 -threads 4 {} {} ILLUMINACLIP:{}/TruSeq3-SE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMAMATIC'], files[0].path, output_file.path, app.config['TRIMMAMATIC_ADAPTERS'])
         output_file.file_type = 'TRIMMED_FASTQ'
         files_to_execute.append(output_file)
     if len(files) == 2: 
@@ -1916,7 +1916,7 @@ def run_trim_analysis_with_files(analysis, files):
         r2_output_file.path = '{}.R1.trimmed.fastq'.format(basepath)
         r2_output_file.name = "{}.R2.trimmed.fastq".format(basename)
         r2_output_file.file_type = 'TRIMMED_FASTQ'
-        r1_output_file.command = 'java -jar {} PE -phred33 -threads 4 {} {} {} {} {} {} ILLUMINACLIP:{}/TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMAMATIC_JAR'], files[0].path, files[1].path, r1_output_file.path, '/dev/null', r2_output_file.path, '/dev/null', app.config['TRIMMAMATIC_ADAPTERS'])
+        r1_output_file.command = '{} PE -phred33 -threads 4 {} {} {} {} {} {} ILLUMINACLIP:{}/TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMAMATIC'], files[0].path, files[1].path, r1_output_file.path, '/dev/null', r2_output_file.path, '/dev/null', app.config['TRIMMAMATIC_ADAPTERS'])
         r2_output_file.command = ''
         files_to_execute.append(r1_output_file)
         files_to_execute.append(r2_output_file)
@@ -1987,7 +1987,7 @@ def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
         f.command = f.command.encode('ascii')
         f.dataset_id = analysis.dataset_id 
         f.analysis_id = analysis.id 
-        f.chain = files[0].chain
+        f.chain = filesono.chain
         print 'Executing: {}'.format(f.command)
         analysis.active_command = f.command
         f.in_use = True 
@@ -2007,7 +2007,7 @@ def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
             analysis.status = 'FAILED'
             db.session.commit()
     print 'Uclust job for analysis {} has been executed.'.format(analysis)
-    return files 
+    return files_to_execute
 
 
 

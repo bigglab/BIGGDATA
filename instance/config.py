@@ -5,35 +5,43 @@ DEBUG = True
 
 
 
-# Local Development-specific vars, override below if in production
 
 # SQLALCHEMY_DATABASE_URI = "postgresql://localhost/biggig"
 SQLALCHEMY_DATABASE_URI = "postgres://uf8vm9gg6isrbk:p6iot5ksr6i60ff173l8f4v1ig@ec2-107-20-136-206.compute-1.amazonaws.com:6712/d30h3s4gmpmcuo"
 SQLALCHEMY_TRACK_MODIFICATIONS = True
 SQLALCHEMY_POOL_TIMEOUT = None
+QUOTAGUARD_URL = 'http://quotaguard4189:013877db0c3e@proxy.quotaguard.com:9292'
+
+
+
+# Local Development-specific vars, override below if in production
 
 HOME='/Users/red/Desktop/GeorgiouProjects/BIGGDATA'
 
+TRIMMAMATIC = 'java -jar /Users/red/tools/Trimmomatic-0.35/trimmomatic-0.35.jar'
+TRIMMAMATIC_ADAPTERS = '/Users/red/tools/Trimmomatic-0.35/adapters'
+MIGMAP = 'java -Xmx2g -jar ~/tools/migmap-0.9.8/migmap-0.9.8.jar'
 
-# File System configurations - file system is one machine on AWS so have to keep universal
+
+
+
+
+
+
+# File System configurations - this is where all user data is stored! Need a more universal way.... 
+# Dropboxes and Data kept separate to efficiently use 2x local SSD on AWS c3.xlarge node 
 DROPBOX_ROOT='/dropboxes'
 SCRATCH_ROOT='/data'
 SHARE_ROOT = '/dropboxes/shared'
-
-QUOTAGUARD_URL = 'http://quotaguard4189:013877db0c3e@proxy.quotaguard.com:9292'
 
 
 # Heroku-specific vars 
 if 'DATABASE_URL' in os.environ.keys():  # HACK TO CHECK IF WE'RE IN PRODUCTION ON HEROKU: 
 	SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
 	HOME = os.environ['HOME']
-	# DROPBOX_ROOT='{}/data/dropbox_root'.format(HOME)
-	# SCRATCH_ROOT='{}/data/scratch_root'.format(HOME)
 	DROPBOX_ROOT='/dropboxes'
 	SCRATCH_ROOT='/data'
 	SHARE_ROOT = '/dropboxes/shared'
-# Heroku postgres:   postgres://uf8vm9gg6isrbk:p6iot5ksr6i60ff173l8f4v1ig@ec2-107-20-136-206.compute-1.amazonaws.com:6712/d30h3s4gmpmcuo 
-
 
 
 # AWS-specifc vars 
@@ -44,6 +52,8 @@ if 'LESSOPEN' in os.environ.keys():  # HACK TO CHECK IF WE'RE ON AWS INSTANCE:
 	SCRATCH_ROOT='/data'
 	SHARE_ROOT = '/dropboxes/shared'
 	HOME = '/home/ubuntu/BIGGDATA'
+	TRIMMAMATIC = 'java -jar /home/ubuntu/install/Trimmomatic-0.35/trimmomatic-0.35.jar'
+	TRIMMAMATIC_ADAPTERS = '/home/ubuntu/install/Trimmomatic-0.35/adapters'
 
 
 
@@ -57,14 +67,7 @@ SECRET_KEY = '\x95\x90+\x1c\xd36\xa3\x94\x99\xaeA\xac\xd3M5\x0b\xc7\xefF\xf3\x08
 
 
 
-
-# BINARIES ETC
-
-TRIMMAMATIC_JAR = '/home/ubuntu/install/Trimmomatic-0.35/trimmomatic-0.35.jar'
-TRIMMAMATIC_ADAPTERS = '/home/ubuntu/install/Trimmomatic-0.35/adapters'
-
-
-
+# MONGO SETUP ON BIOTSEQ 
 
 MONGO_DATABASE_URI = "biotseq.icmb.utexas.edu"
 MONGO_USER = 'reader'
@@ -74,6 +77,8 @@ mongo_config = {"reader":"cdrom","writer":"rag1rag2","dbpath":"biotseq.icmb.utex
 
 
 
+
+# OPTIONS AVAILABLE ACCORDING TO app.config.__dict__  AFTER COMPILATION 
 
  # 'BOOTSTRAP_LOCAL_SUBDOMAIN': None, 
  # 'BOOTSTRAP_USE_MINIFIED': True, 
