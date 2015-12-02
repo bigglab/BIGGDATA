@@ -77,6 +77,8 @@ s3_bucket = s3.get_bucket(app.config['S3_BUCKET'])
 
 # Mongo DB for Legacy Sequence Data
 mongo_connection_uri = 'mongodb://reader:cdrom@biotseq.icmb.utexas.edu:27017/'
+
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 

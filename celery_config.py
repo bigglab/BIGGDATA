@@ -1,7 +1,7 @@
 import os
 import sys 
 from kombu import Exchange, Queue
-from kombu.common import Broadcast
+#from kombu.common import Broadcast
 
 
 

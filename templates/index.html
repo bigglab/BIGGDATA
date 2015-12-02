@@ -7,11 +7,6 @@
 		<h4>Good to see you here, {{user.first_name}}</h4>
 		<br>
 
-		<br>
-		<br>
-		<h1>As usage of this site will be practically nil over Thanksgiving, I've suspended the compute infrastructure to save some cashola. No operations requiring file interaction (so... all of them) will be processed until the compute node is back pu and running.</h1>
-		<br>
-		<br>
 		{% if user.files.all() == [] %}
 			<h4>Looks like you need to <a href="{{url_for('.file_download')}}">import some files</a> to the system</h4>
 		{% else %}
@@ -33,9 +28,9 @@
 <br>
 <br>
 
-<!-- 
+
 <div class="container">
-	<h2>Key Points On How To Use This Website</h2>
+	<h2>Some Key Points On How This Website Works</h2>
 	<br>
 	<h4>Datasets are the primary entity you should become accustomed to here on BIGG DATA.</h4>
 	<br>
@@ -50,9 +45,9 @@
 	<br>
 
 <div class="container">
-	<h4>We're just getting started here, but we're heading toward <b>multi-dataset comparisons</b> to generate the plots we all want and need.</h4>
+	<h4>Bear in mind this is in pre-release development, but we're heading toward <b>multi-dataset comparisons</b> to generate the plots we all want and need.</h4>
 </div>
- -->
+
 {%endblock content %}
 
 
