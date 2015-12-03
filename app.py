@@ -771,7 +771,7 @@ nav.register_element('frontend_top', Navbar(
     Subgroup(
         'Run Analysis',
         View('My Datasets', '.datasets'),
-        View('Analysis Dashboard', '.analyses'),
+        View('My Analyses', '.analyses'),
         View('VDJ VIZualizer', '.vdj_visualizer'),
         Link('Other Tasks', 'under_construction'), 
         ),
