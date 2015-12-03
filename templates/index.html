@@ -6,7 +6,6 @@
 	{% if user.is_authenticated() %}
 		<h4>Good to see you here, {{user.first_name}}</h4>
 		<br>
-
 		{% if user.files.all() == [] %}
 			<h4>Looks like you need to <a href="{{url_for('.file_download')}}">import some files</a> to the system</h4>
 		{% else %}
@@ -27,6 +26,7 @@
 
 <br>
 <br>
+
 <div class='container'>
 	<h2>CURRENTLY IN LOCAL DEVELOPMENT STATUS</h2>
 	<h4>AWS instances cost money, so we don't have any spun up at the moment.</h4>
@@ -39,14 +39,9 @@
 
 <div class="container">
 	<h2>Some Key Points On How This Website Works</h2>
-	<br>
-	<h4>Datasets are the primary entity you should become accustomed to here on BIGG DATA.</h4>
-	<br>
-	<h4>Datasets represent single or paired-end sequencing file sets.</h4>
-	<br>
-	<h4>Files are annotated as coming from the HEAVY or LIGHT (or TCRA/TCRB) chains when imported.</h4> 
-	<br>
-	<h4>When running an analysis on a particular dataset, files coming from the same chain will be pre-processed for overlap alignments and the consensus sequences taken into analysis. If files come from alternative chains, we will assume you would like to do VH/VL pairing after the annotions are processed.</h4>
+	<h4>Datasets represent a set of sequencing files coming from a particular Illumina library.</h4>
+	<h4>By defining attributes such as chain and species when adding a dataset, we can populate new analyses with the most appropriate default settings. This will also enable auto-analysis of data when it becomes available.</h4>
+	<h4>When running an analysis on a particular dataset, files coming from the same chain need to be pre-processed for overlap alignments and the consensus sequences taken into analysis. You can also pre-run the overlap alignment with alternative settings if you like - the overlaps from the freshest alignment will be analyzed.</h4> 
 </div>
 
 	<br>
@@ -55,6 +50,12 @@
 <div class="container">
 	<h4>Bear in mind this is in pre-release development, but we're heading toward <b>multi-dataset comparisons</b> to generate the plots we all want and need.</h4>
 </div>
+
+<br>
+<br>
+<br>
+<br>
+<br>
 
 {%endblock content %}
 
