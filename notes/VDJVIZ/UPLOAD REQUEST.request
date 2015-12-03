@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>baseURL</key>
+	<string>http://vdjviz.rsldrt.com:9000/account/api/upload</string>
+	<key>bodyString</key>
+	<string>------WebKitFormBoundarybfAAJQBNDzGhKQMp
+Content-Disposition: form-data; name="softwareTypeName"
+
+mixcr
+------WebKitFormBoundarybfAAJQBNDzGhKQMp
+Content-Disposition: form-data; name="fileName"
+
+clns2.txt
+------WebKitFormBoundarybfAAJQBNDzGhKQMp
+Content-Disposition: form-data; name="fileExtension"
+
+txt
+------WebKitFormBoundarybfAAJQBNDzGhKQMp
+Content-Disposition: form-data; name="uid"
+
+1
+------WebKitFormBoundarybfAAJQBNDzGhKQMp
+Content-Disposition: form-data; name="files[]"; filename="clns5.txt"
+Content-Type: text/plain
+
+
+------WebKitFormBoundarybfAAJQBNDzGhKQMp--</string>
+	<key>followRedirect</key>
+	<true/>
+	<key>handleJSONPCallbacks</key>
+	<false/>
+	<key>headers</key>
+	<array>
+		<dict>
+			<key>header</key>
+			<string>Host</string>
+			<key>inUse</key>
+			<true/>
+			<key>value</key>
+			<string>vdjviz.rsldrt.com:9000</string>
+		</dict>
+		<dict>
+			<key>header</key>
+			<string>Connection</string>
+			<key>inUse</key>
+			<true/>
+			<key>value</key>
+			<string>keep-alive</string>
+		</dict>
+		<dict>
+			<key>header</key>
+			<string>Content-Length</string>
+			<key>inUse</key>
+			<false/>
+			<key>value</key>
+			<string>1859874</string>
+		</dict>
+		<dict>
+			<key>header</key>
+			<string>Accept</string>
+			<key>inUse</key>
+			<true/>
+			<key>value</key>
+			<string>application/json, text/javascript, */*; q=0.01</string>
+		</dict>
+		<dict>
+			<key>header</key>
+			<string>Origin</string>
+			<key>inUse</key>
+			<true/>
+			<key>value</key>
+			<string>http://vdjviz.rsldrt.com:9000</string>
+		</dict>
+		<dict>
+			<key>header</key>
+			<string>X-Requested-With</string>
+			<key>inUse</key>
+			<true/>
+			<key>value</key>
+			<string>XMLHttpRequest</string>
+		</dict>
+		<dict>
+			<key>header</key>
+			<string>User-Agent</string>
+			<key>inUse</key>
+			<true/>
+			<key>value</key>
+			<string>Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.86 Safari/537.36</string>
+		</dict>
+		<dict>
+			<key>header</key>
+			<string>Content-Type</string>
+			<key>inUse</key>
+			<true/>
+			<key>value</key>
+			<string>multipart/form-data; boundary=----WebKitFormBoundarybfAAJQBNDzGhKQMp</string>
+		</dict>
+		<dict>
+			<key>header</key>
+			<string>Referer</string>
+			<key>inUse</key>
+			<true/>
+			<key>value</key>
+			<string>http://vdjviz.rsldrt.com:9000/account</string>
+		</dict>
+		<dict>
+			<key>header</key>
+			<string>Accept-Encoding</string>
+			<key>inUse</key>
+			<true/>
+			<key>value</key>
+			<string>gzip, deflate</string>
+		</dict>
+		<dict>
+			<key>header</key>
+			<string>Accept-Language</string>
+			<key>inUse</key>
+			<true/>
+			<key>value</key>
+			<string>en-US,en;q=0.8</string>
+		</dict>
+		<dict>
+			<key>header</key>
+			<string>Cookie</string>
+			<key>inUse</key>
+			<true/>
+			<key>value</key>
+			<string>__utma=155377080.1895388295.1442627799.1442815913.1442970404.3; __utmz=155377080.1442627799.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); id=a76fc0b5a54b7be76ea05cbe559d5ad44e684ac1287df3f144085413986046cc8e970783e05583cfa25e38eb39e2702a0143362285eae84a77d1a87550bbb494a90157e9503c843af3793b1ee8fb6a8a8338d88298cda08097fda12d58e79c5ac33b2623a90343c1a4dcd6c45b5a10e2f1b1d1f58f028e8d5718b1035b42bba9</string>
+		</dict>
+	</array>
+	<key>httpMethod</key>
+	<string>POST</string>
+	<key>jsonpScript</key>
+	<string></string>
+	<key>paramBodyUIChoice</key>
+	<integer>0</integer>
+	<key>parameters</key>
+	<array>
+		<dict>
+			<key>inUse</key>
+			<true/>
+			<key>parameter</key>
+			<string>softwareTypeName</string>
+			<key>value</key>
+			<string>vdjtools</string>
+		</dict>
+		<dict>
+			<key>inUse</key>
+			<true/>
+			<key>parameter</key>
+			<string>fileName</string>
+			<key>value</key>
+			<string>/Users/red/Desktop/GeorgiouProjects/tmp/clns1.txt</string>
+		</dict>
+		<dict>
+			<key>inUse</key>
+			<true/>
+			<key>parameter</key>
+			<string>fileExtension</string>
+			<key>value</key>
+			<string>txt</string>
+		</dict>
+		<dict>
+			<key>inUse</key>
+			<true/>
+			<key>parameter</key>
+			<string>uid</string>
+			<key>value</key>
+			<string>0</string>
+		</dict>
+		<dict>
+			<key>inUse</key>
+			<true/>
+			<key>parameter</key>
+			<string>name</string>
+			<key>value</key>
+			<string>name="files[]"</string>
+		</dict>
+	</array>
+	<key>parametersType</key>
+	<integer>0</integer>
+	<key>presentBeforeChallenge</key>
+	<false/>
+	<key>stringEncoding</key>
+	<integer>4</integer>
+	<key>usingHTTPBody</key>
+	<true/>
+</dict>
+</plist>

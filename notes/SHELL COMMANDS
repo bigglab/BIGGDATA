@@ -1,0 +1,23 @@
+SHELL COMMANDS
+
+
+java -jar $TRIMMAMATIC_JAR PE -phred33 -threads 4 -trimlog <logFile> \ 
+input_forward.fq.gz input_reverse.fq.gz \
+output_forward_paired.fq.gz output_forward_unpaired.fq.gz \
+output_reverse_paired.fq.gz output_reverse_unpaired.fq.gz \
+ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50
+
+
+java -jar $TRIMMAMATIC_JAR PE -phred33 \
+../SRR1525438_1.fastq.gz ../SRR1525438_2.fastq.gz \
+SRR1525438_1.fq.gz SRR1525438_1.unpaired.fq.gz \
+SRR1525438_2.fq.gz SRR1525438_2.unpaied.fq.gz \
+ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50
+
+
+
+
+
+
+
+

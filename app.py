@@ -77,8 +77,6 @@ s3_bucket = s3.get_bucket(app.config['S3_BUCKET'])
 
 # Mongo DB for Legacy Sequence Data
 mongo_connection_uri = 'mongodb://reader:cdrom@biotseq.icmb.utexas.edu:27017/'
-
-
 login_manager = LoginManager()
 login_manager.init_app(app)
 
@@ -789,8 +787,7 @@ nav.register_element('frontend_top', Navbar(
         'Documentation', 
         View('BIGG DATA Overview', '.overview'), 
         View('BIGG DB Schema', '.schema'), 
-        Link('Confluence', 'under_construction'), 
-        Link('How To Write A Pipeline', 'under_construction'),
+        # Link('Confluence', 'under_construction'), 
         Separator(),
         Text('External Docs'),
         Link('Flask-Bootstrap', 'http://pythonhosted.org/Flask-Bootstrap'),

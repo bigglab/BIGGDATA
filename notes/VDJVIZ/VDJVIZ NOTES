@@ -1,0 +1,149 @@
+VDJVIZ NOTES
+
+curl 'http://vdjviz.rsldrt.com:9000/authenticate/userpass' -H 'Cookie: __utma=155377080.1895388295.1442627799.1442815913.1442970404.3; __utmz=155377080.1442627799.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); id=96cdd2161cf9a85c336805d9c86517ef93c828c8e9b2d64ce2ca4ef6551c8c882c8c3eec8cdc7c3ecf1b49a67dce8cc611285b76fe225965d9fc4933264ed92b48410022ed3a6103f2b5498af0924b3ea2f5e197f83e63df5014054beadb7a500cf2772ab20b8e23bdc7dd426d266f9f6dee375ea3fff44d357f638821acfda3' -H 'Origin: http://vdjviz.rsldrt.com:9000' -H 'Accept-Encoding: gzip, deflate' -H 'Accept-Language: en-US,en;q=0.8' -H 'Upgrade-Insecure-Requests: 1' -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.86 Safari/537.36' -H 'Content-Type: application/x-www-form-urlencoded' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8' -H 'Cache-Control: max-age=0' -H 'Referer: http://vdjviz.rsldrt.com:9000/authenticate/userpass' -H 'Connection: keep-alive' --data 'username=vdjviz1%40vdjviz.com&password=vdjviz1' --compressed
+
+
+
+POST /authenticate/userpass HTTP/1.1
+Host: vdjviz.rsldrt.com:9000
+Connection: keep-alive
+Content-Length: 46
+Cache-Control: max-age=0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Origin: http://vdjviz.rsldrt.com:9000
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.86 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+Referer: http://vdjviz.rsldrt.com:9000/authenticate/userpass
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: __utma=155377080.1895388295.1442627799.1442815913.1442970404.3; __utmz=155377080.1442627799.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); id=96cdd2161cf9a85c336805d9c86517ef93c828c8e9b2d64ce2ca4ef6551c8c882c8c3eec8cdc7c3ecf1b49a67dce8cc611285b76fe225965d9fc4933264ed92b48410022ed3a6103f2b5498af0924b3ea2f5e197f83e63df5014054beadb7a500cf2772ab20b8e23bdc7dd426d266f9f6dee375ea3fff44d357f638821acfda3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+http://vdjviz.rsldrt.com:9000/account/api/upload
+
+
+POST /account/api/upload HTTP/1.1
+Host: vdjviz.rsldrt.com:9000
+Connection: keep-alive
+Content-Length: 1859874
+Accept: application/json, text/javascript, */*; q=0.01
+Origin: http://vdjviz.rsldrt.com:9000
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.86 Safari/537.36
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundarymbPp20JAvYVq1FfA
+Referer: http://vdjviz.rsldrt.com:9000/account
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Cookie: __utma=155377080.1895388295.1442627799.1442815913.1442970404.3; __utmz=155377080.1442627799.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); id=a76fc0b5a54b7be76ea05cbe559d5ad44e684ac1287df3f144085413986046cc8e970783e05583cfa25e38eb39e2702a0143362285eae84a77d1a87550bbb494a90157e9503c843af3793b1ee8fb6a8a8338d88298cda08097fda12d58e79c5ac33b2623a90343c1a4dcd6c45b5a10e2f1b1d1f58f028e8d5718b1035b42bba9
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+VDJ VIZ Notes 
+
+
+user authenticate form: 
+
+<form action="http://54.83.15.57:9000/authenticate/userpass" method="POST" role="form">
+<input name="username" type="email">
+<input name="password" type="password" value> 
+
+
+
+POST
+http://vdjviz.rsldrt.com:9000/account/api/upload
+
+
+application/json
+Content-Type:application/json; charset=utf-8
+Content-Encoding:gzip
+Connection:keep-alive
+Content-Type:multipart/form-data;
+
+Host:vdjviz.rsldrt.com:9000
+Origin:http://vdjviz.rsldrt.com:9000
+Referer:http://vdjviz.rsldrt.com:9000/account
+
+Payload: 
+------WebKitFormBoundaryXKUE5bKkC1Qay9yj
+Content-Disposition: form-data; name="softwareTypeName"
+
+mixcr
+------WebKitFormBoundaryXKUE5bKkC1Qay9yj
+Content-Disposition: form-data; name="fileName"
+
+test.aln.vdjca
+------WebKitFormBoundaryXKUE5bKkC1Qay9yj
+Content-Disposition: form-data; name="fileExtension"
+
+txt
+------WebKitFormBoundaryXKUE5bKkC1Qay9yj
+Content-Disposition: form-data; name="uid"
+
+5
+------WebKitFormBoundaryXKUE5bKkC1Qay9yj
+Content-Disposition: form-data; name="files[]"; filename="test.aln.vdjca.txt"
+Content-Type: text/plain
+
+
+
+
+
+
+
+
+POST 
+http://vdjviz.rsldrt.com:9000/account/api/annotation
+
+Payload: 
+{action: "data", fileName: "test2.aln.clns", shift: 0}
+
+
+
+
+
+
+
+
+

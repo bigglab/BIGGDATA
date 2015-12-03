@@ -1,0 +1,673 @@
+IGREP RUNTHROUGHS 
+
+
+###################################################
+
+OPTIONS AVAILABLE DURING IGREP ANAYSIS SETUP: 
+
+###################################################
+
+# File Input 
+	Download From DB
+	Open From Scratch (Fastq, Fasta, IMGT)
+
+FromDB
+	Select Experiment(s)
+	Groups...
+
+
+
+Analysis Group Name
+'Test Run' (only analyze 10K reads)
+Select Multiple germline dbs 
+
+
+Annotation Reporting Settings: 
+minimum alignment length to V-gene (0-800)  [40]
+Minimum alignment percent identity to V Gene (0.0-1.0)  [0.4]
+Handling insertions and deletions detected in the V Gene alignment
+	never remove insertions
+	always remove insertions (similar to IMGT)
+	only remove if mutation results in stop codon 
+
+
+
+Isotype Sequences 
+	Input list of barcode sequences to scan for 
+
+>IGHG
+CCTCCACCAAGGGCCCATCGCAG
+>IGHM
+GGAGTGCATCCGCCCCAACC
+>IGHA
+CATCCCCGACCAGCCCCAAGC
+>IGK
+GAACTGTGGCTGCACCATCT
+>IGL
+GTCACTCTGTTCCCGCCCTC
+
+
+	strand relative to barcode sequences (+/-/not_sure)
+
+Treat alignments that only partially map to a barcode as mismatches [False]
+Select the maximum number of mismatches allowed [1]
+Choose the minimum alignment length [15]
+
+
+
+VH::VL Pairing
+	Analyze Single Cutoff (0.90)
+	Analyze Range Of Cutoffs [min, max, increment, store_in_db_threshold]  (0.8, 0.98, 0.01, 0.90)
+
+
+
+Generate Results Summary Files 
+	Unique AB AA File 
+	V-gene usage 
+	J-gene usage 
+	VJ-gene usage 
+	Unique CDR3 counts + diversity 
+
+
+
+Generate MS DB File 
+	Cluster cutoff for clonotyping sequences (0.90)
+
+
+
+Add results to DB [False]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#################################################################
+
+RUNTHROUGH OUTPUT WITH DEFAULTS ON DTRA_POLIO VH::VL EXPERIMENT 
+
+#################################################################
+
+
+
+cachedhttps://biotseq.ut.appsoma.com:5001/kamhonhoi_public/Programs/immunogrep_cython_db_tools.so
+756 byteshttps://www.appsoma.com/programs/get/immunogrep_igblast_run.bash
+1708 byteshttps://www.appsoma.com/programs/get/cchrysostomou/default/make_unique_aa.bash
+cachedhttps://biotseq.ut.appsoma.com:5001/kamhonhoi_public/Programs/mixcr.jar
+/usr/local/lib/python2.7/dist-packages/setuptools-3.4.3-py2.7.egg/pkg_resources.py:1031: UserWarning: /home/appsoma_workspace/private/rdurrett/.python-eggs is writable by group/others and vulner
+able to attack when used with get_resource_filename. Consider a more secure location (set with .set_extraction_path or the PYTHON_EGG_CACHE environment variable).                                
+a
+b
+c
+aaaargconnecting3
+Downloading experiment: 552c261d9eb6363a487b62cf
+ok
+yadda
+Download complete
+All experiments downloaded
+Annotating group 1: Group_1
+Alignment: 0.2%
+Alignment: 10.6%  ETA: 00:01:52
+Alignment: 21.4%  ETA: 00:01:27
+Alignment: 20.9%  ETA: 00:01:31
+Alignment: 32.2%  ETA: 00:01:15
+Alignment: 31.3%  ETA: 00:01:19
+Alignment: 41.8%  ETA: 00:01:06
+Alignment: 42.7%  ETA: 00:01:05
+Alignment: 52.4%  ETA: 00:00:54
+Alignment: 53.5%  ETA: 00:00:51
+Alignment: 62.7%  ETA: 00:00:43
+Alignment: 64.1%  ETA: 00:00:40
+Alignment: 73.1%  ETA: 00:00:31
+Alignment: 74.9%  ETA: 00:00:27
+Alignment: 83.4%  ETA: 00:00:19
+Alignment: 85.4%  ETA: 00:00:16
+Alignment: 94%  ETA: 00:00:06
+Alignment: 96%  ETA: 00:00:04
+Exporting alignments: 0%
+Exporting alignments: 0%
+Exporting alignments: 10.4%  ETA: 00:00:25
+Exporting alignments: 26.4%  ETA: 00:00:09
+Exporting alignments: 10.3%  ETA: 00:00:26
+Exporting alignments: 42.4%  ETA: 00:00:07
+Exporting alignments: 24.4%  ETA: 00:00:10
+Exporting alignments: 58.4%  ETA: 00:00:05
+Exporting alignments: 38.3%  ETA: 00:00:08
+Exporting alignments: 71.3%  ETA: 00:00:04
+Exporting alignments: 52.4%  ETA: 00:00:06
+Exporting alignments: 87.1%  ETA: 00:00:01
+Exporting alignments: 65.6%  ETA: 00:00:05
+Parsing mixcr file
+Exporting alignments: 78.8%  ETA: 00:00:03
+Exporting alignments: 89.7%  ETA: 00:00:01
+10% percent done. Time: 2015-11-24 21:15:43.474208
+Parsing mixcr file
+20% percent done. Time: 2015-11-24 21:15:47.250094
+10% percent done. Time: 2015-11-24 21:15:47.530296
+30% percent done. Time: 2015-11-24 21:15:50.902510
+20% percent done. Time: 2015-11-24 21:15:51.526836
+40% percent done. Time: 2015-11-24 21:15:54.558339
+30% percent done. Time: 2015-11-24 21:15:55.516068
+50% percent done. Time: 2015-11-24 21:15:58.245210
+40% percent done. Time: 2015-11-24 21:15:59.424159
+60% percent done. Time: 2015-11-24 21:16:02.055664
+50% percent done. Time: 2015-11-24 21:16:03.275278
+70% percent done. Time: 2015-11-24 21:16:05.759830
+60% percent done. Time: 2015-11-24 21:16:07.096114
+80% percent done. Time: 2015-11-24 21:16:09.515590
+70% percent done. Time: 2015-11-24 21:16:10.912255
+90% percent done. Time: 2015-11-24 21:16:13.415328
+80% percent done. Time: 2015-11-24 21:16:14.966813
+37.4587159157
+90% percent done. Time: 2015-11-24 21:16:19.213658
+39.4696619511
+annotation complete, merging files...
+files merged
+Reading all files at once and collapsing identical CDRH3-CDRL3 pairs into collapsed dict
+Processed 0 sequences
+Processed 100000 sequences
+Processed 200000 sequences
+Processed 300000 sequences
+Processed 400000 sequences
+Processed 500000 sequences
+Processed 600000 sequences
+Will now sort file by MiSeq ID to determine which sequences should be paired                                                                                                                      
+File sorted. Will now parse sequences into their H-L pairs                                                                                                                                        
+Sorting paired sequences by unique CDRH3-CDRL3 sequences                                                                                                                                          
+Collapsing sequences by unique CDRH3-CDRL3 values. Finding average SHM and most occurring "Gene Mode" for unique sequences                                                                        
+Compiling collapsed reads file: sorting unique CDRH3-CDRL3 sequences by their respective counts and exporting to FASTA file                                                                       
+Creating a sorted line-by-line cluster file
+Summary:
+Parsed through 644296 sequences
+254512 (39.0%) sequences did not pass filters:
+                238231 sequences did not have a cdr3
+                16281 sequences were not productive
+                0 sequences had an unidentifiable chain type
+141416 (21.0%) sequences were not paired successfully:
+                0 sequences had different LOCUS calls
+                6932 sequences were paired as VH-VH
+                1986 sequences were paired as VL-VL
+                132497 sequences did not have a corresponding R1-R2 pair read
+248368 (38.0%) sequences were successfully paired:
+This leaves 124184 identified VH-VL sequence-pairs:
+VH-VL sequence-pairs were collapsed into 51213 sequences containing unique CDRH3-CDRL3 pairs:
+9865 (19.0%) of these unique pairs were observed more than once                                                                                                                                   
+Clustering CDRH3 reads with 90% identity.
+
+usearch v7.0.1090_i86linux32, 4.0Gb RAM (24.7Gb total), 12 cores                                                                                                                                  
+(C) Copyright 2013 Robert C. Edgar, all rights reserved.                                                                                                                                          
+http://drive5.com/usearch                                                                                                                                                                         
+                                                                                                                                                                                                  
+Licensed to: jonrmcdaniel@gmail.com                                                                                                                                                               
+                                                                                                                                                                                                  
+00:00  26Mb  100.0% 302 clusters, max size 558, avg 32.7                                                                                                                                          
+
+      Seqs  9865
+  Clusters  302
+  Max size  558
+  Avg size  32.7
+  Min size  1
+Singletons  59, 0.6% of seqs, 19.5% of clusters
+   Max mem  
+      Time  1.00s
+Throughput  9865.0 seqs/sec.
+                                                                                                                                                                                                  
+USEARCH complete
+
+Compiling clustered reads file.
+
+Saving clustered data.
+
+Compiling finalized clustered output file.
+                                                                                                                                                                                                  
+Generating an annotation file of paired results for the database                                                                                                                                  
+All paired clustering complete
+All annotation/analysis pipelines are complete
+Zipping result files created in pipeline
+  adding: SK03.mixcr.annotation (deflated 75%)
+  adding: Group_1_SK03.mixcr.annotation.pairing.annotation (deflated 84%)
+  adding: Group_1_CDR3_identical_nt_pairs.txt (deflated 84%)
+  adding: Group_1_Summary.txt (deflated 55%)
+  adding: clustered_output_file.0.9.uc (deflated 85%)
+  adding: Group_1_CDR3_raw_clustered_nt_pairs_over1read.0.9.txt (deflated 79%)
+  adding: Group_1_CDR3_clustered_nt_pairs_over1read.0.9.txt (deflated 70%)
+{'insert': defaultdict(<type 'list'>, {}), 'append': defaultdict(<type 'list'>, {}), 'update': [], 'update_map': {'exps_to_dl': [], 'files_to_insert': []}}                                       
+{}                                                                                                                                                                                                
+                                                                                                                                                                                                  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#########################################################
+
+RUNTHROUGH WITH IGFFT In-House ANNOTATION PROGRAM 
+
+#########################################################
+
+
+
+
+
+
+
+
+                                                                                                                                                                
+                                                                                                                                                                                                  
+Parsing and summarizing alignment file                                                                                                                                                            
+90 Percent Complete: 9.18433 minutes                                                                                                                                                              
+aaaargconnecting3                                                                                                                                                                                 
+input is a-okay, maybe                                                                                                                                                                            
+[D][T][A].[Y][YF][C][AT]                                                                                                                                                                          
+[YVILPS][W][G][QK][G][TS]                                                                                                                                                                         
+input is a-okay, maybe                                                                                                                                                                            
+[E][D]...[Y][Y][C][QM][QH]                                                                                                                                                                        
+[TA][F][G][QGP][G][T]                                                                                                                                                                             
+input is a-okay, maybe                                                                                                                                                                            
+[EGD][D][E][A][DE][Y][Y][C]                                                                                                                                                                       
+[VIL][F][G][GT][G][T]                                                                                                                                                                             
+90 Percent Complete: 9.17133 minutes                                                                                                                                                              
+                                                                                                                                                                                                  
+        The resulting annotation output will be parsed using the following settings:                                                                                                              
+                Minimum alignment length cutoff: 40,                                                                                                                                              
+                Minimum percent identity: 0.4,                                                                                                                                                    
+                Fix detected insertions: Never,                                                                                                                                                   
+                Method to identify CDR3 and start of fr4: "gg_inhouse"                                                                                                                            
+                Performing isotyping on sequences using provided barcodes:                                                                                                                        
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+        The resulting annotation output will be parsed using the following settings:                                                                                                              
+                Minimum alignment length cutoff: 40,                                                                                                                                              
+                Minimum percent identity: 0.4,                                                                                                                                                    
+                Fix detected insertions: Never,                                                                                                                                                   
+                Method to identify CDR3 and start of fr4: "gg_inhouse"                                                                                                                            
+                Performing isotyping on sequences using provided barcodes:                                                                                                                        
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+        The resulting annotation output will be parsed using the following settings:                                                                                                              
+                Minimum alignment length cutoff: 40,                                                                                                                                              
+                Minimum percent identity: 0.4,                                                                                                                                                    
+                Fix detected insertions: Never,                                                                                                                                                   
+                Method to identify CDR3 and start of fr4: "gg_inhouse"                                                                                                                            
+                Performing isotyping on sequences using provided barcodes:                                                                                                                        
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+couts: 0hits: 0FFT OUTSIDE FUNCTION: 242220000                                                                                                                                                    
+FFT INSIDE  FUNCTION: -234540000                                                                                                                                                                  
+OPTIMIZE OUTSIDE  FUNCTION: 50890000                                                                                                                                                              
+OPTIMIZE INSIDE  FUNCTION: 232940000                                                                                                                                                              
+Total Time: 592200000                                                                                                                                                                             
+                                                                                                                                                                                                  
+Analysis complete                                                                                                                                                                                 
+Analysis Completed at Sat, 28 Nov 2015 16:48:48 +0000                                                                                                                                             
+Analysis saved to: /home/appsoma_workspace/private/rdurrett/scratch/igrep/Exp_00010_igseq_analysis_2015-11-28_103411/DTRA_Polio_D3173_VAX1605_VHVL.fastq.d.igfft.alignment                        
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+Parsing and summarizing alignment file                                                                                                                                                            
+aaaargconnecting3                                                                                                                                                                                 
+input is a-okay, maybe                                                                                                                                                                            
+[D][T][A].[Y][YF][C][AT]                                                                                                                                                                          
+[YVILPS][W][G][QK][G][TS]                                                                                                                                                                         
+input is a-okay, maybe                                                                                                                                                                            
+[E][D]...[Y][Y][C][QM][QH]                                                                                                                                                                        
+[TA][F][G][QGP][G][T]                                                                                                                                                                             
+input is a-okay, maybe                                                                                                                                                                            
+[EGD][D][E][A][DE][Y][Y][C]                                                                                                                                                                       
+[VIL][F][G][GT][G][T]                                                                                                                                                                             
+                                                                                                                                                                                                  
+        The resulting annotation output will be parsed using the following settings:                                                                                                              
+                Minimum alignment length cutoff: 40,                                                                                                                                              
+                Minimum percent identity: 0.4,                                                                                                                                                    
+                Fix detected insertions: Never,                                                                                                                                                   
+                Method to identify CDR3 and start of fr4: "gg_inhouse"                                                                                                                            
+                Performing isotyping on sequences using provided barcodes:                                                                                                                        
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+couts: 0hits: 0FFT OUTSIDE FUNCTION: 231430000                                                                                                                                                    
+FFT INSIDE  FUNCTION: -224750000                                                                                                                                                                  
+OPTIMIZE OUTSIDE  FUNCTION: 57630000                                                                                                                                                              
+OPTIMIZE INSIDE  FUNCTION: 250660000                                                                                                                                                              
+Total Time: 608860000                                                                                                                                                                             
+                                                                                                                                                                                                  
+Analysis complete                                                                                                                                                                                 
+Analysis Completed at Sat, 28 Nov 2015 16:49:15 +0000                                                                                                                                             
+Analysis saved to: /home/appsoma_workspace/private/rdurrett/scratch/igrep/Exp_00010_igseq_analysis_2015-11-28_103411/DTRA_Polio_D3173_VAX1605_VHVL.fastq.f.igfft.alignment                        
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+Parsing and summarizing alignment file                                                                                                                                                            
+aaaargconnecting3                                                                                                                                                                                 
+input is a-okay, maybe                                                                                                                                                                            
+[D][T][A].[Y][YF][C][AT]                                                                                                                                                                          
+[YVILPS][W][G][QK][G][TS]                                                                                                                                                                         
+input is a-okay, maybe                                                                                                                                                                            
+[E][D]...[Y][Y][C][QM][QH]                                                                                                                                                                        
+[TA][F][G][QGP][G][T]                                                                                                                                                                             
+input is a-okay, maybe                                                                                                                                                                            
+[EGD][D][E][A][DE][Y][Y][C]                                                                                                                                                                       
+[VIL][F][G][GT][G][T]                                                                                                                                                                             
+couts: 0hits: 0FFT OUTSIDE FUNCTION: 233440000                                                                                                                                                    
+FFT INSIDE  FUNCTION: -225770000                                                                                                                                                                  
+OPTIMIZE OUTSIDE  FUNCTION: 56110000                                                                                                                                                              
+OPTIMIZE INSIDE  FUNCTION: 247230000                                                                                                                                                              
+Total Time: 608680000                                                                                                                                                                             
+                                                                                                                                                                                                  
+Analysis complete                                                                                                                                                                                 
+Analysis Completed at Sat, 28 Nov 2015 16:49:17 +0000                                                                                                                                             
+Analysis saved to: /home/appsoma_workspace/private/rdurrett/scratch/igrep/Exp_00010_igseq_analysis_2015-11-28_103411/DTRA_Polio_D3173_VAX1605_VHVL.fastq.e.igfft.alignment                        
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+Parsing and summarizing alignment file                                                                                                                                                            
+aaaargconnecting3                                                                                                                                                                                 
+input is a-okay, maybe                                                                                                                                                                            
+[D][T][A].[Y][YF][C][AT]                                                                                                                                                                          
+[YVILPS][W][G][QK][G][TS]                                                                                                                                                                         
+input is a-okay, maybe                                                                                                                                                                            
+[E][D]...[Y][Y][C][QM][QH]                                                                                                                                                                        
+[TA][F][G][QGP][G][T]                                                                                                                                                                             
+input is a-okay, maybe                                                                                                                                                                            
+[EGD][D][E][A][DE][Y][Y][C]                                                                                                                                                                       
+[VIL][F][G][GT][G][T]                                                                                                                                                                             
+                                                                                                                                                                                                  
+        The resulting annotation output will be parsed using the following settings:                                                                                                              
+                Minimum alignment length cutoff: 40,                                                                                                                                              
+                Minimum percent identity: 0.4,                                                                                                                                                    
+                Fix detected insertions: Never,                                                                                                                                                   
+                Method to identify CDR3 and start of fr4: "gg_inhouse"                                                                                                                            
+                Performing isotyping on sequences using provided barcodes:                                                                                                                        
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+        The resulting annotation output will be parsed using the following settings:                                                                                                              
+                Minimum alignment length cutoff: 40,                                                                                                                                              
+                Minimum percent identity: 0.4,                                                                                                                                                    
+                Fix detected insertions: Never,                                                                                                                                                   
+                Method to identify CDR3 and start of fr4: "gg_inhouse"                                                                                                                            
+                Performing isotyping on sequences using provided barcodes:                                                                                                                        
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+10% percent done. Time: 2015-11-28 10:49:32.181697                                                                                                                                                
+10% percent done. Time: 2015-11-28 10:49:34.995768                                                                                                                                                
+10% percent done. Time: 2015-11-28 10:49:35.083770                                                                                                                                                
+10% percent done. Time: 2015-11-28 10:50:19.644928                                                                                                                                                
+20% percent done. Time: 2015-11-28 10:50:51.001636                                                                                                                                                
+20% percent done. Time: 2015-11-28 10:50:54.617569                                                                                                                                                
+20% percent done. Time: 2015-11-28 10:50:55.147551                                                                                                                                                
+10% percent done. Time: 2015-11-28 10:50:58.512313                                                                                                                                                
+10% percent done. Time: 2015-11-28 10:51:07.227127                                                                                                                                                
+20% percent done. Time: 2015-11-28 10:51:40.674499                                                                                                                                                
+30% percent done. Time: 2015-11-28 10:52:10.916048                                                                                                                                                
+30% percent done. Time: 2015-11-28 10:52:15.272525                                                                                                                                                
+30% percent done. Time: 2015-11-28 10:52:15.885383                                                                                                                                                
+20% percent done. Time: 2015-11-28 10:52:30.353693                                                                                                                                                
+20% percent done. Time: 2015-11-28 10:52:47.273829                                                                                                                                                
+30% percent done. Time: 2015-11-28 10:53:15.074817                                                                                                                                                
+40% percent done. Time: 2015-11-28 10:53:30.481643                                                                                                                                                
+40% percent done. Time: 2015-11-28 10:53:36.119535                                                                                                                                                
+40% percent done. Time: 2015-11-28 10:53:37.767220                                                                                                                                                
+30% percent done. Time: 2015-11-28 10:54:02.168714                       
+
+
+
+
+
+
+                                                                                                                                                                                                
+                                                                                                                                                                                                  
+Parsing and summarizing alignment file                                                                                                                                                            
+aaaargconnecting3                                                                                                                                                                                 
+input is a-okay, maybe                                                                                                                                                                            
+[D][T][A].[Y][YF][C][AT]                                                                                                                                                                          
+[YVILPS][W][G][QK][G][TS]                                                                                                                                                                         
+input is a-okay, maybe                                                                                                                                                                            
+[E][D]...[Y][Y][C][QM][QH]                                                                                                                                                                        
+[TA][F][G][QGP][G][T]                                                                                                                                                                             
+input is a-okay, maybe                                                                                                                                                                            
+[EGD][D][E][A][DE][Y][Y][C]                                                                                                                                                                       
+[VIL][F][G][GT][G][T]                                                                                                                                                                             
+                                                                                                                                                                                                  
+        The resulting annotation output will be parsed using the following settings:                                                                                                              
+                Minimum alignment length cutoff: 40,                                                                                                                                              
+                Minimum percent identity: 0.4,                                                                                                                                                    
+                Fix detected insertions: Never,                                                                                                                                                   
+                Method to identify CDR3 and start of fr4: "gg_inhouse"                                                                                                                            
+                Performing isotyping on sequences using provided barcodes:                                                                                                                        
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+        The resulting annotation output will be parsed using the following settings:                                                                                                              
+                Minimum alignment length cutoff: 40,                                                                                                                                              
+                Minimum percent identity: 0.4,                                                                                                                                                    
+                Fix detected insertions: Never,                                                                                                                                                   
+                Method to identify CDR3 and start of fr4: "gg_inhouse"                                                                                                                            
+                Performing isotyping on sequences using provided barcodes:                                                                                                                        
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  
+10% percent done. Time: 2015-11-28 10:49:32.181697                                                                                                                                                
+10% percent done. Time: 2015-11-28 10:49:34.995768                                                                                                                                                
+10% percent done. Time: 2015-11-28 10:49:35.083770                                                                                                                                                
+10% percent done. Time: 2015-11-28 10:50:19.644928                                                                                                                                                
+20% percent done. Time: 2015-11-28 10:50:51.001636                                                                                                                                                
+20% percent done. Time: 2015-11-28 10:50:54.617569                                                                                                                                                
+20% percent done. Time: 2015-11-28 10:50:55.147551                                                                                                                                                
+10% percent done. Time: 2015-11-28 10:50:58.512313                                                                                                                                                
+10% percent done. Time: 2015-11-28 10:51:07.227127                                                                                                                                                
+20% percent done. Time: 2015-11-28 10:51:40.674499                                                                                                                                                
+30% percent done. Time: 2015-11-28 10:52:10.916048                                                                                                                                                
+30% percent done. Time: 2015-11-28 10:52:15.272525                                                                                                                                                
+30% percent done. Time: 2015-11-28 10:52:15.885383                                                                                                                                                
+20% percent done. Time: 2015-11-28 10:52:30.353693                                                                                                                                                
+20% percent done. Time: 2015-11-28 10:52:47.273829                                                                                                                                                
+30% percent done. Time: 2015-11-28 10:53:15.074817                                                                                                                                                
+40% percent done. Time: 2015-11-28 10:53:30.481643                                                                                                                                                
+40% percent done. Time: 2015-11-28 10:53:36.119535                                                                                                                                                
+40% percent done. Time: 2015-11-28 10:53:37.767220                                                                                                                                                
+30% percent done. Time: 2015-11-28 10:54:02.168714                                                                                                                                                
+30% percent done. Time: 2015-11-28 10:54:26.043498                                                                                                                                                
+40% percent done. Time: 2015-11-28 10:54:45.678176                                                                                                                                                
+50% percent done. Time: 2015-11-28 10:54:52.516728                                                                                                                                                
+50% percent done. Time: 2015-11-28 10:54:58.454900                                                                                                                                                
+50% percent done. Time: 2015-11-28 10:54:59.658032                                                                                                                                                
+40% percent done. Time: 2015-11-28 10:55:28.562868                                                                                                                                                
+40% percent done. Time: 2015-11-28 10:56:02.612755                                                                                                                                                
+60% percent done. Time: 2015-11-28 10:56:07.438903                                                                                                                                                
+50% percent done. Time: 2015-11-28 10:56:12.372291                                                                                                                                                
+60% percent done. Time: 2015-11-28 10:56:13.057602                                                                                                                                                
+60% percent done. Time: 2015-11-28 10:56:16.049350                                                                                                                                                
+50% percent done. Time: 2015-11-28 10:56:51.831589                                                                                                                                                
+70% percent done. Time: 2015-11-28 10:57:20.557717                                                                                                                                                
+70% percent done. Time: 2015-11-28 10:57:27.275012                                                                                                                                                
+70% percent done. Time: 2015-11-28 10:57:32.309328                                                                                                                                                
+50% percent done. Time: 2015-11-28 10:57:38.134121                                                                                                                                                
+60% percent done. Time: 2015-11-28 10:57:40.558990                                                                                                                                                
+60% percent done. Time: 2015-11-28 10:58:27.992173                                                                                                                                                
+80% percent done. Time: 2015-11-28 10:58:35.260998                                                                                                                                                
+80% percent done. Time: 2015-11-28 10:58:41.493401                                                                                                                                                
+80% percent done. Time: 2015-11-28 10:58:47.869031                                                                                                                                                
+70% percent done. Time: 2015-11-28 10:59:07.479623                                                                                                                                                
+60% percent done. Time: 2015-11-28 10:59:15.385444                                                                                                                                                
+90% percent done. Time: 2015-11-28 10:59:53.330443                                                                                                                                                
+90% percent done. Time: 2015-11-28 10:59:57.658979                                                                                                                                                
+90% percent done. Time: 2015-11-28 11:00:04.780224                                                                                                                                                
+70% percent done. Time: 2015-11-28 11:00:05.242709                                                                                                                                                
+80% percent done. Time: 2015-11-28 11:00:36.992948                                                                                                                                                
+70% percent done. Time: 2015-11-28 11:00:58.740280                                                                                                                                                
+80% percent done. Time: 2015-11-28 11:01:40.350432                                                                                                                                                
+90% percent done. Time: 2015-11-28 11:02:04.643792                                                                                                                                                
+80% percent done. Time: 2015-11-28 11:02:32.201693                                                                                                                                                
+90% percent done. Time: 2015-11-28 11:03:12.161880                                                                                                                                                
+90% percent done. Time: 2015-11-28 11:04:03.671018                                                                                                                                                
+annotation complete, merging files...                                                                                                                                                             
+files merged.                                                                                                                                                                                     
+WARNING, THE FOLLOWING FIELD IS NOT DEFINED: dgene. PAIRING WILL NOT INCLUDE INFORMATION FOR THIS FIELD                                                                                           
+WARNING, THE FOLLOWING FIELD IS NOT DEFINED: dgene_scores. PAIRING WILL NOT INCLUDE INFORMATION FOR THIS FIELD                                                                                    
+Reading all files at once and collapsing identical CDRH3-CDRL3 pairs into collapsed dict                                                                                                          
+Processed 0 sequences                                                                                                                                                                             
+Processed 100000 sequences                                                                                                                                                                        
+Processed 200000 sequences                                                                                                                                                                        
+Processed 300000 sequences                                                                                                                                                                        
+Processed 400000 sequences                                                                                                                                                                        
+Processed 500000 sequences                                                                                                                                                                        
+Processed 600000 sequences                                                                                                                                                                        
+Processed 700000 sequences                                                                                                                                                                        
+Processed 800000 sequences                                                                                                                                                                        
+Processed 900000 sequences                                                                                                                                                                        
+Processed 1000000 sequences                                                                                                                                                                       
+Processed 1100000 sequences                                                                                                                                                                       
+Processed 1200000 sequences                                                                                                                                                                       
+Processed 1300000 sequences                                                                                                                                                                       
+Processed 1400000 sequences                                                                                                                                                                       
+Processed 1500000 sequences                                                                                                                                                                       
+Processed 1600000 sequences                                                                                                                                                                       
+Processed 1700000 sequences                                                                                                                                                                       
+Processed 1800000 sequences                                                                                                                                                                       
+Processed 1900000 sequences                                                                                                                                                                       
+Processed 2000000 sequences                                                                                                                                                                       
+Processed 2100000 sequences                                                                                                                                                                       
+Will now sort file by MiSeq ID to determine which sequences should be paired                                                                                                                      
+File sorted. Will now parse sequences into their H-L pairs                                                                                                                                        
+Sorting paired sequences by unique CDRH3-CDRL3 sequences                                                                                                                                          
+Collapsing sequences by unique CDRH3-CDRL3 values. Finding average SHM and most occurring "Gene Mode" for unique sequences                                                                        
+Compiling collapsed reads file: sorting unique CDRH3-CDRL3 sequences by their respective counts and exporting to FASTA file                                                                       
+Creating a sorted line-by-line cluster file                                                                                                                                                       
+Summary:                                                                                                                                                                                          
+Parsed through 2114812 sequences                                                                                                                                                                  
+256450 (12.0%) sequences did not pass filters:                                                                                                                                                    
+                193452 sequences did not have a cdr3                                                                                                                                              
+                62998 sequences were not productive                                                                                                                                               
+                0 sequences had an unidentifiable chain type                                                                                                                                      
+310752 (14.0%) sequences were not paired successfully:                                                                                                                                            
+                0 sequences had different LOCUS calls                                                                                                                                             
+                24 sequences were paired as VH-VH                                                                                                                                                 
+                634 sequences were paired as VL-VL                                                                                                                                                
+                310093 sequences did not have a corresponding R1-R2 pair read                                                                                                                     
+1547610 (73.0%) sequences were successfully paired:                                                                                                                                               
+This leaves 773805 identified VH-VL sequence-pairs:                                                                                                                                               
+VH-VL sequence-pairs were collapsed into 229506 sequences containing unique CDRH3-CDRL3 pairs:                                                                                                    
+38238 (16.0%) of these unique pairs were observed more than once                                                                                                                                  
+Clustering CDRH3 reads with 90% identity.                                                                                                                                                         
+                                                                                                                                                                                                  
+usearch v7.0.1090_i86linux32, 4.0Gb RAM (24.7Gb total), 12 cores                                                                                                                                  
+(C) Copyright 2013 Robert C. Edgar, all rights reserved.                                                                                                                                          
+http://drive5.com/usearch                                                                                                                                                                         
+                                                                                                                                                                                                  
+Licensed to: jonrmcdaniel@gmail.com                                                                                                                                                               
+                                                                                                                                                                                                  
+00:01  26Mb    1.6% 477 clusters, max size 22, avg 1.1                                                                                                                                            
+                                                                                                                                                                                                  
+fastaseqsource.cpp(207):                                                                                                                                                                          
+WARNING: Short sequence(s) discarded, min seq length is 10                                                                                                                                        
+                                                                                                                                                                                                  
+00:01  28Mb  100.0% 2214 clusters, max size 2032, avg 17.3                                                                                                                                        
+                                                                                                                                                                                                  
+      Seqs  38237 (38.2k)                                                                                                                                                                         
+  Clusters  2214                                                                                                                                                                                  
+  Max size  2032                                                                                                                                                                                  
+  Avg size  17.3                                                                                                                                                                                  
+  Min size  1                                                                                                                                                                                     
+Singletons  918, 2.4% of seqs, 41.5% of clusters                                                                                                                                                  
+   Max mem  28Mb                                                                                                                                                                                  
+      Time  1.00s                                                                                                                                                                                 
+Throughput  38.2k seqs/sec.                                                                                                                                                                       
+                                                                                                                                                                                                  
+USEARCH complete                                                                                                                                                                                  
+Compiling clustered reads file.                                                                                                                                                                   
+                                                                                                                                                                                                  
+Saving clustered data.                                                                                                                                                                            
+                                                                                                                                                                                                  
+Compiling finalized clustered output file.                                                                                                                                                        
+                                                                                                                                                                                                  
+Generating an annotation file of paired results for the database                                                                                                                                  
+All paired clustering complete                                                                                                                                                                    
+Performing descriptive statistics at 2015-11-28 11:16:22.570423.                                                                                                                                  
+Analyzing the following files:                                                                                                                                                                    
+         /home/appsoma_workspace/private/rdurrett/scratch/igrep/Exp_00010_igseq_analysis_2015-11-28_103411/DTRA_Polio_D3173_VAX1605_VHVL.igfft.annotation                                         
+Reading through sequences in file(s)                                                                                                                                                              
+Read 500000 sequences                                                                                                                                                                             
+Read 1000000 sequences                                                                                                                                                                            
+Read 1500000 sequences                                                                                                                                                                            
+Read 2000000 sequences                                                                                                                                                                            
+Generating a file of unique AB amino acid sequences                                                                                                                                               
+Performing V gene analysis                                                                                                                                                                        
+Performing J gene analysis                                                                                                                                                                        
+Performing V-J gene analysis                                                                                                                                                                      
+Performing CDR3 analyisis                                                                                                                                                                         
+Loading CDR3s into a dataframe                                                                                                                                                                    
+Dataframe created                                                                                                                                                                                 
+Writing summary to file                                                                                                                                                                           
+Descriptive statistics completed at 2015-11-28 11:19:15.021897.                                                                                                                                   
+All annotation/analysis pipelines are complete                                                                                                                                                    
+Zipping result files created in pipeline                                                                                                                                                          
+  adding: DTRA_Polio_D3173_VAX1605_VHVL.igfft.annotation (deflated 85%)                                                                                                                           
+  adding: Group_1_DTRA_Polio_D3173_VAX1605_VHVL.igfft.annotation.pairing.annotation                                                                                                               
+

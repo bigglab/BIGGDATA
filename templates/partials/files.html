@@ -25,7 +25,7 @@
 					<th>NO</th>
 				{% endif %}
 				{% if file.file_size %}
-					<th>{{round_to_two(file.file_size/1000000)}} Mb</th>
+					<th>{{file.file_size|filesizeformat}}</th>
 				{% else %}
 					<th></th>
 				{% endif %}

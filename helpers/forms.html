@@ -1,0 +1,25 @@
+{% macro render(form) %}
+<dl>
+{% for field in form if field.type not in ["HiddenField", "CSRFTokenField"] %}
+<dt>{{ field.label }}</dt>
+<dd>{{ field }}
+{% if field.errors %}
+<ul class="errors">
+{% for error in field.errors %}
+<li>{{error}}</li>
+{% endfor %}
+</ul>
+{% endif %}</dd>
+{% endfor %}
+</dl>
+{{ form.hidden_tag() }}
+{% endmacro %}
+
+TO USE FORM MACRO: 
+{% import "helpers/forms.html" as forms %}
+<!-- ... snip ... -->
+<form action="{{url_for('users.register')}}" method="POST">
+{{ forms.render(form) }}
+<p><input type="Submit" value="Learn more about your visitors"></p>
+</form>
+

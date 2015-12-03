@@ -1,0 +1,244 @@
+OPTIONS FOR INCORPORATION INTO FORMS / ANALYSIS CLASS 
+
+
+ESSENTIAL: 
+
+species
+	human
+	mouse 
+
+locus 
+
+enable isotyping 
+
+enable trim
+
+
+
+
+
+
+
+MIXCR 
+
+Usage: mixcr [options] [command] [command options]
+  Options:
+    -h, --help
+       Displays this help message.
+       Default: true
+  Commands:
+    align      Builds alignments with V,D,J and C genes for input sequencing reads.
+      Usage: align [options] input_file1 [input_file2] output_file.vdjca
+        Options:
+          -i, --diff-loci
+             Allow alignments with different loci of V and J hits.
+             Default: false
+          -f, --force
+             Force overwrite of output files.
+          -u, --functional
+             Use only functional alleles.
+          -h, --help
+             Displays help for this command.
+          -n, --limit
+             Maximal number of reads to process
+             Default: 0
+          -l, --loci
+             Immunological loci to align with separated by ','. Available loci:
+             IGH, IGL, IGK, TRA, TRB, TRG, TRD.
+             Default: all
+          -d, --noMerge
+             Do not merge paired reads.
+             Default: false
+          -p, --parameters
+             Parameters
+             Default: default
+          -r, --report
+             Report file.
+          -a, --save-description
+             Copy read(s) description line from .fastq or .fasta to .vdjca file
+             (can be then exported with -descrR1 and -descrR2 options in
+             exportAlignments action).
+             Default: false
+          -s, --species
+             Species (organism). Possible values: hs, HomoSapiens, musmusculus,
+             mmu, hsa, etc..
+             Default: HomoSapiens
+          -t, --threads
+             Processing threads
+             Default: 4
+          -O
+             Overrides base values of parameters.
+             Syntax: -Okey=value
+             Default: {}
+
+    exportAlignments      Export binary data
+      Usage: exportAlignments [options]
+        Options:
+          -h, --help
+             Displays help for this command.
+
+    assemble      Assemble clones
+      Usage: assemble [options] input_file output_file
+        Options:
+          -f, --force
+             Force overwrite of output files.
+          -h, --help
+             Displays help for this command.
+          -p, --parameters
+             Clone assembling parameters
+             Default: default
+          -r, --report
+             Report file.
+          -t, --threads
+             Processing threads
+             Default: 4
+          -O
+             Overrides base values of paramentrs.
+             Syntax: -Okey=value
+             Default: {}
+
+    exportClones      Export binary data
+      Usage: exportClones [options]
+        Options:
+          -h, --help
+             Displays help for this command.
+
+    exportAlignmentsPretty      Export full alignments.
+      Usage: exportAlignmentsPretty [options] input_file.vdjca [output.txt]
+        Options:
+          -a, --allele
+             Output full allele sequence
+          -c, --cdr3-contains
+             Only output alignments where CDR3 contains given substring
+          -f, --filter
+             Custom filter
+          -h, --help
+             Displays help for this command.
+          -n, --limit
+             Limit number of filtered alignments; no more than N alignments will
+             be outputted
+          -l, --limitBefore
+             Limit number of alignments before filtering
+          -r, --read-contains
+             Only output alignments where target read contains given substring
+          -s, --skip
+             Number of output alignments to skip
+          -t, --top
+             Output only top
+          -v, --verbose
+             Verbose output (old)
+
+    mergeAlignments      Merge several *.vdjca[.gz] files with alignments into a single alignments file.
+      Usage: mergeAlignments [options] [input_file1.vdjca[.gz] [input_file2.vdjca[.gz] ....]] output_file.vdjca[.gz]
+        Options:
+          -h, --help
+             Displays help for this command.
+
+
+
+
+
+
+
+
+IGBLAST  ( MIGMAP )
+
+
+(biggdata)SRR1525443/  ∫  java -Xmx2g -jar ~/tools/migmap-0.9.8/migmap-0.9.8.jar                                                                                                                 [11:09:57]
+usage: migmap [options] input.(fa/fastq)[.gz] (output_file/- for stdout)
+    --all-alleles                       Will use all alleles during
+                                        alignment (this is going to be
+                                        slower). [default = use only major
+                                        (*01) alleles]
+    --allow-incomplete                  Report clonotypes with partial
+                                        CDR3 mapping.
+    --allow-no-cdr3                     Report clonotypes with no CDR3
+                                        mapping.
+    --allow-noncanonical                Report clonotypes that have
+                                        non-canonical CDR3 (do not start
+                                        with C or end with F/W residues).
+    --allow-noncoding                   Report clonotypes that have either
+                                        stop codon or frameshift in their
+                                        receptor sequence.
+    --blast-dir <path>                  Path to folder that contains
+                                        'igblastn' and 'makeblastdb'
+                                        binaries. [default = assume they
+                                        are added to $PATH and execute
+                                        them directly]
+    --by-read                           Will output mapping details for
+                                        each read. [default = assemble
+                                        clonotypes and output clonotype
+                                        abundance table]
+    --data-dir <path>                   Path to folder that contains data
+                                        bundle (internal_data/ and
+                                        optional_file/ directories).
+                                        [default = $install_dir/data/]
+    --details <field1,field2,.../all>   Additional fields to provide for
+                                        output, allowed values:
+                                        fr1nt,cdr1nt,fr2nt,cdr2nt,fr3nt,co
+                                        ntignt,fr1aa,cdr1aa,fr2aa,cdr2aa,f
+                                        r3aa,contigaa.
+ -h                                     Display this help message
+ -n <int>                               Number of reads to take. [default
+                                        = all]
+ -p <int>                               Number of cores to use. [default =
+                                        all available processors]
+ -q <2..40>                             Threshold for average quality of
+                                        mutations and N-regions of CDR3
+                                        [default = 25]
+ -R <chain1,...>                        Receptor gene and chain. Several
+                                        chains can be specified, separated
+                                        with commas. Allowed values: [TRA,
+                                        TRB, TRG, TRG, IGH, IGL, IGK].
+                                        [required]
+    --report <file>                     File to store MIGMAP report. Will
+                                        append report line if file exists.
+ -S <name>                              Species. Allowed values: [human,
+                                        mouse, rat, rabbit,
+                                        rhesus_monkey]. [required]
+    --unmapped <fastq[.gz]>             Output unmapped reads in specified
+                                        file.
+    --use-kabat                         Will use KABAT nomenclature for
+                                        CDR/FW partitioning. [default =
+                                        use IMGT nomenclature]
+
+
+
+
+(biggdata)SRR1525443/  ∫  java -Xmx2g -jar ~/tools/migmap-0.9.8/migmap-0.9.8.jar --details fr1nt,cdr1nt,fr2nt,cdr2nt,fr3nt,contignt,fr1aa,cdr1aa,fr2aa,cdr2aa,fr3aa,contigaa -S human -R IGH,IGL,IGK -n 10000 1/fastq.gz migmap.out.txt
+[Sat Nov 28 11:12:38 MST 2015 MIGMAP +00m00s] Loaded database for HomoSapiens IGH,IGK,IGL gene(s): 206 Variable, 37 Diversity and 18 Joining segments.
+[Sat Nov 28 11:12:39 MST 2015 MIGMAP +00m00s] Creating temporary BLAST database /Users/red/tools/migmap-0.9.8/data/database-08165279-9b98-4043-acbe-e7c63075295b.
+[Sat Nov 28 11:12:39 MST 2015 MIGMAP +00m00s] Annotating variable segments.
+[Sat Nov 28 11:12:47 MST 2015 MIGMAP +00m08s] Fully annotated 206 of 206 segments.
+[Sat Nov 28 11:12:47 MST 2015 MIGMAP +00m08s] Analyzing sample 1/fastq.gz
+[Sat Nov 28 11:12:47 MST 2015 MIGMAP +00m08s] Started analysis
+[Sat Nov 28 11:12:47 MST 2015 MIGMAP +00m08s] Loaded 0 reads. 
+[Sat Nov 28 11:12:57 MST 2015 MIGMAP +00m18s] Loaded 4442 reads. 
+[Sat Nov 28 11:13:07 MST 2015 MIGMAP +00m28s] Loaded 7098 reads. Processed 2664 reads, of them 99.17% mapped. Among mapped reads 73.05% passed quality filter and 14.76% passed all filters.
+[Sat Nov 28 11:13:17 MST 2015 MIGMAP +00m38s] Loaded 7098 reads. Processed 2664 reads, of them 99.17% mapped. Among mapped reads 73.05% passed quality filter and 14.76% passed all filters.
+[Sat Nov 28 11:13:27 MST 2015 MIGMAP +00m48s] Loaded 9756 reads. Processed 5332 reads, of them 99.0% mapped. Among mapped reads 73.55% passed quality filter and 14.2% passed all filters.
+[Sat Nov 28 11:13:37 MST 2015 MIGMAP +00m58s] Loaded 9756 reads. Processed 5332 reads, of them 99.0% mapped. Among mapped reads 73.55% passed quality filter and 14.2% passed all filters.
+[Sat Nov 28 11:13:47 MST 2015 MIGMAP +01m08s] Loaded 10004 reads. Processed 8000 reads, of them 98.73% mapped. Among mapped reads 74.95% passed quality filter and 15.69% passed all filters.
+[Sat Nov 28 11:13:57 MST 2015 MIGMAP +01m18s] Loaded 10004 reads. Processed 9984 reads, of them 98.67% mapped. Among mapped reads 75.98% passed quality filter and 16.4% passed all filters.
+[Sat Nov 28 11:13:57 MST 2015 MIGMAP +01m18s] Finished analysis. Processed 10000 reads, of them 98.65% mapped. Among mapped reads 75.98% passed quality filter and 16.4% passed all filters.
+[Sat Nov 28 11:13:57 MST 2015 MIGMAP +01m18s] Sorting 101 clonotype entries, writing output.
+[Sat Nov 28 11:13:57 MST 2015 MIGMAP +01m18s] Finished.
+
+
+
+
+
+
+
+
+################### ONGOING QUESTIONS ##########################
+
+
+
+
+migmap (igblast) outputs contignt sequences such as XXXXXXXGTGTAGACTAGACTACGACTGXXXXXXX 
+	DO WE WANT TO KEEP THE X'S? 
+	migmap automatically counts completely unique clones 
+
+
+

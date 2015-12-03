@@ -1,0 +1,336 @@
+{
+    "date_time": "2015-06-08 21:42:46.481903+0000", 
+    "produced_by_tool": "gsaf_downloader", 
+    "size_in_mb": 463, 
+    "file_type": "fastq.gz", 
+    "user_data": {
+        "description": {
+            "FIELDS_FOR_GSAF": {
+                "SAMPLE_VOLUME_UL": 30, 
+                "TARGET_READS": 2750000, 
+                "MINIMUM_READS": 2250000, 
+                "GSAF_LIBRARY_PREP_REQUIRED": true, 
+                "JOB": "1", 
+                "GSAF_SAMPLE_NAME": "memTCR_C", 
+                "PRO_OR_EUKARYOTIC_ORGANISM": "eukaryotic", 
+                "BIOANALYZERS_REQUIRED": null, 
+                "BY_PLATE": "0.125", 
+                "CONCENTRATION_NG_UL": 60, 
+                "GSAF_BARCODE": "", 
+                "DESCRIPTION": [
+                    "mTCR Sequencing Mouse", 
+                    "Mouse C5 Library 1"
+                ], 
+                "EMAIL_ADDRESSES": "herr.schaetzle@gmail.com,bingtan100@gmail.com", 
+                "SEQUENCING_PLATFORM": "MiSeq 2x300"
+            }, 
+            "GGLAB_DB_FIELDS": [
+                {
+                    "LAB_NOTEBOOK_SOURCE": "", 
+                    "SEQUENCING_SUBMISSION_NUMBER": [], 
+                    "CHAIN_TYPES_SEQUENCED": [
+                        "beta"
+                    ], 
+                    "CONTAINS_RNA_SEQ_DATA": false, 
+                    "REVERSE_PRIMER_USED_IN_RT_STEP": "oligo dT", 
+                    "LIST_OF_POLYMERASES_USED": [
+                        "FastStart High Fidelity"
+                    ], 
+                    "SEQUENCING_PLATFORM": "MiSeq 2x300", 
+                    "VH:VL_PAIRED": false, 
+                    "PROJECT_NAME": "mTCR", 
+                    "TARGET_READS": 2750000, 
+                    "CELL_MARKERS_USED": [], 
+                    "READ_ACCESS": [
+                        "sschaetzle"
+                    ], 
+                    "ADJUVANT": "", 
+                    "POST_SEQUENCING_PROCESSING:PHI_X_FILTER": false, 
+                    "CELL_TYPES_SEQUENCED": [
+                        "mTc"
+                    ], 
+                    "SPECIES": "Mus musculus", 
+                    "PUBLICATIONS": [], 
+                    "POST_SEQUENCING_PROCESSING:QUALITY_FILTER": "q20p50", 
+                    "OWNERS_OF_EXPERIMENT": [
+                        "sschaetzle"
+                    ], 
+                    "CELL_SELECTION_KIT_NAME": "", 
+                    "ISOTYPES_SEQUENCED": [
+                        "n/a"
+                    ], 
+                    "POST_SEQUENCING_PROCESSING:PROCESS_R1_R2_FILE": "pear", 
+                    "SAMPLE_PREPARATION_DATE": "05/2015", 
+                    "GSAF_BARCODE": "", 
+                    "MID_TAG": [
+                        "TGCCTAGTCA"
+                    ], 
+                    "DESCRIPTION": [
+                        "mTCR Sequencing Mouse", 
+                        "Mouse C1 Library 1"
+                    ], 
+                    "CELL_NUMBER": null, 
+                    "PRIMER_SET_NAME": [
+                        "mTCR"
+                    ], 
+                    "LAB": [
+                        "GEORGIOU"
+                    ], 
+                    "TEMPLATE_TYPE": "cDNA", 
+                    "EXPERIMENT_NAME": "memTCR_C1", 
+                    "PERSON_WHO_PREPARED_LIBRARY": [
+                        "Sebastian Schaetzle"
+                    ], 
+                    "PAIRING_TECHNIQUE": "", 
+                    "_id": "556774349eb6360c29931524"
+                }, 
+                {
+                    "LAB_NOTEBOOK_SOURCE": "", 
+                    "SEQUENCING_SUBMISSION_NUMBER": [], 
+                    "CHAIN_TYPES_SEQUENCED": [
+                        "beta"
+                    ], 
+                    "CONTAINS_RNA_SEQ_DATA": false, 
+                    "REVERSE_PRIMER_USED_IN_RT_STEP": "oligo dT", 
+                    "LIST_OF_POLYMERASES_USED": [
+                        "FastStart High Fidelity"
+                    ], 
+                    "SEQUENCING_PLATFORM": "MiSeq 2x300", 
+                    "VH:VL_PAIRED": false, 
+                    "PROJECT_NAME": "mTCR", 
+                    "TARGET_READS": 2750000, 
+                    "ADJUVANT": "", 
+                    "READ_ACCESS": [
+                        "sschaetzle"
+                    ], 
+                    "CELL_MARKERS_USED": [], 
+                    "POST_SEQUENCING_PROCESSING:PHI_X_FILTER": false, 
+                    "CELL_TYPES_SEQUENCED": [
+                        "mTc"
+                    ], 
+                    "SPECIES": "Mus musculus", 
+                    "PERSON_WHO_PREPARED_LIBRARY": [
+                        "Sebastian Schaetzle"
+                    ], 
+                    "POST_SEQUENCING_PROCESSING:QUALITY_FILTER": "q20p50", 
+                    "OWNERS_OF_EXPERIMENT": [
+                        "sschaetzle"
+                    ], 
+                    "CELL_SELECTION_KIT_NAME": "", 
+                    "ISOTYPES_SEQUENCED": [
+                        "n/a"
+                    ], 
+                    "POST_SEQUENCING_PROCESSING:PROCESS_R1_R2_FILE": "pear", 
+                    "SAMPLE_PREPARATION_DATE": "05/2015", 
+                    "GSAF_BARCODE": "", 
+                    "MID_TAG": [
+                        "CTATGCCTAG"
+                    ], 
+                    "DESCRIPTION": [
+                        "mTCR Sequencing Mouse", 
+                        "Mouse C2 Library 1"
+                    ], 
+                    "CELL_NUMBER": null, 
+                    "PRIMER_SET_NAME": [
+                        "mTCR"
+                    ], 
+                    "LAB": [
+                        "GEORGIOU"
+                    ], 
+                    "TEMPLATE_TYPE": "cDNA", 
+                    "EXPERIMENT_NAME": "memTCR_C2", 
+                    "PUBLICATIONS": [], 
+                    "PAIRING_TECHNIQUE": "", 
+                    "_id": "556774349eb6360c29931525"
+                }, 
+                {
+                    "LAB_NOTEBOOK_SOURCE": "", 
+                    "SEQUENCING_SUBMISSION_NUMBER": [], 
+                    "CHAIN_TYPES_SEQUENCED": [
+                        "beta"
+                    ], 
+                    "CONTAINS_RNA_SEQ_DATA": false, 
+                    "REVERSE_PRIMER_USED_IN_RT_STEP": "oligo dT", 
+                    "LIST_OF_POLYMERASES_USED": [
+                        "FastStart High Fidelity"
+                    ], 
+                    "SEQUENCING_PLATFORM": "MiSeq 2x300", 
+                    "VH:VL_PAIRED": false, 
+                    "PROJECT_NAME": "mTCR", 
+                    "TARGET_READS": 2750000, 
+                    "CELL_MARKERS_USED": [], 
+                    "READ_ACCESS": [
+                        "sschaetzle"
+                    ], 
+                    "ADJUVANT": "", 
+                    "POST_SEQUENCING_PROCESSING:PHI_X_FILTER": false, 
+                    "CELL_TYPES_SEQUENCED": [
+                        "mTc"
+                    ], 
+                    "SPECIES": "Mus musculus", 
+                    "PERSON_WHO_PREPARED_LIBRARY": [
+                        "Sebastian Schaetzle"
+                    ], 
+                    "POST_SEQUENCING_PROCESSING:QUALITY_FILTER": "q20p50", 
+                    "OWNERS_OF_EXPERIMENT": [
+                        "sschaetzle"
+                    ], 
+                    "CELL_SELECTION_KIT_NAME": "", 
+                    "ISOTYPES_SEQUENCED": [
+                        "n/a"
+                    ], 
+                    "POST_SEQUENCING_PROCESSING:PROCESS_R1_R2_FILE": "pear", 
+                    "SAMPLE_PREPARATION_DATE": "05/2015", 
+                    "GSAF_BARCODE": "", 
+                    "MID_TAG": [
+                        "CGAACTCGAT"
+                    ], 
+                    "DESCRIPTION": [
+                        "mTCR Sequencing Mouse", 
+                        "Mouse C3 Library 1"
+                    ], 
+                    "CELL_NUMBER": null, 
+                    "PRIMER_SET_NAME": [
+                        "mTCR"
+                    ], 
+                    "LAB": [
+                        "GEORGIOU"
+                    ], 
+                    "TEMPLATE_TYPE": "cDNA", 
+                    "EXPERIMENT_NAME": "memTCR_C3", 
+                    "PUBLICATIONS": [], 
+                    "PAIRING_TECHNIQUE": "", 
+                    "_id": "556774349eb6360c29931526"
+                }, 
+                {
+                    "LAB_NOTEBOOK_SOURCE": "", 
+                    "SEQUENCING_SUBMISSION_NUMBER": [], 
+                    "CHAIN_TYPES_SEQUENCED": [
+                        "beta"
+                    ], 
+                    "CONTAINS_RNA_SEQ_DATA": false, 
+                    "REVERSE_PRIMER_USED_IN_RT_STEP": "oligo dT", 
+                    "LIST_OF_POLYMERASES_USED": [
+                        "FastStart High Fidelity"
+                    ], 
+                    "SEQUENCING_PLATFORM": "MiSeq 2x300", 
+                    "VH:VL_PAIRED": false, 
+                    "PROJECT_NAME": "mTCR", 
+                    "TARGET_READS": 2750000, 
+                    "CELL_MARKERS_USED": [], 
+                    "READ_ACCESS": [
+                        "sschaetzle"
+                    ], 
+                    "ADJUVANT": "", 
+                    "POST_SEQUENCING_PROCESSING:PHI_X_FILTER": false, 
+                    "CELL_TYPES_SEQUENCED": [
+                        "mTc"
+                    ], 
+                    "SPECIES": "Mus musculus", 
+                    "PERSON_WHO_PREPARED_LIBRARY": [
+                        "Sebastian Schaetzle"
+                    ], 
+                    "POST_SEQUENCING_PROCESSING:QUALITY_FILTER": "q20p50", 
+                    "OWNERS_OF_EXPERIMENT": [
+                        "sschaetzle"
+                    ], 
+                    "CELL_SELECTION_KIT_NAME": "", 
+                    "ISOTYPES_SEQUENCED": [
+                        "n/a"
+                    ], 
+                    "POST_SEQUENCING_PROCESSING:PROCESS_R1_R2_FILE": "pear", 
+                    "SAMPLE_PREPARATION_DATE": "05/2015", 
+                    "GSAF_BARCODE": "", 
+                    "MID_TAG": [
+                        "TCAGTATAGC"
+                    ], 
+                    "DESCRIPTION": [
+                        "mTCR Sequencing Mouse", 
+                        "Mouse C4 Library 1"
+                    ], 
+                    "CELL_NUMBER": null, 
+                    "PRIMER_SET_NAME": [
+                        "mTCR"
+                    ], 
+                    "LAB": [
+                        "GEORGIOU"
+                    ], 
+                    "TEMPLATE_TYPE": "cDNA", 
+                    "EXPERIMENT_NAME": "memTCR_C4", 
+                    "PUBLICATIONS": [], 
+                    "PAIRING_TECHNIQUE": "", 
+                    "_id": "556774359eb6360c29931527"
+                }, 
+                {
+                    "LAB_NOTEBOOK_SOURCE": "", 
+                    "SEQUENCING_SUBMISSION_NUMBER": [], 
+                    "CHAIN_TYPES_SEQUENCED": [
+                        "beta"
+                    ], 
+                    "CONTAINS_RNA_SEQ_DATA": false, 
+                    "REVERSE_PRIMER_USED_IN_RT_STEP": "oligo dT", 
+                    "LIST_OF_POLYMERASES_USED": [
+                        "FastStart High Fidelity"
+                    ], 
+                    "SEQUENCING_PLATFORM": "MiSeq 2x300", 
+                    "VH:VL_PAIRED": false, 
+                    "PROJECT_NAME": "mTCR", 
+                    "TARGET_READS": 2750000, 
+                    "CELL_MARKERS_USED": [], 
+                    "READ_ACCESS": [
+                        "sschaetzle"
+                    ], 
+                    "ADJUVANT": "", 
+                    "POST_SEQUENCING_PROCESSING:PHI_X_FILTER": false, 
+                    "CELL_TYPES_SEQUENCED": [
+                        "mTc"
+                    ], 
+                    "SPECIES": "Mus musculus", 
+                    "PERSON_WHO_PREPARED_LIBRARY": [
+                        "Sebastian Schaetzle"
+                    ], 
+                    "POST_SEQUENCING_PROCESSING:QUALITY_FILTER": "q20p50", 
+                    "OWNERS_OF_EXPERIMENT": [
+                        "sschaetzle"
+                    ], 
+                    "CELL_SELECTION_KIT_NAME": "", 
+                    "ISOTYPES_SEQUENCED": [
+                        "n/a"
+                    ], 
+                    "POST_SEQUENCING_PROCESSING:PROCESS_R1_R2_FILE": "pear", 
+                    "SAMPLE_PREPARATION_DATE": "05/2015", 
+                    "GSAF_BARCODE": "", 
+                    "MID_TAG": [
+                        "ACGTGAACGT"
+                    ], 
+                    "DESCRIPTION": [
+                        "mTCR Sequencing Mouse", 
+                        "Mouse C5 Library 1"
+                    ], 
+                    "CELL_NUMBER": null, 
+                    "PRIMER_SET_NAME": [
+                        "mTCR"
+                    ], 
+                    "LAB": [
+                        "GEORGIOU"
+                    ], 
+                    "TEMPLATE_TYPE": "cDNA", 
+                    "EXPERIMENT_NAME": "memTCR_C5", 
+                    "PUBLICATIONS": [], 
+                    "PAIRING_TECHNIQUE": "", 
+                    "_id": "556774359eb6360c29931528"
+                }
+            ]
+        }
+    }, 
+    "filename": "memTCR-C_S3_L001_R1_001.fastq.gz", 
+    "reads": [
+        "memTCR-C_S3_L001_R1_001.fastq.gz", 
+        "memTCR-C_S3_L001_R2_001.fastq.gz"
+    ], 
+    "sample_name": "memTCR_C", 
+    "path": "scratch/results/job-44207/memTCR-C_S3_L001_R1_001.fastq.gz", 
+    "SA": "SA15121", 
+    "JA": "JA15417", 
+    "md5": "11244697b66f43fd4060e88e25070381"
+}
