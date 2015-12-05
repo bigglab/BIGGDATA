@@ -46,6 +46,7 @@ from sqlalchemy.sql import select
 from sqlalchemy.orm import sessionmaker, scoped_session
 from pymongo import MongoClient
 import pymongo
+from flask_collect import Collect
  
 #Local Imports 
 from forms import *
@@ -63,6 +64,14 @@ nav = Nav()
 Bootstrap(app) 
 
 db = SQLAlchemy(app)
+
+
+
+# manager = Manager()
+
+collect = Collect()
+collect.init_app(app)
+# collect.init_script(manager)
 
 
 
