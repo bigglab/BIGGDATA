@@ -5,7 +5,7 @@
 from flask._compat import string_types
 from werkzeug.utils import import_string
 from os import path as op
-
+from flask.ext.script import Option 
 
 class Collect(object):
 
@@ -90,16 +90,19 @@ class Collect(object):
 
         .. _Flask-Script: http://packages.python.org/Flask-Script/
         """
+
+
         def collect(verbose=True):
             """Collect static from blueprints."""
             return self.collect(verbose=verbose)
 
-        def collectstatic(verbose=True):
+        manager.option('-ni', '--noinput', dest='noinput')
+        def collectstatic(verbose=True, noinput=True):
             """Collect static from blueprints."""
             return self.collect(verbose=verbose)
 
-        # manager.command(collect)
         manager.command(collectstatic)
+
 
     def collect(self, verbose=False):
         """Collect static files from blueprints.
