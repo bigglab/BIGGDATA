@@ -30,27 +30,21 @@ MIGMAP = 'java -Xmx2g -jar ~/tools/migmap-0.9.8/migmap-0.9.8.jar'
 
 # File System configurations - this is where all user data is stored! Need a more universal way.... 
 # Dropboxes and Data kept separate to efficiently use 2x local SSD on AWS c3.xlarge node 
-DROPBOX_ROOT='/dropboxes'
-SCRATCH_ROOT='/data'
-SHARE_ROOT = '/dropboxes/shared'
+DROPBOX_ROOT='/data/dropboxes'
+SCRATCH_ROOT='/data/scratch'
+SHARE_ROOT = '/data/dropboxes/shared'
 
 
 # Heroku-specific vars 
 if 'DATABASE_URL' in os.environ.keys():  # HACK TO CHECK IF WE'RE IN PRODUCTION ON HEROKU: 
 	SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
 	HOME = os.environ['HOME']
-	DROPBOX_ROOT='/dropboxes'
-	SCRATCH_ROOT='/data'
-	SHARE_ROOT = '/dropboxes/shared'
 
 
 # AWS-specifc vars 
 if 'LESSOPEN' in os.environ.keys():  # HACK TO CHECK IF WE'RE ON AWS INSTANCE: 
 	SQLALCHEMY_DATABASE_URI = "postgres://uf8vm9gg6isrbk:p6iot5ksr6i60ff173l8f4v1ig@ec2-107-20-136-206.compute-1.amazonaws.com:6712/d30h3s4gmpmcuo"
 	# Local instance stores, for speed 
-	DROPBOX_ROOT='/dropboxes'
-	SCRATCH_ROOT='/data'
-	SHARE_ROOT = '/dropboxes/shared'
 	HOME = '/home/ubuntu/BIGGDATA'
 	TRIMMAMATIC = 'java -jar /home/ubuntu/install/Trimmomatic-0.35/trimmomatic-0.35.jar'
 	TRIMMAMATIC_ADAPTERS = '/home/ubuntu/install/Trimmomatic-0.35/adapters'
