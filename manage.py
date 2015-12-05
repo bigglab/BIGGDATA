@@ -16,18 +16,18 @@ app.config.from_pyfile('config.py')
 
 migrate = Migrate(app, db)
 manager = Manager(app)
-# import models.user 
 
 manager.add_command('db', MigrateCommand)
 
 
-collectstatic = Collect()
-collectstatic.init_app(app)
-collectstatic.init_script(manager)
-# collectstatic = collect 
+collect = Collect()
+collect.init_app(app)
+collect.init_script(manager)
+
 
 if __name__ == '__main__':
     manager.run()
+
 
 
 
