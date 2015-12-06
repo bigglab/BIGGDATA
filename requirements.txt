@@ -89,6 +89,7 @@ pytz==2015.6
 redis==2.10.3
 requests==2.8.1
 sadisplay==0.4.1
+scipy==0.16.1
 setproctitle==1.1.9
 simplegeneric==0.8.1
 six==1.10.0

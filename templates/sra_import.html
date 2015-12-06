@@ -5,6 +5,7 @@
 
 <div class="container">
 <h3>Import from an SRA Accession: </h3>
+    <h4>Currently files from NCBI's SRA must be transferred, so these files might take a minute or two to become available.</h4>
     <form method="POST" action="/files/import_sra" enctype="multipart/form-data">
     <table class="table table-striped">
         {{ form.csrf_token }}

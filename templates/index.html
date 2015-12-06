@@ -9,10 +9,10 @@
 		<h4>Good to see you here, {{user.first_name}}</h4>
 		<br>
 		{% if user.files.all() == [] %}
-			<h4>Looks like you need to <a href="{{url_for('.file_download')}}">import some files</a> to the system</h4>
+			<h4>Looks like you need to import some files! <a href="{{url_for('.import_sra')}}">Import a sample set from NCBI</a> or <a href="{{url_for('.file_download')}}">upload a file from your computer or url</a>.</h4>
 		{% else %}
 			{% if user.datasets.all() == [] %}
-			<h4>You've been preloaded with <a href="{{url_for('.files')}}">some example files</a>, or upload you're own to get started!</h4>
+			<h4>You've got <a href="{{url_for('.files')}}">some files</a>, but no datasets!</h4>
 			<h4><a href="{{url_for('.datasets')}}">Create a Dataset</a> and add some files to run an analysis</h4>
 			{% else %}
 					<h4>Looks like you're up and running:</h4>
