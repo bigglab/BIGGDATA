@@ -17,6 +17,17 @@ ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLE
 
 
 
+~/install/jre1.8.0_72/bin/java -Xmx2G -jar ~/install/migmap-0.9.7/migmap-0.9.7.jar \
+--details fr1nt,cdr1nt,fr2nt,cdr2nt,fr3nt,contignt,fr1aa,cdr1aa,fr2aa,cdr2aa,fr3aa,contigaa \
+-R IGH -S human \
+IgH.R1.fastq out.txt
+
+
+
+
+
+
+
 
 
 

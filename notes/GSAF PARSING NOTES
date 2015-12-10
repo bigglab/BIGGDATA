@@ -1,0 +1,172 @@
+
+
+Experiment-wide variables: 
+
+	{u'JA': u'JA15417',
+	 u'SA': u'SA15121',
+	 u'date_time': u'2015-06-08 21:42:46.481903+0000',
+	 u'file_type': u'fastq.gz',
+	 u'filename': u'memTCR-C_S3_L001_R1_001.fastq.gz',
+	 u'md5': u'11244697b66f43fd4060e88e25070381',
+	 u'path': u'scratch/results/job-44207/memTCR-C_S3_L001_R1_001.fastq.gz',
+	 u'produced_by_tool': u'gsaf_downloader',
+	 u'reads': [u'memTCR-C_S3_L001_R1_001.fastq.gz',
+	  u'memTCR-C_S3_L001_R2_001.fastq.gz'],
+	 u'sample_name': u'memTCR_C',
+	 u'size_in_mb': 463,
+	 u'user_data': []
+	 }
+
+
+keys: 
+
+[u'JA', job number
+ u'SA', submission number 
+ u'date_time',
+ u'file_type',
+ u'filename',
+ u'md5',
+ u'path',
+ u'produced_by_tool',
+ u'reads',
+ u'sample_name',
+ u'size_in_mb',
+ u'user_data']
+
+
+
+
+
+Essential: 
+
+species 
+	human 
+	mouse 
+
+locus
+
+enable isotyping 
+enable trim 
+enable clustering + stats 
+enable MSDB output 
+
+
+
+
+
+
+	_id on sample comes from mongo experiment ObjectId? 
+
+
+
+
+
+
+
+Example sample entry (can have multiple): 
+
+	{u'ADJUVANT': u'',
+	 u'CELL_MARKERS_USED': [],
+	 u'CELL_NUMBER': None,
+	 u'CELL_SELECTION_KIT_NAME': u'',
+	 u'CELL_TYPES_SEQUENCED': [u'mTc'],
+	 u'CHAIN_TYPES_SEQUENCED': [u'beta'],
+	 u'CONTAINS_RNA_SEQ_DATA': False,
+	 u'DESCRIPTION': [u'mTCR Sequencing Mouse', u'Mouse C1 Library 1'],
+	 u'EXPERIMENT_NAME': u'memTCR_C1',
+	 u'GSAF_BARCODE': u'',
+	 u'ISOTYPES_SEQUENCED': [u'n/a'],
+	 u'LAB': [u'GEORGIOU'],
+	 u'LAB_NOTEBOOK_SOURCE': u'',
+	 u'LIST_OF_POLYMERASES_USED': [u'FastStart High Fidelity'],
+	 u'MID_TAG': [u'TGCCTAGTCA'],
+	 u'OWNERS_OF_EXPERIMENT': [u'sschaetzle'],
+	 u'PAIRING_TECHNIQUE': u'',
+	 u'PERSON_WHO_PREPARED_LIBRARY': [u'Sebastian Schaetzle'],
+	 u'POST_SEQUENCING_PROCESSING:PHI_X_FILTER': False,
+	 u'POST_SEQUENCING_PROCESSING:PROCESS_R1_R2_FILE': u'pear',
+	 u'POST_SEQUENCING_PROCESSING:QUALITY_FILTER': u'q20p50',
+	 u'PRIMER_SET_NAME': [u'mTCR'],
+	 u'PROJECT_NAME': u'mTCR',
+	 u'PUBLICATIONS': [],
+	 u'READ_ACCESS': [u'sschaetzle'],
+	 u'REVERSE_PRIMER_USED_IN_RT_STEP': u'oligo dT',
+	 u'SAMPLE_PREPARATION_DATE': u'05/2015',
+	 u'SEQUENCING_PLATFORM': u'MiSeq 2x300',
+	 u'SEQUENCING_SUBMISSION_NUMBER': [],
+	 u'SPECIES': u'Mus musculus',
+	 u'TARGET_READS': 2750000,
+	 u'TEMPLATE_TYPE': u'cDNA',
+	 u'VH:VL_PAIRED': False,
+	 u'_id': u'556774349eb6360c29931524'}
+
+
+keys: 
+
+[u'ADJUVANT',
+ u'CELL_MARKERS_USED',
+ u'CELL_NUMBER',
+ u'CELL_SELECTION_KIT_NAME',
+ u'CELL_TYPES_SEQUENCED',
+ u'CHAIN_TYPES_SEQUENCED',
+ u'CONTAINS_RNA_SEQ_DATA',
+ u'DESCRIPTION',
+ u'EXPERIMENT_NAME',
+ u'GSAF_BARCODE',
+ u'ISOTYPES_SEQUENCED',
+ u'LAB',
+ u'LAB_NOTEBOOK_SOURCE',
+ u'LIST_OF_POLYMERASES_USED',
+ u'MID_TAG',
+ u'OWNERS_OF_EXPERIMENT',
+ u'PAIRING_TECHNIQUE',
+ u'PERSON_WHO_PREPARED_LIBRARY',
+ u'POST_SEQUENCING_PROCESSING:PHI_X_FILTER',
+ u'POST_SEQUENCING_PROCESSING:PROCESS_R1_R2_FILE',
+ u'POST_SEQUENCING_PROCESSING:QUALITY_FILTER',
+ u'PRIMER_SET_NAME',
+ u'PROJECT_NAME',
+ u'PUBLICATIONS',
+ u'READ_ACCESS',
+ u'REVERSE_PRIMER_USED_IN_RT_STEP',
+ u'SAMPLE_PREPARATION_DATE',
+ u'SEQUENCING_PLATFORM',
+ u'SEQUENCING_SUBMISSION_NUMBER',
+ u'SPECIES',
+ u'TARGET_READS',
+ u'TEMPLATE_TYPE',
+ u'VH:VL_PAIRED',
+ u'_id']
+
+
+
+
+
+
+
+
+
+Make One Large Form To Include All Analysis Parameters 
+
+
+		class CreateMixcrAnalysisForm(Form): 
+		    dataset_id = IntegerField()
+		    name = TextField(u'Name')
+		    description = TextField(u'Description')
+		    trim = BooleanField(u'Trim Illumina Adapters')
+		    pair_overlaps = BooleanField(u'Pair Overlaps')
+		    pair_interchain = BooleanField(u'Pair Interchain')
+		    insert_into_db = BooleanField(u'Insert Into DB')
+		    cluster = BooleanField(u'Cluster Sequences')
+
+
+		class CreatePandaseqAnalysisForm(Form): 
+		    dataset_id = IntegerField()
+		    name = TextField(u'Name', )
+		    description = TextField(u'Description')
+		    algorithm = SelectField(u'Algorithm', choices=(['ea_util', 'ea_util'], ['flash', 'flash'], ['pear', 'pear'], ['rdp_mle', 'rdp_mle'],  ['simple_bayesian', 'simple_bayesian'], ['stitch', 'stitch'], ['uparse', 'uparse']), validators=[validators.input_required()])
+
+
+
+
+
