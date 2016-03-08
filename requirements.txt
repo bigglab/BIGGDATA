@@ -108,7 +108,7 @@ thrift==0.9.3
 tornado==4.2.1
 traitlets==4.0.0
 unicodecsv==0.14.1
-urllib2==0.1.14
+#urllib2==0.1.14
 validators==0.9
 visitor==0.1.2
 websocket-client==0.32.0

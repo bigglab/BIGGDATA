@@ -6,3 +6,4 @@ data/scratch_root/*
 *.pyo
 legacy/* 
 credentials.txt
+biggdata.sh

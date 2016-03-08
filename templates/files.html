@@ -4,25 +4,39 @@
 
 
 <div class="container">
-	<h4>Files Associated Directly With Your User:</h4>
+	<h4>Files Associated Directly With Your User:
+	<button data-toggle="collapse" data-target="#directfiles" class="btn">></button>
+	</h4>
 	<br>
+	<div id="directfiles" class="collapse">
 	{% set files = files %}
 	{% include "partials/files.html" with context %}
+	</div>
 </div>
 
 <br>
 <br>
 
-
-
 <div class="container">
+	<div class="dropdown">
+		<button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">Datasets<span class="caret"></span></button>
+			<ul class="dropdown-menu">
+				{% for dataset in current_user.datasets %}
+					{% if dataset.files.all() != [] %}
+						<li data-toggle="collapse" data-target=#{{dataset.id}}>{{dataset.id}} {{dataset.name}}</li>
+					{% endif %}
+				{% endfor %}
+			</ul>
+	</div>
 	{% for dataset in current_user.datasets %}
 		{% if dataset.files.all() != [] %}
 			<br>
-			<h4>Files Associated With Your Dataset {{dataset.id}} {{dataset.name}}</h4>
-			{% set files = dataset.files %}
-			{% include "partials/files.html" with context %}
-			{% endif %}
+			<div id={{dataset.id}} class="collapse">
+				<h4>Files Associated With Your Dataset {{dataset.id}} {{dataset.name}}</h4>
+					{% set files = dataset.files %}
+					{% include "partials/files.html" with context %}
+					{% endif %}
+			</div>
 	{% endfor %}
 </div>
 
