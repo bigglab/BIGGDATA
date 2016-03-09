@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-{%- extends "bootstrap/base.html" %}
+<!-- {%- extends "bootstrap/base.html" %} -->
 {%block title %}BIGG DATA{% endblock %}
 {% import "bootstrap/fixes.html" as fixes %}
 
@@ -8,7 +8,7 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
 <script src="{{ url_for('static', filename='typeahead.bundle.js') }}"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
- -->{{super()}}
+{{super()}}
 {{fixes.ie8()}}
 <!-- <link rel="shortcut icon" href="http://biggdata.rsldrt.com/static/icons/bigg_data_logo.ico">
  -->
