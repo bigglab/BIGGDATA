@@ -418,8 +418,6 @@ class Analysis(db.Model):
 ########## 
 
 
-
-
 def build_exp_from_dict(dict): 
     ex = Experiment()
     for k,v in dict.iteritems():
@@ -431,7 +429,6 @@ def build_exp_from_dict(dict):
                 vetted_k = ''.format(vetted_k, c)
         setattr(ex, k.lower(), v)
     return ex
-
 
 
 
@@ -542,6 +539,7 @@ def build_annotation_from_mongo_dict(d):
     else: 
         print 'CAN NOT INTERPRET NON-IMGT DOCUMENTS (yet)'
         return False
+
 
 
 def trim_ig_allele_name(long_name): 
