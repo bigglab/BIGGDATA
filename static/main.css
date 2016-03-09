@@ -1,0 +1,13 @@
+/* This css is on top of bootstraps,
+ * it either adds additional functionality or new classes etc.
+ */
+
+/*
+ * Login Page CSS
+ */
+
+.loginbox{
+	box-sizing: border-box;
+	border-radius: 5px;
+	border: 1px solid #d8dee2;
+}
