@@ -4,52 +4,49 @@
 <br>
 <br>
 
-<!-- <div class="container">
-    <form method="POST" action="/login">
-    <table class="table table-striped">
-    <thead>
-        <h4>Enter your email and password to login:</h4>
-    </thead>
-    <tbody>
-        <tr>
-            <th>{{ login_form.csrf_token }}</th>
-            <th>{{ login_form.email.label }}: {{ login_form.email(size=20) }}</th>
-            <th>Password: {{ login_form.password(size=20) }}</th>
-            <th><input type="submit" value="Login"></th>
-        </tr>
-    </tbody>
-    </table>
-    </form>
-
-</div> -->
+{% if current_user.is_anonymous() == False %}
+<div class="container">
+    <br>
+    <p>You are currently logged in as {{current_user.first_name}} {{current_user.last_name}}</p>
+    <p><a href="{{url_for('.logout')}}">Click here to logout</a>
+    <br>
+    </p>
+</div>
+{% endif %}
 
 <!-- login start -->
 <div class="container">
     <div class="loginbox">
         <form method="POST" action="/login"> 
             <div class="row">
-                <div class="col-md-8 col-md-offset-4">
+                <div class="text-center">
                     <h4 class=>Sign in to BIGG DATA</h4> 
                 </div>
             </div>
+            <p>{{ login_form.csrf_token }}</p>
             <div class="row">
-                <div class="col-md-1">
-                    <p>{{ login_form.csrf_token }}</p>
+                <div class="text-center">
+                    {{ login_form.email.label }}:
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-8 col-md-offset-4">
-                    <p>{{ login_form.email.label }}: {{ login_form.email(size=20) }}</p>
+                <div class="text-center">
+                    {{ login_form.email(size=20) }}
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-8 col-md-offset-4">
-                    <p><strong>Password: </strong>{{ login_form.password(size=20) }}</p>
+                <div class="text-center">
+                    <strong>Password: </strong>
                 </div>
             </div>
             <div class="row">
-                <div class ="col-md-8 col-md-offset-4">
-                    <input  type="submit" value="Login">
+                <div class="text-center">
+                    {{ login_form.password(size=20) }}
+                </div>
+            </div>
+            <div class="row">
+                <div class ="text-center">
+                    <input class="btn-success btn" type="submit" value="Login">
                 </div>
             </div>
         </form>
@@ -57,53 +54,65 @@
 </div>
 
 <br>
-<br>
 
-<!-- <div class="container">
+<div class="container text-center">
+    <div class="row">
+       <p>New User? <a data-toggle="collapse" data-target="#newuser">Click Here to Register</a></p> 
+    </div>
 
-    <form method="POST" action="/users/create">
-    {{ create_user_form.csrf_token }}
-    <table class="table table-striped">
-    <thead>
-        <h4>Or Create A New User Here:</h4>
-    </thead>
-    <tbody>
-        <tr>
-            <th>{{ create_user_form.username.label }}:  {{ create_user_form.username(size=10) }}</th>
-            <th>{{ create_user_form.email.label }}: {{ create_user_form.email(size=40) }}</th>
-            <th></th>
-            <th></th>
-        </tr>
-        <tr>
-            <th>{{ create_user_form.first_name.label }}:  {{ create_user_form.first_name(size=20) }}</th>
-            <th>{{ create_user_form.last_name.label }}:  {{ create_user_form.last_name(size=20) }}</th>
-            <th>Password: {{ create_user_form.password(size=20) }}</th>
-            <th><input type="submit" value="Create User"></th>
-        </tr>
-    </tbody>
-    </table>
-    </form>
-
-</div> -->
-
-<!-- <div class="container">
-    <form method="POST" action="/users/create">
-        {{ create_user_form.csrf_token }}
-        <div class="row">
-            <h4>Or Create A New User Here:</h4>
- -->
-<br>
-<br>
-
-{% if current_user.is_anonymous() == False %}
-<div class="container">
     <br>
-    <h4>Logged in as {{current_user.first_name}} {{current_user.last_name}}</h4>
-    <h4><a href="{{url_for('.logout')}}">Click here to logout</a>
     <br>
-    </h4>
+
+    <div id="newuser" class="collapse" class="loginbox" aria-expanded="false">
+        <form method="POST" action="/users/create">
+            <div>{{ create_user_form.csrf_token }}</div>
+            <div class="loginbox">
+                <div class="row">
+                    <h4>Create A New User</h4>
+                </div>
+                <!-- First and Last names -->
+                <div class="row">
+                    <div class="col-xs-3 col-xs-offset-3 col-md-2 col-md-offset-4">
+                        First name
+                    </div>
+                    <div class="col-xs-3 col-md-2 col-xs-offset-0">
+                        Last name
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-3 col-xs-offset-3 col-md-2 col-md-offset-4">
+                        {{ create_user_form.first_name(size=20) }}
+                    </div>
+                    <div class="col-xs-3 col-md-2">
+                        {{ create_user_form.last_name(size=20) }}
+                    </div>
+                </div>
+                <!-- Username, email, password -->
+                <div class="row">
+                        Username
+                </div>
+                <div class="row">
+                        {{ create_user_form.username(size=40) }}
+                </div>
+                <div class="row">
+                        Email                
+                </div>
+                <div class="row">
+                        {{ create_user_form.email(size=40) }}
+                </div>
+                <div class="row">
+                    Password
+                </div>
+                <div class="row">
+                        {{ create_user_form.password(size=40) }}
+                </div>
+                <br>
+                <div class="row">
+                    <input class="btn btn-info" type="submit" value="Create User">
+                </div>
+            </div>
+        </form>
+    </div>
 </div>
-{% endif %}
-
 
 {% endblock %}
