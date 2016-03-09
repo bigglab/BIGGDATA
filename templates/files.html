@@ -18,16 +18,51 @@
 <br>
 
 <div class="container">
-	<div class="dropdown">
-		<button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">Datasets<span class="caret"></span></button>
-			<ul class="dropdown-menu">
-				{% for dataset in current_user.datasets %}
-					{% if dataset.files.all() != [] %}
-						<li data-toggle="collapse" data-target=#{{dataset.id}}>{{dataset.id}} {{dataset.name}}</li>
-					{% endif %}
-				{% endfor %}
-			</ul>
+	<div class="row">
+		<div class="col-md-6">
+			<div class="input-group">
+				<div class="input-group-btn">
+				<!-- Button -->
+					<div class="dropdown">
+						<button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">Datasets<span class="caret"></span></button>
+							<ul class="dropdown-menu">
+								{% for dataset in current_user.datasets %}
+									{% if dataset.files.all() != [] %}
+										<li data-toggle="collapse" data-target=#{{dataset.id}}><a href="#">{{dataset.id}} {{dataset.name}}</a></li>
+									{% endif %}
+								{% endfor %}
+							</ul>
+					</div>
+				<!-- Button End -->
+				</div>
+				<!-- Input Bar -->
+				<div id="datasetsearch">
+					<input class="typeahead form-control" type="text" placeholder="Search for dataset (not working at the moment)">
+				</div>
+				<script type="text/javascript">
+						var datasets = ['SRR1525443', 'SRR1525444'];
+
+						var sdatasets = new Bloodhound({
+							datumTokenizer: Bloodhound.tokenizers.obj.whitespace,
+  							queryTokenizer: Bloodhound.tokenizers.whitespace,
+	  						local: datasets
+	  					});
+  						
+
+						$('#datasetsearch.typeahead').typeahead({
+							highlight: true,
+							minLength: 1,
+						}
+						{
+							name: 'datasets',
+							limit: 10,
+							local: sdatasets,
+						});
+				</script>
+			</div>
+		</div>
 	</div>
+
 	{% for dataset in current_user.datasets %}
 		{% if dataset.files.all() != [] %}
 			<br>
