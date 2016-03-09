@@ -16,7 +16,7 @@
 
 <!-- login start -->
 <div class="container">
-    <div class="loginbox">
+    <div class="loginbox text-center">
         <form method="POST" action="/login"> 
             <div class="row">
                 <div class="text-center">
@@ -25,29 +25,20 @@
             </div>
             <p>{{ login_form.csrf_token }}</p>
             <div class="row">
-                <div class="text-center">
                     {{ login_form.email.label }}:
-                </div>
             </div>
             <div class="row">
-                <div class="text-center">
                     {{ login_form.email(size=20) }}
-                </div>
             </div>
             <div class="row">
-                <div class="text-center">
                     <strong>Password: </strong>
-                </div>
             </div>
             <div class="row">
-                <div class="text-center">
                     {{ login_form.password(size=20) }}
-                </div>
             </div>
+            <br>
             <div class="row">
-                <div class ="text-center">
                     <input class="btn-success btn" type="submit" value="Login">
-                </div>
             </div>
         </form>
     </div>
