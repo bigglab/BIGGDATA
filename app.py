@@ -466,10 +466,14 @@ def parse_name_for_chain_type(name):
         chain = 'TCRA'
     if 'tcrb' in name.lower() or 'beta' in name.lower(): 
         chain = 'TCRB'
+    if 'tcra' in name.lower() or 'alpha' in name.lower() and 'tcrb' in name.lower() or 'beta' in name.lower():
+        chain = 'TCRA/B'
     if 'igh' in name.lower() or 'heavy' in name.lower(): 
         chain = 'HEAVY'
     if 'igl' in name.lower() or 'igk' in name.lower() or 'light' in name.lower(): 
         chain = 'LIGHT'
+    if 'igl' in name.lower() or 'igk' in name.lower() or 'light' in name.lower() and 'igh' in name.lower() or 'heavy' in name.lower(): 
+        chain = 'HEAVY/LIGHT'
     try: 
         chain
     except NameError: 
@@ -951,7 +955,7 @@ def import_files_as_dataset(filepath_array, filename_array=None, chain=None, use
     d = Dataset()
     d.user_id = user_id
     d.name = name
-    d.description = 'autogen dataset from file import'
+    d.description = 'Dataset generated from file import'
     d.chain_types_sequenced = [chain]
     db.session.add(d)
     db.session.commit()

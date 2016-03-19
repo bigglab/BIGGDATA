@@ -48,7 +48,7 @@ class CreatePandaseqAnalysisForm(Form):
 class FileDownloadForm(Form):
     url     = TextField(u'File URL', validators=[validators.input_required()], widget=TextInput())
     description  = TextAreaField(u'File Description')
-    chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB']), validators=[validators.input_required()])
+    chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
     paired_partner  = IntegerField()
     dataset_id = IntegerField()
 
