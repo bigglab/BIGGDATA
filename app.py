@@ -1135,7 +1135,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     # KICK OFF ASYNC DB INSERTS FROM OUTPUT FILES
     parseable_mixcr_alignments_file_path = alignment_output_file.path
     # PARSE WITH parse_and_insert_mixcr_annotation_dataframe_from_file_path to speed up? 
-    if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
+    if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotation_dataframe_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
     return True 
 
 
