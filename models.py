@@ -668,11 +668,6 @@ def build_annotation_dataframe_from_mixcr_file(file_path, dataset_id=None, analy
     df['All D hits'] = df['All D hits'].apply(parse_alignments_from_mixcr_hits)
     df['All J hits'] = df['All J hits'].apply(parse_alignments_from_mixcr_hits)
     df['All C hits'] = df['All C hits'].apply(parse_alignments_from_mixcr_hits)
-    df['All V hits'] = df['All V hits'].apply(json.dumps)
-    df['All D hits'] = df['All D hits'].apply(json.dumps)
-    df['All J hits'] = df['All J hits'].apply(json.dumps)
-    df['All C hits'] = df['All C hits'].apply(json.dumps)
-
 
     df['v_top_hit'] = df['All V hits'].apply(select_top_hit)
     df['v_top_hit_locus'] = df['v_top_hit'].apply(trim_ig_locus_name)
@@ -682,6 +677,10 @@ def build_annotation_dataframe_from_mixcr_file(file_path, dataset_id=None, analy
     df['j_top_hit_locus'] = df['j_top_hit'].apply(trim_ig_locus_name)
     df['c_top_hit'] = df['All C hits'].apply(select_top_hit)
     df['c_top_hit_locus'] = df['c_top_hit'].apply(trim_ig_locus_name)
+    df['All V hits'] = df['All V hits'].apply(json.dumps)
+    df['All D hits'] = df['All D hits'].apply(json.dumps)
+    df['All J hits'] = df['All J hits'].apply(json.dumps)
+    df['All C hits'] = df['All C hits'].apply(json.dumps)
     df['analysis_id'] = analysis_id
     df['dataset_id'] = dataset_id 
 
