@@ -1185,7 +1185,7 @@ def parse_and_insert_mixcr_annotation_dataframe_from_file_path(file_path, datase
         analysis.db_status = 'Finished. {} Annotations Inserted'.format(len(annotation_df))
     db.session.commit()
     result = annotate_analysis_from_db.apply_async((analysis.id, ), queue='default')
-    return len(annotations)
+    return True
 
 
 

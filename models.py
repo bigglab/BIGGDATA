@@ -362,6 +362,7 @@ class Annotation(db.Model):
         codon_frame = Column(Integer)
         start_codon = Column(Integer)
         stop_codon = Column(Integer)
+        index = Column(Integer)
 
         def __repr__(self): 
             return "< Annotation {} on Sequence {} : {} >".format(self.id, self.sequence_id, self.analysis_name)
