@@ -1134,7 +1134,8 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     db.session.commit()
     # KICK OFF ASYNC DB INSERTS FROM OUTPUT FILES
     parseable_mixcr_alignments_file_path = alignment_output_file.path
-    if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotation_dataframe_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
+    # PARSE WITH parse_and_insert_mixcr_annotation_dataframe_from_file_path to speed up? 
+    if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
     return True 
 
 
@@ -1175,10 +1176,14 @@ def parse_and_insert_mixcr_annotation_dataframe_from_file_path(file_path, datase
     else: 
         analysis = None 
     if analysis: analysis.db_status = 'BUILDING ANNOTATIONS'
-    if analysis: analysis.status = 'INSERTING TO DB'
+    if analysis: analysis.status = 'BUILDING DATABASE'
     db.session.commit()
     annotation_df = build_annotation_dataframe_from_mixcr_file(file_path, dataset_id=dataset_id, analysis_id=analysis_id)
     print "Inserting annotation dataframe to postgres"
+    if analysis: analysis.total_count = len(annotation_df)
+    if analysis: analysis.db_status = 'INSERTING'
+    if analysis: analysis.status = 'INSERTING TO DB'
+    db.session.commit()
     engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
     annotation_df.to_sql('annotation', engine, if_exists='append')
     if analysis: 
