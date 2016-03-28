@@ -663,7 +663,7 @@ def select_top_hit(hits):
         return None
 
 def build_annotation_dataframe_from_mixcr_file(file_path, dataset_id=None, analysis_id=None):
-    df = pd.read_table(file_path)
+    df = pd.read_table(file_path, low_memory=False)
     df['All V hits'] = df['All V hits'].apply(parse_alignments_from_mixcr_hits)
     df['All D hits'] = df['All D hits'].apply(parse_alignments_from_mixcr_hits)
     df['All J hits'] = df['All J hits'].apply(parse_alignments_from_mixcr_hits)
