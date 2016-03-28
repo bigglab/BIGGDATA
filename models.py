@@ -676,8 +676,8 @@ def build_annotation_dataframe_from_mixcr_file(file_path, dataset_id=None, analy
     df['j_top_hit_locus'] = df['j_top_hit'].apply(trim_ig_locus_name)
     df['c_top_hit'] = df['All C hits'].apply(select_top_hit)
     df['c_top_hit_locus'] = df['c_top_hit'].apply(trim_ig_locus_name)
-    annotation_df['analysis_id'] = analysis_id
-    annotation_df['dataset_id'] = dataset_id 
+    df['analysis_id'] = analysis_id
+    df['dataset_id'] = dataset_id 
 
     column_reindex = {
     "Description R1":'header',
