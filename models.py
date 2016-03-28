@@ -669,7 +669,6 @@ def build_annotation_dataframe_from_mixcr_file(file_path, dataset_id=None, analy
     df['All D hits'] = df['All D hits'].apply(parse_alignments_from_mixcr_hits)
     df['All J hits'] = df['All J hits'].apply(parse_alignments_from_mixcr_hits)
     df['All C hits'] = df['All C hits'].apply(parse_alignments_from_mixcr_hits)
-
     df['v_top_hit'] = df['All V hits'].apply(select_top_hit)
     df['v_top_hit_locus'] = df['v_top_hit'].apply(trim_ig_locus_name)
     df['d_top_hit'] = df['All D hits'].apply(select_top_hit)
@@ -713,6 +712,14 @@ def build_annotation_dataframe_from_mixcr_file(file_path, dataset_id=None, analy
     cols = column_reindex.values() 
     cols.append('analysis_id')
     cols.append('dataset_id')
+    cols.append('v_top_hit_locus')
+    cols.append('d_top_hit_locus')
+    cols.append('j_top_hit_locus')
+    cols.append('c_top_hit_locus')
+    cols.append('v_top_hit')
+    cols.append('d_top_hit')
+    cols.append('j_top_hit')
+    cols.append('c_top_hit')
     df = df[cols]
     return df 
 
