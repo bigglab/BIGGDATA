@@ -300,7 +300,9 @@ class Annotation(db.Model):
         analysis_name = Column(String())
         recombination_type = Column(String())
         strand = Column(String(10))
-        
+        read_sequences = Column(String())
+        read_qualities = Column(String())
+        header = Column(String())
         productive = Column(db.Boolean)
         productive_comment = Column(String(256))
         recombination_type = Column(String(20))
@@ -594,8 +596,9 @@ def build_annotations_from_mixcr_file(file_path, dataset_id=None, analysis_id=No
         for i,k in enumerate(headers): 
 
             # COULD USE THIS TO BUILD SEQUENCE DOCUMENTS
-            # if "Read(s) sequence" == k: ann.   = fields[i]
-            # if "Read(s) sequence qualities" == k: ann.   = fields[i]
+            if "Description R1" == k: ann.header = fields[i]
+            if "Read(s) sequence" == k: ann.read_sequences   = fields[i]
+            if "Read(s) sequence qualities" == k: ann.read_qualities   = fields[i]
             if "All V hits" == k: ann.v_hits  = parse_alignments_from_mixcr_hits(fields[i])
             if "All D hits" == k: ann.d_hits  = parse_alignments_from_mixcr_hits(fields[i])
             if "All J hits" == k: ann.j_hits  = parse_alignments_from_mixcr_hits(fields[i])
