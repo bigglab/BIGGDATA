@@ -14,7 +14,7 @@
 	<tbody>
 		{% for file in files|sort(attribute='id', reverse=True) %}
 			<tr>
-				<th>{{file.id}}</th>
+				<th><a href="{{url_for('.file', id=file.id)}}">{{file.id}}</a></th>
 				<th>{{file.name}}</th>
 				<th>{{file.chain}}</th>
 				<th>{{file.file_type}}</th>

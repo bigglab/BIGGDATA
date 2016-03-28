@@ -6,11 +6,11 @@
 <h1>Checking out file: {{file.name}}</h1>
 </div>
 
-
+<!-- 
 <div class="container">
 <a href="{{url_for('.send_file_from_id', id=file.id)}}"><h4>DOWNLOAD THIS FILE</h4></a>
 </div>
-
+ -->
 
 <div class="container">
 	<table class="table table-striped">
@@ -29,7 +29,7 @@
 		</thead>
 		<tbody>
 				<tr>
-					<th>{{file.id}}</th>
+					<th><a href="{{url_for('.file', id=file.id)}}">{{file.id}}</a></th>
 					<th>{{file.name}}</th>
 					<th>{{file.description}}</th>
 					<th>{{file.locus}}</th>
