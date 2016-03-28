@@ -574,7 +574,7 @@ def parse_alignments_from_mixcr_hits(hits):
     except: 
         return None 
     else: 
-        score_dict = OrderedDict()
+        score_dict = {}
         hs = hits.split(',')
         if len(hs) == 0: 
             return score_dict
