@@ -5,6 +5,8 @@ import sys
 import os
 import time
 import random
+import pandas as pd 
+import numpy as np
 from shutil import copyfile
 import operator
 # import urllib
@@ -567,23 +569,27 @@ def trim_ig_locus_name(long_name):
 
 
 def parse_alignments_from_mixcr_hits(hits): 
-    score_dict = OrderedDict()
-    hs = hits.split(',')
-    if len(hs) == 0: 
-        return score_dict
-    for h in hs: 
-        if len(h.split('(')) != 2: 
-            # print '!!!!!!! Empty h?:  {}'.format(h)
-            continue
-        gene,score = h.split('(')
-        # short_gene = trim_ig_locus_name(gene)
-        score = int(score.replace(')',''))
-        score_dict[gene] = score 
-    return score_dict 
+    try: 
+        hits.split(',')
+    except: 
+        return None 
+    else: 
+        score_dict = OrderedDict()
+        hs = hits.split(',')
+        if len(hs) == 0: 
+            return score_dict
+        for h in hs: 
+            if len(h.split('(')) != 2: 
+                # print '!!!!!!! Empty h?:  {}'.format(h)
+                continue
+            gene,score = h.split('(')
+            # short_gene = trim_ig_locus_name(gene)
+            score = int(score.replace(')',''))
+            score_dict[gene] = score 
+        return score_dict 
 
 
-
-def build_annotations_from_mixcr_file(file_path, dataset_id=None, analysis_id=None): 
+def build_annotations_from_mixcr_file(file_path, dataset_id=None, analysis_id=None):
     f = open(file_path)
     headers = f.readline().split('\t')
     annotations = []
@@ -649,6 +655,59 @@ def build_annotations_from_mixcr_file(file_path, dataset_id=None, analysis_id=No
     return annotations
 
 
+def select_top_hit(hits):
+    if hits !=  None :
+        top_hit = trim_ig_allele_name(sorted(hits.items(), key=lambda x: x[1], reverse=True)[0][0])
+        return top_hit
+    else: 
+        return None
+
+def build_annotation_dataframe_from_mixcr_file(file_path, dataset_id=None, analysis_id=None):
+    df = pd.read_table(file_path)
+    df['All V hits'] = df['All V hits'].apply(parse_alignments_from_mixcr_hits)
+    df['All D hits'] = df['All D hits'].apply(parse_alignments_from_mixcr_hits)
+    df['All J hits'] = df['All J hits'].apply(parse_alignments_from_mixcr_hits)
+    df['All C hits'] = df['All C hits'].apply(parse_alignments_from_mixcr_hits)
+    df['v_top_hit'] = df['All V hits'].apply(select_top_hit)
+    df['v_top_hit_locus'] = df['v_top_hit'].apply(trim_ig_locus_name)
+    df['d_top_hit'] = df['All D hits'].apply(select_top_hit)
+    df['d_top_hit_locus'] = df['d_top_hit'].apply(trim_ig_locus_name)
+    df['j_top_hit'] = df['All J hits'].apply(select_top_hit)
+    df['j_top_hit_locus'] = df['j_top_hit'].apply(trim_ig_locus_name)
+    df['c_top_hit'] = df['All C hits'].apply(select_top_hit)
+    df['c_top_hit_locus'] = df['c_top_hit'].apply(trim_ig_locus_name)
+    annotation_df['analysis_id'] = analysis_id
+    annotation_df['dataset_id'] = dataset_id 
+
+    column_reindex = {
+    "Description R1":'header',
+    'Read(s) sequence': 'read_sequences',
+    'Read(s) sequence qualities': 'read_qualities',
+    'All V hits':'v_hits',
+    'All D hits':'d_hits',
+    'All J hits':'j_hits',
+    'All C hits':'c_hits',
+    "N. Seq. FR1":'fr1_nt',
+    "N. Seq. CDR1" : 'cdr1_nt',
+    "N. Seq. FR2" : 'fr2_nt',
+    "N. Seq. CDR2" : 'cdr2_nt',
+    "N. Seq. FR3" : 'fr3_nt' ,
+    "N. Seq. CDR3": 'cdr3_nt',
+    "N. Seq. FR4" : 'fr4_nt',
+    "AA. Seq. FR1"  : 'fr1_aa' ,
+    "AA. Seq. CDR1" : 'cdr1_aa',
+    "AA. Seq. FR2"  : 'fr2_aa' ,
+    "AA. Seq. CDR2" : 'cdr2_aa',
+    "AA. Seq. FR3"  : 'fr3_aa' ,
+    "AA. Seq. CDR3" : 'cdr3_aa',
+    "AA. Seq. FR4"  : 'fr4_aa' ,
+    }
+    df = df.rename(str, columns=column_reindex)
+    cols = column_reindex.values() 
+    cols.append('analysis_id')
+    cols.append('dataset_id')
+    df = df[cols]
+    return df 
 
 
 

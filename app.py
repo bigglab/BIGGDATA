@@ -1134,7 +1134,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     db.session.commit()
     # KICK OFF ASYNC DB INSERTS FROM OUTPUT FILES
     parseable_mixcr_alignments_file_path = alignment_output_file.path
-    if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
+    if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotation_dataframe_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
     return True 
 
 
@@ -1162,6 +1162,27 @@ def parse_and_insert_mixcr_annotations_from_file_path(file_path, dataset_id=None
             db.session.commit()
     if analysis: 
         analysis.db_status = 'Finished. {} Annotations Inserted'.format(len(annotations))
+    db.session.commit()
+    result = annotate_analysis_from_db.apply_async((analysis.id, ), queue='default')
+    return len(annotations)
+
+
+@celery.task
+def parse_and_insert_mixcr_annotation_dataframe_from_file_path(file_path, dataset_id=None, analysis_id=None):
+    print 'Building annotation dataframe from mixcr output at {}, then inserting into postgres'.format(file_path)
+    if analysis_id: 
+        analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
+    else: 
+        analysis = None 
+    if analysis: analysis.db_status = 'BUILDING ANNOTATIONS'
+    if analysis: analysis.status = 'INSERTING TO DB'
+    db.session.commit()
+    annotation_df = build_annotation_dataframe_from_mixcr_file(file_path, dataset_id=dataset_id, analysis_id=analysis_id)
+    print "Inserting annotation dataframe to postgres"
+    engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+    annotation_df.to_sql('annotation', engine, if_exists='append')
+    if analysis: 
+        analysis.db_status = 'Finished. {} Annotations Inserted'.format(len(annotation_df))
     db.session.commit()
     result = annotate_analysis_from_db.apply_async((analysis.id, ), queue='default')
     return len(annotations)
