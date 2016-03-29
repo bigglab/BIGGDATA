@@ -60,7 +60,7 @@ bcrypt = Bcrypt(app)
 nav = Nav() 
 Bootstrap(app) 
 
-db = SQLAlchemy(app)
+db.init_app(app)
 
 # Celery configured for local RabbitMQ 
 celery = Celery(app.name, broker='amqp://')
