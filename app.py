@@ -1135,7 +1135,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     # KICK OFF ASYNC DB INSERTS FROM OUTPUT FILES
     parseable_mixcr_alignments_file_path = alignment_output_file.path
     # PARSE WITH parse_and_insert_mixcr_annotation_dataframe_from_file_path to speed up? 
-    if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotation_dataframe_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
+    if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
     return True 
 
 
@@ -1163,6 +1163,7 @@ def parse_and_insert_mixcr_annotations_from_file_path(file_path, dataset_id=None
             db.session.commit()
     if analysis: 
         analysis.db_status = 'Finished. {} Annotations Inserted'.format(len(annotations))
+        analysis.status = 'Complete'
     db.session.commit()
     result = annotate_analysis_from_db.apply_async((analysis.id, ), queue='default')
     return len(annotations)
@@ -1231,10 +1232,12 @@ def run_pandaseq_with_dataset_id(dataset_id, analysis_name='', analysis_descript
     analysis.available = False
     analysis.inserted_into_db = False
     db.session.add(analysis)
-    db.session.commit()
     data_files_by_chain = {}
     for key, values in itertools.groupby(dataset.primary_data_files(), lambda x: x.chain): 
         data_files_by_chain[key] = list(values)
+    dataset.primary_data_files_ids = [] 
+    db.session.add(dataset)
+    db.session.commit()
     print "Running pandaseq in these batches of files (sorted by file.chain): {}".format(data_files_by_chain)
     for chain, files in data_files_by_chain.items(): 
         if len(files) == 2: 
@@ -1293,6 +1296,8 @@ def run_pandaseq_analysis_with_files(analysis, files, algorithm='pear'):
     if not analysis.status == 'FAILED': analysis.status = 'SUCCESS'
     analysis.active_command = ''
     analysis.finished = 'now'
+    dataset.primary_data_files_ids.append(alignment_file.id)
+    db.session.add(dataset)
     db.session.commit()
     # Make PandaSeq Alignment Primary Dataset Data Files! Currently done in dataset.primary_data_files() 
     return True 
