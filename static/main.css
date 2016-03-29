@@ -17,3 +17,16 @@
 .center-block{
 	float: none;
 }
+
+/*
+ * For editing values
+ */
+
+.editable h1:hover .pencil {
+    float: right;
+    display:block;
+}
+
+.editable h1 .pencil{
+	display: none;
+}

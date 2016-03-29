@@ -2,8 +2,8 @@
 
 {% block content %}
 
-<div class="container">
-<h1>Checking out file: {{file.name}}</h1>
+<div class="editable container">
+<h1>Checking out file: {{file.name}}<a data-toggle="collapse" data-target="#dataEdit" href="#"><span class="pencil glyphicon glyphicon-pencil"></span></a></h1>
 </div>
 
 <!-- 
@@ -12,7 +12,8 @@
 </div>
  -->
 
-<div class="container">
+<div class="editable container">
+	<row>
 	<table class="table table-striped">
 		<thead>
 			<tr>
@@ -41,15 +42,33 @@
 					{% else %}
 						<th>NO</th>
 					{% endif %}
-				</tr>
-				<tr>
-					<th>{{file.path}}</th>
+					<!-- <td><a href="#">Edit<span class="pencil glyphicon glyphicon-pencil"></span></a></td> -->
 				</tr>
 		</tbody>
 	</table>
+	</row>
+	<row>
+		<p><strong>File path:</strong> {{file.path}}</p>
+	</row>
+</div>
+<div id="dataEdit" class="container collapse" aria-expanded="false">
+<h2>Editing file</h2>
+
+</div>
+<br>
+<br>
+<br>
+<div class="container">
+	{% if file.dataset_id != [] %}
+		{% set dataset = file.dataset %}
+		<div>
+			<h4>Dataset {{file.dataset_id}} {{dataset.name}} is associated with this file</h4>
+				{% set files = dataset.files %}
+				{% include "partials/files.html" with context %}
+		</div>
+	{% endif %}
 </div>
 
-
-{%endblock content %}
+{% endblock content %}
 
 
