@@ -1284,6 +1284,7 @@ def run_pandaseq_analysis_with_files(analysis, files, algorithm='pear'):
         if response == 0: 
             f.available = True 
             f.file_size = os.path.getsize(f.path)
+            dataset.primary_data_files_ids = [f.id]
             db.session.commit()
         else:
             f.available = False
@@ -1296,8 +1297,6 @@ def run_pandaseq_analysis_with_files(analysis, files, algorithm='pear'):
     if not analysis.status == 'FAILED': analysis.status = 'SUCCESS'
     analysis.active_command = ''
     analysis.finished = 'now'
-    dataset.primary_data_files_ids.append(alignment_file.id)
-    db.session.add(dataset)
     db.session.commit()
     # Make PandaSeq Alignment Primary Dataset Data Files! Currently done in dataset.primary_data_files() 
     return True 
