@@ -61,6 +61,7 @@ nav = Nav()
 Bootstrap(app) 
 
 db.init_app(app)
+db.app = app 
 
 # Celery configured for local RabbitMQ 
 celery = Celery(app.name, broker='amqp://')
