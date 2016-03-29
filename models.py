@@ -199,7 +199,10 @@ class Dataset(db.Model):
                 print 'No Data Files Associated with Dataset {}'.format(dataset.id)
                 gzipped_fastqs = dataset.files_by_type('GZIPPED_FASTQ')
                 fastqs = dataset.files_by_type('FASTQ')
+                pandaseq_fastqs = dataset.files_by_type('PANDASEQ_ALIGNED_FASTQ')
                 print 'FOUND THESE DATA FILES: GZIPPED_FASTQ: {} {}  FASTQ: {} {}'.format(len(gzipped_fastqs), gzipped_fastqs, len(fastqs), fastqs)
+                if len(pandaseq_fastqs) != 0: 
+                    files = pandaseq_fastqs
                 if len(fastqs) == 0 and len(gzipped_fastqs) == 0:
                     print 'NO FASTQ DATA ASSOCIATED WITH DATASET'
                     files = [] 
