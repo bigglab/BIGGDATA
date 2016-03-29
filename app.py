@@ -47,6 +47,10 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from pymongo import MongoClient
 import pymongo
  
+# Local Imports - local imports go here to prevent circular imports 
+from forms import *
+from functions import * 
+from models import * 
 
 # Initialize Application
 app = Flask(__name__, instance_relative_config=True)
@@ -63,10 +67,6 @@ celery = Celery(app.name, broker='amqp://')
 import celery_config 
 celery.config_from_object('celery_config')
 
-# Local Imports - local imports go here to prevent circular imports 
-from forms import *
-from functions import * 
-from models import * 
 
 # @Dave - temporary edit for local environ
 s3 = boto.connect_s3(app.config['AWSACCESSKEYID'], app.config['AWSSECRETKEY'])
