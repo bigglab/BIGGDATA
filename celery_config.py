@@ -3,11 +3,6 @@ import sys
 from kombu import Exchange, Queue
 #from kombu.common import Broadcast
 
-
-
-
-
-
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT=['json']
@@ -17,14 +12,9 @@ CELERY_ENABLE_UTC = True
 CELERY_RESULT_BACKEND = 'rpc'
 CELERY_RESULT_PERSISTENT = True
 
-
-
-
-
 default_exchange = Exchange('default', type='direct')
 ut_exchange = Exchange('ut', type='direct')
 aws_exchange = Exchange('aws', type='direct')
-
 
 CELERY_DEFAULT_QUEUE = 'default'
 CELERY_QUEUES = (
@@ -51,20 +41,18 @@ class TaskRouter(object):
 			# 	}
 			return None
 
-
-
 CELERY_ROUTES = (
 	TaskRouter(), 
 )
 
 
+# @Dave - temporary edit - using local RabbitMQ for testing
+BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 
-
-
-if 'RABBITMQ_BIGWIG_URL' in os.environ.keys(): # On Heroku = Sender Queue: 
-	BROKER_URL = os.environ['RABBITMQ_BIGWIG_TX_URL']
-if 'LESSOPEN' in os.environ.keys(): # AWS Processor = Reciever RX Queue: 
-	BROKER_URL="amqp://Sq_rhK2z:sGYEo2JbO0z3JpXh8YJq58NuMbvbM2Su@leaping-pipkin-62.bigwig.lshift.net:10919/thzgJ-IWDfsZ"
-else: # Web Server Fired Anywhere Else: Sender Queue 
-	BROKER_URL = 'amqp://Sq_rhK2z:sGYEo2JbO0z3JpXh8YJq58NuMbvbM2Su@leaping-pipkin-62.bigwig.lshift.net:10918/thzgJ-IWDfsZ'
+# if 'RABBITMQ_BIGWIG_URL' in os.environ.keys(): # On Heroku = Sender Queue: 
+# 	BROKER_URL = os.environ['RABBITMQ_BIGWIG_TX_URL']
+# if 'LESSOPEN' in os.environ.keys(): # AWS Processor = Reciever RX Queue: 
+# 	BROKER_URL="amqp://Sq_rhK2z:sGYEo2JbO0z3JpXh8YJq58NuMbvbM2Su@leaping-pipkin-62.bigwig.lshift.net:10919/thzgJ-IWDfsZ"
+# else: # Web Server Fired Anywhere Else: Sender Queue 
+# 	BROKER_URL = 'amqp://Sq_rhK2z:sGYEo2JbO0z3JpXh8YJq58NuMbvbM2Su@leaping-pipkin-62.bigwig.lshift.net:10918/thzgJ-IWDfsZ'
 
