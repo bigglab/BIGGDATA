@@ -21,7 +21,7 @@
 	<div class="row">
 		<div class="col-md-6">
 			<div class="input-group">
-				<div class="input-group-btn">
+				<span class="input-group-btn">
 				<!-- Button -->
 					<div class="dropdown">
 						<button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">Datasets<span class="caret"></span></button>
@@ -34,35 +34,42 @@
 							</ul>
 					</div>
 				<!-- Button End -->
-				</div>
+				</span>
 				<!-- Input Bar -->
 				<div id="datasetsearch">
-					<input class="typeahead form-control" type="text" placeholder="Search for dataset (not working at the moment)">
-				</div>
-				<script type="text/javascript">
-						var datasets = ['SRR1525443', 'SRR1525444'];
-
-						var sdatasets = new Bloodhound({
-							datumTokenizer: Bloodhound.tokenizers.obj.whitespace,
+					<input class="typeahead form-control" type="text" name='datasets' autocomplete="off" value="" placeholder="Search for dataset" aria-describedby="sizing-addon1"/>
+				<!-- </div> -->
+				<script>
+						var datasetnames = {{ datasetnames|safe }};
+						for (var i = 0; i < datasetnames.length; i++){
+							datasetnames[i] = datasetnames[i].replace(/"/g, '')
+						};
+						var datasets = new Bloodhound({
+							datumTokenizer: function(d) { return Bloodhound.tokenizers.whitespace(d); },
   							queryTokenizer: Bloodhound.tokenizers.whitespace,
-	  						local: datasets
-	  					});
-  						
+  							local: datasetnames,
+		  					});
 
-						$('#datasetsearch.typeahead').typeahead({
+						datasets.initialize();
+
+						$('#datasetsearch .typeahead').typeahead({
 							highlight: true,
 							minLength: 1,
 						},
 						{
 							name: 'datasets',
 							limit: 10,
-							local: sdatasets,
+							source: datasets.ttAdapter(),
 						});
 				</script>
+
+
+
 			</div>
 		</div>
 	</div>
-
+	<br>
+	<br>
 	{% for dataset in current_user.datasets %}
 		{% if dataset.files.all() != [] %}
 			<br>

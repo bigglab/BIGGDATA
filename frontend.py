@@ -302,6 +302,12 @@ def files(status=[], bucket=None, key=None):
     files = sorted(current_user.files.all(), key=lambda x: x.id, reverse=True)
     dropbox_file_paths = get_dropbox_files(current_user)
     form = Form()
+
+    #creates list of datasets
+    datasetnames = ["test", "test2"]
+    for x in current_user.datasets:
+        name = str(x.name) 
+        datasetnames.append(name)
     if bucket and key: 
         status.append('https://s3.amazon.com/{}/{}'.format(bucket, key))
     if request.method == 'POST' and os.path.isfile(request.form['submit']):
@@ -316,12 +322,11 @@ def files(status=[], bucket=None, key=None):
         else: 
             flash('file metadata already created to your user')
             dropbox_file_paths = get_dropbox_files(current_user)
-        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status)
+        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status, datasetnames=map(json.dumps, datasetnames))
     else: 
         dropbox_file_paths = get_dropbox_files(current_user)
-        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status)
-
-
+        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status, datasetnames=map(json.dumps, datasetnames))
+ 
 
 @frontend.route('/files/<int:id>', methods=['GET'])
 @login_required

@@ -85,6 +85,9 @@ class ImportSraAsDatasetForm(Form):
     description = TextField()
     chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB']), validators=[validators.input_required()])
 
+class FileEdit(Form):
+    name = TextField()
+    paired_partner = TextField()
 
 
 
