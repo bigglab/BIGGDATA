@@ -23,22 +23,20 @@
 			<div class="input-group">
 				<span class="input-group-btn">
 				<!-- Button -->
-					<div class="dropdown">
-						<button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">Datasets<span class="caret"></span></button>
+						<button class="btn btn-default dropdown-toggle dropdown" type="button" data-toggle="dropdown">Datasets<span class="caret"></span></button>
 							<ul class="dropdown-menu">
 								{% for dataset in current_user.datasets %}
 									{% if dataset.files.all() != [] %}
-										<li data-toggle="collapse" data-target=#{{dataset.id}}><a href="#">{{dataset.id}} {{dataset.name}}</a></li>
+										<li data-toggle="collapse" data-target=#{{dataset.name}}><a href="#">{{dataset.id}} {{dataset.name}}</a></li>
 									{% endif %}
 								{% endfor %}
 							</ul>
-					</div>
 				<!-- Button End -->
 				</span>
 				<!-- Input Bar -->
 				<div id="datasetsearch">
-					<input class="typeahead form-control" type="text" name='datasets' autocomplete="off" value="" placeholder="Search for dataset" aria-describedby="sizing-addon1"/>
-				<!-- </div> -->
+					<input id="datasets" class="typeahead form-control" type="text" name='datasets' autocomplete="off" value="" placeholder="Search for dataset" aria-describedby="sizing-addon1"/>
+				</div>
 				<script>
 						var datasetnames = {{ datasetnames|safe }};
 						for (var i = 0; i < datasetnames.length; i++){
@@ -62,9 +60,15 @@
 							source: datasets.ttAdapter(),
 						});
 				</script>
-
-
-
+				<span class ="input-group-btn">
+					<button id="go" class="btn btn-default" type="button" onclick="clickgo()">Go</button>
+				<script>
+					function clickgo(){
+					var dataset = '#'.concat( $('#datasets').val() );
+					$(dataset).collapse('toggle');
+					}
+				</script>		
+				</span>	
 			</div>
 		</div>
 	</div>
@@ -73,7 +77,7 @@
 	{% for dataset in current_user.datasets %}
 		{% if dataset.files.all() != [] %}
 			<br>
-			<div id={{dataset.id}} class="collapse">
+			<div id={{dataset.name}} class="collapse">
 				<h4>Files Associated With Your Dataset {{dataset.id}} {{dataset.name}}</h4>
 					{% set files = dataset.files %}
 					{% include "partials/files.html" with context %}
