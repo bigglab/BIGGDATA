@@ -36,7 +36,7 @@
 					<table class='table table-striped'>
 					<tbody>
 						<tr>
-							<th><a href="{{url_for('.analysis', id=analysis.id)}}">Execution of {{analysis.program}}</a> on <a href="{{url_for('.dataset', id=analysis.dataset.id)}}">Dataset {{analysis.dataset.id}} {{analysis.dataset.name}}</a></th>
+							<th><a href="{{url_for('.analysis', id=analysis.id)}}">Analysis {{analysis.id}} - Execution of {{analysis.program}}</a> on <a href="{{url_for('.dataset', id=analysis.dataset.id)}}">Dataset {{analysis.dataset.id}} {{analysis.dataset.name}}</a></th>
 							<th>State: {{analysis.status}}</th>
 							<th>{% if analysis.active_command %}Running: {{' '.join(analysis.active_command.split(' ')[0:2])}} {% endif %}</th>
 							<th>{{analysis.name}}</th>

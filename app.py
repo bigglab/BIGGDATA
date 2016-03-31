@@ -392,11 +392,17 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     alignment_file.command = 'mixcr align --save-description -f {} {}'.format(' '.join([f.path for f in files]), alignment_file.path)
     alignment_file.file_type = 'MIXCR_ALIGNMENTS'
     files_to_execute.append(alignment_file)
+    clone_index_file = File()
+    clone_index_file.file_type = 'MIXCR_CLONE_INDEX'
+    clone_index_file.path = '{}.aln.clns.index'.format(basepath)
+    clone_index_file.name = '{}.aln.clns.index'.format(basename)
+    clone_index_file.command = 'echo "Indexing Done On Clone Assemble Step"'
+    files_to_execute.append(clone_index_file)
     clone_file = File()
     clone_file.file_type = 'MIXCR_CLONES'
     clone_file.path = '{}.aln.clns'.format(basepath)
     clone_file.name = '{}.aln.clns'.format(basename)
-    clone_file.command = 'mixcr assemble -f {} {}'.format(alignment_file.path, clone_file.path)
+    clone_file.command = 'mixcr assemble --index {} -f {} {}'.format(clone_index_file.path, alignment_file.path, clone_file.path)
     files_to_execute.append(clone_file)
     db.session.add(alignment_file)
     db.session.add(clone_file)
@@ -414,7 +420,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     alignment_output_file.path = '{}.txt'.format(alignment_file.path)
     alignment_output_file.file_type = 'MIXCR_ALIGNMENT_TEXT'
     alignment_output_file.name = '{}.txt'.format(alignment_file.name)
-    alignment_output_file.command = 'mixcr exportAlignments  -f -readId -descrR1 --preset full  {} {}'.format(alignment_file.path, alignment_output_file.path)
+    alignment_output_file.command = 'mixcr exportAlignments -cloneId {}  -f -readId -descrR1 --preset full  {} {}'.format(clone_index_file.path, alignment_file.path, alignment_output_file.path)
     files_to_execute.append(alignment_output_file)
     pretty_alignment_file = File()
     pretty_alignment_file.parent_id = alignment_file.id 
