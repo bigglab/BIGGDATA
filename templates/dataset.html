@@ -51,6 +51,27 @@
 				
 <br><br>
 
+{% if dataset.analyses.all() != [] %} 
+
+	<div class="container">
+		<h4>Previous Analyses Run With This Dataset:</h4>
+		<table class="table table-striped">
+			{% for analysis in dataset.analyses.all() %}
+				<tr>
+					<th><a href="{{url_for('.analysis', id=analysis.id)}}">Analysis {{analysis.id}}</a></th>
+					<th>{{analysis.name}}</th>
+					<th>{{analysis.description}}</th>
+				</tr>				
+			{% endfor %}
+		</table>
+
+	</div>
+
+<br><br>
+
+{% endif %}
+
+
 
 <div class="container">
 	<h4>Files Associated With This Dataset:</h4>

@@ -62,7 +62,7 @@
 	{% if file.dataset_id != [] %}
 		{% set dataset = file.dataset %}
 		<div>
-			<h4>Dataset {{file.dataset_id}} {{dataset.name}} is associated with this file</h4>
+			<h4><a href="{{url_for('.dataset', id=dataset.id)}}">Dataset {{file.dataset_id}} {{dataset.name}}</a> is associated with this file</h4>
 				{% set files = dataset.files %}
 				{% include "partials/files.html" with context %}
 		</div>
