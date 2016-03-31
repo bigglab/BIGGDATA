@@ -391,19 +391,19 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     # MIGHT NEED TO ADD THIS ARGUMENT to align   -OjParameters.parameters.mapperMaxSeedsDistance=5
     alignment_file.command = 'mixcr align --save-description -f {} {}'.format(' '.join([f.path for f in files]), alignment_file.path)
     alignment_file.file_type = 'MIXCR_ALIGNMENTS'
-    files_to_execute.append(alignment_file)
+    files_to_execute.append(alignment_file)    
     clone_index_file = File()
     clone_index_file.file_type = 'MIXCR_CLONE_INDEX'
     clone_index_file.path = '{}.aln.clns.index'.format(basepath)
     clone_index_file.name = '{}.aln.clns.index'.format(basename)
     clone_index_file.command = 'echo "Indexing Done On Clone Assemble Step"'
-    files_to_execute.append(clone_index_file)
     clone_file = File()
     clone_file.file_type = 'MIXCR_CLONES'
     clone_file.path = '{}.aln.clns'.format(basepath)
     clone_file.name = '{}.aln.clns'.format(basename)
     clone_file.command = 'mixcr assemble --index {} -f {} {}'.format(clone_index_file.path, alignment_file.path, clone_file.path)
     files_to_execute.append(clone_file)
+    files_to_execute.append(clone_index_file)
     db.session.add(alignment_file)
     db.session.add(clone_file)
     db.session.commit()
