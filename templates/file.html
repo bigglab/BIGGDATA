@@ -51,10 +51,28 @@
 		<p><strong>File path:</strong> {{file.path}}</p>
 	</row>
 </div>
-<div id="dataEdit" class="container collapse" aria-expanded="false">
-<h2>Editing file</h2>
 
+<!-- File Edit form !-->
+<div class="container">
+	<div id="dataEdit" class="collapse" aria-expanded="false">
+		<row><h2>Editing file</h2></row>
+		<row>
+			<p>File name:</p>
+			<input type="text form-control" value="{{ file.name }}"/>
+		</row>
+		<row>
+			<p>Paired to:</p>
+			<input type="text form-control" value="{{ file.paired_partner }}"/>
+		</row>
+		<row>
+		<br>
+			<input class="btn btn-primary" type="submit" value="Submit"/>
+		</row>
+	</div>
 </div>
+<!-- File Edit form end !-->
+
+
 <br>
 <br>
 <br>
