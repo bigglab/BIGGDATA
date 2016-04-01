@@ -1,0 +1,16 @@
+{% extends '_base.html' %}
+
+{% block content %}
+
+<div class="container">
+
+    <h1>Manage Projects</h1>
+    <p>From this page you can add, edit, or browse projects.</p>
+    <a href= "{{ url_for('projects.create_project') }}">Add a Project</a><br/>
+    <a href= "{{ url_for('projects.browse_projects') }}">Browse Existing Projects</a>
+    
+</div>
+
+{%endblock content %}
+
+
