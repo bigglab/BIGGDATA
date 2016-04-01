@@ -1,67 +1,74 @@
-<!DOCTYPE html>
-<html lang="en">
 {%- extends "bootstrap/base.html" %}
-{%block title %}BIGG DATA{% endblock %}
+
+    {%block title %}BIGG DATA{% endblock %}
+
 {% import "bootstrap/fixes.html" as fixes %}
 
 {%block head %}
-<!-- <script src="{{ url_for('static', filename='typeahead.bundle.js') }}"></script> -->
-{{super()}}
-{{fixes.ie8()}}
-<!-- <link rel="shortcut icon" href="http://biggdata.rsldrt.com/static/icons/bigg_data_logo.ico">
- -->
-<link rel="icon" type="image/png" href="http://biggdata.rsldrt.com/static/icons/favicon-32x32.png" sizes="32x32" />
-<link rel="icon" type="image/png" href="http://biggdata.rsldrt.com/static/icons/favicon-16x16.png" sizes="16x16" />
+
+    {{super()}}
+    {{fixes.ie8()}}
+    <!-- <script src="{{ url_for('static', filename='typeahead.bundle.js') }}"></script> -->
+    <!-- <link rel="shortcut icon" href="http://biggdata.rsldrt.com/static/icons/bigg_data_logo.ico">-->
+    <link rel="icon" type="image/png" href="http://biggdata.rsldrt.com/static/icons/favicon-32x32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="http://biggdata.rsldrt.com/static/icons/favicon-16x16.png" sizes="16x16" />
 
 {%- endblock %}
 
 {% block styles -%}
+    
     {{super()}}
+    
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
- <!--   <script type="text/javascript" src="/igrep_assets/scripts/igrep.script.tools.js"></script>     
-     <script src="http://russelldurrett.com/jquery-1.11.3.min.js"></script>
-    <script src="http://russelldurrett.com/jquery-2.1.4.min.js"></script>
- 
--->
+    <!--   
+        <script type="text/javascript" src="/igrep_assets/scripts/igrep.script.tools.js"></script>     
+        <script src="http://russelldurrett.com/jquery-1.11.3.min.js"></script>
+        <script src="http://russelldurrett.com/jquery-2.1.4.min.js"></script>
+     -->
 
-<!--     <link rel="stylesheet" type="text/css" href="/igrep_assets/styles/dashboard.css">   
-    <link rel="stylesheet" type="text/css" href="/igrep_assets/styles/immunogrep_stylesheet.css">   
- -->
+    <!--
+        <link rel="stylesheet" type="text/css" href="/igrep_assets/styles/dashboard.css">   
+        <link rel="stylesheet" type="text/css" href="/igrep_assets/styles/immunogrep_stylesheet.css">   
+     -->
+
 {%- endblock %}
 
 
-{% block navbar %} 
-{{nav.frontend_top.render()}}
-{% endblock %}
 
 
+{% block body %}
+    
+    {% block navbar %} 
+        {{nav.frontend_top.render()}}
+    {% endblock %}
 
-
-<body>
-
-  <a class="sr-only" href="#content">Skip To Content</a>
+    <a class="sr-only" href="#content">Skip To Content</a>
 
     {% block outer_content %}
-    <nav role="navigation">
-    </nav>
+        <nav role="navigation"></nav>
     {% endblock outer_content %}
 
-    
 
     {% block messages %}
-    <div class="container">
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <ul class=flashes>
-            {% for message in messages %}
-                <li>{{ message }}</li>
-            {% endfor %}
-            </ul>
-        {% endif %}
-    {% endwith %}
-    </div>
+        <div class = 'container'>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="row">
+                        <div class="col-md-12">
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">
+                                <a class="close" title="Close" href="#" data-dismiss="alert">&times;</a>
+                                {{message}}
+                                </div><!-- end .alert -->
+                            {% endfor %}
+                        </div><!-- end col-md -->
+                    </div><!-- end row -->
+                {% endif %}
+            {% endwith %}
+        </div>
     {% endblock messages %}
 
 
@@ -73,7 +80,6 @@
         <div class="container">
             <div class="row">
                 <div id="main-content" class="col-md-8">
-                    <h4>this is rendered off the _base template</h4>
                     {% block content %}
                     <h1>App content goes here - when specified...</h1>
                     {% endblock content %}
@@ -85,11 +91,8 @@
         </div>
     </section>
 
-    <footer>
-    </footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
 
+{% endblock body %}
 
-
-</body>
-</div>
-</html>

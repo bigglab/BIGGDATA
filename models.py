@@ -53,18 +53,20 @@ import pymongo
 from forms import *
 from functions import * 
 
-
-bcrypt = Bcrypt()
-db = SQLAlchemy()
-
-
+from app import db
 
 # os.environ['http_proxy'] = app.config['QUOTAGUARD_URL']
 proxy = urllib2.ProxyHandler()
 opener = urllib2.build_opener(proxy)
 
-
-
+# Tables Used By Models
+# table to map between users and experiments
+user_projects = db.Table(
+    'user_projects', 
+    db.Column('user', db.Integer, db.ForeignKey('user.id')),
+    db.Column('project', db.Integer, db.ForeignKey('project.id')),
+    db.Column('read_only', db.Boolean, default = False)
+    )
 
 # MODELS. Not abstracted to make alembic migrations easier 
 
@@ -84,6 +86,9 @@ class User(db.Model):
         files = db.relationship('File', backref='user', lazy='dynamic')
         datasets = db.relationship('Dataset', backref='user', lazy='dynamic')
         analyses = db.relationship('Analysis', backref='user', lazy='dynamic')
+
+        projects = db.relationship('Project', secondary = user_projects, back_populates = 'users' )
+
         
         def get_id(self):
             """Return the email address to satisfy Flask-Login's requirements."""
@@ -108,11 +113,6 @@ class User(db.Model):
 
         def __init__(self): 
             self.user_type = 'researcher'
-
-
-
-
-
 
 class File(db.Model):
         __tablename__ = 'file'
@@ -164,11 +164,11 @@ class File(db.Model):
             else: 
                 return False
 
-
 class Dataset(db.Model):
         __tablename__ = 'dataset'
         id = db.Column(db.Integer, primary_key=True)
         user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+        project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
         experiment_id = db.Column(db.Integer, db.ForeignKey('experiment.id'))
         name = db.Column(db.String(256))
         description =db.Column(db.String(512))
@@ -219,9 +219,6 @@ class Dataset(db.Model):
             return files 
         # primary_data_files = db.relationship('File', primaryjoin="File.dataset_id == Dataset.id")
 
-
-
-
 class Experiment(db.Model):
         __tablename__ = 'experiment'
         id = db.Column(db.Integer, primary_key=True)
@@ -231,7 +228,13 @@ class Experiment(db.Model):
         _id = db.Column(JSON())
         paired = db.Column(db.Boolean, default=False)
         chain_types_sequenced = db.Column(postgresql.ARRAY(db.String(20)))
+        
+        # we should leave this column in temporarily for compatibility
+        # as soon as the association table is created we can remove this column
+        # TO DO: create new user accounts for every user listed in this column
         owners_of_experiment = db.Column(postgresql.ARRAY(db.String(20)))
+
+
         read_access = db.Column(postgresql.ARRAY(db.String(50)))
         cell_types_sequenced = db.Column(postgresql.ARRAY(db.String(50)))
         isotypes_sequenced = db.Column(postgresql.ARRAY(db.String(10)))
@@ -266,10 +269,92 @@ class Experiment(db.Model):
         primer_set_name = db.Column(postgresql.ARRAY(db.String(100)))
         datasets = db.relationship('Dataset', backref='experiment', lazy='dynamic')
 
+        # establish a relationship to the association table
+        # users = db.relationship('User', secondary = user_experiments, back_populates = 'experiments' )
+
         def __repr__(self): 
             return "<  Experiment {}:  {}   :   {}   :   {} >".format(self.id, self.project_name, self.experiment_name, self.seq_count)
 
+class Project(db.Model):
+        __tablename__ = 'project'
+        id = db.Column(db.Integer, primary_key=True)
+        project_name = db.Column(db.String(128))
+        description = db.Column(db.String(256))
+        _id = db.Column(JSON())
+        cell_types_sequenced = db.Column(db.String(256))
+        publications = db.Column(db.String(256)) 
+        user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+        
+        species = db.Column(db.String(128))
+        lab = db.Column(db.String(128))
 
+        # establish a list of datasets
+        datasets = db.relationship('Dataset', backref='project', lazy='dynamic')
+
+        # establish a relationship to the association table
+        users = db.relationship('User', secondary = user_projects, back_populates = 'projects' )
+
+        def __repr__(self): 
+            return "<  Project {}:  {}   :   {}    >".format(self.id, self.project_name, self.description_name)
+
+# The following fields are from the the GSAF JSON
+# "LAB_NOTEBOOK_SOURCE": "", 
+#                     "SEQUENCING_SUBMISSION_NUMBER": [], 
+#                     "CHAIN_TYPES_SEQUENCED": [
+#                         "beta"
+#                     ], 
+#                     "CONTAINS_RNA_SEQ_DATA": false, 
+#                     "REVERSE_PRIMER_USED_IN_RT_STEP": "oligo dT", 
+#                     "LIST_OF_POLYMERASES_USED": [
+#                         "FastStart High Fidelity"
+#                     ], 
+#                     "SEQUENCING_PLATFORM": "MiSeq 2x300", 
+#                     "VH:VL_PAIRED": false, 
+#                     "PROJECT_NAME": "mTCR", 
+#                     "TARGET_READS": 2750000, 
+#                     "CELL_MARKERS_USED": [], 
+#                     "READ_ACCESS": [
+#                         "sschaetzle"
+#                     ], 
+#                     "ADJUVANT": "", 
+#                     "POST_SEQUENCING_PROCESSING:PHI_X_FILTER": false, 
+#                     "CELL_TYPES_SEQUENCED": [
+#                         "mTc"
+#                     ], 
+#                     "SPECIES": "Mus musculus", 
+#                     "PUBLICATIONS": [], 
+#                     "POST_SEQUENCING_PROCESSING:QUALITY_FILTER": "q20p50", 
+#                     "OWNERS_OF_EXPERIMENT": [
+#                         "sschaetzle"
+#                     ], 
+#                     "CELL_SELECTION_KIT_NAME": "", 
+#                     "ISOTYPES_SEQUENCED": [
+#                         "n/a"
+#                     ], 
+#                     "POST_SEQUENCING_PROCESSING:PROCESS_R1_R2_FILE": "pear", 
+#                     "SAMPLE_PREPARATION_DATE": "05/2015", 
+#                     "GSAF_BARCODE": "", 
+#                     "MID_TAG": [
+#                         "TGCCTAGTCA"
+#                     ], 
+#                     "DESCRIPTION": [
+#                         "mTCR Sequencing Mouse", 
+#                         "Mouse C1 Library 1"
+#                     ], 
+#                     "CELL_NUMBER": null, 
+#                     "PRIMER_SET_NAME": [
+#                         "mTCR"
+#                     ], 
+#                     "LAB": [
+#                         "GEORGIOU"
+#                     ], 
+#                     "TEMPLATE_TYPE": "cDNA", 
+#                     "EXPERIMENT_NAME": "memTCR_C1", 
+#                     "PERSON_WHO_PREPARED_LIBRARY": [
+#                         "Sebastian Schaetzle"
+#                     ], 
+#                     "PAIRING_TECHNIQUE": "", 
+#                     "_id": "556774349eb6360c29931524"
 
 
 
