@@ -54,40 +54,42 @@ from forms import *
 from functions import * 
 from models import * 
 
+# blueprint
 frontend = Blueprint('frontend', __name__)
+
 nav.register_element('frontend_top', Navbar(
-    View('BIGG DATA', '.index'),
-    View('Home', '.index'),
+    View('BIGG DATA', 'frontend.index'),
+    View('Home', 'frontend.index'),
     Subgroup(
         'Login',
-        View('Login', '.login'),
-        View('Logout', '.logout'),
+        View('Login', 'frontend.login'),
+        View('Logout', 'frontend.logout'),
         ),
     Subgroup(
         'Files', 
-        View('My Files', '.files'), 
-        View('Import File', '.file_download'), 
-        View('Import From NCBI', '.import_sra'), 
+        View('My Files', 'frontend.files'), 
+        View('Import File', 'frontend.file_download'), 
+        View('Import From NCBI', 'frontend.import_sra'), 
         ),
     Subgroup(
         'Run Analysis',
-        View('My Datasets', '.datasets'),
-        View('My Analyses', '.analyses'),
-        View('VDJ VIZualizer', '.vdj_visualizer'),
+        View('My Datasets', 'frontend.datasets'),
+        View('My Analyses', 'frontend.analyses'),
+        View('VDJ VIZualizer', 'frontend.vdj_visualizer'),
         Link('Other Tasks', 'under_construction'), 
         ),
     Subgroup(
         'Database', 
-        View('Browse Experiments', '.browse_experiments'),
-        View('Browse Sequences', '.browse_sequences'),
+        View('Manage Projects', 'projects.manage_projects'),
+        View('Browse Sequences', 'frontend.browse_sequences'),
         Link('Download Lots of Data', 'under_construction'),
         Link('Download For Mass Spec', 'under_construction')
         ),
-    View('Dashboard', '.analyses'),
+    View('Dashboard', 'frontend.analyses'),
     Subgroup(
         'Documentation', 
-        View('BIGG DATA Overview', '.overview'), 
-        View('BIGG DB Schema', '.schema'), 
+        View('BIGG DATA Overview', 'frontend.overview'), 
+        View('BIGG DB Schema', 'frontend.schema'), 
         # Link('Confluence', 'under_construction'), 
         Separator(),
         Text('External Docs'),
@@ -165,24 +167,6 @@ def create_user():
     return redirect(url_for(".index"))
 
 
-@celery.task
-def instantiate_user_with_directories(new_user_id):
-    new_user = db.session.query(User).filter(User.id==new_user_id).first()
-    if not os.path.isdir(new_user.dropbox_path):
-        os.makedirs(new_user.dropbox_path)
-        print 'created new directory at {}'.format(new_user.dropbox_path)
-    if not os.path.isdir(new_user.scratch_path):
-        os.makedirs(new_user.scratch_path)
-        print 'created new directory at {}'.format(new_user.dropbox_path)
-    # COPY SOME EXAMPLE FILES TO PLAY WITH
-    share_root = app.config['SHARE_ROOT'] 
-    files = os.listdir(share_root)
-    print 'copying these files to new users dropbox: {}'.format(','.join(files))
-    for f in files: 
-        fullfilepath = '{}/{}'.format(new_user.dropbox_path, f)
-        copyfile('{}/{}'.format(share_root, f), '{}/{}'.format(new_user.dropbox_path, f))
-        link_file_to_user(fullfilepath, new_user.id, f)
-    return True 
 
 @frontend.route("/logout", methods=["GET"])
 def logout():
@@ -455,41 +439,6 @@ def pandaseq(dataset_id, status=[]):
         # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
     else: 
         return render_template("pandaseq.html", dataset=dataset, form=form, status=status) 
-
-@frontend.route('/browse_experiments', methods=['GET', 'POST'])
-@login_required
-def browse_experiments():
-    # print request.__dict__
-    files = current_user.files.all()
-    datasets = current_user.datasets.all()
-    datadict = tree()
-    for dataset in datasets:
-        datadict[dataset] = dataset.files.all()
-    form = Form()
-    exps = db.session.query(Experiment).order_by(Experiment.curated.desc(), Experiment.experiment_creation_date.desc()).all()
-    species_data = sorted(db.engine.execute('select species, count(*) from experiment GROUP BY species;').fetchall(), key=lambda x: x[1], reverse=True)
-    chain_data = sorted(db.engine.execute('select chain_types_sequenced, count(*) from experiment GROUP BY chain_types_sequenced;').fetchall(), key=lambda x: x[1], reverse=True)
-    cell_data = sorted(db.engine.execute('select cell_types_sequenced, count(*) from experiment GROUP BY cell_types_sequenced;').fetchall(), key=lambda x: x[1], reverse=True)
-    primer_data = sorted(db.engine.execute('select primer_set_name, count(*) from experiment GROUP BY primer_set_name;').fetchall(), key=lambda x: x[1], reverse=True)
-    cell_marker_data = sorted(db.engine.execute('select cell_markers_used, count(*) from experiment GROUP BY cell_markers_used;').fetchall(), key=lambda x: x[1], reverse=True)
-    owner_query_data = sorted(db.engine.execute('select owners_of_experiment, count(*) from experiment GROUP BY owners_of_experiment;').fetchall(), key=lambda x: x[1], reverse=True)
-    owners = set(flatten_list([o[0] for o in owner_query_data]))
-    owner_data = {}
-    for o in owners: 
-        owner_data[o] = 0 
-    for os,c in owner_query_data: 
-        for o in os: 
-            owner_data[o] += c 
-    owner_data = sorted(owner_data.items(), key=operator.itemgetter(1), reverse=True)
-    isotype_query_data = sorted(db.engine.execute('select isotypes_sequenced, count(*) from experiment GROUP BY isotypes_sequenced;').fetchall(), key=lambda x: x[1], reverse=True)
-    isotype_data = demultiplex_tuple_counts(isotype_query_data)
-    # sorted(isotype_counts.items(), key=operator.itemgetter(0))
-    cell_marker_query_data = sorted(db.engine.execute('select cell_markers_used, count(*) from experiment GROUP BY cell_markers_used;').fetchall(), key=lambda x: x[1], reverse=True)
-    cell_marker_data=demultiplex_tuple_counts(cell_marker_query_data, index=1, reverse=True)
-    # print cell_marker_data 
-    golden = retrieve_golden()
-    err = False
-    return render_template("browse_experiments.html", datadict=datadict, form=form, exps=exps, err=err, gif_path=golden, species_data=species_data, chain_data=chain_data, cell_data=cell_data, cell_marker_data=cell_marker_data, primer_data=primer_data, isotype_data=isotype_data, owner_data=owner_data)
 
 @frontend.route('/browse_sequences', methods=['GET', 'POST'])
 @login_required
