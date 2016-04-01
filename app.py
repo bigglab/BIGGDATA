@@ -68,7 +68,6 @@ celery = Celery(app.name, broker='amqp://')
 import celery_config 
 celery.config_from_object('celery_config')
 
-
 # @Dave - temporary edit for local environ
 s3 = boto.connect_s3(app.config['AWSACCESSKEYID'], app.config['AWSSECRETKEY'])
 s3_bucket = s3.get_bucket(app.config['S3_BUCKET'])
@@ -119,10 +118,16 @@ def load_user(email):
         return None
 
 def retrieve_golden():
-    gifs_dir = '{}/static/goldens'.format(app.config['HOME'])
-    gifs = os.listdir(gifs_dir)
-    gif = random.choice(gifs)
-    gif_path = url_for('static', filename='goldens/{}'.format(gif))
+
+    # @Dave - quick edit b/c I don't have the gifs
+
+    try:
+        gifs_dir = '{}/static/goldens'.format(app.config['HOME'])
+        gifs = os.listdir(gifs_dir)
+        gif = random.choice(gifs)
+        gif_path = url_for('static', filename='goldens/{}'.format(gif))
+    except:
+        gif_path = None
     return gif_path
 
 @login_manager.unauthorized_handler
@@ -219,6 +224,25 @@ def link_file_to_user(path, user_id, name):
     db.session.add(file)
     db.session.commit()
     return True
+
+@celery.task
+def instantiate_user_with_directories(new_user_id):
+    new_user = db.session.query(User).filter(User.id==new_user_id).first()
+    if not os.path.isdir(new_user.dropbox_path):
+        os.makedirs(new_user.dropbox_path)
+        print 'created new directory at {}'.format(new_user.dropbox_path)
+    if not os.path.isdir(new_user.scratch_path):
+        os.makedirs(new_user.scratch_path)
+        print 'created new directory at {}'.format(new_user.dropbox_path)
+    # COPY SOME EXAMPLE FILES TO PLAY WITH
+    share_root = app.config['SHARE_ROOT'] 
+    files = os.listdir(share_root)
+    print 'copying these files to new users dropbox: {}'.format(','.join(files))
+    for f in files: 
+        fullfilepath = '{}/{}'.format(new_user.dropbox_path, f)
+        copyfile('{}/{}'.format(share_root, f), '{}/{}'.format(new_user.dropbox_path, f))
+        link_file_to_user(fullfilepath, new_user.id, f)
+    return True 
 
 
 @celery.task
@@ -786,9 +810,19 @@ def long_task(self):
     return {'current': 100, 'total': 100, 'status': 'Task completed!',
             'result': 42}
 
+# function to flash error messages from forms automatically
+def flash_errors( form, category="warning" ):
+    '''Flash all errors for a form.'''
+    for field, errors in form.errors.items():
+        for error in errors:
+            flash("{0} - {1}".format( getattr( form, field ).label.text, error ), category )
+
 # import blueprint routes here
 from frontend import *
+from projects import *
 app.register_blueprint(frontend)
+app.register_blueprint(projects_blueprint)
+
 nav.init_app(app)
 
 
