@@ -53,7 +53,7 @@ import pymongo
 from forms import *
 from functions import * 
 
-from app import db
+db = SQLAlchemy()
 
 # os.environ['http_proxy'] = app.config['QUOTAGUARD_URL']
 proxy = urllib2.ProxyHandler()
