@@ -4,6 +4,7 @@ import static
 import sys
 import os
 import time
+from datetime import datetime
 import random
 import pandas as pd 
 import numpy as np
@@ -49,6 +50,9 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from pymongo import MongoClient
 import pymongo
  
+from sqlalchemy.ext.associationproxy import association_proxy
+
+
 #Local Imports 
 from forms import *
 from functions import * 
@@ -58,15 +62,6 @@ db = SQLAlchemy()
 # os.environ['http_proxy'] = app.config['QUOTAGUARD_URL']
 proxy = urllib2.ProxyHandler()
 opener = urllib2.build_opener(proxy)
-
-# Tables Used By Models
-# table to map between users and experiments
-user_projects = db.Table(
-    'user_projects', 
-    db.Column('user', db.Integer, db.ForeignKey('user.id')),
-    db.Column('project', db.Integer, db.ForeignKey('project.id')),
-    db.Column('read_only', db.Boolean, default = False)
-    )
 
 # MODELS. Not abstracted to make alembic migrations easier 
 
@@ -87,8 +82,9 @@ class User(db.Model):
         datasets = db.relationship('Dataset', backref='user', lazy='dynamic')
         analyses = db.relationship('Analysis', backref='user', lazy='dynamic')
 
-        projects = db.relationship('Project', secondary = user_projects, back_populates = 'users' )
+        projects = association_proxy('user_projects', 'project')
 
+        #projects = db.relationship('Project', secondary = 'user_projects', back_populates = 'users' )
         
         def get_id(self):
             """Return the email address to satisfy Flask-Login's requirements."""
@@ -108,8 +104,6 @@ class User(db.Model):
 
         def __repr__(self): 
             return "<  User {}: {}  {}  {}  >".format(self.username, self.first_name, self.last_name, self.email)
-
-
 
         def __init__(self): 
             self.user_type = 'researcher'
@@ -287,7 +281,8 @@ class Project(db.Model):
         cell_types_sequenced = db.Column(db.String(256))
         publications = db.Column(db.String(256)) 
         user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-        
+        creation_date = db.Column(db.DateTime(), default=datetime.utcnow())
+
         species = db.Column(db.String(128))
         lab = db.Column(db.String(128))
 
@@ -295,10 +290,34 @@ class Project(db.Model):
         datasets = db.relationship('Dataset', backref='project', lazy='dynamic')
 
         # establish a relationship to the association table
-        users = db.relationship('User', secondary = user_projects, back_populates = 'projects' )
+        users = association_proxy('project_users', 'user')
+        #users = db.relationship('User', secondary = 'user_projects', back_populates = 'projects' )
 
         def __repr__(self): 
-            return "<  Project {}:  {}   :   {}    >".format(self.id, self.project_name, self.description_name)
+            return "<  Project {}:  {}   :   {}    >".format(self.id, self.project_name, self.description)
+
+class UserProjects (db.Model):
+    __tablename__ = 'user_project'
+
+    __table_args__ = (
+        db.PrimaryKeyConstraint('user_id', 'project_id'),
+    )
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
+    read_only = db.Column(db.Boolean, default = False)
+
+    
+    user = db.relationship(User, backref = db.backref("user_projects"))
+
+    # Orphan projects (i.e., projects with no owner OR person with read-only access) are deleted
+    project = db.relationship(Project, backref = db.backref("project_users", cascade="all, delete-orphan"))
+
+    def __init__(self, user = None, project = None, read_only = False):
+        self.user = user
+        self.project = project
+        self.read_only = read_only
+                
 
 # The following fields are from the the GSAF JSON
 # "LAB_NOTEBOOK_SOURCE": "", 

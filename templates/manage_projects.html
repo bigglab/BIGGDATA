@@ -5,12 +5,53 @@
 <div class="container">
 
     <h1>Manage Projects</h1>
-    <p>From this page you can add, edit, or browse projects.</p>
-    <a href= "{{ url_for('projects.create_project') }}">Add a Project</a><br/>
-    <a href= "{{ url_for('projects.browse_projects') }}">Browse Existing Projects</a>
-    
+    From this page you can add, edit, or browse projects. <a href= "{{ url_for('projects.create_project') }}">Click here</a> to add a project.<br/>
+    <!--<a href= "{# url_for('projects.browse_projects') #}">Browse Existing Projects</a>-->
+    <br/>    
+    {% if projects %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Project Name</th>
+                    <th>Description</th>
+                    <th>Species</th>
+                    <th>Cells</th>
+                    <th>Created</th>
+                    <th>Users</th>
+                    <th>Datasets</th>
+                    <th>Edit</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for name, id, description, species, cells, created, users in projects %}
+                    <tr>
+                        <th>{{name}}</th>
+                        <th>{{description}}</th>
+                        <th>{{species}}</th>
+                        <th>{{cells}}</th>
+                        <th>{{created}}</th>
+                        <th>{{users}}</th>
+                        <th>Dataset List</th>
+                        <th>
+                            <form method=post action="{{url_for('projects.edit_project')}}">
+                                {{ edit_project_form.hidden_tag() }}
+                                <input type='hidden' name='id' value="{{id}}">
+                                <input type='submit' name='submit' value="Edit">
+                            </form>
+
+
+                        </th>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <em>You have no projects to view at this time.</em>
+    {% endif %}
+
 </div>
 
-{%endblock content %}
+{% endblock content %}
 
 
