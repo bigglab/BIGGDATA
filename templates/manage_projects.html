@@ -5,7 +5,7 @@
 <div class="container">
 
     <h1>Manage Projects</h1>
-    From this page you can add, edit, or browse projects. <a href= "{{ url_for('projects.create_project') }}">Click here</a> to add a project.<br/>
+    From this page you can add, edit, or browse projects. <a href= "{{ url_for('projects.create_project') }}">Click here</a> to add a project. Click the name of a project to view details about the project. <br/>
     <!--<a href= "{# url_for('projects.browse_projects') #}">Browse Existing Projects</a>-->
     <br/>    
     {% if projects %}
@@ -15,32 +15,40 @@
                     <th>Project Name</th>
                     <th>Description</th>
                     <th>Species</th>
-                    <th>Cells</th>
                     <th>Created</th>
-                    <th>Users</th>
-                    <th>Datasets</th>
+                    <th>Role</th>
                     <th>Edit</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
-                {% for name, id, description, species, cells, created, users in projects %}
+                {% for name, id, description, species, cells, created, role, read_only in projects %}
                     <tr>
-                        <th>{{name}}</th>
-                        <th>{{description}}</th>
-                        <th>{{species}}</th>
-                        <th>{{cells}}</th>
-                        <th>{{created}}</th>
-                        <th>{{users}}</th>
-                        <th>Dataset List</th>
-                        <th>
-                            <form method=post action="{{url_for('projects.edit_project')}}">
+                        <th>                                
+                            <form method=post action="{{url_for('projects.view_project')}}" name = 'view_{{id}}'>
                                 {{ edit_project_form.hidden_tag() }}
                                 <input type='hidden' name='id' value="{{id}}">
-                                <input type='submit' name='submit' value="Edit">
+                                <a href="#" onclick="document.forms['view_{{id}}'].submit();">{{name}}</a>
+                                <noscript>
+                                     <input type="submit" name ='submit' value='{{name}}'>
+                                </noscript>
                             </form>
+                        </th>
+                        <th>{{description}}</th>
+                        <th>{{species}}</th>
+                        <th>{{created}}</th>
+                        <th>{{role}}</th>
+                        <th>
+                            {% if read_only %}
 
-
+                            {% else %}
+                                <form method=post action="{{url_for('projects.edit_project')}}">
+                                    {{ edit_project_form.hidden_tag() }}
+                                    <input type='hidden' name='id' value="{{id}}">
+                                    <input type='submit' name='submit' value="Edit">
+                                </form>
+                            {% endif %}
+                            
                         </th>
                     </tr>
                 {% endfor %}

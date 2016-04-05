@@ -6,6 +6,7 @@ import static
 import sys
 import os
 import time
+from datetime import datetime
 import random
 from shutil import copyfile
 import operator
@@ -61,15 +62,6 @@ from models import *
 # Add parameters for PANDASEQ and MIXCR to datasets
 # Figure out how to cascade changes to User/Project/UserProject tables
 # Read up on SQLAlchemy sessions
-# 
-# List all user projects
-# Change access (read-only, owners, etc)
-# 
-# Find projects belonging to a user:
-# db.session.query(Project).filter(Project.users.contains(current_user))
-# 
-# Find users who have read-only access to a project
-# db.session.query(Project).filter(Project.project_users.any(read_only = 'TRUE'))
 #
 # Add public user functionality --> See and example project, etc
 # Add tabs for yours, shared, and read-only 
@@ -82,12 +74,59 @@ projects_blueprint = Blueprint('projects', __name__)
 def manage_projects():
     edit_project_form = CreateProjectForm()
 
-    user_projects = db.session.query(Project).filter(Project.users.contains(current_user))
+    # lists of projects (data stored as tuples) where current user is owner, editor, or has read-only access
+    own_projects = []
+    edit_projects = []
+    read_projects = []
+    projects = []
+    
+    user_projects = db.session.query(Project).filter(Project.project_users.any(read_only = 'FALSE')). \
+                                                     filter(Project.users.contains(current_user))
 
-    if user_projects:
-        projects = []
+    if user_projects and user_projects.count() > 0:
+
+        read_only = False
 
         for project in user_projects:
+
+            try:
+                dt = datetime.strptime(str(project.creation_date), "%Y-%m-%d %H:%M:%S.%f")
+                #dt = project.creation_date
+                dt_str =  dt.strftime("%Y-%m-%d")
+            except:
+                dt_str = None
+            if project.user_id == current_user.id:
+                role = 'Owner'
+            else:
+                role = 'User'
+
+            projects.append((
+                project.project_name,
+                project.id, 
+                project.description, 
+                project.species, 
+                project.cell_types_sequenced, 
+                dt_str,
+                role, 
+                read_only ))
+    
+    user_projects = db.session.query(Project).filter(Project.project_users.any(read_only = 'TRUE')). \
+                                                     filter(Project.users.contains(current_user))
+
+    if user_projects and user_projects.count() > 0:
+
+        read_only = True
+        role = 'Read Only'
+
+        for project in user_projects:
+
+            try:
+                dt = datetime.strptime(str(project.creation_date), "%Y-%m-%d %H:%M:%S.%f")
+                #dt = project.creation_date
+                dt_str =  dt.strftime("%Y-%m-%d")
+            except:
+                dt_str = None
+
             user_list = None
             projects.append((
                 project.project_name,
@@ -95,17 +134,12 @@ def manage_projects():
                 project.description, 
                 project.species, 
                 project.cell_types_sequenced, 
-                project.creation_date, 
-                user_list ))
-    else:
-        projects = None
+                dt_str,
+                role,  
+                read_only ))
 
-    # If you want to print projects where the user
-    # user_read_projects = db.session.query(Project).filter(Project.project_users.any(read_only = 'TRUE')). \
-    #                                                 filter(Project.users.contains(current_user))
-    # print "Read Only:"
-    # for project in user_read_projects:
-    #     print project
+    if len(projects) == 0:
+        projects = None
 
     return render_template("manage_projects.html", projects = projects, edit_project_form = edit_project_form)
 
@@ -152,12 +186,17 @@ def create_project():
 def edit_project():
     edit_project_form = CreateProjectForm()
 
-    project_id = request.form['id']
+    try:
+        project_id = request.form['id']
 
-    # first, determine if the project exists, and if the user has permission to edit it
-    project_query = db.session.query(Project).filter(Project.project_users.any(read_only = 'FALSE')). \
-                                                 filter(Project.users.contains(current_user)). \
-                                                 filter(Project.id==project_id)
+        # first, determine if the project exists, and if the user has permission to edit it
+        project_query = db.session.query(Project).filter(Project.project_users.any(read_only = 'FALSE')). \
+                                                     filter(Project.users.contains(current_user)). \
+                                                     filter(Project.id==project_id)
+    except:
+        flash('Error: there was an error attempting to edit that project.', 'warning')
+        return redirect( url_for('projects.manage_projects') )
+
 
     if project_query and project_query.count() > 0:
         project = project_query[0]
@@ -175,11 +214,10 @@ def edit_project():
             edit_project_form.lab.data = project.lab 
             return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id)
         else:
-            # update the database with the data, then redirect
-
             if edit_project_form.validate_on_submit():
 
                 # Still need to test for duplicate names
+                # update the database with the data, then redirect
                 project.project_name = edit_project_form.project_name.data
                 project.description = edit_project_form.description.data
                 project.cell_types_sequenced = edit_project_form.cell_types_sequenced.data
@@ -187,7 +225,6 @@ def edit_project():
                 project.species = edit_project_form.species.data
                 project.lab = edit_project_form.lab.data
                 
-                # db.session.add(new_project)
                 db.session.commit()
 
                 flash('Success!!! Your new project has been updated.', 'success')
@@ -205,42 +242,43 @@ def edit_project():
 
     return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id)
 
-# @projects_blueprint.route('/browse_projects', methods=['GET', 'POST'])
-# @login_required
-# def browse_projects():
-    
-#     print request.__dict__
-#     files = current_user.files.all()
-#     datasets = current_user.datasets.all()
-#     datadict = tree()
-#     for dataset in datasets:
-#         datadict[dataset] = dataset.files.all()
-#     form = Form()
-#     exps = db.session.query(Experiment).order_by(Experiment.curated.desc(), Experiment.experiment_creation_date.desc()).all()
-#     species_data = sorted(db.engine.execute('select species, count(*) from experiment GROUP BY species;').fetchall(), key=lambda x: x[1], reverse=True)
-#     chain_data = sorted(db.engine.execute('select chain_types_sequenced, count(*) from experiment GROUP BY chain_types_sequenced;').fetchall(), key=lambda x: x[1], reverse=True)
-#     cell_data = sorted(db.engine.execute('select cell_types_sequenced, count(*) from experiment GROUP BY cell_types_sequenced;').fetchall(), key=lambda x: x[1], reverse=True)
-#     primer_data = sorted(db.engine.execute('select primer_set_name, count(*) from experiment GROUP BY primer_set_name;').fetchall(), key=lambda x: x[1], reverse=True)
-#     cell_marker_data = sorted(db.engine.execute('select cell_markers_used, count(*) from experiment GROUP BY cell_markers_used;').fetchall(), key=lambda x: x[1], reverse=True)
-#     owner_query_data = sorted(db.engine.execute('select owners_of_experiment, count(*) from experiment GROUP BY owners_of_experiment;').fetchall(), key=lambda x: x[1], reverse=True)
-#     owners = set(flatten_list([o[0] for o in owner_query_data]))
-#     owner_data = {}
-#     for o in owners: 
-#         owner_data[o] = 0 
-#     for os,c in owner_query_data: 
-#         for o in os: 
-#             owner_data[o] += c 
-#     owner_data = sorted(owner_data.items(), key=operator.itemgetter(1), reverse=True)
-#     isotype_query_data = sorted(db.engine.execute('select isotypes_sequenced, count(*) from experiment GROUP BY isotypes_sequenced;').fetchall(), key=lambda x: x[1], reverse=True)
-#     isotype_data = demultiplex_tuple_counts(isotype_query_data)
-#     # sorted(isotype_counts.items(), key=operator.itemgetter(0))
-#     cell_marker_query_data = sorted(db.engine.execute('select cell_markers_used, count(*) from experiment GROUP BY cell_markers_used;').fetchall(), key=lambda x: x[1], reverse=True)
-#     cell_marker_data=demultiplex_tuple_counts(cell_marker_query_data, index=1, reverse=True)
-#     # print cell_marker_data 
-#     golden = retrieve_golden()
-#     err = False
-#     return render_template("browse_projects.html", datadict=datadict, form=form, exps=exps, err=err, gif_path=golden, species_data=species_data, chain_data=chain_data, cell_data=cell_data, cell_marker_data=cell_marker_data, primer_data=primer_data, isotype_data=isotype_data, owner_data=owner_data)
+@projects_blueprint.route('/view_project', methods=['POST'])
+@login_required
+def view_project():
 
+    view_project_form = CreateProjectForm()
 
+    # first, make sure the user has access to the project
+    try:
+        project_id = request.form['id']
+        project_query = db.session.query(Project).filter(Project.id == project_id)
+    except:
+        flash('Error: there was an error attempting to view that project.','warning')
+        return redirect( url_for('projects.manage_projects') )
+
+    if project_query and project_query.count() > 0:
+        project = project_query[0]
+    else:
+        flash('Error: there was an error attempting to view that project.','warning')
+        return redirect( url_for('projects.manage_projects') )
+
+    user_has_access = False
+
+    for user in project.users:    
+        if current_user.id == user.id:
+            user_has_access = True
+
+    if user_has_access is False:
+        flash('You do not have access rights for that project','warning')
+        return redirect( url_for('projects.manage_projects') )
+
+    view_project_form.project_name.data = project.project_name
+    view_project_form.description.data = project.description
+    view_project_form.cell_types_sequenced.data = project.cell_types_sequenced
+    view_project_form.publications.data = project.publications
+    view_project_form.species.data = project.species
+    view_project_form.lab.data = project.lab 
+
+    return render_template("view_project.html", view_project_form = view_project_form, project_id = project_id)
 
 
