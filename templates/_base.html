@@ -8,13 +8,20 @@
 
 {{super()}}
 {{fixes.ie8()}}
- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
-<script src="{{ url_for('static', filename='typeahead.bundle.js') }}"></script>
+<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+<script src="{{ url_for('static', filename='typeahead.bundle.js') }}"></script> -->
 <!-- <link rel="shortcut icon" href="http://biggdata.rsldrt.com/static/icons/bigg_data_logo.ico">-->
 <link rel="icon" type="image/png" href="http://biggdata.rsldrt.com/static/icons/favicon-32x32.png" sizes="32x32" />
 <link rel="icon" type="image/png" href="http://biggdata.rsldrt.com/static/icons/favicon-16x16.png" sizes="16x16" />
+{% block scripts %} 
+    {{fixes.ie8()}}
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+    <script src="{{ url_for('static', filename='typeahead.bundle.js') }}"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
 
+{% endblock scripts %}
 {%- endblock %}
+
 
 {% block styles -%}
     
@@ -93,8 +100,4 @@
         </div>
     </section>
 
-    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
-
 {% endblock body %}
-
