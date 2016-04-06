@@ -317,18 +317,27 @@ def files(status=[], bucket=None, key=None):
 def file(id):
     f = db.session.query(File).filter(File.id==id).first()
 
+
     editfileform = FileEditForm()
     if f.dataset != None:
         editfileform.paired_partner.choices = [(x.id, x.name) for x in f.dataset.files if ((x.user_id != None))]
     else:
         editfileform.paired_partner.choices = [(x.id, x.name) for x in f.user.files if ((x.user_id != None) and (x.dataset == None))]
+
     if editfileform.validate_on_submit():
         f.name = editfileform.name.data
-        f.paired_partner = editfileform.paired_partner.data
-        f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
-        f2.paired_partner=f.id
+        if f.paired_partner != None:
+            f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
+
+            if f2.id == editfileform.paired_partner.id:
+                flash('Edited ' + f.name, 'success')
+            else:
+                f.paired_partner = editfileform.paired_partner.data
+                f3 = db.session.query(File).filter(File.id==f.paired_partner).first()
+                f3.paired_partner=f.id
+                f2.paired_partner=None
         db.session.commit()
-        flash('Renamed to ' + f.name, 'success')
+        flash('Edited ' + f.name, 'success')
     else:
         flash_errors(editfileform)
 
