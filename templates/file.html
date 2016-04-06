@@ -55,19 +55,24 @@
 <!-- File Edit form !-->
 <div class="container">
 	<div id="dataEdit" class="collapse" aria-expanded="false">
-		<row><h2>Editing file</h2></row>
+	<form method="POST" action="/files/{{file.id}}">
+		<row>
+			<h2>Editing file</h2>
+			{{ editfileform.csrf_token }}
+		</row>
 		<row>
 			<p>File name:</p>
-			<input type="text form-control" value="{{ file.name }}"/>
+				{{ editfileform.name(size=20, value=file.name)}}
 		</row>
 		<row>
 			<p>Paired to:</p>
-			<input type="text form-control" value="{{ file.paired_partner }}"/>
+				{{ editfileform.paired_partner}}	
 		</row>
 		<row>
 		<br>
-			<input class="btn btn-primary" type="submit" value="Submit"/>
+			<button class="btn btn-primary" type="submit">Submit</button>
 		</row>
+	</form>
 	</div>
 </div>
 <!-- File Edit form end !-->
