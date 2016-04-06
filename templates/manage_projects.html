@@ -9,15 +9,15 @@
     <!--<a href= "{# url_for('projects.browse_projects') #}">Browse Existing Projects</a>-->
     <br/>    
     {% if projects %}
-        <table class="table table-striped">
+        <table id="fixed" class="table table-striped">
             <thead>
                 <tr>
-                    <th>Project Name</th>
-                    <th>Description</th>
+                    <th width="15%">Project Name</th>
+                    <th width="30%">Description</th>
                     <th>Species</th>
                     <th>Created</th>
                     <th>Role</th>
-                    <th>Edit</th>
+                    <th width="5%" class="text-right"></th>
                     <th></th>
                 </tr>
             </thead>
@@ -34,11 +34,11 @@
                                 </noscript>
                             </form>
                         </th>
-                        <th>{{description}}</th>
+                        <th id="ellipsis" class="wide30">{{description}}</th>
                         <th>{{species}}</th>
                         <th>{{created}}</th>
                         <th>{{role}}</th>
-                        <th>
+                        <th class="text-right">
                             {% if read_only %}
 
                             {% else %}

@@ -89,12 +89,6 @@ def manage_projects():
 
         for project in user_projects:
 
-            try:
-                dt = datetime.strptime(str(project.creation_date), "%Y-%m-%d %H:%M:%S.%f")
-                #dt = project.creation_date
-                dt_str =  dt.strftime("%Y-%m-%d")
-            except:
-                dt_str = None
             if project.user_id == current_user.id:
                 role = 'Owner'
             else:
@@ -106,11 +100,11 @@ def manage_projects():
                 project.description, 
                 project.species, 
                 project.cell_types_sequenced, 
-                dt_str,
+                project.date_string(),
                 role, 
                 read_only ))
     
-    user_projects = db.session.query(Project).filter(Project.project_users.any(read_only = 'TRUE')). \
+    user_projects =  db.session.query(Project).filter(Project.project_users.any(read_only = 'TRUE')). \
                                                      filter(Project.users.contains(current_user))
 
     if user_projects and user_projects.count() > 0:
@@ -119,22 +113,13 @@ def manage_projects():
         role = 'Read Only'
 
         for project in user_projects:
-
-            try:
-                dt = datetime.strptime(str(project.creation_date), "%Y-%m-%d %H:%M:%S.%f")
-                #dt = project.creation_date
-                dt_str =  dt.strftime("%Y-%m-%d")
-            except:
-                dt_str = None
-
-            user_list = None
             projects.append((
                 project.project_name,
                 project.id, 
                 project.description, 
                 project.species, 
                 project.cell_types_sequenced, 
-                dt_str,
+                project.date_string(),
                 role,  
                 read_only ))
 
@@ -151,11 +136,6 @@ def create_project():
     if create_project_form.validate_on_submit():
 
         # Still need to test for duplicate names
-
-        # new_user = User()
-        # new_user.first_name = form.first_name.data
-        # db.session.add(new_user)
-        # db.session.commit()
 
         new_project = Project(
                             user_id = current_user.id,
@@ -203,8 +183,29 @@ def edit_project():
     else:
         project = None
 
+    choices = []
+    editor_defaults = []
+    viewer_defaults = []
+
+    users = db.session.query(User).filter(User.id != current_user.id)
+
+    user_choices = [(str(user.id), user.first_name + " " + user.last_name) for user in users]
+    edit_project_form.editors.choices = user_choices # choices should be a tuple (id, username)
+    edit_project_form.viewers.choices = user_choices # choices should be a tuple (id, username)
+
     if project:
         if request.form['submit'] == 'Edit':
+
+            for user in users:
+                if user not in project.users:
+                    editor_defaults.append(str(user.id))
+                if user not in project.read_only_users:
+                    viewer_defaults.append(str(user.id))
+
+            # populate select fields with user names
+            edit_project_form.editors.data = editor_defaults # default should be a list of ids NOT SELECTED
+            edit_project_form.viewers.data = viewer_defaults # default should be a list of ids NOT SELECTED
+
             # prepopulate the form with data from the database                
             edit_project_form.project_name.data = project.project_name
             edit_project_form.description.data = project.description
@@ -213,8 +214,41 @@ def edit_project():
             edit_project_form.species.data = project.species
             edit_project_form.lab.data = project.lab 
             return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id)
+
         else:
             if edit_project_form.validate_on_submit():
+
+                # Get a list of users who can edit
+                user_access_list = []
+                user_read_list = []
+
+                for user in users:
+                    if str(user.id) not in edit_project_form.editors.data:
+                        user_access_list.append(user)
+                    else:
+                        if str(user.id) not in edit_project_form.viewers.data:
+                            user_access_list.append(user)
+                            user_read_list.append(user)
+
+
+                # user editor list is now a list of editors and viewers, so set the association proxy accordingly, not forgetting current user!
+                user_access_list.append(current_user)
+                project.users = user_access_list
+
+                print "Access List:"
+                print user_access_list
+                print "Read List:"
+                print user_read_list
+
+                for user in user_read_list:
+                    try: 
+                        read_only_user_project = db.session.query(UserProjects). \
+                            filter(UserProjects.user_id == user.id). \
+                            filter(UserProjects.project_id == project.id)
+                        read_only_user_project[0].read_only = True
+                    except:
+                        print "Error setting read_only attribute for {}".format(user)
+
 
                 # Still need to test for duplicate names
                 # update the database with the data, then redirect
@@ -228,13 +262,19 @@ def edit_project():
                 db.session.commit()
 
                 flash('Success!!! Your new project has been updated.', 'success')
-                return redirect( url_for('projects.manage_projects') )
+                #return redirect( url_for('projects.manage_projects') )
+
+                # painfully redundant, but this will clean up and form issues where there is a double viewer/editor selection:
+                for user in users:
+                    if user not in project.read_only_users:
+                        viewer_defaults.append(str(user.id))
+
+                # populate select fields with user names
+                edit_project_form.viewers.data = viewer_defaults # default should be a list of ids NOT SELECTED
 
             else:
                 flash_errors(edit_project_form)
 
-
-            flash('Your project information has been updated.', 'success')
             return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id)
     else:
         flash('Error: the project was not found or you do not have permission to edit the project.', 'warning')
@@ -251,7 +291,9 @@ def view_project():
     # first, make sure the user has access to the project
     try:
         project_id = request.form['id']
-        project_query = db.session.query(Project).filter(Project.id == project_id)
+        project_query = db.session.query(Project). \
+                            filter(Project.id == project_id). \
+                            filter(Project.users.contains(current_user))
     except:
         flash('Error: there was an error attempting to view that project.','warning')
         return redirect( url_for('projects.manage_projects') )
@@ -262,23 +304,23 @@ def view_project():
         flash('Error: there was an error attempting to view that project.','warning')
         return redirect( url_for('projects.manage_projects') )
 
-    user_has_access = False
-
-    for user in project.users:    
-        if current_user.id == user.id:
-            user_has_access = True
-
-    if user_has_access is False:
-        flash('You do not have access rights for that project','warning')
-        return redirect( url_for('projects.manage_projects') )
+    if current_user in project.read_only_users:
+        read_only = True
+    else:
+        read_only = False
 
     view_project_form.project_name.data = project.project_name
     view_project_form.description.data = project.description
     view_project_form.cell_types_sequenced.data = project.cell_types_sequenced
     view_project_form.publications.data = project.publications
     view_project_form.species.data = project.species
-    view_project_form.lab.data = project.lab 
+    view_project_form.lab.data = project.lab
+    creation_date = project.date_string()
 
-    return render_template("view_project.html", view_project_form = view_project_form, project_id = project_id)
+    return render_template("view_project.html", 
+        view_project_form = view_project_form, 
+        project_id = project_id, 
+        read_only = read_only, 
+        creation_date = creation_date)
 
 
