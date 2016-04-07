@@ -336,6 +336,10 @@ def file(id):
                 f3 = db.session.query(File).filter(File.id==f.paired_partner).first()
                 f3.paired_partner=f.id
                 f2.paired_partner=None
+        else:
+            f.paired_partner = editfileform.paired_partner.data
+            f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
+            f2.paired_partner = f.id
         db.session.commit()
         flash('Edited ' + f.name, 'success')
     else:
