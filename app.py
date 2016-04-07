@@ -284,7 +284,7 @@ def import_from_sra(accession, name=None, user_id=57):
     if not name: 
         name = accession 
     print 'Fetching SRA data from NCBI {}'.format(accession)
-    command = 'fastq-dump --gzip --split-files -T --outdir {} {}'.format(user.scratch_path, accession) 
+    command = 'fastq-dump --gzip --defline-qual '+' --split-files -T -F --outdir {} {}'.format(user.scratch_path, accession) 
     response = os.system(command)
     if response == 0: 
         file_paths = []

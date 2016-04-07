@@ -10,6 +10,7 @@ from datetime import datetime
 import random
 from shutil import copyfile
 import operator
+from sets import Set
 # import urllib
 os.environ['http_proxy']=''
 import urllib2
@@ -66,15 +67,12 @@ from models import *
 # Add public user functionality --> See and example project, etc
 # Add tabs for yours, shared, and read-only 
 # 
-# prevent users from removing owner's access privilege
-# print users on the view project page
 # print owner on the edit and view project page
-# add user email to selection boxes
-#
-# add user access functionality to the create project page
-# add user access view to the view project page
 # add column for owner
 #
+# get a list of projects based on a dataset query
+# dataset.project
+# 
 
 projects_blueprint = Blueprint('projects', __name__)
 
@@ -83,12 +81,11 @@ projects_blueprint = Blueprint('projects', __name__)
 def manage_projects():
     edit_project_form = CreateProjectForm()
 
-    # lists of projects (data stored as tuples) where current user is owner, editor, or has read-only access
-    #own_projects = []
-    #edit_projects = []
-    #read_projects = []
     projects = []
-    
+    read_only_projects = []
+    write_user_projects = []
+    owner_projects = []
+
     user_projects = db.session.query(Project).filter(Project.users.contains(current_user))
 
     if user_projects and user_projects.count() > 0:
@@ -98,23 +95,42 @@ def manage_projects():
             if current_user in project.read_only_users:
                 read_only = True
                 role = 'Read Only'
+                read_only_projects.append((
+                    project.project_name,
+                    project.id, 
+                    project.description, 
+                    project.species, 
+                    project.cell_types_sequenced, 
+                    project.date_string(),
+                    role, 
+                    read_only ))
             else:
                 read_only = False
 
                 if project.user_id == current_user.id:
                     role = 'Owner'
+                    owner_projects.append((
+                        project.project_name,
+                        project.id, 
+                        project.description, 
+                        project.species, 
+                        project.cell_types_sequenced, 
+                        project.date_string(),
+                        role, 
+                        read_only ))
                 else:
                     role = 'User'
+                    write_user_projects.append((
+                        project.project_name,
+                        project.id, 
+                        project.description, 
+                        project.species, 
+                        project.cell_types_sequenced, 
+                        project.date_string(),
+                        role, 
+                        read_only ))
 
-            projects.append((
-                project.project_name,
-                project.id, 
-                project.description, 
-                project.species, 
-                project.cell_types_sequenced, 
-                project.date_string(),
-                role, 
-                read_only ))
+    projects = owner_projects + write_user_projects + read_only_projects
     
     if len(projects) == 0:
         projects = None
@@ -227,10 +243,16 @@ def edit_project():
     edit_project_form.editors.choices = user_choices # choices should be a tuple (id, username)
     edit_project_form.viewers.choices = user_choices # choices should be a tuple (id, username)
 
-    if project:
-        if request.form['submit'] == 'Edit':
+    owner = None
 
+    if project:
+        for user in project.users:
+            if user.id == project.user_id:
+                    owner = user.first_name + " " + user.last_name
+
+        if request.form['submit'] == 'Edit':
             for user in users:
+                
                 if user not in project.read_only_users:
                     viewer_defaults.append(str(user.id))
                 else: # the user is in the read_only list, so they have to be taken off the editor list
@@ -250,7 +272,7 @@ def edit_project():
             edit_project_form.publications.data = project.publications
             edit_project_form.species.data = project.species
             edit_project_form.lab.data = project.lab 
-            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id)
+            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner)
 
         else:
             if edit_project_form.validate_on_submit():
@@ -310,7 +332,7 @@ def edit_project():
             else:
                 flash_errors(edit_project_form)
 
-            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id)
+            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner)
     else:
         flash('Error: the project was not found or you do not have permission to edit the project.', 'warning')
         return redirect( url_for('projects.manage_projects') )
@@ -352,10 +374,31 @@ def view_project():
     view_project_form.lab.data = project.lab
     creation_date = project.date_string()
 
+    owner = None
+    user_list = Set([])
+    read_only_list = Set([])
+
+    # Create a list of users with read-only and write access
+    for user in project.users:
+        if user:
+            if user.id == project.user_id: 
+                owner = user.first_name + " " + user.last_name
+            else:
+                user_list.add(user.first_name + " " + user.last_name)
+    for user in project.read_only_users:
+        if user: 
+            read_only_list.add(user.first_name + " " + user.last_name)
+
+    write_user_list = user_list - read_only_list
+
+
     return render_template("view_project.html", 
         view_project_form = view_project_form, 
         project_id = project_id, 
         read_only = read_only, 
-        creation_date = creation_date)
+        creation_date = creation_date,
+        owner = owner,
+        read_only_list = read_only_list,
+        write_user_list = write_user_list)
 
 
