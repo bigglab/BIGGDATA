@@ -66,6 +66,15 @@ from models import *
 # Add public user functionality --> See and example project, etc
 # Add tabs for yours, shared, and read-only 
 # 
+# prevent users from removing owner's access privilege
+# print users on the view project page
+# print owner on the edit and view project page
+# add user email to selection boxes
+#
+# add user access functionality to the create project page
+# add user access view to the view project page
+# add column for owner
+#
 
 projects_blueprint = Blueprint('projects', __name__)
 
@@ -75,24 +84,27 @@ def manage_projects():
     edit_project_form = CreateProjectForm()
 
     # lists of projects (data stored as tuples) where current user is owner, editor, or has read-only access
-    own_projects = []
-    edit_projects = []
-    read_projects = []
+    #own_projects = []
+    #edit_projects = []
+    #read_projects = []
     projects = []
     
-    user_projects = db.session.query(Project).filter(Project.project_users.any(read_only = 'FALSE')). \
-                                                     filter(Project.users.contains(current_user))
+    user_projects = db.session.query(Project).filter(Project.users.contains(current_user))
 
     if user_projects and user_projects.count() > 0:
 
-        read_only = False
-
         for project in user_projects:
 
-            if project.user_id == current_user.id:
-                role = 'Owner'
+            if current_user in project.read_only_users:
+                read_only = True
+                role = 'Read Only'
             else:
-                role = 'User'
+                read_only = False
+
+                if project.user_id == current_user.id:
+                    role = 'Owner'
+                else:
+                    role = 'User'
 
             projects.append((
                 project.project_name,
@@ -104,25 +116,6 @@ def manage_projects():
                 role, 
                 read_only ))
     
-    user_projects =  db.session.query(Project).filter(Project.project_users.any(read_only = 'TRUE')). \
-                                                     filter(Project.users.contains(current_user))
-
-    if user_projects and user_projects.count() > 0:
-
-        read_only = True
-        role = 'Read Only'
-
-        for project in user_projects:
-            projects.append((
-                project.project_name,
-                project.id, 
-                project.description, 
-                project.species, 
-                project.cell_types_sequenced, 
-                project.date_string(),
-                role,  
-                read_only ))
-
     if len(projects) == 0:
         projects = None
 
@@ -133,10 +126,15 @@ def manage_projects():
 def create_project():
     create_project_form = CreateProjectForm()
 
+    # also need to wrap this with some exception handling in case this query fails
+    users = db.session.query(User).filter(User.id != current_user.id)
+    user_choices = [(str(user.id), user.first_name + " " + user.last_name) for user in users]
+    create_project_form.editors.choices = user_choices # choices should be a tuple (str(id), username)
+    create_project_form.viewers.choices = user_choices 
+
     if create_project_form.validate_on_submit():
 
         # Still need to test for duplicate names
-
         new_project = Project(
                             user_id = current_user.id,
                             project_name = create_project_form.project_name.data,
@@ -147,9 +145,40 @@ def create_project():
                             lab = create_project_form.lab.data
                         )
 
-        new_project.users.append(current_user)
+        # Get a list of users who can edit
+        user_access_list = []
+        user_read_list = []
+
+        # The current user can of course access their own file
+        user_access_list.append(current_user)
+
+        # Add a list of users who can access the project
+        for user in users:
+            if str(user.id) not in create_project_form.editors.data:
+                user_access_list.append(user)
+            else:
+                if str(user.id) not in create_project_form.viewers.data:
+                    user_access_list.append(user)
+                    user_read_list.append(user)
+
+        # user editor list is now a list of editors and viewers, so set the association proxy accordingly
+        new_project.users = user_access_list
 
         db.session.add(new_project)
+        db.session.flush()
+
+        # if the owner set read-only access for users, then we have to update the read-only setting in the association table manually
+        if len(user_read_list) > 0:
+            db.session.refresh(new_project)
+            for user in user_read_list:
+                try: 
+                    read_only_user_project = db.session.query(UserProjects). \
+                        filter(UserProjects.user_id == user.id). \
+                        filter(UserProjects.project_id == new_project.id)
+                    read_only_user_project[0].read_only = True
+                except:
+                    print "Error setting read_only attribute for {}".format(user)
+
         db.session.commit()
 
         flash('Success!!! Your new project has been created.', 'success')
@@ -157,9 +186,13 @@ def create_project():
 
     else:
         flash_errors(create_project_form)
-    return render_template("create_project.html", create_project_form = create_project_form)
 
-    #return render_template("create_project.html", create_project_form = create_project_form, get_flashed_messages=get_flashed_messages)
+
+    defaults = [(str(user.id)) for user in users]
+    create_project_form.editors.data = defaults # defaults should be a list [str(id)]
+    create_project_form.viewers.data = defaults 
+
+    return render_template("create_project.html", create_project_form = create_project_form)
 
 @projects_blueprint.route('/edit_project', methods=['POST'])
 @login_required
@@ -177,17 +210,18 @@ def edit_project():
         flash('Error: there was an error attempting to edit that project.', 'warning')
         return redirect( url_for('projects.manage_projects') )
 
-
     if project_query and project_query.count() > 0:
         project = project_query[0]
     else:
         project = None
 
-    choices = []
     editor_defaults = []
     viewer_defaults = []
 
-    users = db.session.query(User).filter(User.id != current_user.id)
+    # need to add a restriction that prevents users from removing owner's write access
+    users = db.session.query(User). \
+            filter(User.id != current_user.id). \
+            filter(User.id != project.user_id)
 
     user_choices = [(str(user.id), user.first_name + " " + user.last_name) for user in users]
     edit_project_form.editors.choices = user_choices # choices should be a tuple (id, username)
@@ -197,11 +231,14 @@ def edit_project():
         if request.form['submit'] == 'Edit':
 
             for user in users:
-                if user not in project.users:
-                    editor_defaults.append(str(user.id))
                 if user not in project.read_only_users:
                     viewer_defaults.append(str(user.id))
+                else: # the user is in the read_only list, so they have to be taken off the editor list
+                    editor_defaults.append(str(user.id))
 
+                if user not in project.users:
+                    editor_defaults.append(str(user.id))
+            
             # populate select fields with user names
             edit_project_form.editors.data = editor_defaults # default should be a list of ids NOT SELECTED
             edit_project_form.viewers.data = viewer_defaults # default should be a list of ids NOT SELECTED
@@ -230,15 +267,14 @@ def edit_project():
                             user_access_list.append(user)
                             user_read_list.append(user)
 
-
                 # user editor list is now a list of editors and viewers, so set the association proxy accordingly, not forgetting current user!
                 user_access_list.append(current_user)
-                project.users = user_access_list
+                if current_user.id != project.user_id:
+                    for user in project.users:
+                        if user.id == project.user_id:
+                            user_access_list.append(user)
 
-                print "Access List:"
-                print user_access_list
-                print "Read List:"
-                print user_read_list
+                project.users = user_access_list
 
                 for user in user_read_list:
                     try: 
@@ -248,7 +284,6 @@ def edit_project():
                         read_only_user_project[0].read_only = True
                     except:
                         print "Error setting read_only attribute for {}".format(user)
-
 
                 # Still need to test for duplicate names
                 # update the database with the data, then redirect

@@ -54,13 +54,9 @@
                 {{ create_project_form.description(class_="form-control", rows = '5 ') }} <br/>
             </div>
             <div class="col-sm-4">
-                <label>Users who Can Edit</label>
-                <select class="form-control"id='editors' name='editors' multiple='multiple'>
-                    <option value='elem_1' selected>User 1</option>
-                    <option value='elem_2' selected>User 2</option>
-                    <option value='elem_3' selected>User 3</option>
-                    <option value='elem_4' selected>User 4</option>
-                </select>
+                <!--<label>Users who Can Edit</label>-->
+                {{ create_project_form.editors.label }}
+                {{ create_project_form.editors(class_="form-control", rows = '5', multiple='multiple') }} <br/>
                 <script>
                     $('#editors').multiSelect({
                         selectableHeader: "Grant Access",
@@ -71,13 +67,8 @@
             </div>
 
             <div class="col-sm-4">
-                <label>Users who Can View</label>
-                <select id='viewers' name='viewers' multiple='multiple'>
-                    <option value='elem_1' selected>User 1</option>
-                    <option value='elem_2' selected>User 2</option>
-                    <option value='elem_3' selected>User 3</option>
-                    <option value='elem_4' selected>User 4</option>
-                </select>
+                {{ create_project_form.viewers.label }}
+                {{ create_project_form.viewers(class_="form-control", rows = '5', multiple='multiple') }} 
                 <script>
                     $('#viewers').multiSelect({
                         selectableHeader: "Grant Access",
