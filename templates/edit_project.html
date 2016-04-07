@@ -10,7 +10,7 @@
 <div class="container">
 
     <h1>Edit Project</h1>
-    <p>Please edit the information about your project below. After you are done updating, you may <a href="{{url_for('projects.manage_projects')}}"></a></p>
+    <p>Please edit the information about your project below. After you are done updating, you may <a href="{{url_for('projects.manage_projects')}}">click here</a> to return.</p>
     <br>
     <form method="POST" action="{{url_for('projects.edit_project')}}">
         
@@ -18,43 +18,45 @@
 
         <div class='row'>
 
-            <div class="col-sm-4">
+            <div class="col-md-4">
                 {{ edit_project_form.project_name.label }}<br/>
                 {{ edit_project_form.project_name(class_="form-control") }} <br/>
             </div>
-            <div class="col-sm-4">
+            <div class="col-md-4">
                 {{ edit_project_form.lab.label }}<br/>
                 {{ edit_project_form.lab(class_="form-control") }} <br/>            
             </div>
 
-            <div class="col-sm-4">
+            <div class="col-md-4">
                 {{ edit_project_form.publications.label }}<br/>
                 {{ edit_project_form.publications(class_="form-control") }} <br/>             
             </div>
         </div>
         <div class='row'>
 
-            <div class="col-sm-4">
+            <div class="col-md-4">
                 {{ edit_project_form.cell_types_sequenced.label }}<br/>
                 {{ edit_project_form.cell_types_sequenced(class_="form-control") }} <br/>
             </div>
-            <div class="col-sm-4">
+            <div class="col-md-4">
                 {{ edit_project_form.species.label }}<br/>
                 {{ edit_project_form.species(class_="form-control") }} <br/>            
             </div>
 
-            <div class="col-sm-4">
+            <div class="col-md-4">
             </div>
         </div>
         <br/>
         <div class='row'>
 
-            <div class="col-sm-4">
+            <div class="col-md-4">
+                <label>Owner</label><br/>
+                {{owner}}<br/>
+                <br/>
                 {{ edit_project_form.description.label }}<br/>
                 {{ edit_project_form.description(class_="form-control", rows = '5', multiple='multiple') }} <br/>
             </div>
-            <div class="col-sm-4">
-                <!--<label>Users who Can Edit</label>-->
+            <div class="col-md-4">
                 {{ edit_project_form.editors.label }}
                 {{ edit_project_form.editors(class_="form-control", rows = '5', multiple='multiple') }} <br/>
                 <script>
@@ -65,8 +67,7 @@
                 </script>
                 <noscript>To edit users, You must enable JavaScript.</noscript>
             </div>
-
-            <div class="col-sm-4">
+            <div class="col-md-4">
                 {{ edit_project_form.viewers.label }}
                 {{ edit_project_form.viewers(class_="form-control", rows = '5', multiple='multiple') }} 
                 <script>
