@@ -320,9 +320,11 @@ def file(id):
 
     editfileform = FileEditForm()
     if f.dataset != None:
-        editfileform.paired_partner.choices = [(x.id, x.name) for x in f.dataset.files if ((x.user_id != None))]
+        editfileform.paired_partner.choices = [(x.id, x.name) for x in f.dataset.files if ((x.user_id != None) and (x.name != f.name))]
+        editfileform.paired_partner.choices.append((0, None))
     else:
-        editfileform.paired_partner.choices = [(x.id, x.name) for x in f.user.files if ((x.user_id != None) and (x.dataset == None))]
+        editfileform.paired_partner.choices = [(x.id, x.name) for x in f.user.files if ((x.user_id != None) and (x.dataset == None) and (x.name != f.name))]
+        editfileform.paired_partner.choices.append((0, None))
 
     if editfileform.validate_on_submit():
         f.name = editfileform.name.data
@@ -331,6 +333,11 @@ def file(id):
 
             if f2.id == editfileform.paired_partner.id:
                 flash('Edited ' + f.name, 'success')
+            elif editfileform.paired_partner.data is 0:
+                f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
+                f2.paired_partner = None
+                f.paired_partner = None
+                flash('Removed partner', 'success')
             else:
                 f.paired_partner = editfileform.paired_partner.data
                 f3 = db.session.query(File).filter(File.id==f.paired_partner).first()
