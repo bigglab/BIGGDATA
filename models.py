@@ -51,6 +51,7 @@ from pymongo import MongoClient
 import pymongo
  
 from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.orm.collections import attribute_mapped_collection
 
 
 #Local Imports 
@@ -291,10 +292,21 @@ class Project(db.Model):
 
         # establish a relationship to the association table
         users = association_proxy('project_users', 'user')
+        read_only_users = association_proxy('project_users', '_read_only_users')
+
         #users = db.relationship('User', secondary = 'user_projects', back_populates = 'projects' )
 
         def __repr__(self): 
             return "<  Project {}:  {}   :   {}    >".format(self.id, self.project_name, self.description)
+
+        def date_string(self):
+            try:
+                dt = datetime.strptime(str(self.creation_date), "%Y-%m-%d %H:%M:%S.%f")
+                #dt = project.creation_date
+                dt_str =  dt.strftime("%Y-%m-%d")
+            except:
+                dt_str = None
+            return dt_str
 
 class UserProjects (db.Model):
     __tablename__ = 'user_project'
@@ -309,6 +321,7 @@ class UserProjects (db.Model):
 
     
     user = db.relationship(User, backref = db.backref("user_projects"))
+    _read_only_users = db.relationship(User, primaryjoin="and_(UserProjects.read_only=='TRUE', UserProjects.user_id == User.id)")
 
     # Orphan projects (i.e., projects with no owner OR person with read-only access) are deleted
     project = db.relationship(Project, backref = db.backref("project_users", cascade="all, delete-orphan"))
@@ -317,8 +330,9 @@ class UserProjects (db.Model):
         self.user = user
         self.project = project
         self.read_only = read_only
-                
-
+    
+    #def make_read_only (self, user_id):
+    #    pass
 # The following fields are from the the GSAF JSON
 # "LAB_NOTEBOOK_SOURCE": "", 
 #                     "SEQUENCING_SUBMISSION_NUMBER": [], 

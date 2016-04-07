@@ -1,5 +1,10 @@
 {% extends '_base.html' %}
 
+{% block scripts %}
+    {{super()}}
+    <script src="/static/js/jquery.multi-select.js"></script>
+{% endblock scripts %}
+
 {% block content %}
 
 <div class="container">
@@ -49,12 +54,32 @@
                 {{ create_project_form.description(class_="form-control", rows = '5 ') }} <br/>
             </div>
             <div class="col-sm-4">
+                <!--<label>Users who Can Edit</label>-->
+                {{ create_project_form.editors.label }}
+                {{ create_project_form.editors(class_="form-control", rows = '5', multiple='multiple') }} <br/>
+                <script>
+                    $('#editors').multiSelect({
+                        selectableHeader: "Grant Access",
+                        selectionHeader: "Deny Access"
+                    })
+                </script>
+                <noscript>To edit users, You must enable JavaScript.</noscript>
             </div>
 
             <div class="col-sm-4">
+                {{ create_project_form.viewers.label }}
+                {{ create_project_form.viewers(class_="form-control", rows = '5', multiple='multiple') }} 
+                <script>
+                    $('#viewers').multiSelect({
+                        selectableHeader: "Grant Access",
+                        selectionHeader: "Deny Access"
+                    })
+                </script>
+                <noscript>To edit users, You must enable JavaScript.</noscript>
             </div>
 
         </div>
+
         <button type="submit" class="btn btn-default">Submit</button>    
     </form>
 
