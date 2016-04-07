@@ -23,16 +23,16 @@
 
         <div class='row'>
 
-            <div class="col-sm-4">
+            <div class="col-md-4">
                 {{ view_project_form.project_name.label }}<br/>
                 {{ view_project_form.project_name.data }}<br/>
             </div>
-            <div class="col-sm-4">
+            <div class="col-md-4">
                 {{ view_project_form.lab.label }}<br/>
                 {{ view_project_form.lab.data }}<br/>
             </div>
 
-            <div class="col-sm-4">
+            <div class="col-md-4">
                 {{ view_project_form.publications.label }}<br/>
                 {{ view_project_form.publications.data }}<br/>
             </div>
@@ -41,34 +41,48 @@
         <br/>
         <div class='row'>
 
-            <div class="col-sm-4">
+            <div class="col-md-4">
                 {{ view_project_form.cell_types_sequenced.label }}<br/>
                 {{ view_project_form.cell_types_sequenced.data }}<br/>
             </div>
-            <div class="col-sm-4">
+            <div class="col-md-4">
                 {{ view_project_form.species.label }}<br/>
                 {{ view_project_form.species.data }}<br/>
             </div>
-            <div class="col-sm-4">
+            <div class="col-md-4">
                 <label>Creation Date</label><br/>
                 {{ creation_date }}<br/>
             </div>
 
-            <div class="col-sm-4">
+            <div class="col-md-4">
             </div>
         </div>
         <br/>
         <br/>
         <div class='row'>
-
-            <div class="col-sm-4">
+            <div class="col-md-4">
+                <label>Owner</label><br/>
+                {{owner}}<br/>
+                <br/>
                 {{ view_project_form.description.label }}<br/>
                 {{ view_project_form.description.data }} <br/>
             </div>
-            <div class="col-sm-4">
+            <div class="col-md-4">
+                {% if write_user_list %}
+                    <label>Users</label><br/>
+                    {% for name in write_user_list %}
+                        {{name}}<br/>
+                    {% endfor %}
+                {% endif %}
             </div>
 
-            <div class="col-sm-4">
+            <div class="col-md-4">
+                {% if read_only_list %}
+                    <label>Read-Only Access</label><br/>
+                    {% for name in read_only_list %}
+                        {{name}}<br/>
+                    {% endfor %}
+                {% endif %}
             </div>
 
         </div>
