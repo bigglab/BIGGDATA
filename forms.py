@@ -96,8 +96,9 @@ class CreateProjectForm(Form):
         cell_types_sequenced = TextField('Cell Types Sequenced', [validators.length(max=50)])        
         publications = TextField('Publications', [validators.length(max=256)])
         lab = TextField('Lab', [validators.length(max=128)], default = 'Georgiou')
-        editors = SelectMultipleField('Users Who Can Edit')
-        viewers = SelectMultipleField('Users Who Can View')
+        editors = SelectMultipleField('Users Who Can Edit', choices=[('None','None')])
+        viewers = SelectMultipleField('Users Who Can View', choices=[('None','None')])
+        datasets = SelectMultipleField('Add Datasets to Project', choices=[('None','None')])
 
         #species = TextField('Species', [validators.length(max=128)])
         species = SelectField( 'Species', choices=[('', ''), ('H. sapiens', 'H. sapiens'), ('M. musculus', 'M. musculus')] )

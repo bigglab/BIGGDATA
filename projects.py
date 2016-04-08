@@ -66,9 +66,6 @@ from models import *
 #
 # Add public user functionality --> See and example project, etc
 # Add tabs for yours, shared, and read-only 
-# 
-# print owner on the edit and view project page
-# add column for owner
 #
 # get a list of projects based on a dataset query
 # dataset.project
@@ -83,7 +80,7 @@ def manage_projects():
 
     projects = []
     read_only_projects = []
-    write_user_projects = []
+    editor_projects = []
     owner_projects = []
 
     user_projects = db.session.query(Project).filter(Project.users.contains(current_user))
@@ -91,46 +88,22 @@ def manage_projects():
     if user_projects and user_projects.count() > 0:
 
         for project in user_projects:
+            role = project.role(current_user)
 
-            if current_user in project.read_only_users:
-                read_only = True
-                role = 'Read Only'
-                read_only_projects.append((
-                    project.project_name,
-                    project.id, 
-                    project.description, 
-                    project.species, 
-                    project.cell_types_sequenced, 
-                    project.date_string(),
-                    role, 
-                    read_only ))
-            else:
+            if role == "Owner":
                 read_only = False
+                owner_projects.append((project.project_name, project.id, project.description, project.species, 
+                        project.cell_types_sequenced, project.date_string(), role, read_only ))
+            elif role == "Editor":
+                read_only = False
+                editor_projects.append((project.project_name, project.id, project.description, project.species, 
+                        project.cell_types_sequenced, project.date_string(), role, read_only ))
+            else:
+                read_only = True
+                read_only_projects.append((project.project_name, project.id, project.description, project.species, 
+                        project.cell_types_sequenced, project.date_string(), role, read_only ))
 
-                if project.user_id == current_user.id:
-                    role = 'Owner'
-                    owner_projects.append((
-                        project.project_name,
-                        project.id, 
-                        project.description, 
-                        project.species, 
-                        project.cell_types_sequenced, 
-                        project.date_string(),
-                        role, 
-                        read_only ))
-                else:
-                    role = 'User'
-                    write_user_projects.append((
-                        project.project_name,
-                        project.id, 
-                        project.description, 
-                        project.species, 
-                        project.cell_types_sequenced, 
-                        project.date_string(),
-                        role, 
-                        read_only ))
-
-    projects = owner_projects + write_user_projects + read_only_projects
+    projects = owner_projects + editor_projects + read_only_projects
     
     if len(projects) == 0:
         projects = None
@@ -143,10 +116,16 @@ def create_project():
     create_project_form = CreateProjectForm()
 
     # also need to wrap this with some exception handling in case this query fails
-    users = db.session.query(User).filter(User.id != current_user.id)
-    user_choices = [(str(user.id), user.first_name + " " + user.last_name) for user in users]
+    users = Set(db.session.query(User).filter(User.id != current_user.id))
+    users.discard(None)
+    user_choices = [(str(user.id), user.name) for user in users]
     create_project_form.editors.choices = user_choices # choices should be a tuple (str(id), username)
     create_project_form.viewers.choices = user_choices 
+
+    datasets = Set(current_user.datasets)
+    datasets.discard(None)
+    dataset_choices = [(str(dataset.id), dataset.name + ' (' + str(dataset.id) + ')' ) for dataset in datasets]
+    create_project_form.datasets.choices = dataset_choices # choices should be a tuple (id, username)
 
     if create_project_form.validate_on_submit():
 
@@ -180,6 +159,13 @@ def create_project():
         # user editor list is now a list of editors and viewers, so set the association proxy accordingly
         new_project.users = user_access_list
 
+        # add selected datasets to the project
+        dataset_selection = []
+        for dataset in datasets:
+            if str(dataset.id) not in create_project_form.datasets.data:
+                dataset_selection.append(dataset)
+        new_project.datasets = dataset_selection
+
         db.session.add(new_project)
         db.session.flush()
 
@@ -203,56 +189,63 @@ def create_project():
     else:
         flash_errors(create_project_form)
 
-
     defaults = [(str(user.id)) for user in users]
     create_project_form.editors.data = defaults # defaults should be a list [str(id)]
     create_project_form.viewers.data = defaults 
 
+    dataset_defaults = [(str(dataset.id)) for dataset in datasets]
+    create_project_form.datasets.data = dataset_defaults 
+
     return render_template("create_project.html", create_project_form = create_project_form)
 
-@projects_blueprint.route('/edit_project', methods=['POST'])
+@projects_blueprint.route('/edit_project/<project_id>', methods=['GET','POST'])
 @login_required
-def edit_project():
+def edit_project(project_id):
     edit_project_form = CreateProjectForm()
 
     try:
-        project_id = request.form['id']
-
         # first, determine if the project exists, and if the user has permission to edit it
-        project_query = db.session.query(Project).filter(Project.project_users.any(read_only = 'FALSE')). \
-                                                     filter(Project.users.contains(current_user)). \
-                                                     filter(Project.id==project_id)
+        project_query = db.session.query(Project).filter(Project.id==project_id)
+        
+        if project_query and project_query.count() > 0:
+            project = project_query[0]
+        else:
+            flash('Error: there was an error attempting to edit that project.', 'warning')
+            return redirect( url_for('projects.manage_projects') )
     except:
         flash('Error: there was an error attempting to edit that project.', 'warning')
-        return redirect( url_for('projects.manage_projects') )
+        return redirect( url_for('projects.manage_projects') )        
 
-    if project_query and project_query.count() > 0:
-        project = project_query[0]
-    else:
-        project = None
+    if not project or current_user in project.readers or (current_user != project.owner and current_user not in project.editors):
+        flash('Error: you do not have permission to edit that project.', 'warning')
+        return redirect( url_for('projects.manage_projects') )        
 
     editor_defaults = []
     viewer_defaults = []
 
-    # need to add a restriction that prevents users from removing owner's write access
-    users = db.session.query(User). \
+    # Set of users, not including current user or project owner
+    users = Set(db.session.query(User). \
             filter(User.id != current_user.id). \
-            filter(User.id != project.user_id)
+            filter(User.id != project.user_id))
+    users.discard(None)
 
-    user_choices = [(str(user.id), user.first_name + " " + user.last_name) for user in users]
+    user_choices = [(str(user.id), user.name) for user in users]
     edit_project_form.editors.choices = user_choices # choices should be a tuple (id, username)
     edit_project_form.viewers.choices = user_choices # choices should be a tuple (id, username)
+
+    datasets = Set(current_user.datasets)
+    datasets.discard(None)
+
+    dataset_choices = [(str(dataset.id), dataset.name + ' (' + str(dataset.id) + ')' ) for dataset in datasets]
+    edit_project_form.datasets.choices = dataset_choices # choices should be a tuple (id, username)
 
     owner = None
 
     if project:
-        for user in project.users:
-            if user.id == project.user_id:
-                    owner = user.first_name + " " + user.last_name
-
-        if request.form['submit'] == 'Edit':
+        owner = project.owner.name
+        
+        if request.method == 'GET':
             for user in users:
-                
                 if user not in project.read_only_users:
                     viewer_defaults.append(str(user.id))
                 else: # the user is in the read_only list, so they have to be taken off the editor list
@@ -261,6 +254,12 @@ def edit_project():
                 if user not in project.users:
                     editor_defaults.append(str(user.id))
             
+            # this places datasets not attached to the current project on the right side of the multiselect
+            edit_project_form.datasets.data = []
+            for dataset in datasets:
+                if dataset not in project.datasets:
+                    edit_project_form.datasets.data.append(str(dataset.id))
+
             # populate select fields with user names
             edit_project_form.editors.data = editor_defaults # default should be a list of ids NOT SELECTED
             edit_project_form.viewers.data = viewer_defaults # default should be a list of ids NOT SELECTED
@@ -281,6 +280,7 @@ def edit_project():
                 user_access_list = []
                 user_read_list = []
 
+                # determine which users are selected as editors or readers (editor selection trumps reader selection)
                 for user in users:
                     if str(user.id) not in edit_project_form.editors.data:
                         user_access_list.append(user)
@@ -298,6 +298,7 @@ def edit_project():
 
                 project.users = user_access_list
 
+                # Change the read only setting for selected read only users
                 for user in user_read_list:
                     try: 
                         read_only_user_project = db.session.query(UserProjects). \
@@ -306,6 +307,22 @@ def edit_project():
                         read_only_user_project[0].read_only = True
                     except:
                         print "Error setting read_only attribute for {}".format(user)
+
+                # Detmine which datasets are selected and add them to the databse
+                dataset_selection = []
+
+                # first, if another user has their datasets in the project, keep them there!
+                project_datasets = Set(project.datasets)
+                project_datasets.discard(None)
+                for dataset in project_datasets:
+                    if dataset.user_id != current_user.id:
+                        dataset_selection.append(dataset)
+
+                # now, add the datasets selected by the user
+                for dataset in datasets:
+                    if str(dataset.id) not in edit_project_form.datasets.data:
+                        dataset_selection.append(dataset)
+                project.datasets = dataset_selection
 
                 # Still need to test for duplicate names
                 # update the database with the data, then redirect
@@ -339,15 +356,14 @@ def edit_project():
 
     return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id)
 
-@projects_blueprint.route('/view_project', methods=['POST'])
+@projects_blueprint.route('/view_project/<project_id>', methods=['GET', 'POST'])
 @login_required
-def view_project():
+def view_project(project_id):
 
     view_project_form = CreateProjectForm()
 
     # first, make sure the user has access to the project
     try:
-        project_id = request.form['id']
         project_query = db.session.query(Project). \
                             filter(Project.id == project_id). \
                             filter(Project.users.contains(current_user))
@@ -361,10 +377,7 @@ def view_project():
         flash('Error: there was an error attempting to view that project.','warning')
         return redirect( url_for('projects.manage_projects') )
 
-    if current_user in project.read_only_users:
-        read_only = True
-    else:
-        read_only = False
+    read_only = current_user in project.read_only_users
 
     view_project_form.project_name.data = project.project_name
     view_project_form.description.data = project.description
@@ -374,23 +387,13 @@ def view_project():
     view_project_form.lab.data = project.lab
     creation_date = project.date_string()
 
-    owner = None
-    user_list = Set([])
-    read_only_list = Set([])
+    owner = project.owner.name
+    write_user_list = [user.name for user in project.editors]
+    read_only_list = [user.name for user in project.readers]
 
-    # Create a list of users with read-only and write access
-    for user in project.users:
-        if user:
-            if user.id == project.user_id: 
-                owner = user.first_name + " " + user.last_name
-            else:
-                user_list.add(user.first_name + " " + user.last_name)
-    for user in project.read_only_users:
-        if user: 
-            read_only_list.add(user.first_name + " " + user.last_name)
-
-    write_user_list = user_list - read_only_list
-
+    datasets = Set(project.datasets)
+    datasets.discard(None)
+    dataset_list = [(dataset.name + ' (' + str(dataset.id) + ')',dataset.owner.name) for dataset in datasets]
 
     return render_template("view_project.html", 
         view_project_form = view_project_form, 
@@ -399,6 +402,7 @@ def view_project():
         creation_date = creation_date,
         owner = owner,
         read_only_list = read_only_list,
-        write_user_list = write_user_list)
+        write_user_list = write_user_list,
+        dataset_list = dataset_list)
 
 

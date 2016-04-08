@@ -10,9 +10,9 @@
 <div class="container">
 
     <h1>Edit Project</h1>
-    <p>Please edit the information about your project below. After you are done updating, you may <a href="{{url_for('projects.manage_projects')}}">click here</a> to return.</p>
+    <p>Please edit the information about your project below. You must press the "Submit" button to save changes.
     <br>
-    <form method="POST" action="{{url_for('projects.edit_project')}}">
+    <form method="POST" action="{{url_for('projects.edit_project', project_id = project_id)}}">
         
         {{ edit_project_form.hidden_tag() }}
 
@@ -55,6 +55,20 @@
                 <br/>
                 {{ edit_project_form.description.label }}<br/>
                 {{ edit_project_form.description(class_="form-control", rows = '5', multiple='multiple') }} <br/>
+                <br/>
+                <input type='hidden' name='submit' value="Update">
+                <button type="submit" value="submit" class="btn btn-default">Update</button>
+            </div>
+            <div class="col-md-4">
+                {{ edit_project_form.datasets.label }}
+                {{ edit_project_form.datasets(class_="form-control", rows = '5', multiple='multiple') }} <br/>
+                <script>
+                    $('#datasets').multiSelect({
+                        selectableHeader: "Add to Project",
+                        selectionHeader: "Not in Project"
+                    })
+                </script>
+                <noscript>To edit users, You must enable JavaScript.</noscript>
             </div>
             <div class="col-md-4">
                 {{ edit_project_form.editors.label }}
@@ -65,9 +79,7 @@
                         selectionHeader: "Deny Access"
                     })
                 </script>
-                <noscript>To edit users, You must enable JavaScript.</noscript>
-            </div>
-            <div class="col-md-4">
+                <br/>
                 {{ edit_project_form.viewers.label }}
                 {{ edit_project_form.viewers(class_="form-control", rows = '5', multiple='multiple') }} 
                 <script>
@@ -76,15 +88,11 @@
                         selectionHeader: "Deny Access"
                     })
                 </script>
+
                 <noscript>To edit users, You must enable JavaScript.</noscript>
             </div>
 
-        </div>
-        <input type='hidden' name='id' value="{{project_id}}">
-        <input type='hidden' name='submit' value="Update">
-
-        <button type="submit" value="submit" class="btn btn-default">Update</button>
-        
+        </div>        
     </form>
 
 </div>
