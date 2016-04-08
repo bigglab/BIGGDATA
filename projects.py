@@ -83,7 +83,7 @@ def manage_projects():
     editor_projects = []
     owner_projects = []
 
-    user_projects = db.session.query(Project).filter(Project.users.contains(current_user))
+    user_projects = db.session.query(Project).filter(Project.users.contains(current_user)).order_by(Project.id)
 
     if user_projects and user_projects.count() > 0:
 
@@ -118,12 +118,14 @@ def create_project():
     # also need to wrap this with some exception handling in case this query fails
     users = Set(db.session.query(User).filter(User.id != current_user.id))
     users.discard(None)
+    users = sorted(users, key=lambda x: x.last_name, reverse=False)
     user_choices = [(str(user.id), user.name) for user in users]
     create_project_form.editors.choices = user_choices # choices should be a tuple (str(id), username)
     create_project_form.viewers.choices = user_choices 
 
     datasets = Set(current_user.datasets)
     datasets.discard(None)
+    datasets = sorted(datasets, key=lambda x: x.id, reverse=False)
     dataset_choices = [(str(dataset.id), dataset.name + ' (' + str(dataset.id) + ')' ) for dataset in datasets]
     create_project_form.datasets.choices = dataset_choices # choices should be a tuple (id, username)
 
@@ -192,7 +194,6 @@ def create_project():
     defaults = [(str(user.id)) for user in users]
     create_project_form.editors.data = defaults # defaults should be a list [str(id)]
     create_project_form.viewers.data = defaults 
-
     dataset_defaults = [(str(dataset.id)) for dataset in datasets]
     create_project_form.datasets.data = dataset_defaults 
 
@@ -228,6 +229,7 @@ def edit_project(project_id):
             filter(User.id != current_user.id). \
             filter(User.id != project.user_id))
     users.discard(None)
+    users = sorted(users, key=lambda x: x.last_name, reverse=False)
 
     user_choices = [(str(user.id), user.name) for user in users]
     edit_project_form.editors.choices = user_choices # choices should be a tuple (id, username)
@@ -235,6 +237,7 @@ def edit_project(project_id):
 
     datasets = Set(current_user.datasets)
     datasets.discard(None)
+    datasets = sorted(datasets, key=lambda x: x.id, reverse=False)
 
     dataset_choices = [(str(dataset.id), dataset.name + ' (' + str(dataset.id) + ')' ) for dataset in datasets]
     edit_project_form.datasets.choices = dataset_choices # choices should be a tuple (id, username)
@@ -388,11 +391,13 @@ def view_project(project_id):
     creation_date = project.date_string()
 
     owner = project.owner.name
-    write_user_list = [user.name for user in project.editors]
-    read_only_list = [user.name for user in project.readers]
+    write_user_list = [user.name for user in sorted(project.editors, key=lambda x: x.last_name, reverse=False)]
+    read_only_list = [user.name for user in sorted(project.readers, key=lambda x: x.last_name, reverse=False)]
 
     datasets = Set(project.datasets)
     datasets.discard(None)
+    datasets = sorted(datasets, key=lambda x: x.id, reverse=False)
+
     dataset_list = [(dataset.name + ' (' + str(dataset.id) + ')',dataset.owner.name) for dataset in datasets]
 
     return render_template("view_project.html", 
