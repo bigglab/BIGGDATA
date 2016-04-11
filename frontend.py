@@ -7,6 +7,7 @@ import time
 import random
 from shutil import copyfile
 import operator
+from sets import Set
 # import urllib
 os.environ['http_proxy']=''
 import urllib2
@@ -338,6 +339,19 @@ def datasets():
     datasets = current_user.datasets.all()
     datadict = get_user_dataset_dict(current_user)
     form = CreateDatasetForm()
+
+    projects = Set(current_user.projects)
+    projects.discard(None)
+    projects = sorted(projects, key=lambda x: x.id, reverse=False)
+    project_tuples = []
+
+    if len(projects) > 0:
+        for project in projects:
+            if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
+                project_tuples.append( (str(project.id), project.project_name))
+        if len(project_tuples) > 0:
+            form.project.choices = project_tuples
+
     if request.method == 'POST':
         if form.name.data: 
             d = Dataset() 
@@ -345,8 +359,38 @@ def datasets():
             d.description = form.description.data
             d.paired = form.paired.data 
             d.ig_type = form.ig_type.data 
-            d.user_id = current_user.id 
+            d.user_id = current_user.id
+
             db.session.add(d)
+            db.session.flush()
+
+            # check if the user has selected the default project (i.e., the user has no projects)
+            if form.project.data == 'default':
+                # if the user has no projects, add one
+                if len(projects) != 0:
+                    # really shouldn't get here, if the user has projects, add it to the first one (sorted by id#)
+                    for project in projects:
+                        if project.role(current_user) == 'Owner':
+                            project.datasets.append(d)
+                            db.session.commit()
+                            return redirect(url_for('.datasets'))
+                # create a new project here with the name default, add the user and dataset to the new project
+                new_project = Project(user_id = current_user.id, project_name = 'Default')
+                db.session.add(new_project)
+                db.session.flush()
+                new_project.users = [current_user]
+                new_project.datasets = [d]
+                db.session.commit()
+                return redirect(url_for('.datasets'))
+            else: # check if the user has selected a project which they have access to
+                for project in projects:
+                    if str(project.id) == form.project.data:
+                        if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
+                            project.datasets.append(d)
+                            db.session.commit()
+                            return redirect(url_for('.datasets'))
+                flash('Error: you do not have permission to add a dataset to that project.','warning')
+                return redirect(url_for('.datasets'))
             db.session.commit()
         return redirect(url_for('.datasets')) # render_template("datasets.html", datadict=datadict, form=Form())
     else: 
