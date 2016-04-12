@@ -25,14 +25,7 @@
                 {% for name, id, description, species, cells, created, role, read_only in projects %}
                     <tr>
                         <th>                                
-                            <form method=post action="{{url_for('projects.view_project')}}" name = 'view_{{id}}'>
-                                {{ edit_project_form.hidden_tag() }}
-                                <input type='hidden' name='id' value="{{id}}">
-                                <a href="#" onclick="document.forms['view_{{id}}'].submit();">{{name}}</a>
-                                <noscript>
-                                     <input type="submit" name ='submit' value='{{name}}'>
-                                </noscript>
-                            </form>
+                            <a href="{{url_for('projects.view_project', project_id = id)}}">{{name}}</a>
                         </th>
                         <th id="ellipsis" class="wide30">{{description}}</th>
                         <th>{{species}}</th>
@@ -42,10 +35,8 @@
                             {% if read_only %}
 
                             {% else %}
-                                <form method=post action="{{url_for('projects.edit_project')}}">
-                                    {{ edit_project_form.hidden_tag() }}
-                                    <input type='hidden' name='id' value="{{id}}">
-                                    <input type='submit' name='submit' value="Edit">
+                                <form method="get" action="{{url_for('projects.edit_project', project_id = id)}}">
+                                    <input type='submit' value="Edit">
                                 </form>
                             {% endif %}
                             
