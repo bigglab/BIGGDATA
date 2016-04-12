@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    
+
+
+    <title>BIGG DATA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap -->
+    <link href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+    <link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/static/main.css">
+    <!--   
+        <script type="text/javascript" src="/igrep_assets/scripts/igrep.script.tools.js"></script>     
+        <script src="http://russelldurrett.com/jquery-1.11.3.min.js"></script>
+        <script src="http://russelldurrett.com/jquery-2.1.4.min.js"></script>
+     -->
+
+    <!--
+        <link rel="stylesheet" type="text/css" href="/igrep_assets/styles/dashboard.css">   
+        <link rel="stylesheet" type="text/css" href="/igrep_assets/styles/immunogrep_stylesheet.css">   
+     -->
+
+    <!--[if lt IE 9]>
+          <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.2/html5shiv.min.js"></script>
+          <script src="//cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+<script src="/static/typeahead.bundle.js"></script> -->
+<!-- <link rel="shortcut icon" href="http://biggdata.rsldrt.com/static/icons/bigg_data_logo.ico">-->
+<link rel="icon" type="image/png" href="http://biggdata.rsldrt.com/static/icons/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" type="image/png" href="http://biggdata.rsldrt.com/static/icons/favicon-16x16.png" sizes="16x16" />
+
+ 
+    
+    <!--[if lt IE 9]>
+          <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.2/html5shiv.min.js"></script>
+          <script src="//cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+    <script src="/static/typeahead.bundle.js"></script>
+    <script src="https://cdn.datatables.net/1.10.11/js/jquery.dataTables.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/js/bootstrap.min.js"></script>
+
+	<link rel="stylesheet" href="/static/jquery.dataTables.min.css">
+
+  </head>
+  <body>
+    
+    
+     
+        <nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button aria-controls="navbar" aria-expanded="false" class="navbar-toggle collapsed" data-target="#50942f84af9af5f314a4e6782a6e16cef7ed57ab" data-toggle="collapse" type="button">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="/">BIGG DATA</a>
+    </div>
+    <div class="navbar-collapse collapse" id="50942f84af9af5f314a4e6782a6e16cef7ed57ab">
+      <ul class="nav navbar-nav">
+        <li>
+          <a href="/" title="Home">Home</a>
+        </li>
+        <li class="dropdown">
+          <a aria-expanded="false" aria-haspopup="true" class="dropdown-toggle" data-toggle="dropdown" href="#" role="button">Login
+            <span class="caret"></span>
+          </a>
+          <ul class="dropdown-menu">
+            <li>
+              <a href="/login" title="Login">Login</a>
+            </li>
+            <li>
+              <a href="/logout" title="Logout">Logout</a>
+            </li>
+          </ul>
+        </li>
+        <li class="dropdown">
+          <a aria-expanded="false" aria-haspopup="true" class="dropdown-toggle" data-toggle="dropdown" href="#" role="button">Files
+            <span class="caret"></span>
+          </a>
+          <ul class="dropdown-menu">
+            <li>
+              <a href="/files" title="My Files">My Files</a>
+            </li>
+            <li>
+              <a href="/file_download" title="Import File">Import File</a>
+            </li>
+            <li>
+              <a href="/files/import_sra" title="Import From NCBI">Import From NCBI</a>
+            </li>
+          </ul>
+        </li>
+        <li class="active">
+          <a aria-expanded="false" aria-haspopup="true" class="dropdown-toggle" data-toggle="dropdown" href="#" role="button">Run Analysis
+            <span class="caret"></span>
+          </a>
+          <ul class="dropdown-menu">
+            <li class="active">
+              <a href="/datasets" title="My Datasets">My Datasets</a>
+            </li>
+            <li>
+              <a href="/analysis" title="My Analyses">My Analyses</a>
+            </li>
+            <li>
+              <a href="/vdjviz" title="VDJ VIZualizer">VDJ VIZualizer</a>
+            </li>
+            <li>
+              <a href="under_construction">Other Tasks</a>
+            </li>
+          </ul>
+        </li>
+        <li class="dropdown">
+          <a aria-expanded="false" aria-haspopup="true" class="dropdown-toggle" data-toggle="dropdown" href="#" role="button">Database
+            <span class="caret"></span>
+          </a>
+          <ul class="dropdown-menu">
+            <li>
+              <a href="/manage_projects" title="Manage Projects">Manage Projects</a>
+            </li>
+            <li>
+              <a href="/browse_sequences" title="Browse Sequences">Browse Sequences</a>
+            </li>
+            <li>
+              <a href="under_construction">Download Lots of Data</a>
+            </li>
+            <li>
+              <a href="under_construction">Download For Mass Spec</a>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <a href="/analysis" title="Dashboard">Dashboard</a>
+        </li>
+        <li class="dropdown">
+          <a aria-expanded="false" aria-haspopup="true" class="dropdown-toggle" data-toggle="dropdown" href="#" role="button">Documentation
+            <span class="caret"></span>
+          </a>
+          <ul class="dropdown-menu">
+            <li>
+              <a href="/developers/overview" title="BIGG DATA Overview">BIGG DATA Overview</a>
+            </li>
+            <li>
+              <a href="/developers/schema" title="BIGG DB Schema">BIGG DB Schema</a>
+            </li>
+            <li class="divider" role="separator"></li>
+            <li class="dropdown-header">External Docs</li>
+            <li>
+              <a href="http://pythonhosted.org/Flask-Bootstrap">Flask-Bootstrap</a>
+            </li>
+            <li>
+              <a href="https://github.com/mbr/flask-appconfig">Flask-AppConfig</a>
+            </li>
+            <li>
+              <a href="https://github.com/mbr/flask-debug">Flask-Debug</a>
+            </li>
+            <li class="divider" role="separator"></li>
+            <li class="dropdown-header">Bootstrap</li>
+            <li>
+              <a href="http://getbootstrap.com/getting-started/">Getting started</a>
+            </li>
+            <li>
+              <a href="http://getbootstrap.com/css/">CSS</a>
+            </li>
+            <li>
+              <a href="http://getbootstrap.com/components/">Components</a>
+            </li>
+            <li>
+              <a href="http://getbootstrap.com/javascript/">Javascript</a>
+            </li>
+            <li>
+              <a href="http://getbootstrap.com/customize/">Customize</a>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <a href="https://github.com/russelldurrett/BIGGDATA">Powered by Python and Flask</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+    
+
+    <a class="sr-only" href="#content">Skip To Content</a>
+
+    
+        <nav role="navigation"></nav>
+    
+
+
+    
+        <div class = 'container'>
+            
+                
+            
+        </div>
+    
+
+
+    
+    
+
+
+    <section id="content">
+        <div class="container">
+            <div class="row">
+                <div id="main-content" class="col-md-8">
+                    
+	<div class="container">
+		    <form method="POST" action="/datasets">
+		    <table class='table table-striped'> 
+			    <thead>
+				    <h4>Create A New Dataset:</h4>
+				    <tr>
+					    <!-- <th><input id="csrf_token" name="csrf_token" type="hidden" value="1460480882##3ef2e656ec02f11f4a55439dcee8511ac59417ce"></th> -->
+				    	<th><label for="name">Name</label>:</th>
+				    	<th>Description (Ig Type, Cell Sorting Marker, etc):</th>
+				    	<th><label>Add to Project:</label></th>
+				    	<th><label>Pairing:</label></th>
+				    	<th></th>
+					</tr>
+			    </thead>
+				<tbody>
+				    <tr>
+    			        <!-- <th></th> -->
+    			        <th><input class="form-control" id="name" name="name" size="15" type="text" value=""></th>
+    			        <th><input class="form-control" id="description" name="description" size="15" type="text" value=""></th>
+    			        <!-- <th>Ig Type: <input id="ig_type" name="ig_type" size="10" type="text" value=""></th> -->
+    			        <th><select class="form-control" id="project" name="project"><option value="1">Project 1</option><option value="2">Project 2</option><option value="3">Project 3</option><option value="4">Project 4</option><option value="9">Project 5</option></select></th>
+    			        <th>Expect VH/VL Paired Data? : <input id="paired" name="paired" type="checkbox" value="y"></th>
+    			        <th><input type="submit" value="Submit"></th>
+    		        </tr>
+		        </tbody>
+	            </table>
+		    </form>
+	</div>
+
+
+<br>
+<div class="container">
+    <h4>Existing Datasets:</h4>
+	<table id="datasets" class="display" cellspacing="0" width="100%">
+		<thead>
+			<tr>
+				<th> </th>
+				<th>Datasets</th>
+				<th>Name</th>
+				<th>Description</th>
+				<th>IG Type</th>
+				<th>VDJ+VJ Paired</th>
+				<th>Run Analysis</th>
+			</tr>
+		</thead>
+		<tbody>
+			
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/114">114</a></td>
+					<td><a href="/datasets/114">Test Dataset</a></td>
+					<td></td>
+					<td></td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/114">MIXCR</a> <a href="/analysis/pandaseq/114">PANDASEQ</a></td>
+				</tr>
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/114">114</a></td>
+					<td><a href="/datasets/114">Test Dataset</a></td>
+					<td></td>
+					<td></td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/114">MIXCR</a> <a href="/analysis/pandaseq/114">PANDASEQ</a></td>
+				</tr>
+
+			
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/109">109</a></td>
+					<td><a href="/datasets/109">SRR1525443</a></td>
+					<td>Dataset generated from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/109">MIXCR</a> <a href="/analysis/pandaseq/109">PANDASEQ</a></td>
+				</tr>
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/109">109</a></td>
+					<td><a href="/datasets/109">SRR1525443</a></td>
+					<td>Dataset generated from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/109">MIXCR</a> <a href="/analysis/pandaseq/109">PANDASEQ</a></td>
+				</tr>
+
+			
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/108">108</a></td>
+					<td><a href="/datasets/108">SRR1525443</a></td>
+					<td>autogen dataset from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/108">MIXCR</a> <a href="/analysis/pandaseq/108">PANDASEQ</a></td>
+				</tr>
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/108">108</a></td>
+					<td><a href="/datasets/108">SRR1525443</a></td>
+					<td>autogen dataset from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/108">MIXCR</a> <a href="/analysis/pandaseq/108">PANDASEQ</a></td>
+				</tr>
+
+			
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/107">107</a></td>
+					<td><a href="/datasets/107">SRR1525443</a></td>
+					<td>autogen dataset from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/107">MIXCR</a> <a href="/analysis/pandaseq/107">PANDASEQ</a></td>
+				</tr>
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/107">107</a></td>
+					<td><a href="/datasets/107">SRR1525443</a></td>
+					<td>autogen dataset from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/107">MIXCR</a> <a href="/analysis/pandaseq/107">PANDASEQ</a></td>
+				</tr>
+
+			
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/106">106</a></td>
+					<td><a href="/datasets/106">SRR1525443</a></td>
+					<td>autogen dataset from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/106">MIXCR</a> <a href="/analysis/pandaseq/106">PANDASEQ</a></td>
+				</tr>
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/106">106</a></td>
+					<td><a href="/datasets/106">SRR1525443</a></td>
+					<td>autogen dataset from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/106">MIXCR</a> <a href="/analysis/pandaseq/106">PANDASEQ</a></td>
+				</tr>
+
+			
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/104">104</a></td>
+					<td><a href="/datasets/104">SRR1525443</a></td>
+					<td>autogen dataset from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/104">MIXCR</a> <a href="/analysis/pandaseq/104">PANDASEQ</a></td>
+				</tr>
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/104">104</a></td>
+					<td><a href="/datasets/104">SRR1525443</a></td>
+					<td>autogen dataset from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/104">MIXCR</a> <a href="/analysis/pandaseq/104">PANDASEQ</a></td>
+				</tr>
+
+			
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/103">103</a></td>
+					<td><a href="/datasets/103">SRR1525474</a></td>
+					<td>autogen dataset from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/103">MIXCR</a> <a href="/analysis/pandaseq/103">PANDASEQ</a></td>
+				</tr>
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/103">103</a></td>
+					<td><a href="/datasets/103">SRR1525474</a></td>
+					<td>autogen dataset from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/103">MIXCR</a> <a href="/analysis/pandaseq/103">PANDASEQ</a></td>
+				</tr>
+
+			
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/102">102</a></td>
+					<td><a href="/datasets/102">SRR1525443</a></td>
+					<td>autogen dataset from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/102">MIXCR</a> <a href="/analysis/pandaseq/102">PANDASEQ</a></td>
+				</tr>
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/102">102</a></td>
+					<td><a href="/datasets/102">SRR1525443</a></td>
+					<td>autogen dataset from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/102">MIXCR</a> <a href="/analysis/pandaseq/102">PANDASEQ</a></td>
+				</tr>
+
+			
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/101">101</a></td>
+					<td><a href="/datasets/101">SRR1525443</a></td>
+					<td>autogen dataset from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/101">MIXCR</a> <a href="/analysis/pandaseq/101">PANDASEQ</a></td>
+				</tr>
+				<tr>
+					<td class='details-control'>+</td>
+					<td><a href="/datasets/101">101</a></td>
+					<td><a href="/datasets/101">SRR1525443</a></td>
+					<td>autogen dataset from file import</td>
+					<td>None</td>
+					
+						<td></td>
+					
+					<td><a href="/analysis/mixcr/101">MIXCR</a> <a href="/analysis/pandaseq/101">PANDASEQ</a></td>
+				</tr>
+
+			
+			
+		</tbody>
+	</table>
+</div>
+
+<script>
+// var table = $('#datasets').DataTable();
+ 
+// table.rows().every( function () {
+//     this.child( 'Row details for row: '+this.index() );
+// } );
+ 
+// $('#datasets tbody').on( 'click', 'tr', function () {
+//     var child = table.row( this ).child;
+ 
+//     if ( child.isShown() ) {
+//         child.hide();
+//     }
+//     else {
+//         child.show();
+//     }
+// } );
+
+	$(document).ready(function() {
+	    var table = $('#datasets').DataTable();
+
+	    // Add event listener for opening and closing details
+	    $('#datasets tbody').on('click', 'td.details-control', function () {
+	        var tr = $(this).closest('tr');
+
+	        var row = table.row( tr );	 
+
+	        var child = table.row( tr ).child;
+
+		    if ( child.isShown() ) {
+		        child.hide();
+		    }
+		    else {
+		        child.show();
+		    }
+	        
+	        // if ( row.child.isShown() ) {
+	        //     // This row is already open - close it
+	        //     row.child.hide();
+	        //     tr.removeClass('shown');
+	        // }
+	        // else {
+	        //     // Open this row
+	        //     //row.child( format(row.data()) ).show();
+	        //     row.child().show();
+	        //     tr.addClass('shown');
+	        // }
+	    } );
+	} );
+</script>
+
+
+
+
+
+                </div>
+
+            </div>
+            
+            
+        </div>
+    </section>
+
+
+  </body>
+</html>

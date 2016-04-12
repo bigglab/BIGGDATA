@@ -1,74 +1,117 @@
 {% extends '_base.html' %}
 
-{% block content %}
+{% block head %}
+    {{super()}}
+	<link rel="stylesheet" href="/static/jquery.dataTables.min.css">
+{% endblock head %}
 
+{% block content %}
 	<div class="container">
 		    <form method="POST" action="/datasets">
 		    <table class='table table-striped'> 
-		    <thead>
-			    <h4>Create A New Dataset:</h4>
-			    <tr>
-			    <!-- <th>{{ form.csrf_token }}</th> -->
-		    	<th>{{ form.name.label }}:</th>
-		    	<th>Description (Ig Type, Cell Sorting Marker, etc):</th>
-		    	<th><label>Add to Project:</label></th>
-		    	<th><label>Pairing:</label></th>
-		    </thead>
-			    <tr>
-		        <!-- <th></th> -->
-		        <th>{{ form.name(size=15, class="form-control") }}</th>
-		        <th>{{ form.description(size=15, class="form-control") }}</th>
-		        <!-- <th>Ig Type: {{ form.ig_type(size=10) }}</th> -->
-		        <th>{{ form.project(class="form-control") }}</th>
-		        <th>Expect VH/VL Paired Data? : {{ form.paired }}</th>
-		        <th><input type="submit" value="Submit"></th>
-	        </tr>
-        </table>
+			    <thead>
+				    <h4>Create A New Dataset:</h4>
+				    <tr>
+					    <!-- <th>{{ form.csrf_token }}</th> -->
+				    	<th>{{ form.name.label }}:</th>
+				    	<th>Description (Ig Type, Cell Sorting Marker, etc):</th>
+				    	<th><label>Add to Project:</label></th>
+				    	<th><label>Pairing:</label></th>
+				    	<th></th>
+					</tr>
+			    </thead>
+				<tbody>
+				    <tr>
+    			        <!-- <th></th> -->
+    			        <th>{{ form.name(size=15, class="form-control") }}</th>
+    			        <th>{{ form.description(size=15, class="form-control") }}</th>
+    			        <!-- <th>Ig Type: {{ form.ig_type(size=10) }}</th> -->
+    			        <th>{{ form.project(class="form-control") }}</th>
+    			        <th>Expect VH/VL Paired Data? : {{ form.paired }}</th>
+    			        <th><input type="submit" value="Submit"></th>
+    		        </tr>
+		        </tbody>
+	            </table>
 		    </form>
 	</div>
 
-{% for dataset, files in datadict.iteritems() %}
 
 <br>
 <div class="container">
-<a href="{{url_for('.dataset', id=dataset.id)}}"><h3>Dataset {{dataset.id}} </h3></a>
-	<table class="table table-striped">
+    <h4>Existing Datasets:</h4>
+	<table id="datasets" class="display" cellspacing="0" width="100%">
 		<thead>
 			<tr>
-				<th>Dataset Name</th>
+				<th class='no-sort'> </th>
+				<th>Dataset</th>
+				<th>Name</th>
 				<th>Description</th>
 				<th>IG Type</th>
 				<th>VDJ+VJ Paired</th>
-				<th>Run Analysis</th>
+				<th class='no-sort'>Run Analysis</th>
 			</tr>
 		</thead>
 		<tbody>
-			<tr>
-				<th><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></th>
-				<th>{{dataset.description}}</th>
-				<th>{{dataset.ig_type}}</th>
-				{% if dataset.paired %}
-					<th>YES</th>
-				{% else %}
-					<th></th>
-				{% endif %}
-				<th><a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">MIXCR</a> <a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a><th>
-				</tr>
+			{% for dataset, files in datadict.iteritems() %}
 				<tr>
-					{% set files = dataset.files %}
-					{% include "partials/files.html" with context %}
-				</tr>
-				<tr>
-					{% if dataset.files.all() == []%}
-						<th><a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a></th>
+					<td class='details-control'></td>
+					<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.id}}</a></td>
+					<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
+					<td>{{dataset.description}}</td>
+					<td>{{dataset.ig_type}}</td>
+					{% if dataset.paired %}
+						<td>YES</td>
+					{% else %}
+						<td></td>
 					{% endif %}
-				</tr>				
-			</tr>
+					<td><a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">MIXCR</a> <a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a></td>
+				</tr>
+			{% endfor %}
+			
 		</tbody>
 	</table>
 </div>
 
-{% endfor %}
+<script>
+	
+	var table = $('#datasets').DataTable({
+		columnDefs: [
+  		{ targets: 'no-sort', orderable: false }
+  		],
+  		order: [[ 1, 'asc' ]]
+	});
+ 
+	var table_data = [
+	{%- for dataset, files in datadict.iteritems() -%}
+		{%- if dataset.files.all() == [] -%}
+			`<a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
+		{% else %}
+			{%- set files = dataset.files -%}
+			`{%- include "partials/files.html" with context %}`,
+		{% endif %}
+	{%- endfor -%}
+		''
+	]
+
+	table.rows().every( function () {
+	    this.child( table_data[this.index()] );
+	} );
+
+	$('#datasets tbody').on( 'click', 'tr', function () {
+	    var child = table.row( this ).child;
+		var tr = $(this).closest('tr');
+	    
+	    if ( child.isShown() ) {
+	        child.hide();
+	        tr.removeClass('shown');
+	    }
+	    else {
+	        child.show();
+	        tr.addClass('shown')
+
+	    }
+	} );
+</script>
 
 
 
