@@ -1,0 +1,82 @@
+
+
+
+<div class="container">
+	<h2>Here's some data gathered directly from our database:</h2>
+</div>
+
+<br>
+
+<div class="container">
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Top 20 Unique CDR3 AA Sequences</th>
+				<th># Sequences</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for cdr3_aa, count in cdr3_aa_counts[0:20] %}
+				<tr>
+					<th>{{cdr3_aa}}</th>
+					<th>{{count}}</th>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+
+<br>
+<br>
+
+
+<div class="container">
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>20 Most Popular V Genes:</th>
+				<th># Sequences</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for v_hit, count in v_hit_counts[0:20] %}
+				<tr>
+					<th>{{v_hit}}</th>
+					<th>{{count}}</th>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+
+
+<br><br>
+
+
+<div class="container">
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>V Gene Loci Usage</th>
+				<th># Sequences</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for v_hit, count in v_hit_loci_counts %}
+				<tr>
+					<th>{{v_hit}}</th>
+					<th>{{count}}</th>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+
+
+
+
+
+
+<br>
+<br>
+
