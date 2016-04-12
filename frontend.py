@@ -396,10 +396,10 @@ def analyses(status=[]):
 @login_required
 def analysis(id):
     analysis = db.session.query(Analysis).filter(Analysis.id==id).first()
-    cdr3_aa_counts = db.engine.execute("select  cdr3_aa, count(1) from annotation a WHERE a.analysis_id = {} GROUP BY cdr3_aa ORDER BY count(1) DESC;".format(analysis.id)).fetchall()
-    v_hit_counts = db.engine.execute("select  v_top_hit, count(1) from annotation a WHERE a.analysis_id = {} GROUP BY v_top_hit ORDER BY count(1) DESC;".format(analysis.id)).fetchall()
-    v_hit_loci_counts = db.engine.execute("select  v_top_hit_locus, count(1) from annotation a WHERE a.analysis_id = {} GROUP BY v_top_hit_locus ORDER BY count(1) DESC;".format(analysis.id)).fetchall()
-    return render_template("analysis.html", analysis=analysis, cdr3_aa_counts=cdr3_aa_counts, v_hit_counts=v_hit_counts, v_hit_loci_counts=v_hit_loci_counts)
+    # cdr3_aa_counts = db.engine.execute("select  cdr3_aa, count(1) from annotation a WHERE a.analysis_id = {} GROUP BY cdr3_aa ORDER BY count(1) DESC;".format(analysis.id)).fetchall()
+    # v_hit_counts = db.engine.execute("select  v_top_hit, count(1) from annotation a WHERE a.analysis_id = {} GROUP BY v_top_hit ORDER BY count(1) DESC;".format(analysis.id)).fetchall()
+    # v_hit_loci_counts = db.engine.execute("select  v_top_hit_locus, count(1) from annotation a WHERE a.analysis_id = {} GROUP BY v_top_hit_locus ORDER BY count(1) DESC;".format(analysis.id)).fetchall()
+    return render_template("analysis.html", analysis=analysis) #, cdr3_aa_counts=cdr3_aa_counts, v_hit_counts=v_hit_counts, v_hit_loci_counts=v_hit_loci_counts)
     
 @frontend.route('/analysis/mixcr/<int:dataset_id>', methods=['GET', 'POST'])
 @login_required
