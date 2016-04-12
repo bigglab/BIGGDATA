@@ -315,10 +315,11 @@ def files(status=[], bucket=None, key=None):
 @frontend.route('/files/<int:id>', methods=['GET','POST'])
 @login_required
 def file(id):
-    f = db.session.query(File).filter(File.id==id).first()
-
 
     editfileform = FileEditForm()
+
+    f = db.session.query(File).filter(File.id==id).first()
+
     if f.dataset != None:
         editfileform.paired_partner.choices = [(x.id, x.name) for x in f.dataset.files if ((x.user_id != None) and (x.name != f.name))]
         editfileform.paired_partner.choices.append((0, None))
