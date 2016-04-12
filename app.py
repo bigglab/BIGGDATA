@@ -279,7 +279,7 @@ def get_user_dataset_dict(user):
     return datadict
 
 @celery.task 
-def import_from_sra(accession, name=None, user_id=57):
+def import_from_sra(accession, name=None, user_id=57, chain=None):
     user = db.session.query(User).filter(User.id==user_id).first()
     if not name: 
         name = accession 
@@ -299,7 +299,7 @@ def import_from_sra(accession, name=None, user_id=57):
             print 'Number of files from SRA export not one or two...'
             return False 
         print 'Writing sra output files to {}'.format(user.scratch_path)
-        dataset = import_files_as_dataset(file_paths, filename_array=filename_array, user_id=user_id, name=name)
+        dataset = import_files_as_dataset(file_paths, filename_array=filename_array, user_id=user_id, name=name, chain=chain)
         print 'Dataset from SRA Accession {} created for user {}'.format(accession, user.username) 
         return True
     else: 
