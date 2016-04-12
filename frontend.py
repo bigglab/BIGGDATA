@@ -348,6 +348,8 @@ def datasets():
             d.user_id = current_user.id 
             db.session.add(d)
             db.session.commit()
+            d.directory = current_user.scratch_path + '/Directory_' + d.id 
+            db.session.commit()
         return redirect(url_for('.datasets')) # render_template("datasets.html", datadict=datadict, form=Form())
     else: 
         return render_template("datasets.html", datadict=datadict, form=form)

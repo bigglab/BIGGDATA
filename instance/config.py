@@ -54,8 +54,7 @@ MONGO_USER = 'reader'
 MONGO_PASSWORD = 'cdrom'
 mongo_config = {"reader":"cdrom","writer":"rag1rag2","dbpath":"biotseq.icmb.utexas.edu"}
 
-
-
+IGREP_COMMON_TOOLS = '/home/russ/IGREP/common_tools'
 
 
 # OPTIONS AVAILABLE ACCORDING TO app.config.__dict__  AFTER COMPILATION 

@@ -315,6 +315,8 @@ def import_files_as_dataset(filepath_array, filename_array=None, chain=None, use
     d.chain_types_sequenced = [chain]
     db.session.add(d)
     db.session.commit()
+    d.directory = current_user.scratch_path + '/Dataset_' + d.id
+    db.session.commit()
     files = []
     for index, filepath in enumerate(filepath_array):
         f = File()
@@ -665,7 +667,7 @@ def run_trim_analysis_with_files(analysis, files):
     print 'RUNNING TRIMMAMATIC ON THESE FILES: {}'.format(files)
     scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
     basename = files[0].path.split('/')[-1].split('.')[0]
-    basepath = '{}/{}'.format(scratch_path, basename)
+    basepath = analysis.directory   #'{}/{}'.format(scratch_path, basename)
     print 'Writing output files to base name: {}'.format(basepath)
     output_files = []
     # Instantiate Source Files
@@ -777,6 +779,182 @@ def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
             db.session.commit()
     print 'Uclust job for analysis {} has been executed.'.format(analysis)
     return files_to_execute
+
+
+@celery.task
+def run_analysis(dataset_id, file_ids, analysis_type='IGFFT', analysis_name='', analysis_description='', trim=False, overlap=False, paired=False, cluster_setting=[0.85,0.9,.01]): 
+    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+    print 'RUNNING {} ANALYSIS ON DATASET ID# {}: {}'.format(analysis_type, dataset_id, repr(dataset.__dict__))
+    #CONSTRUCT AND SAVE ANALYSIS OBJECT
+    analysis = Analysis({'name': analysis_name, "description":analysis_description })
+    analysis.db_status = 'WAITING'
+    # analysis.name = analysis_name
+    # analysis.description = analysis_description
+    analysis.user_id = user_id
+    analysis.dataset_id = dataset.id
+    analysis.program = analysis_type
+    analysis.started = 'now'
+    analysis.files_to_analyze = file_ids
+    analysis.params = {}
+    analysis.status = 'QUEUED'
+    analysis.responses = []
+    analysis.available = False
+    analysis.inserted_into_db = False
+    db.session.add(analysis)
+    db.session.commit()
+    if dataset.directory:
+        analysis.directory = dataset.directory + '/Analysis_' + str(analysis.id)
+    else: 
+        analysis.directory = analysis.dataset.user.scratch_path + '/Analysis_' + str(analysis.id)
+    files = map(lambda x: db.session.query(File).filter(File.id==x).first(), file_ids)
+    
+    print 'Analysis Output Set To {}'.format(analysis.directory)
+    print 'Using these files: {}'.format(",".join(str(files)))
+    if trim:
+        print 'Running Trim on Files in Analysis {} before executing annotation'.format(analysis.id)
+        files = run_trim_analysis_with_files(analysis, files)
+    # if analysis_type == 'MIXCR': 
+    #     if overlap == True: 
+    #         print 'ABOUT TO RUN MIXCR ANALYSIS {} ON FILES'.format(repr(analysis))
+    #         run_mixcr_analysis_id_with_files(analysis.id, files)
+
+    #Execute Analysis 
+    if analysis_type == 'IGFFT':
+        files_for_analysis = [] 
+        for file in files: 
+            if file.file_type == 'GZIPPED_FASTQ': 
+                f = File()
+                f.parent_id = file.id 
+                f.path = analysis.directory + '/' + file.name.replace('.gz','')
+                f.file_type = 'FASTQ'
+                f.name =  file.name.replace('.gz', '')
+                f.command = 'gunzip -c {} > {}'.format(file.path, f.path)
+                analysis.status = 'GUNZIPPING'
+                db.session.commit()
+                response = os.command(f.command)
+                if response == 0: 
+                    f.available = TRUE 
+                    db.session.add(f)
+                    db.session.commit()
+                    files_for_analysis.append(f)
+                else: 
+                    print 'ERROR GUNZIPPING FILE {}: '.format(f.path, f.command)
+            else: 
+                files_for_analysis.append(file)
+
+        annotated_files = run_igrep_annotation_on_dataset_files(dataset, analysis, files, user_id=6, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting)
+
+
+
+def run_igrep_annotation_on_dataset_analysis_files(dataset, analysis, files, user_id=6, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]):
+    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+    print 'RUNNING IGREP IGFFT ON DATASET ID# {}: {}'.format(dataset_id, repr(dataset.__dict__))
+
+    # LOAD IGREP SCRIPTS INTO PYTHON PATH
+    sys.path.insert(0, app.config['IGREP_COMMON_TOOLS'])
+    import immunogrep_ngs_pair_tools as processing
+    import immunogrep_fastx_toolkit as fastx
+    import immunogrep_igfft_functions as igfft
+    import immunogrep_gglab_pairing as pairing
+    import immunogrep_useful_functions as useful
+
+    # Set up some default settings to run program
+    # How many threads should we use when multithreading is possible
+    number_threads = 6
+    # Trimmomatic settings: Trimmoamtic will remove low quality bases from ends of sequences using a sliding window approach
+    # Size of window in trimmomatic
+    window_trim = 5
+    # average quality of window
+    quality_cutoff_trim = 20
+    # minimum lenght of sequence after trim
+    min_read_len_post_trim = 100
+    # encoding of quality scores from sequencer
+    phred_encode = 33
+    # Quality filtering settings: fastx quality filter will remove whole sequences whose percent of bases are below the quality cutoff
+    quality_cutoff = 20
+    percent_bases = 50
+
+    # AB Annotation settings
+    # Use these sequences to determine isotype
+    isotyping_barcodes = [
+        ['CCTCCACCAAGGGCCCATCGCAG', 'IGHG'],
+        ['GGAGTGCATCCGCCCCAACC', 'IGHM'],
+        ['CATCCCCGACCAGCCCCAAGC', 'IGHA'],
+        ['GAACTGTGGCTGCACCATCT', 'IGK'],
+        ['GTCACTCTGTTCCCGCCCTC', 'IGL']
+    ]
+    remove_insertions = 0  # Never remove insertions from alignment
+    #remove_insertions = 1  # Aloways remove insertions from alignment
+    #remove_insertions = 2  # Only remove insertions if there is a stop codon in final sequence
+
+    # Pairing settings
+    # How are CDRH3 sequences clustered (min cluster, max cluster, step size)
+    # cluster_setting = [0.85, 0.98, 0.01]
+    # This is the cluster we usually want and will store in database if possible
+    annotation_cluster_cutoff = 0.9
+
+    if dataset.species == 'Human': species = 'homosapiens' 
+    if dataset.species == 'Mouse': species = 'musmusculus' 
+
+    chains = set(map(lambda f: f.chain), files)
+    loci = []
+    if 'HEAVY' in chains: loci.append('igh') 
+    if 'LIGHT' in chains: loci.append('igk') 
+    if 'LIGHT' in chains: loci.append('igl') 
+    if 'HEAVY/LIGHT' in chains: loci = ['igh', 'igk', 'igl'] 
+
+  
+    print('Annotating fastq files')
+    annotated_files = []
+    for i, f in enumerate(files):
+        annotated_f = igfft.igfft_multiprocess(f.path, file_type='FASTQ', species=species, locus=loci, parsing_settings={'isotype': isotyping_barcodes, 'remove_insertions': remove_insertions}, num_processes=number_threads, delete_alignment_file=True)           
+        annotated_files.append(annotated_f[0])
+        file = File()
+        file.parent_id = f.id 
+        file.dataset_id = dataset.id 
+        file.path = annotated_f[0]
+        file.file_type = 'IGFFT_ANNOTATION'
+        file.created='now'
+        file.available=True 
+        db.session.add(file)
+        db.session.commit()
+    
+    if not group_name: group_name = 'ReadGroup_1' 
+
+    print('Pairing sequences')  
+    output_dir = analysis.directory
+    pairing.RunPairing(annotated_files, annotated_file_formats='TAB', analysis_method='GEORGIOU_INHOUSE', output_folder_path=output_dir, prefix_output_files=group_name, cluster_cutoff=cluster_setting, annotation_cluster_setting=annotation_cluster_cutoff)
+    return True 
+
+#     print('Pipeline complete')
+        
+# if __name__ == "__main__":
+#     arguments = sys.argv[1:]
+#     argnum = 0
+#     fastq_files = []
+#     while True:
+#         if argnum >= len(arguments):
+#             break
+#         if arguments[argnum] == '-species':
+#             argnum += 1
+#             species = arguments[argnum]
+#         elif arguments[argnum] == '-locus': 
+#             argnum += 1
+#             locus = arguments[argnum]
+#         else:
+#             fastq_files.append(arguments[argnum])
+#             f = os.path.expanduser(fastq_files[-1])         
+#             if not os.path.isfile(f):
+#                 raise Exception('The provided file {0} does not exist'.format(f))
+#             fastq_files[-1] = os.path.abspath(f)            
+#         argnum += 1 
+#     run_gglab_pipeline(fastq_files, species, locus.split(','))
+
+
+
+
+
+
 
 # should really break out tasks to celery_tasks.py or something 
 @celery.task
