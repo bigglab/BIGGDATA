@@ -3,7 +3,7 @@
 {% block content %}
 
 <div class="editable container">
-<h1>Checking out file: {{file.name}}<a data-toggle="collapse" data-target="#dataEdit" href="#"><span class="pencil glyphicon glyphicon-pencil"></span></a></h1>
+<h1><a data-toggle="collapse" data-target="#dataEdit" href="#"><span class="pencil glyphicon glyphicon-pencil"></span></a>Checking out file: {{file.name}}</h1>
 </div>
 
 <!-- 
@@ -53,6 +53,7 @@
 </div>
 
 <!-- File Edit form !-->
+{% if edit == 'edit' %}
 <div class="container">
 	<div id="dataEdit" class="collapse" aria-expanded="false">
 	<form method="POST" action="/files/{{file.id}}">
@@ -75,6 +76,7 @@
 	</form>
 	</div>
 </div>
+{% endif %}
 <!-- File Edit form end !-->
 
 

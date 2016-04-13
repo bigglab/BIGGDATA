@@ -23,49 +23,49 @@
 			<div class="input-group">
 				<span class="input-group-btn">
 				<!-- Button -->
-						<button class="btn btn-default dropdown-toggle dropdown" type="button" data-toggle="dropdown">Datasets<span class="caret"></span></button>
+						<button class="btn btn-default dropdown-toggle dropdown" type="button" data-toggle="dropdown">Projects<span class="caret"></span></button>
 							<ul class="dropdown-menu">
-								{% for dataset in current_user.datasets %}
-									{% if dataset.files.all() != [] %}
-										<li data-toggle="collapse" data-target=#{{dataset.name}}><a href="#">{{dataset.id}} {{dataset.name}}</a></li>
+								{% for project in current_user.projects %}
+									{% if project.datasets != [] %}
+										<li data-toggle="collapse" data-target=#{{project.project_name}}><a href="#">{{project.id}} {{project.project_name}}</a></li>
 									{% endif %}
 								{% endfor %}
 							</ul>
 				<!-- Button End -->
 				</span>
 				<!-- Input Bar -->
-				<div id="datasetsearch">
-					<input id="datasets" class="typeahead form-control" type="text" name='datasets' autocomplete="off" value="" placeholder="Search for dataset" aria-describedby="sizing-addon1"/>
+				<div id="projectsearch">
+					<input id="projects" class="typeahead form-control" type="text" name='projects' autocomplete="off" value="" placeholder="Search for project" aria-describedby="sizing-addon1"/>
 				</div>
 				<script>
-						var datasetnames = {{ datasetnames|safe }};
-						for (var i = 0; i < datasetnames.length; i++){
-							datasetnames[i] = datasetnames[i].replace(/"/g, '')
+						var projectnames = {{ projectnames|safe }};
+						for (var i = 0; i < projectnames.length; i++){
+							projectnames[i] = projectnames[i].replace(/"/g, '')
 						};
-						var datasets = new Bloodhound({
+						var projects = new Bloodhound({
 							datumTokenizer: function(d) { return Bloodhound.tokenizers.whitespace(d); },
   							queryTokenizer: Bloodhound.tokenizers.whitespace,
-  							local: datasetnames,
+  							local: projectnames,
 		  					});
 
-						datasets.initialize();
+						projects.initialize();
 
-						$('#datasetsearch .typeahead').typeahead({
+						$('#projectsearch .typeahead').typeahead({
 							highlight: true,
 							minLength: 1,
 						},
 						{
-							name: 'datasets',
+							name: 'projects',
 							limit: 10,
-							source: datasets.ttAdapter(),
+							source: projects.ttAdapter(),
 						});
 				</script>
 				<span class ="input-group-btn">
 					<button id="go" class="btn btn-default" type="button" onclick="clickgo()">Go</button>
 				<script>
 					function clickgo(){
-					var dataset = '#'.concat( $('#datasets').val() );
-					$(dataset).collapse('toggle');
+					var project = '#'.concat( $('#projects').val() );
+					$(projects).collapse('toggle');
 					}
 				</script>		
 				</span>	
@@ -74,15 +74,21 @@
 	</div>
 	<br>
 	<br>
-	{% for dataset in current_user.datasets %}
-		{% if dataset.files.all() != [] %}
+	{% for project in current_user.projects %}
+		{% if project.datasets != [] %}
+		<div id={{project.project_name}} class="collapse">
+		{% for dataset in current_user.datasets %}
+			{% if dataset.files.all() != [] %}
 			<br>
-			<div id={{dataset.name}} class="collapse">
+			<div id={{dataset.name}}>
 				<h4>Files Associated With Your Dataset {{dataset.id}} {{dataset.name}}</h4>
 					{% set files = dataset.files %}
 					{% include "partials/files.html" with context %}
 					{% endif %}
 			</div>
+		{% endfor %}
+		</div>
+		{% endif %}
 	{% endfor %}
 </div>
 

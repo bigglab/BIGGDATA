@@ -289,10 +289,10 @@ def files(status=[], bucket=None, key=None):
     form = Form()
 
     #creates list of datasets
-    datasetnames = ["test", "test2"]
-    for x in current_user.datasets:
-        name = str(x.name) 
-        datasetnames.append(name)
+    projectnames = []
+    for x in current_user.projects:
+        name = str(x.project_name) 
+        projectnames.append(name)
     if bucket and key: 
         status.append('https://s3.amazon.com/{}/{}'.format(bucket, key))
     if request.method == 'POST' and os.path.isfile(request.form['submit']):
@@ -307,54 +307,71 @@ def files(status=[], bucket=None, key=None):
         else: 
             flash('file metadata already created to your user')
             dropbox_file_paths = get_dropbox_files(current_user)
-        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status, datasetnames=map(json.dumps, datasetnames))
+        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status, projectnames=map(json.dumps, projectnames))
     else: 
         dropbox_file_paths = get_dropbox_files(current_user)
-        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status, datasetnames=map(json.dumps, datasetnames))
+        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status, projectnames=map(json.dumps, projectnames))
  
 
 @frontend.route('/files/<int:id>', methods=['GET','POST'])
 @login_required
 def file(id):
-
-    editfileform = FileEditForm()
-
     f = db.session.query(File).filter(File.id==id).first()
 
-    if f.dataset != None:
-        editfileform.paired_partner.choices = [(x.id, x.name) for x in f.dataset.files if ((x.user_id != None) and (x.name != f.name))]
-        editfileform.paired_partner.choices.append((0, None))
+    # This part is to ensure that you have permissions to look/edit the selected file
+    projects = f.dataset.projects
+    if f.user_id is current_user.id:
+        edit = 'edit'
     else:
-        editfileform.paired_partner.choices = [(x.id, x.name) for x in f.user.files if ((x.user_id != None) and (x.dataset == None) and (x.name != f.name))]
-        editfileform.paired_partner.choices.append((0, None))
+        edit = ''
+    for project in projects:
+        if project.role(f.user_id) is "Owner" or "Editor":
+            edit = 'edit'
+        elif project.role(f.user_id) is "Read Only" and edit != 'edit':
+            edit = 'read'
+        elif edit != 'edit' and edit != 'read':
+            edit = None
 
-    if editfileform.validate_on_submit():
-        f.name = editfileform.name.data
-        if f.paired_partner != None:
-            f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
+    if edit is 'None':
+        flash('You do not have permission to access this file', 'warning')
+        return redirect( url_for('files'))
+    else:
 
-            if f2.id == editfileform.paired_partner.id:
-                flash('Edited ' + f.name, 'success')
-            elif editfileform.paired_partner.data is 0:
+        editfileform = FileEditForm()
+        if f.dataset != None:
+            editfileform.paired_partner.choices = [(x.id, x.name) for x in f.dataset.files if ((x.user_id != None) and (x.name != f.name))]
+            editfileform.paired_partner.choices.append((0, None))
+        else:
+            editfileform.paired_partner.choices = [(x.id, x.name) for x in f.user.files if ((x.user_id != None) and (x.dataset == None) and (x.name != f.name))]
+            editfileform.paired_partner.choices.append((0, None))
+
+        if editfileform.validate_on_submit():
+            f.name = editfileform.name.data
+            if f.paired_partner != None:
                 f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
-                f2.paired_partner = None
-                f.paired_partner = None
-                flash('Removed partner', 'success')
+
+                if f2.id == editfileform.paired_partner.id:
+                    flash('Edited ' + f.name, 'success')
+                elif editfileform.paired_partner.data is 0:
+                    f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
+                    f2.paired_partner = None
+                    f.paired_partner = None
+                    flash('Removed partner', 'success')
+                else:
+                    f.paired_partner = editfileform.paired_partner.data
+                    f3 = db.session.query(File).filter(File.id==f.paired_partner).first()
+                    f3.paired_partner=f.id
+                    f2.paired_partner=None
             else:
                 f.paired_partner = editfileform.paired_partner.data
-                f3 = db.session.query(File).filter(File.id==f.paired_partner).first()
-                f3.paired_partner=f.id
-                f2.paired_partner=None
+                f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
+                f2.paired_partner = f.id
+            db.session.commit()
+            flash('Edited ' + f.name, 'success')
         else:
-            f.paired_partner = editfileform.paired_partner.data
-            f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
-            f2.paired_partner = f.id
-        db.session.commit()
-        flash('Edited ' + f.name, 'success')
-    else:
-        flash_errors(editfileform)
+            flash_errors(editfileform)
 
-    return render_template("file.html", file=f, editfileform=editfileform)
+        return render_template("file.html", file=f, editfileform=editfileform, edit=edit)
 
 @frontend.route('/files/download/<int:id>')
 @login_required

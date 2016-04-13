@@ -24,21 +24,21 @@
 
 .twitter-typeahead{
 	width: 100%;
-	padding-top: 5px;
+	padding-top: 3px;
 }
 .tt-dropdown-menu{
 	width: 100%;
-	padding-top: 5px;
+	padding-top: 15px;
 }
 .tt-hint{
-	padding-top: 15px;
+	padding-top: 10px;
 }
 /*
  * For editing values
  */
 
 .editable h1:hover .pencil {
-    float: right;
+    float: left;
     display:block;
 }
 
