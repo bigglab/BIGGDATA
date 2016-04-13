@@ -10,6 +10,8 @@ import pandas as pd
 import numpy as np
 from shutil import copyfile
 import operator
+from sets import Set
+
 # import urllib
 os.environ['http_proxy']=''
 import urllib2
@@ -51,6 +53,7 @@ from pymongo import MongoClient
 import pymongo
  
 from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm.collections import attribute_mapped_collection
 
 
@@ -84,8 +87,11 @@ class User(db.Model):
         analyses = db.relationship('Analysis', backref='user', lazy='dynamic')
 
         projects = association_proxy('user_projects', 'project')
-
         #projects = db.relationship('Project', secondary = 'user_projects', back_populates = 'users' )
+
+        @hybrid_property
+        def name(self):
+            return self.first_name + ' ' + self.last_name
         
         def get_id(self):
             """Return the email address to satisfy Flask-Login's requirements."""
@@ -177,14 +183,13 @@ class Dataset(db.Model):
         chain_types_sequenced = db.Column(postgresql.ARRAY(db.String(20)))
         primary_data_files_ids = Column(postgresql.ARRAY(db.Integer))
 
+        projects = association_proxy('dataset_projects', 'project')
 
         def __repr__(self): 
             return "<Dataset {} : {} : {}>".format(self.id, self.name, self.description)
 
         def __init__(self):
             self.primary_data_files_ids = []
-
-
 
         def primary_data_files(self):
             all_files = self.files.all()
@@ -209,7 +214,6 @@ class Dataset(db.Model):
                 files = [f for f in all_files if f.id in self.primary_data_files_ids]
             return files 
 
-
         def files_by_type(self, type_string):
             all_files = self.files.all()
             if all_files == None: return []
@@ -217,61 +221,16 @@ class Dataset(db.Model):
             return files 
         # primary_data_files = db.relationship('File', primaryjoin="File.dataset_id == Dataset.id")
 
-class Experiment(db.Model):
-        __tablename__ = 'experiment'
-        id = db.Column(db.Integer, primary_key=True)
-        user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-        project_name = db.Column(db.String(128))
-        description = db.Column(db.String(256))
-        _id = db.Column(JSON())
-        paired = db.Column(db.Boolean, default=False)
-        chain_types_sequenced = db.Column(postgresql.ARRAY(db.String(20)))
-        
-        # we should leave this column in temporarily for compatibility
-        # as soon as the association table is created we can remove this column
-        # TO DO: create new user accounts for every user listed in this column
-        owners_of_experiment = db.Column(postgresql.ARRAY(db.String(20)))
-
-
-        read_access = db.Column(postgresql.ARRAY(db.String(50)))
-        cell_types_sequenced = db.Column(postgresql.ARRAY(db.String(50)))
-        isotypes_sequenced = db.Column(postgresql.ARRAY(db.String(10)))
-        publications = db.Column(postgresql.ARRAY(db.String(256)))
-        mid_tag = db.Column(postgresql.ARRAY(db.String(256)))
-        filenames = db.Column(postgresql.ARRAY(db.String(256)))
-        reverse_primer_used_in_rt_step = db.Column(db.String(128))
-        sample_preparation_date = db.Column(db.String(128))
-        uploaded_by = db.Column(db.String(128))
-        sequencing_platform = db.Column(db.String(128))
-        experiment_creation_date = db.Column(db.String(128))
-        species = db.Column(db.String(128))
-        seq_count = db.Column(db.Integer())
-        cell_number = db.Column(db.Integer())
-        target_reads = db.Column(db.Integer())
-        template_type = db.Column(db.String(128))
-        experiment_name = db.Column(db.String(256))
-        work_order = db.Column(db.String(128))
-        gsaf_sample_name = db.Column(db.String(128))
-        lab = db.Column(db.String(128))
-        cell_selection_kit_name = db.Column(db.String(128))
-        contains_rna_seq_data = db.Column(db.Boolean, default=False)
-        curated = db.Column(db.Boolean, default=False)
-        gsaf_barcode = db.Column(db.String(20))
-        analyses_settings = db.Column(JSON())
-        lab_notebook_source = db.Column(db.String(128))
-        pairing_technique = db.Column(db.String(128))
-        analyses_count = db.Column(JSON())
-        person_who_prepared_library = db.Column(db.String(128))
-        cell_markers_used = db.Column(postgresql.ARRAY(db.String(100)))
-        list_of_polymerases_used = db.Column(postgresql.ARRAY(db.String(100)))
-        primer_set_name = db.Column(postgresql.ARRAY(db.String(100)))
-        datasets = db.relationship('Dataset', backref='experiment', lazy='dynamic')
-
-        # establish a relationship to the association table
-        # users = db.relationship('User', secondary = user_experiments, back_populates = 'experiments' )
-
-        def __repr__(self): 
-            return "<  Experiment {}:  {}   :   {}   :   {} >".format(self.id, self.project_name, self.experiment_name, self.seq_count)
+        @hybrid_property
+        def owner(self):
+            #user = 
+            try:
+                user_query = db.session.query(User).filter(self.user_id == User.id)
+                user = user_query[0]                    
+                return user
+            except:
+                pass
+            return None
 
 class Project(db.Model):
         __tablename__ = 'project'
@@ -288,7 +247,8 @@ class Project(db.Model):
         lab = db.Column(db.String(128))
 
         # establish a list of datasets
-        datasets = db.relationship('Dataset', backref='project', lazy='dynamic')
+        # datasets = db.relationship('Dataset', backref='project', lazy='dynamic')
+        datasets = association_proxy('project_datasets', 'dataset')
 
         # establish a relationship to the association table
         users = association_proxy('project_users', 'user')
@@ -307,6 +267,64 @@ class Project(db.Model):
             except:
                 dt_str = None
             return dt_str
+
+        # this does not include the owner
+        @hybrid_property
+        def editors(self):
+            owner_set = Set([self.owner])
+            total_user_set = Set(self.users)
+            read_user_set = Set(self.read_only_users)
+            editors = total_user_set - read_user_set
+            editors = editors - owner_set
+            editors.discard(None)
+            return list(editors)
+
+        @hybrid_property
+        def readers(self):
+            read_user_set = Set(self.read_only_users)
+            read_user_set.discard(None)
+            return list(read_user_set)
+
+        @hybrid_property
+        def owner(self):
+            try:
+                for user in self.users:
+                    if self.user_id == user.id:
+                        return user
+            except:
+                pass
+            return None
+
+        def role(self, user):
+            try:
+                if user == self.owner:
+                    return "Owner"
+                elif user in self.editors:
+                    return "Editor"
+                elif user in self.read_only_users:
+                    return "Read Only" 
+                else:
+                    return None
+            except:
+                pass
+            return None
+
+class ProjectDatasets (db.Model):
+    __tablename__ = 'project_dataset'
+
+    __table_args__ = (
+        db.PrimaryKeyConstraint('project_id', 'dataset_id'),
+    )
+
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
+    dataset_id = db.Column(db.Integer, db.ForeignKey('dataset.id'))
+
+    dataset = db.relationship(Dataset, backref = db.backref("dataset_projects"))
+    project = db.relationship(Project, backref = db.backref("project_datasets",  cascade="all, delete-orphan"))
+
+    def __init__(self, dataset = None, project = None):
+        self.project = project
+        self.dataset = dataset
 
 class UserProjects (db.Model):
     __tablename__ = 'user_project'
@@ -494,12 +512,6 @@ class Annotation(db.Model):
             self.j_hits = OrderedDict()
             self.c_hits = OrderedDict()
 
-
-
-
-
-
-
 class Analysis(db.Model):  
 
         id = Column(Integer(), primary_key=True)
@@ -534,8 +546,60 @@ class Analysis(db.Model):
         def __init__(self):
             self.available = False
 
+class Experiment(db.Model):
+        __tablename__ = 'experiment'
+        id = db.Column(db.Integer, primary_key=True)
+        user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+        project_name = db.Column(db.String(128))
+        description = db.Column(db.String(256))
+        _id = db.Column(JSON())
+        paired = db.Column(db.Boolean, default=False)
+        chain_types_sequenced = db.Column(postgresql.ARRAY(db.String(20)))
+        
+        # we should leave this column in temporarily for compatibility
+        # as soon as the association table is created we can remove this column
+        # TO DO: create new user accounts for every user listed in this column
+        owners_of_experiment = db.Column(postgresql.ARRAY(db.String(20)))
 
+        read_access = db.Column(postgresql.ARRAY(db.String(50)))
+        cell_types_sequenced = db.Column(postgresql.ARRAY(db.String(50)))
+        isotypes_sequenced = db.Column(postgresql.ARRAY(db.String(10)))
+        publications = db.Column(postgresql.ARRAY(db.String(256)))
+        mid_tag = db.Column(postgresql.ARRAY(db.String(256)))
+        filenames = db.Column(postgresql.ARRAY(db.String(256)))
+        reverse_primer_used_in_rt_step = db.Column(db.String(128))
+        sample_preparation_date = db.Column(db.String(128))
+        uploaded_by = db.Column(db.String(128))
+        sequencing_platform = db.Column(db.String(128))
+        experiment_creation_date = db.Column(db.String(128))
+        species = db.Column(db.String(128))
+        seq_count = db.Column(db.Integer())
+        cell_number = db.Column(db.Integer())
+        target_reads = db.Column(db.Integer())
+        template_type = db.Column(db.String(128))
+        experiment_name = db.Column(db.String(256))
+        work_order = db.Column(db.String(128))
+        gsaf_sample_name = db.Column(db.String(128))
+        lab = db.Column(db.String(128))
+        cell_selection_kit_name = db.Column(db.String(128))
+        contains_rna_seq_data = db.Column(db.Boolean, default=False)
+        curated = db.Column(db.Boolean, default=False)
+        gsaf_barcode = db.Column(db.String(20))
+        analyses_settings = db.Column(JSON())
+        lab_notebook_source = db.Column(db.String(128))
+        pairing_technique = db.Column(db.String(128))
+        analyses_count = db.Column(JSON())
+        person_who_prepared_library = db.Column(db.String(128))
+        cell_markers_used = db.Column(postgresql.ARRAY(db.String(100)))
+        list_of_polymerases_used = db.Column(postgresql.ARRAY(db.String(100)))
+        primer_set_name = db.Column(postgresql.ARRAY(db.String(100)))
+        datasets = db.relationship('Dataset', backref='experiment', lazy='dynamic')
 
+        # establish a relationship to the association table
+        # users = db.relationship('User', secondary = user_experiments, back_populates = 'experiments' )
+
+        def __repr__(self): 
+            return "<  Experiment {}:  {}   :   {}   :   {} >".format(self.id, self.project_name, self.experiment_name, self.seq_count)
 
 ######### 
 

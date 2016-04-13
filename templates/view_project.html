@@ -7,17 +7,13 @@
     <h1>View Project</h1>
     
     {% if not read_only %}
-        <form method=post action="{{url_for('projects.edit_project')}}" name = 'view_{{project_id}}'>
-            {{ view_project_form.hidden_tag() }}
-            <input type='hidden' name='id' value="{{project_id}}">
-            You may edit the information below by clicking here: <input type='submit' name='submit' value="Edit">
-        </form>
+        You may edit the information below by <a href='{{url_for("projects.edit_project", project_id = project_id)}}'>clicking here</a>.
         <br/>
     {% else %}
         <p>The information about your project is listed below. </p>
     {% endif %}
     <br>
-    <form method="POST" action="{{url_for('projects.edit_project')}}">
+    <form method="POST" action="{{url_for('projects.edit_project', project_id = project_id)}}">
         
         {{ view_project_form.hidden_tag() }}
 
@@ -68,15 +64,31 @@
                 {{ view_project_form.description.data }} <br/>
             </div>
             <div class="col-md-4">
+                {% if dataset_list %}
+                    <label>Datasets</label><br/>
+                    <table>
+                        <tr>
+                            <td>Dataset:</td>
+                            <td style="padding-left:8px">Owner Name:</td>
+                        </tr>
+                        {% for dataset, name in dataset_list %}
+                        <tr>
+                            <td>{{dataset}}</td>
+                            <td style="padding-left:8px">{{name}}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                    <br/>
+                {% endif %}
+            </div>
+            <div class="col-md-4">
                 {% if write_user_list %}
                     <label>Users</label><br/>
                     {% for name in write_user_list %}
                         {{name}}<br/>
                     {% endfor %}
+                    <br/>
                 {% endif %}
-            </div>
-
-            <div class="col-md-4">
                 {% if read_only_list %}
                     <label>Read-Only Access</label><br/>
                     {% for name in read_only_list %}
@@ -86,7 +98,6 @@
             </div>
 
         </div>
-        <input type='hidden' name='id' value="{{project_id}}">
         <input type='hidden' name='submit' value="Update">
 
         <!--<button type="submit" value="submit" class="btn btn-default">Update</button>-->

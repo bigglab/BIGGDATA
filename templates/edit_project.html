@@ -3,6 +3,7 @@
 {% block scripts %}
     {{super()}}
     <script src="/static/js/jquery.multi-select.js"></script>
+    <script src="/static/js/jquery.quicksearch.js"></script>
 {% endblock scripts %}
 
 {% block content %}
@@ -10,9 +11,9 @@
 <div class="container">
 
     <h1>Edit Project</h1>
-    <p>Please edit the information about your project below. After you are done updating, you may <a href="{{url_for('projects.manage_projects')}}">click here</a> to return.</p>
+    <p>Please edit the information about your project below. You must press the "Submit" button to save changes.
     <br>
-    <form method="POST" action="{{url_for('projects.edit_project')}}">
+    <form method="POST" action="{{url_for('projects.edit_project', project_id = project_id)}}">
         
         {{ edit_project_form.hidden_tag() }}
 
@@ -55,6 +56,57 @@
                 <br/>
                 {{ edit_project_form.description.label }}<br/>
                 {{ edit_project_form.description(class_="form-control", rows = '5', multiple='multiple') }} <br/>
+                <br/>
+                <input type='hidden' name='submit' value="Update">
+                <button type="submit" value="submit" class="btn btn-default">Update</button>
+            </div>
+            <div class="col-md-4">
+                {{ edit_project_form.datasets.label }}
+                {{ edit_project_form.datasets(class_="form-control searchable", rows = '5', multiple='multiple') }} <br/>
+                <script>
+                    //$('#datasets').multiSelect({
+                    //    selectableHeader: "Add to Project",
+                    //    selectionHeader: "Not in Project"
+                    //})
+
+                    $('.searchable').multiSelect({
+                        selectableHeader: "Add to Project<br/><input type='text' class='search-input' autocomplete='off' placeholder='Search'>",
+                        selectionHeader: "Not in Project<br/><input type='text' class='search-input' autocomplete='off' placeholder='Search'>",
+                        afterInit: function(ms){
+                        var that = this,
+                            $selectableSearch = that.$selectableUl.prev(),
+                            $selectionSearch = that.$selectionUl.prev(),
+                            selectableSearchString = '#'+that.$container.attr('id')+' .ms-elem-selectable:not(.ms-selected)',
+                            selectionSearchString = '#'+that.$container.attr('id')+' .ms-elem-selection.ms-selected';
+
+                        that.qs1 = $selectableSearch.quicksearch(selectableSearchString)
+                        .on('keydown', function(e){
+                          if (e.which === 40){
+                            that.$selectableUl.focus();
+                            return false;
+                          }
+                        });
+
+                        that.qs2 = $selectionSearch.quicksearch(selectionSearchString)
+                        .on('keydown', function(e){
+                          if (e.which == 40){
+                            that.$selectionUl.focus();
+                            return false;
+                          }
+                        });
+                        },
+                        afterSelect: function(){
+                        this.qs1.cache();
+                        this.qs2.cache();
+                        },
+                        afterDeselect: function(){
+                        this.qs1.cache();
+                        this.qs2.cache();
+                        }
+                    });
+
+                </script>
+                <noscript>To edit users, You must enable JavaScript.</noscript>
             </div>
             <div class="col-md-4">
                 {{ edit_project_form.editors.label }}
@@ -65,9 +117,7 @@
                         selectionHeader: "Deny Access"
                     })
                 </script>
-                <noscript>To edit users, You must enable JavaScript.</noscript>
-            </div>
-            <div class="col-md-4">
+                <br/>
                 {{ edit_project_form.viewers.label }}
                 {{ edit_project_form.viewers(class_="form-control", rows = '5', multiple='multiple') }} 
                 <script>
@@ -76,15 +126,11 @@
                         selectionHeader: "Deny Access"
                     })
                 </script>
+
                 <noscript>To edit users, You must enable JavaScript.</noscript>
             </div>
 
-        </div>
-        <input type='hidden' name='id' value="{{project_id}}">
-        <input type='hidden' name='submit' value="Update">
-
-        <button type="submit" value="submit" class="btn btn-default">Update</button>
-        
+        </div>        
     </form>
 
 </div>
