@@ -2,12 +2,7 @@
 
 {% block content %}
 
-
-
-
-
 	<div class="container">
-		<div class="container">
 		    <form method="POST" action="/datasets">
 		    <table class='table table-striped'> 
 		    <thead>
@@ -15,21 +10,22 @@
 			    <tr>
 			    <!-- <th>{{ form.csrf_token }}</th> -->
 		    	<th>{{ form.name.label }}:</th>
-		    	<th>Description (Ig Type, Cell Sorting Marker, etc)</th>
+		    	<th>Description (Ig Type, Cell Sorting Marker, etc):</th>
+		    	<th><label>Add to Project:</label></th>
+		    	<th><label>Pairing:</label></th>
 		    </thead>
 			    <tr>
 		        <!-- <th></th> -->
-		        <th>{{ form.name(size=20) }}</th>
-		        <th>{{ form.description(size=50) }}</th>
+		        <th>{{ form.name(size=15, class="form-control") }}</th>
+		        <th>{{ form.description(size=15, class="form-control") }}</th>
 		        <!-- <th>Ig Type: {{ form.ig_type(size=10) }}</th> -->
+		        <th>{{ form.project(class="form-control") }}</th>
 		        <th>Expect VH/VL Paired Data? : {{ form.paired }}</th>
 		        <th><input type="submit" value="Submit"></th>
 	        </tr>
         </table>
 		    </form>
-		</div>
 	</div>
-
 
 {% for dataset, files in datadict.iteritems() %}
 

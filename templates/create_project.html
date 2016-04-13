@@ -48,13 +48,26 @@
         </div>
         <br/>
         <div class='row'>
-
-            <div class="col-sm-4">
+            <div class="col-md-4">
+                <br/>
                 {{ create_project_form.description.label }}<br/>
-                {{ create_project_form.description(class_="form-control", rows = '5 ') }} <br/>
+                {{ create_project_form.description(class_="form-control", rows = '5', multiple='multiple') }} <br/>
+                <br/>
+                <input type='hidden' name='submit' value="Create">
+                <button type="submit" value="submit" class="btn btn-default">Create</button>
             </div>
-            <div class="col-sm-4">
-                <!--<label>Users who Can Edit</label>-->
+            <div class="col-md-4">
+                {{ create_project_form.datasets.label }}
+                {{ create_project_form.datasets(class_="form-control", rows = '5', multiple='multiple') }} <br/>
+                <script>
+                    $('#datasets').multiSelect({
+                        selectableHeader: "Add to Project",
+                        selectionHeader: "Not in Project"
+                    })
+                </script>
+                <noscript>To edit users, You must enable JavaScript.</noscript>
+            </div>
+            <div class="col-md-4">
                 {{ create_project_form.editors.label }}
                 {{ create_project_form.editors(class_="form-control", rows = '5', multiple='multiple') }} <br/>
                 <script>
@@ -63,10 +76,7 @@
                         selectionHeader: "Deny Access"
                     })
                 </script>
-                <noscript>To edit users, You must enable JavaScript.</noscript>
-            </div>
-
-            <div class="col-sm-4">
+                <br/>
                 {{ create_project_form.viewers.label }}
                 {{ create_project_form.viewers(class_="form-control", rows = '5', multiple='multiple') }} 
                 <script>
@@ -75,12 +85,12 @@
                         selectionHeader: "Deny Access"
                     })
                 </script>
+
                 <noscript>To edit users, You must enable JavaScript.</noscript>
             </div>
 
         </div>
 
-        <button type="submit" class="btn btn-default">Submit</button>    
     </form>
 
 </div>
