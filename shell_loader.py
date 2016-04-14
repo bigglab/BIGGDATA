@@ -1,87 +1,82 @@
-from app import *
+#System Imports
+import json
+import static
+import sys
+import os
+import time
+import random
+from shutil import copyfile
+import operator
+# import urllib
+os.environ['http_proxy']=''
+import urllib2
+import itertools
+import subprocess
+import boto 
+import math 
+# from filechunkio import FileChunkIO 
+from celery import Celery
+from collections import defaultdict, OrderedDict
+import collections
+#Flask Imports
+from werkzeug import secure_filename
+from flask import Blueprint, render_template, flash, redirect, url_for
+from flask import Flask, Blueprint, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages, send_from_directory
+from flask.ext.bcrypt import Bcrypt
+from flask.ext.login import LoginManager, UserMixin, current_user, login_user, logout_user, login_required
+from flask.ext.mail import Mail, Message
+from flask.ext.script import Manager
+from flask.ext.migrate import Migrate, MigrateCommand
+from flask_bootstrap import Bootstrap
+from flask_bootstrap import __version__ as FLASK_BOOTSTRAP_VERSION
+from flask_nav import Nav 
+from flask_nav.elements import Navbar, View, Subgroup, Link, Text, Separator
 from flask_sqlalchemy import SQLAlchemy
-db = SQLAlchemy(app)
-session = db.session
-user = session.query(User).filter(User.first_name=='Russell').first()
-# f = db.session.query(File).all()[0]
+from markupsafe import escape
+# from render_utils import make_context, smarty_filter, urlencode_filter
+import wtforms
+from flask_wtf import Form
+import random
+import jinja2 
+from sqlalchemy import create_engine
+from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Boolean
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql import JSON, JSONB, ARRAY, BIT, VARCHAR, INTEGER, FLOAT, NUMERIC, OID, REAL, TEXT, TIME, TIMESTAMP, TSRANGE, UUID, NUMRANGE, DATERANGE
+from sqlalchemy.sql import select
+from sqlalchemy.orm import sessionmaker, scoped_session
+from pymongo import MongoClient
+import pymongo
+ 
+# Local Imports - local imports go here to prevent circular imports 
+from forms import *
+from functions import * 
+from models import * 
+
+# Initialize Application
+app = Flask(__name__, instance_relative_config=True)
+app.config.from_pyfile('config.py')
+# Initialize extensions
+bcrypt = Bcrypt(app)
+nav = Nav() 
+Bootstrap(app) 
+
+db.init_app(app)
+db.app = app 
+
+# Celery configured for local RabbitMQ 
+celery = Celery(app.name, broker='amqp://')
+import celery_config 
+celery.config_from_object('celery_config')
+
+# @Dave - temporary edit for local environ
+s3 = boto.connect_s3(app.config['AWSACCESSKEYID'], app.config['AWSSECRETKEY'])
+s3_bucket = s3.get_bucket(app.config['S3_BUCKET'])
+
+# Mongo DB for Legacy Sequence Data
+mongo_connection_uri = 'mongodb://reader:cdrom@geordbas01.ccbb.utexas.edu:27017/'
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+
 q = db.session.query 
-a = db.session.add 
-c = db.session.commit 
-
-
-
-# lns = open('data/appsoma-seqs.imgt').readlines()
-# anns = []
-# for l in lns: 
-# 	d = json.loads(l) 
-# 	b = build_annotation_from_mongo_dict(d)
-# 	anns.append(b)
-
-
-d = q(Dataset).all()[-1]
-# fs = [f for f in d.files if f.file_type =='FASTQ']
-
-
-
-
-
-
-test_imgt_seq = {'ANALYSIS_NAME': 'IMGT',
- 'DATA.CDR3.AA': 'ARVRVHFGRQANPRRNWFDP',
- 'DATA.CDR3.AA_LENGTH': 20,
- 'DATA.CDR3.NT': 'GCGAGAGTACGGGTACACTTCGGTCGACAAGCTAACCCACGTCGCAACTGGTTCGACCCC',
- 'DATA.CDR3.NT_LENGTH': 60,
- 'DATA.DREGION.DGENES': ['HOMSAP IGHD5-24*01 ORF'],
- 'DATA.JREGION.FR4.AA': 'WGQGTLVTVSS',
- 'DATA.JREGION.FR4.NT': 'TGGGGCCAGGGAACCCTGGTCACCGTCTCCTCAG',
- 'DATA.JREGION.JGENES': ['HOMSAP IGHJ5*02 F'],
- 'DATA.JREGION.JGENE_QUERY_END': 411,
- 'DATA.JREGION.JGENE_QUERY_START': 362,
- 'DATA.JREGION.JGENE_SCORES': [246.0],
- 'DATA.NOTES': 'POTENTIALLY, BECAUSE OF DETECTED INSERTION/DELETION',
- 'DATA.PREDICTED_AB_SEQ.AA': 'EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYEMNWVRQAPGKGLEWVSYISSSGSTIYYADSVKGRFAISRDNAKNSLYLQTNSPRAEDTAVYYCARVRVHFGRQANPRRNWFDPWGQGTLVTVSS',
- 'DATA.PREDICTED_AB_SEQ.NT': 'GAGGTGCAGCTGGTGGAGTCTGGGGGAGGCTTGGTACAGCCTGGAGGGTCCCTGAGACTCTCCTGTGCAGCCTCTGGATTCACCTTCAGTAGTTATGAAATGAACTGGGTCCGCCAGGCTCCAGGGAAGGGGCTGGAGTGGGTTTCATACATTAGTAGTAGTGGTAGTACCATATACTACGCAGACTCTGTGAAGGGCCGATTCGCCATCTCCAGAGACAACGCCAAGAACTCACTGTATCTGCAAACGAACAGCCCGAGAGCCGAGGACACGGCTGTTTATTACTGTGCGAGAGTACGGGTACACTTCGGTCGACAAGCTAACCCACGTCGCAACTGGTTCGACCCCTGGGGCCAGGGAACCCTGGTCACCGTCTCCTCAG',
- 'DATA.PRODUCTIVE': 'PRODUCTIVE (SEE COMMENT)',
- 'DATA.STRAND': '+',
- 'DATA.VREGION.CDR1.AA': 'GFTFSSYE',
- 'DATA.VREGION.CDR1.AA_LENGTH': 8,
- 'DATA.VREGION.CDR1.NT': 'GGATTCACCTTCAGTAGTTATGAA',
- 'DATA.VREGION.CDR1.NT_LENGTH': 24,
- 'DATA.VREGION.CDR2.AA': 'ISSSGSTI',
- 'DATA.VREGION.CDR2.AA_LENGTH': 8,
- 'DATA.VREGION.CDR2.NT': 'ATTAGTAGTAGTGGTAGTACCATA',
- 'DATA.VREGION.CDR2.NT_LENGTH': 24,
- 'DATA.VREGION.FR1.AA': 'EVQLVESGGGLVQPGGSLRLSCAAS',
- 'DATA.VREGION.FR1.NT': 'GAGGTGCAGCTGGTGGAGTCTGGGGGAGGCTTGGTACAGCCTGGAGGGTCCCTGAGACTCTCCTGTGCAGCCTCT',
- 'DATA.VREGION.FR2.AA': 'MNWVRQAPGKGLEWVSY',
- 'DATA.VREGION.FR2.NT': 'ATGAACTGGGTCCGCCAGGCTCCAGGGAAGGGGCTGGAGTGGGTTTCATAC',
- 'DATA.VREGION.FR3.AA': 'YYADSVKGRFAISRDNAKNSLYLQTNSPRAEDTAVYYC',
- 'DATA.VREGION.FR3.NT': 'TACTACGCAGACTCTGTGAAGGGCCGATTCGCCATCTCCAGAGACAACGCCAAGAACTCACTGTATCTGCAAACGAACAGCCCGAGAGCCGAGGACACGGCTGTTTATTACTGT',
- 'DATA.VREGION.SHM.AA': 3.0,
- 'DATA.VREGION.SHM.NT': 4.0,
- 'DATA.VREGION.VGENES': ['HOMSAP IGHV3-48*03 F'],
- 'DATA.VREGION.VGENE_QUERY_END': 324,
- 'DATA.VREGION.VGENE_QUERY_START': 30,
- 'DATA.VREGION.VGENE_SCORES': [1408.0],
- 'DATE_UPDATED': '05/06/15',
- 'EXP_ID': '552c261c9eb6363a487b62cb',
- 'QUERY_DATA.DREGION.DGENES': [{'PARSED_ALLELES': ['IGHD5-24',
-    'ORF',
-    'HOMSAP IGHD5-24*01 ORF',
-    'IGHD5-24*01',
-    'HOMSAP']}],
- 'QUERY_DATA.JREGION.JGENES': [{'PARSED_ALLELES': ['IGHJ5*02',
-    'HOMSAP IGHJ5*02 F',
-    'IGHJ5',
-    'HOMSAP',
-    'F']}],
- 'QUERY_DATA.VREGION.VGENES': [{'PARSED_ALLELES': ['IGHV3-48*03',
-    'HOMSAP IGHV3-48*03 F',
-    'IGHV3-48',
-    'HOMSAP',
-    'F']}],
- 'RECOMBINATION_TYPE': 'VDJ',
- 'SEQ_ID': '552c98689eb636214d227371',
- 'SETTINGS': 1,
- '_id': '552c9cee904f3e9c087069d2'}
 
