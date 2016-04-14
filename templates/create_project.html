@@ -5,14 +5,14 @@
     <script src="/static/js/jquery.multi-select.js"></script>
 {% endblock scripts %}
 
-{% block content %}
+{% block wide_content %}
 
 <div class="container">
 
     <h1>Create a New Project</h1>
     <p>Please input information about your project below:</p>
     <br>
-    <form method="POST" action="{{url_for('projects.create_project')}}">
+    <form method="POST" action="{{url_for('projects.create_project')}}" enctype="multipart/form-data">
         
         {{ create_project_form.hidden_tag() }}
 
@@ -57,36 +57,93 @@
                 <button type="submit" value="submit" class="btn btn-default">Create</button>
             </div>
             <div class="col-md-4">
-                {{ create_project_form.datasets.label }}
-                {{ create_project_form.datasets(class_="form-control", rows = '5', multiple='multiple') }} <br/>
-                <script>
-                    $('#datasets').multiSelect({
-                        selectableHeader: "Add to Project",
-                        selectionHeader: "Not in Project"
-                    })
-                </script>
-                <noscript>To edit users, You must enable JavaScript.</noscript>
+                
+                <div id="accordion">
+                    <table cellpadding="5" cellspacing="0" border="0">
+                        <tbody class="accordian-control">
+                            <tr>
+                                <td class="collapse-control"></td>
+                                <td valign="center">{{ create_project_form.datasets.label }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div id="collapseOne" class="collapse">
+                        {{ create_project_form.datasets(class_="form-control")}} <br/>
+                         <noscript>To edit datasets, You must enable JavaScript.</noscript>
+                    </div>
+                </div> <!-- /accordian -->
+                <br/>
+                <div id="accordion">
+                    <table cellpadding="5" cellspacing="0" border="0">
+                        <tbody class="accordian-control">
+                            <tr>
+                                <td class="collapse-control"></td>
+                                <td class="none" valign="center">{{ create_project_form.file.label(for='') }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div id="collapseOne" class="collapse">
+                        <span>
+                        <div class="input-group">
+                            <span class="input-group-btn">
+                                <span class="btn btn-default btn-file">
+                                    Browse...{{ create_project_form.file()}} 
+                                </span>
+                            </span>
+                            <input type="text" class="form-control" readonly>
+                        </div>
+                        </span>
+                        <br/>
+                         <noscript>To edit datasets, You must enable JavaScript.</noscript>
+                    </div>
+                </div> <!-- /accordian -->
+                <br/>
+                <div id="accordion">
+                    <table cellpadding="5" cellspacing="0" border="0">
+                        <tbody class="accordian-control">
+                            <tr>
+                                <td class="collapse-control"></td>
+                                <td valign="center"><label>Add Datasets from JSON URL</label>{#{ create_project_form.datasets.label }#}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div id="collapseOne" class="collapse">
+                        {#{ create_project_form.datasets(class_="form-control")}#} <br/>
+                         <noscript>To edit datasets, You must enable JavaScript.</noscript>
+                    </div>
+                </div> <!-- /accordian -->
             </div>
             <div class="col-md-4">
-                {{ create_project_form.editors.label }}
-                {{ create_project_form.editors(class_="form-control", rows = '5', multiple='multiple') }} <br/>
-                <script>
-                    $('#editors').multiSelect({
-                        selectableHeader: "Grant Access",
-                        selectionHeader: "Deny Access"
-                    })
-                </script>
+                <div id="accordion">
+                    <table cellpadding="5" cellspacing="0" border="0">
+                        <tbody class="accordian-control">
+                            <tr>
+                                <td class="collapse-control"></td>
+                                <td valign="center">{{ create_project_form.editors.label }}</td>
+                            </tr>
+                        </tbody>
+                    </table>                                            
+                    <div id="collapseOne" class="collapse">
+                        {{ create_project_form.editors(class_="form-control") }} <br/>
+                        <noscript>To edit users, You must enable JavaScript.</noscript>
+                    </div>
+                </div> <!-- /accordian -->
                 <br/>
-                {{ create_project_form.viewers.label }}
-                {{ create_project_form.viewers(class_="form-control", rows = '5', multiple='multiple') }} 
-                <script>
-                    $('#viewers').multiSelect({
-                        selectableHeader: "Grant Access",
-                        selectionHeader: "Deny Access"
-                    })
-                </script>
-
-                <noscript>To edit users, You must enable JavaScript.</noscript>
+                <div id="accordion">                
+                     <table cellpadding="5" cellspacing="0" border="0">
+                        <tbody class="accordian-control">
+                            <tr>
+                                <td class="collapse-control"></td>
+                                <td valign="center">{{ create_project_form.viewers.label }}</td>
+                            </tr>
+                        </tbody>
+                    </table>                                            
+                    <div id="collapseOne" class="collapse">
+                        {{ create_project_form.viewers(class_="form-control") }} <br/>
+                        <noscript>To edit users, You must enable JavaScript.</noscript>
+                    </div>
+                </div> <!-- /accordian -->
+                <br/>
             </div>
 
         </div>
@@ -95,8 +152,61 @@
 
 </div>
 
+<script>
+
+    $(document).on('change', '.btn-file :file', function() {
+        var input = $(this),
+            numFiles = input.get(0).files ? input.get(0).files.length : 1,
+            label = input.val().replace(/\\/g, '/').replace(/.*\//, '');
+            //label = input.val();
+        input.trigger('fileselect', [numFiles, label]);
+    });
+    
+    $(document).ready( function() {
+      
+        $('.btn-file :file').on('fileselect', function(event, numFiles, label) {
+            var parent_input_group = $(this).closest('div')
+            var child_input = parent_input_group.children('input')
+            child_input.val(label)
+
+        });
+    });
+
+    $('tbody.accordian-control').on( 'click', 'tr', function () {
+        var parent_accordian = $(this).closest('div')
+
+        var child_accordian = parent_accordian.children('.collapse')
+        child_accordian.collapse('toggle')
+
+        var th = $(this).closest('tbody');
+
+        if ( th.hasClass('shown') ) {
+            th.removeClass('shown');
+        }
+        else {
+            th.addClass('shown');
+
+        }
+    } );
+
+    $('#datasets').multiSelect({
+        selectableHeader: "Add to Project",
+        selectionHeader: "Not in Project"
+    })
+
+    $('#viewers').multiSelect({
+        selectableHeader: "Grant Access",
+        selectionHeader: "Deny Access"
+    })
+
+    $('#editors').multiSelect({
+        selectableHeader: "Grant Access",
+        selectionHeader: "Deny Access"
+    })
+
+</script>
 
 
-{%endblock content %}
+{% endblock wide_content %}
 
 

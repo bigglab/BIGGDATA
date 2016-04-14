@@ -183,6 +183,42 @@ class Dataset(db.Model):
         chain_types_sequenced = db.Column(postgresql.ARRAY(db.String(20)))
         primary_data_files_ids = Column(postgresql.ARRAY(db.Integer))
 
+        lab_notebook_source = db.Column(db.String(256))
+        sequencing_submission_number = db.Column(db.String(256))
+        contains_rna_seq_data = db.Column(db.String(256))
+        reverse_primer_used_in_rt_step = db.Column(db.String(256))
+        list_of_polymerases_used = db.Column(db.String(256))
+        sequencing_platform = db.Column(db.String(256))
+        # json_project_name = db.Column(db.String(256)) - will use this to add to a new or existing project
+        target_reads = db.Column(db.String(256))
+        cell_markers_used = db.Column(db.String(256))
+        read_access = db.Column(db.String(256)) # maintain this to add read access for users later
+        owners_of_experiment = db.Column(db.String(256)) # - will use this to add to a new or existing project
+        adjuvant = db.Column(db.String(256))
+        species = db.Column(db.String(256)) 
+        # publications = db.Column(db.String(256)) - will use this to add to a new or existing project
+        # lab = db.Column(db.String(256))
+
+        cell_selection_kit_name = db.Column(db.String(256))
+        isotypes_sequenced = db.Column(db.String(256))
+        
+        post_sequencing_processing_dict = db.Column(db.String(512))
+
+        # post_sequencing_processing:quality_filter = db.Column(db.String(256))
+        # post_sequencing_processing:process_r1_r2_file = db.Column(db.String(256))
+        # post_sequencing_processing:phi_x_filter = db.Column(db.String(256))
+        
+        sample_preparation_date = db.Column(db.String(256))
+        gsaf_barcode = db.Column(db.String(256))
+        mid_tag = db.Column(db.String(256))
+        cell_number = db.Column(db.String(256))
+        primer_set_name = db.Column(db.String(256))
+        template_type = db.Column(db.String(256))
+        experiment_name = db.Column(db.String(256))
+        person_who_prepared_library = db.Column(db.String(256))
+        pairing_technique = db.Column(db.String(256))
+        json_id = db.Column(db.String(256))
+
         projects = association_proxy('dataset_projects', 'project')
 
         def __repr__(self): 
@@ -190,6 +226,8 @@ class Dataset(db.Model):
 
         def __init__(self):
             self.primary_data_files_ids = []
+
+
 
         def primary_data_files(self):
             all_files = self.files.all()

@@ -64,12 +64,8 @@ from models import *
 # Figure out how to cascade changes to User/Project/UserProject tables
 # Read up on SQLAlchemy sessions
 #
-# Add public user functionality --> See and example project, etc
-# Add tabs for yours, shared, and read-only 
-#
-# get a list of projects based on a dataset query
-# dataset.project
-# 
+# add create new project option for adding datasets
+# add edit dataset page
 
 projects_blueprint = Blueprint('projects', __name__)
 
@@ -170,7 +166,7 @@ def create_project():
 
         db.session.add(new_project)
         db.session.flush()
-
+        
         # if the owner set read-only access for users, then we have to update the read-only setting in the association table manually
         if len(user_read_list) > 0:
             db.session.refresh(new_project)
@@ -183,11 +179,31 @@ def create_project():
                 except:
                     print "Error setting read_only attribute for {}".format(user)
 
+        # determine if a JSON was submitted to be added to the project
+        try:
+            if request.files['file'].filename != '':
+                db.session.refresh(new_project)
+
+                request_file = request.files['file']
+                json_string = request_file.read()
+
+                # if this function returns a string, it describes the error
+                error = create_datasets_from_JSON_string(json_string, new_project)
+                if error:
+                    flash(error, 'warning')            
+        except:
+            flash('There was an error in uploading your JSON file.','warning')
+
         db.session.commit()
-
-        flash('Success!!! Your new project has been created.', 'success')
+        flash('Your new project has been created.', 'success')
         return redirect( url_for('projects.manage_projects') )
+        
+        
 
+        
+
+        flash('Your got this file: {}'.format(create_project_form.file.data),'success')
+        return render_template("create_project.html", create_project_form = create_project_form)
     else:
         flash_errors(create_project_form)
 

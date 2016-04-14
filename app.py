@@ -820,6 +820,227 @@ def flash_errors( form, category="warning" ):
         for error in errors:
             flash("{0} - {1}".format( getattr( form, field ).label.text, error ), category )
 
+# @Dave - function to create datasets from a JSON url
+def create_datasets_from_JSON_url(file):
+    pass
+
+# @Dave - function to create datasets from a JSON file
+# If the project is give, the datasets are added to the project
+def create_datasets_from_JSON_string(json_string, project = None):
+
+    json_counter = 0    
+    json_expected_fields = ["LAB_NOTEBOOK_SOURCE", "SEQUENCING_SUBMISSION_NUMBER", 
+        "CHAIN_TYPES_SEQUENCED", "CONTAINS_RNA_SEQ_DATA", "REVERSE_PRIMER_USED_IN_RT_STEP", 
+        "LIST_OF_POLYMERASES_USED", "SEQUENCING_PLATFORM", "VH:VL_PAIRED", "PROJECT_NAME", 
+        "TARGET_READS", "CELL_MARKERS_USED", "READ_ACCESS", "ADJUVANT", "CELL_TYPES_SEQUENCED", 
+        "SPECIES", "PUBLICATIONS", "OWNERS_OF_EXPERIMENT", "CELL_SELECTION_KIT_NAME", 
+        "ISOTYPES_SEQUENCED", "SAMPLE_PREPARATION_DATE", "GSAF_BARCODE", "MID_TAG", 
+        "DESCRIPTION", "CELL_NUMBER", "PRIMER_SET_NAME", "LAB", "TEMPLATE_TYPE", "EXPERIMENT_NAME", 
+        "PERSON_WHO_PREPARED_LIBRARY", "PAIRING_TECHNIQUE", "_id"]
+
+    # The following fields are lists which are joined with a space, comma, or in a dictionary
+    json_flatten_fields = ["SEQUENCING_SUBMISSION_NUMBER",  "MID_TAG", "DESCRIPTION", "PRIMER_SET_NAME", "LAB", "PERSON_WHO_PREPARED_LIBRARY"]
+    json_comma_fields = ["CHAIN_TYPES_SEQUENCED", "LIST_OF_POLYMERASES_USED", "CELL_MARKERS_USED", "CELL_TYPES_SEQUENCED", "PUBLICATIONS", "ISOTYPES_SEQUENCED"]
+    json_psp_fields = ["POST_SEQUENCING_PROCESSING:PHI_X_FILTER", "POST_SEQUENCING_PROCESSING:PROCESS_R1_R2_FILE", "POST_SEQUENCING_PROCESSING:QUALITY_FILTER"]
+
+    try: json_data = json.loads(json_string)
+    except ValueError, error: return "Error loading JSON: {}".format(error)
+
+    if not json_data: return "Error: no JSON data found."
+    if "user_data" not in json_data: return "No user_data field found in JSON data."
+
+    user_data = json_data['user_data']
+    if "description" not in user_data: return "No description of user_data found in JSON data."
+
+    user_data_description = user_data['description']
+    if 'GGLAB_DB_FIELDS' not in user_data_description: return "No GGLAB_DB_FIELDS in user_data description of JSON data."
+
+    json_dataset_array = user_data_description['GGLAB_DB_FIELDS']
+    for json_dataset in json_dataset_array:
+
+        # first, check and make sure all of the fields we want are present
+        for field in json_expected_fields:
+            if field not in json_dataset:
+                json_dataset[field] = ""
+                print "Warning: field '{}' not found in GGLAB_DB_FIELDS".format(field)
+
+        # next, some up with a name for the dataset
+        dataset_name = None
+        try:
+            if json_dataset['DESCRIPTION'][1]:    
+                dataset_name = json_dataset['DESCRIPTION'][1]
+            else:
+                dataset_name = 'Dataset ' + str(json_counter)
+                json_counter = json_counter + 1 
+        except:
+            dataset_name = 'Dataset ' + str(json_counter)
+            json_counter = json_counter + 1 
+
+        # flatten lists here
+        for field in json_flatten_fields:
+            if type(json_dataset[field]) == list:
+                json_dataset[field] = " ".join(json_dataset[field])
+
+        # flatten comma lists here
+        for field in json_comma_fields:
+            if type(json_dataset[field]) == list:
+                json_dataset[field] = ", ".join(json_dataset[field])
+
+        for field in json_expected_fields:
+            if type(json_dataset[field]) != list:
+                print ' "' + field + '", is a ' +  str(type(json_dataset[field]))
+
+        # flatten special fields here
+        post_sequencing_processing = {}
+        for field in json_psp_fields:
+            if field in json_dataset:
+                post_sequencing_processing[field] = json_dataset[field]
+        post_sequencing_processing = str(post_sequencing_processing)
+        
+        print "post_sequencing_processing: " + post_sequencing_processing
+
+        contains_rna_seq_data = False
+        if json_dataset[ "CONTAINS_RNA_SEQ_DATA" ] == "True":
+            contains_rna_seq_data = True
+
+        new_dataset = Dataset()
+        
+        new_dataset.user_id = current_user.id
+        new_dataset.name = dataset_name
+        new_dataset.description = json_dataset[ "DESCRIPTION" ]
+        new_dataset.ig_type = ""
+        new_dataset.cell_types_sequenced = json_dataset[ "CELL_TYPES_SEQUENCED" ]
+        new_dataset.chain_types_sequenced = json_dataset[ "CHAIN_TYPES_SEQUENCED" ]
+        new_dataset.lab_notebook_source = json_dataset[ "LAB_NOTEBOOK_SOURCE" ]
+        new_dataset.sequencing_submission_number = json_dataset[ "SEQUENCING_SUBMISSION_NUMBER" ]
+        new_dataset.contains_rna_seq_data = contains_rna_seq_data
+        new_dataset.reverse_primer_used_in_rt_step = json_dataset[ "REVERSE_PRIMER_USED_IN_RT_STEP" ]
+        new_dataset.list_of_polymerases_used = json_dataset[ "LIST_OF_POLYMERASES_USED" ]
+        new_dataset.sequencing_platform = json_dataset[ "SEQUENCING_PLATFORM" ]
+        new_dataset.target_reads = json_dataset[ "TARGET_READS" ]
+        new_dataset.cell_markers_used = json_dataset[ "CELL_MARKERS_USED" ]
+        new_dataset.adjuvant = json_dataset[ "ADJUVANT" ]
+        new_dataset.species = json_dataset[ "SPECIES" ]
+        new_dataset.cell_selection_kit_name = json_dataset[ "CELL_SELECTION_KIT_NAME" ]
+        new_dataset.isotypes_sequenced = json_dataset[ "ISOTYPES_SEQUENCED" ]
+        new_dataset.sample_preparation_date = json_dataset[ "SAMPLE_PREPARATION_DATE" ]
+        new_dataset.gsaf_barcode = json_dataset[ "GSAF_BARCODE" ]
+        new_dataset.mid_tag = json_dataset[ "MID_TAG" ]
+        new_dataset.cell_number = json_dataset[ "CELL_NUMBER" ]
+        new_dataset.primer_set_name = json_dataset[ "PRIMER_SET_NAME" ]
+        new_dataset.template_type = json_dataset[ "TEMPLATE_TYPE" ]
+        new_dataset.experiment_name = json_dataset[ "EXPERIMENT_NAME" ]
+        new_dataset.person_who_prepared_library = json_dataset[ "PERSON_WHO_PREPARED_LIBRARY" ]
+        new_dataset.pairing_technique = json_dataset[ "PAIRING_TECHNIQUE" ]
+        new_dataset.json_id = json_dataset[ "_id" ]
+        new_dataset.paired = json_dataset[ "VH:VL_PAIRED" ]
+        new_dataset.read_access = str(json_dataset[ "READ_ACCESS" ])
+        new_dataset.owners_of_experiment = str(json_dataset[ "OWNERS_OF_EXPERIMENT" ])
+
+        db.session.add(new_dataset)
+        db.session.flush()
+        db.session.refresh(new_dataset)
+
+        print "Project ID:"
+        print project.id
+        print
+        print "Dataset ID:"
+        print new_dataset.id
+        print
+
+        if project:
+            new_relationship = ProjectDatasets(new_dataset, project)
+            db.session.add(new_relationship)
+            db.session.flush()
+            # manually add the new dataset/project relationship
+            # dataset = None, project = None):
+            # self.project = project
+            # self.dataset = dataset
+        else:
+            print "Warning: new dataset not added to any project"
+
+    return None
+
+# post_sequencing_processing_dict = 
+# primary_data_files_ids = 
+# files = 
+# sequences = 
+# analyses = 
+# annotations = 
+# json_project_name = 
+# publications = 
+# lab = 
+# post_sequencing_processing:quality_filter = 
+# post_sequencing_processing:process_r1_r2_file = 
+# post_sequencing_processing:phi_x_filter = 
+
+    # @Dave - scratch below for JSON info...
+
+    # "LAB_NOTEBOOK_SOURCE": "", 
+    # "SEQUENCING_SUBMISSION_NUMBER": [], 
+    # "CHAIN_TYPES_SEQUENCED": [
+    # "beta"
+    # ], 
+    # "CONTAINS_RNA_SEQ_DATA": false, 
+    # "REVERSE_PRIMER_USED_IN_RT_STEP": "oligo dT", 
+    # "LIST_OF_POLYMERASES_USED": [
+    # "FastStart High Fidelity"
+    # ], 
+    # "SEQUENCING_PLATFORM": "MiSeq 2x300", 
+    # "VH:VL_PAIRED": false, 
+    # "PROJECT_NAME": "mTCR", 
+    # "TARGET_READS": 2750000, 
+    # "CELL_MARKERS_USED": [], 
+    # "READ_ACCESS": [
+    # "sschaetzle"
+    # ], 
+    # "ADJUVANT": "", 
+    # "POST_SEQUENCING_PROCESSING:PHI_X_FILTER": false, 
+    # "CELL_TYPES_SEQUENCED": [
+    # "mTc"
+    # ], 
+    # "SPECIES": "Mus musculus", 
+    # "PUBLICATIONS": [], 
+    # "POST_SEQUENCING_PROCESSING:QUALITY_FILTER": "q20p50", 
+    # "OWNERS_OF_EXPERIMENT": [
+    # "sschaetzle"
+    # ], 
+    # "CELL_SELECTION_KIT_NAME": "", 
+    # "ISOTYPES_SEQUENCED": [
+    # "n/a"
+    # ], 
+    # "POST_SEQUENCING_PROCESSING:PROCESS_R1_R2_FILE": "pear", 
+    # "SAMPLE_PREPARATION_DATE": "05/2015", 
+    # "GSAF_BARCODE": "", 
+    # "MID_TAG": [
+    # "TGCCTAGTCA"
+    # ], 
+    # "DESCRIPTION": [
+    # "mTCR Sequencing Mouse", 
+    # "Mouse C1 Library 1"
+    # ], 
+    # "CELL_NUMBER": null, 
+    # "PRIMER_SET_NAME": [
+    # "mTCR"
+    # ], 
+    # "LAB": [
+    # "GEORGIOU"
+    # ], 
+    # "TEMPLATE_TYPE": "cDNA", 
+    # "EXPERIMENT_NAME": "memTCR_C1", 
+    # "PERSON_WHO_PREPARED_LIBRARY": [
+    # "Sebastian Schaetzle"
+    # ], 
+    # "PAIRING_TECHNIQUE": "", 
+    # "_id": "556774349eb6360c29931524"
+
+
+######
+#
+# Imports @ End - to prevent circular imports
+#
+######
+
 # import blueprint routes here
 from frontend import *
 from projects import *

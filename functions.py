@@ -4,10 +4,6 @@ import json
 
 from models import * 
 
-
-
-
-
 def _modify_function(f):
 	"""A decorator function that replaces the function it wraps with a function that captures all information necessary to call the function again:
 	the function name, its module, and the arguments it was called with. It then sends a POST request to the Immunogrep proxy server with
@@ -35,10 +31,6 @@ def _modify_function(f):
 #			return db_response
 		# return argument_dict
 	return _post_args
-
-
-
-
 
 #--- The flatten dictionary function should be put into some universal ImmunoGrep module, and shouldn't remain here.
 #--- The code is included here for prototyping porpoises.
@@ -104,8 +96,6 @@ def build_exp_from_dict(dict):
                 vetted_k = ''.format(vetted_k, c)
         setattr(ex, k.lower(), v)
     return ex
-
-
 
 def build_annotation_from_mongo_dict(d): 
     d = flatten_dictionary(d)
@@ -392,8 +382,6 @@ def build_annotation_dataframe_from_mixcr_file(file_path, dataset_id=None, analy
     cols.append('c_top_hit')
     df = df[cols]
     return df 
-
-
 
 
 
