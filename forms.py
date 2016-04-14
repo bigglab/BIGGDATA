@@ -104,6 +104,7 @@ class ImportSraAsDatasetForm(Form):
 class FileEditForm(Form):
     name = TextField('File name', [validators.length(max=256)])
     paired_partner = SelectField('Paired partner', coerce=int)
+    chain  = SelectField('Chain', choices=(('HEAVY', 'HEAVY'), ('LIGHT', 'LIGHT'), ('HEAVY/LIGHT', 'HEAVY/LIGHT'), ('TCRA', 'TCRA'), ('TCRB', 'TCRB'), ('TCRA/B', 'TCRA/B')))
 
 class CreateProjectForm(Form):
         user_id = 'user.id'
