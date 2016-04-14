@@ -2,22 +2,74 @@
 
 {% block content %}
 
-
+<!-- Datatable for all files !-->
 <div class="container">
-	<h4>Files Associated Directly With Your User:
-	<button data-toggle="collapse" data-target="#directfiles" class="btn">></button>
+	<h4>Files Associated Directly With Your User:  <button class="btn" data-toggle="collapse" data-target="#directfiles"><span class="glyphicon glyphicon-list"></span></button>
 	</h4>
 	<br>
 	<div id="directfiles" class="collapse">
-	{% set files = files %}
-	{% include "partials/files.html" with context %}
+		<table id="allfiles" class="table table-striped table-bordered" width="100%" cellspacing="0">
+			<thead>
+				<tr>
+					<th>File ID</th>
+					<th>Name</th>
+					<th>Chain</th>
+					<th>File Type</th>
+					<th>Available</th>
+					<th>File Size</th>
+					<th>Downloadable</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for file in files %}
+					<tr>
+						<th><a href="{{url_for('.file', id=file.id)}}">{{file.id}}</a></th>
+						<th>{{file.name}}</th>
+						<th>{{file.chain}}</th>
+						<th>{{file.file_type}}</th>
+					{%- if file.available -%}
+						<th>YES</th>
+					{%- else -%}
+						<th>NO</th>
+					{%- endif -%}
+					{%- if file.file_size -%}
+						<th>{{file.file_size|filesizeformat}}</th>
+					{%- else -%}
+						<th></th>
+					{%- endif -%}
+					{%- if file.s3_status == 'AVAILABLE' -%}
+						<th><a href="https://s3.amazonaws.com/biggdata{{file.s3_path.replace('//','/',10)}}">Downloadable</a></th>
+					{%- else -%}
+						{%- if file.s3_status == 'Staging On S3' -%}
+							<th>Staging On S3</th>
+						{%- else -%}
+							{%- if file.s3_status != 'AVAILABLE' and file.available -%}
+								<th><a href="{{url_for('.transfer_to_s3', file_id=file.id)}}">Stage For Transfer</a></th>
+							{%- else -%}
+								<th>{{ file.s3_status }}</th>
+							{%- endif -%}
+						{%- endif -%}
+					{%- endif -%}
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
 	</div>
 </div>
+<!-- Datatable Script for all files !-->
+<script>
+$(document).ready(function() {
+    $('#allfiles').DataTable();
+} );
+</script>
+<!-- Datatable script end !-->
+<!-- Datatable for allfiles end !-->
 
 <br>
 <br>
 
 <div class="container">
+<!-- Project search bar !-->
 	<div class="row">
 		<div class="col-md-6">
 			<div class="input-group">
@@ -27,7 +79,7 @@
 							<ul class="dropdown-menu">
 								{% for project in current_user.projects %}
 									{% if project.datasets != [] %}
-										<li data-toggle="collapse" data-target=#{{project.project_name}}><a href="#">{{project.id}} {{project.project_name}}</a></li>
+										<li data-toggle="collapse" data-target="#{{project.id}}"><a href="#">{{project.id}}: {{project.project_name}}</a></li>
 									{% endif %}
 								{% endfor %}
 							</ul>
@@ -39,6 +91,7 @@
 				</div>
 				<script>
 						var projectnames = {{ projectnames|safe }};
+						console.log(projectnames);
 						for (var i = 0; i < projectnames.length; i++){
 							projectnames[i] = projectnames[i].replace(/"/g, '')
 						};
@@ -64,32 +117,100 @@
 					<button id="go" class="btn btn-default" type="button" onclick="clickgo()">Go</button>
 				<script>
 					function clickgo(){
-					var project = '#'.concat( $('#projects').val() );
-					$(projects).collapse('toggle');
+						var value = $('#projects').val();
+						var n = value.lastIndexOf(' ');
+						var substr = value.substring(n + 1);
+						console.log(substr);
+						var project = '#'.concat( substr );
+						$(project).collapse('toggle');
 					}
 				</script>		
 				</span>	
 			</div>
 		</div>
 	</div>
+<!-- Project search bar end !-->
 	<br>
 	<br>
+<!-- Datatables for Projects !-->
 	{% for project in current_user.projects %}
 		{% if project.datasets != [] %}
-		<div id={{project.project_name}} class="collapse">
-		{% for dataset in current_user.datasets %}
-			{% if dataset.files.all() != [] %}
-			<br>
-			<div id={{dataset.name}}>
-				<h4>Files Associated With Your Dataset {{dataset.id}} {{dataset.name}}</h4>
-					{% set files = dataset.files %}
-					{% include "partials/files.html" with context %}
-					{% endif %}
-			</div>
-		{% endfor %}
+		<div id="{{project.id}}" class="collapse">
+			<table id="{{project.id}}dataset" class="table table-striped table-bordered" cellspacing="0" width="100%">
+				<thead>
+					<tr>
+						<th class='no-sort'> </th>
+						<th>Dataset</th>
+						<th>Name</th>
+						<th>Description</th>
+						<th>IG Type</th>
+						<th>VDJ+VJ Paired</th>
+						<th class='no-sort'>Run Analysis</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for dataset in project.datasets %}
+						<tr>
+							<td class="details-control"></td>
+							<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.id}}</a></td>
+							<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
+							<td>{{dataset.description}}</td>
+							<td>{{dataset.ig_type}}</td>
+							{% if dataset.paired %}
+								<td>YES</td>
+							{% else %}
+								<td></td>
+							{% endif %}
+							<td><a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">MIXCR</a> <a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a></td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+
 		</div>
+		<script>
+	
+			var table = $('#{{project.id}}dataset').DataTable({
+				columnDefs: [
+		  		{ targets: 'no-sort', orderable: false }
+		  		],
+		  		order: [[ 1, 'asc' ]]
+			});
+		 
+			var table_data = [
+			{%- for dataset in project.datasets -%}
+				{%- if dataset.files.all() == [] -%}
+					`<a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
+				{%- else -%}
+					{%- set files = files -%}
+					`{%- include "partials/files.html" with context %}`,
+				{% endif %}
+			{%- endfor -%}
+				''
+			]
+
+			table.rows().every( function () {
+			    this.child( table_data[this.index()] );
+			} );
+
+			$('#{{project.id}}dataset tbody').on( 'click', 'td.details-control', function () {
+			    var child = table.row( this ).child;
+				var tr = $(this).closest('tr');
+			    
+			    if ( child.isShown() ) {
+			        child.hide();
+			        tr.removeClass('shown');
+			    }
+			    else {
+			        child.show();
+			        tr.addClass('shown')
+
+			    }
+			} );
+		</script>
 		{% endif %}
 	{% endfor %}
+<!-- Datatables for Projects end !-->
 </div>
 
 

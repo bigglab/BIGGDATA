@@ -291,8 +291,9 @@ def files(status=[], bucket=None, key=None):
     #creates list of datasets
     projectnames = []
     for x in current_user.projects:
+        projectid = str(x.id)
         name = str(x.project_name) 
-        projectnames.append(name)
+        projectnames.append(name + ' - ' + projectid)
     if bucket and key: 
         status.append('https://s3.amazon.com/{}/{}'.format(bucket, key))
     if request.method == 'POST' and os.path.isfile(request.form['submit']):
@@ -319,18 +320,25 @@ def file(id):
     f = db.session.query(File).filter(File.id==id).first()
 
     # This part is to ensure that you have permissions to look/edit the selected file
-    projects = f.dataset.projects
-    if f.user_id is current_user.id:
-        edit = 'edit'
+    if f.dataset is None:
+        flash('There is no dataset on this file', 'warning')
+        if f.user_id is current_user.id:
+            edit='edit'
+        else:
+            edit='none'
     else:
-        edit = ''
-    for project in projects:
-        if project.role(f.user_id) is "Owner" or "Editor":
+        projects = f.dataset.projects
+        if f.user_id is current_user.id:
             edit = 'edit'
-        elif project.role(f.user_id) is "Read Only" and edit != 'edit':
-            edit = 'read'
-        elif edit != 'edit' and edit != 'read':
-            edit = None
+        else:
+            edit = ''
+        for project in projects:
+            if project.role(f.user_id) is "Owner" or "Editor":
+                edit = 'edit'
+            elif project.role(f.user_id) is "Read Only" and edit != 'edit':
+                edit = 'read'
+            elif edit != 'edit' and edit != 'read':
+                edit = None
 
     if edit is 'None':
         flash('You do not have permission to access this file', 'warning')
@@ -366,6 +374,8 @@ def file(id):
                 f.paired_partner = editfileform.paired_partner.data
                 f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
                 f2.paired_partner = f.id
+
+            f.chain = editfileform.chain.data
             db.session.commit()
             flash('Edited ' + f.name, 'success')
         else:

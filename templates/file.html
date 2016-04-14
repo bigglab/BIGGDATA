@@ -3,7 +3,7 @@
 {% block content %}
 
 <div class="editable container">
-<h1><a data-toggle="collapse" data-target="#dataEdit" href="#"><span class="pencil glyphicon glyphicon-pencil"></span></a>Checking out file: {{file.name}}</h1>
+<h1><a href='#' data-toggle="collapse" data-target="#dataEdit" href="#"><span class="pencil glyphicon glyphicon-pencil"></span></a>Checking out file: {{file.name}}</h1>
 </div>
 
 <!-- 
@@ -33,7 +33,7 @@
 					<th><a href="{{url_for('.file', id=file.id)}}">{{file.id}}</a></th>
 					<th>{{file.name}}</th>
 					<th>{{file.description}}</th>
-					<th>{{file.locus}}</th>
+					<th>{{file.chain}}</th>
 					<th>{% if file.dataset_id %}{{file.dataset_id}}{% endif %}</th>
 					<th>{{file.file_type}}</th>
 					<th>{{file.paired_partner}}</th>
@@ -69,6 +69,8 @@
 			<p>Paired to:</p>
 				{{ editfileform.paired_partner }}	
 		</row>
+			<p>Chain</p>
+				{{ editfileform.chain }}
 		<row>
 		<br>
 			<button class="btn btn-primary" type="submit">Submit</button>

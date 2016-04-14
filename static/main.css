@@ -162,3 +162,19 @@ input.search-input {
     margin-bottom: 5px;
     height: auto;
 }
+
+/* 
+ * Datatables 
+ */
+td.details-control {
+    background: url('/static/img/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+
+tr.shown td.details-control {
+    background: url('/static/img/details_close.png') no-repeat center center;
+}
+
+.no-sort::after { display: none!important; }
+
+.no-sort { pointer-events: none!important; cursor: default!important; }
