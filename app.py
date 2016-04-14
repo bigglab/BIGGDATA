@@ -835,7 +835,7 @@ def run_analysis(dataset_id, file_ids, user_id=6, analysis_type='IGFFT', analysi
                 f.command = 'gunzip -c {} > {}'.format(file.path, f.path)
                 analysis.status = 'GUNZIPPING'
                 db.session.commit()
-                response = os.command(f.command)
+                response = os.system(f.command)
                 if response == 0: 
                     f.available = TRUE 
                     db.session.add(f)
@@ -865,7 +865,9 @@ def run_igrep_annotation_on_dataset_files(dataset, files, user_id=6, overlap=Fal
 
         # annotated_f = igfft.igfft_multiprocess(f.path, file_type='FASTQ', species=species, locus=loci, parsing_settings={'isotype': isotyping_barcodes, 'remove_insertions': remove_insertions}, num_processes=number_threads, delete_alignment_file=True)           
         # annotated_files.append(annotated_f[0])
-        os.command('{}/gglab_igfft_single.py -species {} -locus {} {}'.format(igrep_script_path, species, loci, file.path))
+        script_command = '{}/gglab_igfft_single.py -species {} -locus {} {}'.format(igrep_script_path, species, loci, file.path)
+        print 'executing script: {}'.format(script_command)
+        response = os.system(script_command)
         new_file = File()
         new_file.parent_id = f.id 
         new_file.dataset_id = dataset.id 
