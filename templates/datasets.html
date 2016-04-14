@@ -63,7 +63,7 @@
 					{% else %}
 						<td></td>
 					{% endif %}
-					<td><a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">MIXCR</a> <a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a></td>
+					<td><a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a> <a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">MIXCR</a> <a href="{{url_for('.create_analysis', dataset_id=dataset.id)}}">ANNOTATE</a></td>
 				</tr>
 			{% endfor %}
 			
@@ -91,11 +91,9 @@
 	{%- endfor -%}
 		''
 	]
-
 	table.rows().every( function () {
 	    this.child( table_data[this.index()] );
 	} );
-
 	$('#datasets tbody').on( 'click', 'tr', function () {
 	    var child = table.row( this ).child;
 		var tr = $(this).closest('tr');
@@ -107,7 +105,6 @@
 	    else {
 	        child.show();
 	        tr.addClass('shown')
-
 	    }
 	} );
 </script>
@@ -116,5 +113,4 @@
 
 
 {%endblock content %}
-
 

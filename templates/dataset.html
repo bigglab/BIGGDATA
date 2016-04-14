@@ -44,6 +44,7 @@
 		<table class="table table-striped">
 			<tr><th><a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">RUN PANDASEQ TO COLLAPSE OVERLAPS</a></th></tr>				
 			<tr><th><a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">RUN MIXCR TO ANNOTATE READS</a></th></tr>				
+			<tr><th><a href="{{url_for('.create_analysis', dataset_id=dataset.id)}}">RUN ANNOTATION</a></th></tr>				
 		</table>
 	</div>
 {% endif %}

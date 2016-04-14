@@ -182,7 +182,8 @@ class Dataset(db.Model):
         cell_types_sequenced = db.Column(postgresql.ARRAY(db.String(50)))
         chain_types_sequenced = db.Column(postgresql.ARRAY(db.String(20)))
         primary_data_files_ids = Column(postgresql.ARRAY(db.Integer))
-
+        directory = Column(String(256))
+        species = Column(String(256))
         projects = association_proxy('dataset_projects', 'project')
 
         def __repr__(self): 
@@ -455,6 +456,7 @@ class Annotation(db.Model):
         analysis_name = Column(String())
         recombination_type = Column(String())
         strand = Column(String(10))
+        strand_corrected_sequence = Column(String())
         read_sequences = Column(String())
         read_qualities = Column(String())
         header = Column(String())
@@ -539,6 +541,7 @@ class Analysis(db.Model):
         params = Column(JSON)
         commands = Column(postgresql.ARRAY(String(1024)))
         responses = Column(postgresql.ARRAY(Integer))
+        files_to_analyze = Column(postgresql.ARRAY(Integer))
         vdj_count = Column(Integer)
         vj_count = Column(Integer)
         tcra_count = Column(Integer)
@@ -550,6 +553,8 @@ class Analysis(db.Model):
         notes = Column(String(1000))
         available = Column(Boolean)
         inserted_into_db = Column(Boolean)
+        directory = Column(String(256))
+        error = Column(String(256))
 
         annotations = db.relationship('Annotation', backref='analysis', lazy='dynamic')
         files = db.relationship('File', backref='analysis', lazy='dynamic')
