@@ -19,17 +19,17 @@
 	<form method="POST" action="/analysis/create/{{dataset.id}}">
     {{ form.csrf_token }}
     <tr>
-    <th>{{ form.name.label }} {{ form.name(size=20) }}</th>
-    <th>{{ form.description.label }} {{ form.description(size=40) }}</th>
-    <th>{{ form.insert_into_db.label }}: {{ form.insert_into_db }}</th>
-    <th>{{ form.file_ids.label }}: {{ form.file_ids }}</th>
+    <td>{{ form.name.label }} {{ form.name(size=20) }}</td>
+    <td>{{ form.description.label }} {{ form.description(size=40) }}</td>
+    <td>{{ form.insert_into_db.label }}: {{ form.insert_into_db }}</td>
+    <td>{{ form.file_ids.label }}: {{ form.file_ids }}</td>
     </tr>
     <tr>
-    <th>Pair Overlaps If Possible: {{ form.pair_overlaps }}</th>
-    <th>Pair Interchain If Possible: {{ form.pair_interchain }}</th>
-    <th>Trim Illumina Adapters: {{ form.trim }}</th>
-    <th>Cluster: {{ form.cluster }}</th>
-    <th><input type="submit" value="RUN PIPELINE"></th>
+    <td>Pair Overlaps If Possible: {{ form.overlap }} </td>
+    <td>Pair Interchain If Possible: {{ form.paired }} </td>
+    <td>Trim Illumina Adapters: {{ form.trim }} </td>
+    <td>Cluster: {{ form.cluster }} </td>
+    <td><input type="submit" value="EXECUTE PIPELINE"></td>
     </tr>
   </form>
 </tbody>

@@ -794,9 +794,7 @@ def run_analysis(dataset_id, file_ids, user_id=6, analysis_type='IGFFT', analysi
     analysis = Analysis()
     analysis.name = analysis_name
     analysis_description = analysis_description
-    analysis.db_status = 'WAITING'
-    # analysis.name = analysis_name
-    # analysis.description = analysis_description
+    # analysis.db_status = 'WAITING'
     analysis.user_id = user_id
     analysis.dataset_id = dataset.id
     analysis.program = analysis_type
@@ -824,12 +822,15 @@ def run_analysis(dataset_id, file_ids, user_id=6, analysis_type='IGFFT', analysi
         analysis.status = 'TRIMMING FILES' 
         db.session.commit() 
         files = run_trim_analysis_with_files(analysis, files)
+    # GENERATE OVERLAPS 
+    # if overlap: 
+
+    #Execute Analysis 
     # if analysis_type == 'MIXCR': 
     #     if overlap == True: 
     #         print 'ABOUT TO RUN MIXCR ANALYSIS {} ON FILES'.format(repr(analysis))
     #         run_mixcr_analysis_id_with_files(analysis.id, files)
 
-    #Execute Analysis 
     if analysis_type == 'IGFFT':
         files_for_analysis = [] 
         for file in files: 
@@ -853,11 +854,13 @@ def run_analysis(dataset_id, file_ids, user_id=6, analysis_type='IGFFT', analysi
             else: 
                 files_for_analysis.append(file)
         analysis.status = 'EXECUTING'
+        db.session.add(analysis)
         db.session.commit()
         if files_for_analysis == []: files_for_analysis = files 
         annotated_files = run_igrep_annotation_on_dataset_files(dataset, files_for_analysis, user_id=6, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting)
-
-
+        print 'annotated files from igfft: {}'.format(annotated_files)
+    # PAIR 
+    # CLUSTER
 
 def run_igrep_annotation_on_dataset_files(dataset, files, user_id=6, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]):
     # dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
