@@ -497,7 +497,7 @@ def pandaseq(dataset_id, status=[]):
 def create_analysis(dataset_id, status=[]):
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
     form = CreateAnalysisForm()
-    file_options = map(lambda f: [f.id, f.name], dataset.files)
+    file_options = map(lambda f: [f.id, f.name], [f for f in dataset.files if 'FASTQ' in f.file_type])
     form.file_ids.choices = file_options
     status = []
     if request.method == 'POST' and dataset:

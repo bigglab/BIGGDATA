@@ -52,7 +52,7 @@
 				{% else %}
 					<th></th>
 				{% endif %}
-				<th><a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">MIXCR</a> <a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a><th>
+				<th><a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a><a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">MIXCR</a> <a href="{{url_for('.create_analysis', dataset_id=dataset.id)}}">ANNOTATE</a><th>
 				</tr>
 				<tr>
 					{% set files = dataset.files %}

@@ -318,6 +318,8 @@ def import_files_as_dataset(filepath_array, filename_array=None, chain=None, use
     db.session.add(d)
     db.session.commit()
     d.directory = current_user.scratch_path + '/Dataset_' + d.id
+    if not os.path.exists(dataset.directory):
+        os.makedirs(dataset.directory)
     db.session.commit()
     files = []
     for index, filepath in enumerate(filepath_array):
@@ -492,9 +494,9 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     analysis.finished = 'now'
     db.session.commit()
     # KICK OFF ASYNC DB INSERTS FROM OUTPUT FILES
-    parseable_mixcr_alignments_file_path = alignment_output_file.path
+    # parseable_mixcr_alignments_file_path = alignment_output_file.path
     # PARSE WITH parse_and_insert_mixcr_annotation_dataframe_from_file_path to speed up? 
-    if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
+    # if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
     return True 
 
 @celery.task
@@ -713,13 +715,14 @@ def run_trim_analysis_with_files(analysis, files):
             f.in_use = False
             f.file_size = os.path.getsize(f.path)
             db.session.commit()
+            output_files.append(f)
         else:
             f.available = False
             f.in_use = False 
             analysis.status = 'FAILED'
             db.session.commit()
     print 'Trim job for analysis {} has been executed.'.format(analysis)
-    return files 
+    return output_files 
 
 
 
@@ -810,12 +813,16 @@ def run_analysis(dataset_id, file_ids, user_id=6, analysis_type='IGFFT', analysi
         analysis.directory = dataset.directory + '/Analysis_' + str(analysis.id)
     else: 
         analysis.directory = analysis.dataset.user.scratch_path + '/Analysis_' + str(analysis.id)
+    if not os.path.exists(analysis.directory):
+        os.makedirs(analysis.directory)
     files = map(lambda x: db.session.query(File).filter(File.id==x).first(), file_ids)
     
     print 'Analysis Output Set To {}'.format(analysis.directory)
     print 'Using these files: {}'.format(files)
     if trim:
         print 'Running Trim on Files in Analysis {} before executing annotation'.format(analysis.id)
+        analysis.status = 'TRIMMING FILES' 
+        db.session.commit() 
         files = run_trim_analysis_with_files(analysis, files)
     # if analysis_type == 'MIXCR': 
     #     if overlap == True: 
@@ -845,7 +852,10 @@ def run_analysis(dataset_id, file_ids, user_id=6, analysis_type='IGFFT', analysi
                     print 'ERROR GUNZIPPING FILE {}: '.format(f.path, f.command)
             else: 
                 files_for_analysis.append(file)
-        annotated_files = run_igrep_annotation_on_dataset_files(dataset, files, user_id=6, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting)
+        analysis.status = 'EXECUTING'
+        db.session.commit()
+        if files_for_analysis == []: files_for_analysis = files 
+        annotated_files = run_igrep_annotation_on_dataset_files(dataset, files_for_analysis, user_id=6, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting)
 
 
 
@@ -857,7 +867,7 @@ def run_igrep_annotation_on_dataset_files(dataset, files, user_id=6, overlap=Fal
 
     if dataset.species == 'Human': species = 'homosapiens' 
     if dataset.species == 'Mouse': species = 'musmusculus' 
-
+    annotated_files = []
     for file in files: 
         if file.chain == 'HEAVY': loci = 'igh'
         if file.chain == 'LIGHT': loci = 'igk,igl'
@@ -865,11 +875,11 @@ def run_igrep_annotation_on_dataset_files(dataset, files, user_id=6, overlap=Fal
 
         # annotated_f = igfft.igfft_multiprocess(f.path, file_type='FASTQ', species=species, locus=loci, parsing_settings={'isotype': isotyping_barcodes, 'remove_insertions': remove_insertions}, num_processes=number_threads, delete_alignment_file=True)           
         # annotated_files.append(annotated_f[0])
-        script_command = '{}/gglab_igfft_single.py -species {} -locus {} {}'.format(igrep_script_path, species, loci, file.path)
+        script_command = 'python {}/gglab_igfft_single.py -species {} -locus {} {}'.format(igrep_script_path, species, loci, file.path)
         print 'executing script: {}'.format(script_command)
         response = os.system(script_command)
         new_file = File()
-        new_file.parent_id = f.id 
+        new_file.parent_id = file.id 
         new_file.dataset_id = dataset.id 
         new_file.name = file.name.replace('fastq','igfft.annotation')
         new_file.path = file.path.replace('fastq','igfft.annotation')
@@ -878,8 +888,9 @@ def run_igrep_annotation_on_dataset_files(dataset, files, user_id=6, overlap=Fal
         new_file.available=True 
         db.session.add(new_file)
         db.session.commit()
-    
-    return True 
+        annotated_files.append(new_file)
+
+    return annotated_files 
 
 
 
