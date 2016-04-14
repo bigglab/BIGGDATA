@@ -68,7 +68,7 @@ celery = Celery(app.name, broker='amqp://')
 import celery_config 
 celery.config_from_object('celery_config')
 # CELERY QUEUE TO SEND JOBS TO - USE FOR DEVELOPMENT 
-celery_queue = 'development'
+celery_queue = 'default'
 
 # @Dave - temporary edit for local environ
 s3 = boto.connect_s3(app.config['AWSACCESSKEYID'], app.config['AWSSECRETKEY'])
