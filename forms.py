@@ -40,6 +40,18 @@ class CreateMixcrAnalysisForm(Form):
     cluster = BooleanField(u'Cluster Sequences')
 
 
+class CreateAnalysisForm(Form): 
+    dataset_id = IntegerField()
+    name = TextField(u'Name')
+    analysis_type = TextField(u'Name', default='IGFFT')
+    description = TextField(u'Description')
+    trim = BooleanField(u'Trim Illumina Adapters')
+    overlap = BooleanField(u'Pair Overlaps')
+    paired = BooleanField(u'Pair Interchain')
+    insert_into_db = BooleanField(u'Insert Into DB')
+    cluster = BooleanField(u'Cluster Sequences')
+
+
 class CreatePandaseqAnalysisForm(Form): 
     dataset_id = IntegerField()
     name = TextField(u'Name', )

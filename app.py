@@ -67,6 +67,8 @@ db.app = app
 celery = Celery(app.name, broker='amqp://')
 import celery_config 
 celery.config_from_object('celery_config')
+# CELERY QUEUE TO SEND JOBS TO - USE FOR DEVELOPMENT 
+celery_queue = 'development'
 
 # @Dave - temporary edit for local environ
 s3 = boto.connect_s3(app.config['AWSACCESSKEYID'], app.config['AWSSECRETKEY'])
@@ -520,7 +522,7 @@ def parse_and_insert_mixcr_annotations_from_file_path(file_path, dataset_id=None
         analysis.db_status = 'Finished. {} Annotations Inserted'.format(len(annotations))
         analysis.status = 'Complete'
     db.session.commit()
-    result = annotate_analysis_from_db.apply_async((analysis.id, ), queue='default')
+    result = annotate_analysis_from_db.apply_async((analysis.id, ), queue=celery_queue)
     return len(annotations)
 
 
@@ -545,7 +547,7 @@ def parse_and_insert_mixcr_annotation_dataframe_from_file_path(file_path, datase
     if analysis: 
         analysis.db_status = 'Finished. {} Annotations Inserted'.format(len(annotation_df))
     db.session.commit()
-    result = annotate_analysis_from_db.apply_async((analysis.id, ), queue='default')
+    result = annotate_analysis_from_db.apply_async((analysis.id, ), queue=celery_queue)
     return True
 
 
