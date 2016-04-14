@@ -441,6 +441,7 @@ class Annotation(db.Model):
         analysis_name = Column(String())
         recombination_type = Column(String())
         strand = Column(String(10))
+        strand_corrected_sequence = Column(String())
         read_sequences = Column(String())
         read_qualities = Column(String())
         header = Column(String())

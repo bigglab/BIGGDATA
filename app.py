@@ -841,8 +841,7 @@ def run_analysis(dataset_id, file_ids, analysis_type='IGFFT', analysis_name='', 
                     print 'ERROR GUNZIPPING FILE {}: '.format(f.path, f.command)
             else: 
                 files_for_analysis.append(file)
-
-        annotated_files = run_igrep_annotation_on_dataset_files(dataset, analysis, files, user_id=6, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting)
+        annotated_files = run_igrep_annotation_on_dataset_files(dataset, files, user_id=6, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting)
 
 
 
@@ -921,34 +920,10 @@ def run_igrep_annotation_on_dataset_analysis_files(dataset, analysis, files, use
     
     if not group_name: group_name = 'ReadGroup_1' 
 
-    print('Pairing sequences')  
-    output_dir = analysis.directory
-    pairing.RunPairing(annotated_files, annotated_file_formats='TAB', analysis_method='GEORGIOU_INHOUSE', output_folder_path=output_dir, prefix_output_files=group_name, cluster_cutoff=cluster_setting, annotation_cluster_setting=annotation_cluster_cutoff)
+    # print('Pairing sequences')  
+    # output_dir = analysis.directory
+    # pairing.RunPairing(annotated_files, annotated_file_formats='TAB', analysis_method='GEORGIOU_INHOUSE', output_folder_path=output_dir, prefix_output_files=group_name, cluster_cutoff=cluster_setting, annotation_cluster_setting=annotation_cluster_cutoff)
     return True 
-
-#     print('Pipeline complete')
-        
-# if __name__ == "__main__":
-#     arguments = sys.argv[1:]
-#     argnum = 0
-#     fastq_files = []
-#     while True:
-#         if argnum >= len(arguments):
-#             break
-#         if arguments[argnum] == '-species':
-#             argnum += 1
-#             species = arguments[argnum]
-#         elif arguments[argnum] == '-locus': 
-#             argnum += 1
-#             locus = arguments[argnum]
-#         else:
-#             fastq_files.append(arguments[argnum])
-#             f = os.path.expanduser(fastq_files[-1])         
-#             if not os.path.isfile(f):
-#                 raise Exception('The provided file {0} does not exist'.format(f))
-#             fastq_files[-1] = os.path.abspath(f)            
-#         argnum += 1 
-#     run_gglab_pipeline(fastq_files, species, locus.split(','))
 
 
 
