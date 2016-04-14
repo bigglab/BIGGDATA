@@ -313,11 +313,47 @@ def files(status=[], bucket=None, key=None):
         return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status, datasetnames=map(json.dumps, datasetnames))
  
 
-@frontend.route('/files/<int:id>', methods=['GET'])
+@frontend.route('/files/<int:id>', methods=['GET','POST'])
 @login_required
 def file(id):
     f = db.session.query(File).filter(File.id==id).first()
-    return render_template("file.html", file=f)
+
+
+    editfileform = FileEditForm()
+    if f.dataset != None:
+        editfileform.paired_partner.choices = [(x.id, x.name) for x in f.dataset.files if ((x.user_id != None) and (x.name != f.name))]
+        editfileform.paired_partner.choices.append((0, None))
+    else:
+        editfileform.paired_partner.choices = [(x.id, x.name) for x in f.user.files if ((x.user_id != None) and (x.dataset == None) and (x.name != f.name))]
+        editfileform.paired_partner.choices.append((0, None))
+
+    if editfileform.validate_on_submit():
+        f.name = editfileform.name.data
+        if f.paired_partner != None:
+            f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
+
+            if f2.id == editfileform.paired_partner.id:
+                flash('Edited ' + f.name, 'success')
+            elif editfileform.paired_partner.data is 0:
+                f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
+                f2.paired_partner = None
+                f.paired_partner = None
+                flash('Removed partner', 'success')
+            else:
+                f.paired_partner = editfileform.paired_partner.data
+                f3 = db.session.query(File).filter(File.id==f.paired_partner).first()
+                f3.paired_partner=f.id
+                f2.paired_partner=None
+        else:
+            f.paired_partner = editfileform.paired_partner.data
+            f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
+            f2.paired_partner = f.id
+        db.session.commit()
+        flash('Edited ' + f.name, 'success')
+    else:
+        flash_errors(editfileform)
+
+    return render_template("file.html", file=f, editfileform=editfileform)
 
 @frontend.route('/files/download/<int:id>')
 @login_required
