@@ -70,6 +70,14 @@ from models import *
 # get a list of projects based on a dataset query
 # dataset.project
 # 
+# Make sure usernames are unique
+# Instantiate users with the following directories:
+#   /data/user/raw/original.fastq.gz
+#   /data/user/scratch/ 
+#   /data/user/filtered/
+# Make these celery tasks
+# 
+# Add role function for files
 
 projects_blueprint = Blueprint('projects', __name__)
 
