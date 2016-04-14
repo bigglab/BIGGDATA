@@ -834,25 +834,27 @@ def run_analysis(dataset_id, file_ids, user_id=6, analysis_type='IGFFT', analysi
     if analysis_type == 'IGFFT':
         files_for_analysis = [] 
         for file in files: 
+            #IGFFT NEEDS UNCOMPRESSED FASTQs
             if file.file_type == 'GZIPPED_FASTQ': 
-                f = File()
-                f.parent_id = file.id 
-                f.path = analysis.directory + '/' + file.name.replace('.gz','')
-                f.file_type = 'FASTQ'
-                f.name =  file.name.replace('.gz', '')
-                f.command = 'gunzip -c {} > {}'.format(file.path, f.path)
+                new_file = File()
+                new_file.parent_id = file.id 
+                new_file.path = analysis.directory + '/' + file.name.replace('.gz','')
+                new_file.file_type = 'FASTQ'
+                new_file.available = False
+                new_file.name =  file.name.replace('.gz', '')
+                new_file.command = 'gunzip -c {} > {}'.format(file.path, new_file.path)
                 analysis.status = 'GUNZIPPING'
                 db.session.commit()
                 response = os.system(f.command)
                 if response == 0: 
-                    f.available = TRUE 
-                    db.session.add(f)
+                    new_file.available = True 
+                    db.session.add(new_file)
                     db.session.commit()
-                    files_for_analysis.append(f)
+                    files_for_analysis.append(new_file)
                 else: 
-                    print 'ERROR GUNZIPPING FILE {}: '.format(f.path, f.command)
+                    print 'ERROR GUNZIPPING FILE {}: '.format(file.path, new_file.command)
             else: 
-                files_for_analysis.append(file)
+                files_for_analysis.append(new_file)
         analysis.status = 'EXECUTING'
         db.session.add(analysis)
         db.session.commit()
