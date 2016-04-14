@@ -166,48 +166,46 @@ $(document).ready(function() {
 					{% endfor %}
 				</tbody>
 			</table>
+			<script>
+	var table{{project.id}}= $('#{{project.id}}dataset').DataTable({
+		columnDefs: [
+  		{ targets: 'no-sort', orderable: false }
+  		],
+  		order: [[ 1, 'asc' ]]
+	});
+ 
+	var table_data{{project.id}} = [
+	{%- for dataset in project.datasets -%}
+		{%- if dataset.files.all() == [] -%}
+			`<a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
+		{%- else -%}
+			{%- set files = dataset.files -%}
+			`{%- include "partials/files.html" with context %}`,
+		{% endif %}
+	{%- endfor -%}
+		''
+	]
 
+	table{{project.id}}.rows().every( function () {
+	    this.child( table_data{{project.id}}[this.index()] );
+	} );
+
+	$('#{{project.id}}dataset tbody').on( 'click', 'td.details-control', function () {
+		var tr = $(this).closest('tr');
+		var child = table{{project.id}}.row( tr ).child;
+	    
+	    if ( child.isShown() ) {
+	        child.hide();
+	        tr.removeClass('shown');
+	    }
+	    else {
+	        child.show();
+	        tr.addClass('shown')
+
+	    }
+	} );
+</script>
 		</div>
-		<script>
-	
-			var table = $('#{{project.id}}dataset').DataTable({
-				columnDefs: [
-		  		{ targets: 'no-sort', orderable: false }
-		  		],
-		  		order: [[ 1, 'asc' ]]
-			});
-		 
-			var table_data = [
-			{%- for dataset in project.datasets -%}
-				{%- if dataset.files.all() == [] -%}
-					`<a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
-				{%- else -%}
-					{%- set files = files -%}
-					`{%- include "partials/files.html" with context %}`,
-				{% endif %}
-			{%- endfor -%}
-				''
-			]
-
-			table.rows().every( function () {
-			    this.child( table_data[this.index()] );
-			} );
-
-			$('#{{project.id}}dataset tbody').on( 'click', 'td.details-control', function () {
-			    var child = table.row( this ).child;
-				var tr = $(this).closest('tr');
-			    
-			    if ( child.isShown() ) {
-			        child.hide();
-			        tr.removeClass('shown');
-			    }
-			    else {
-			        child.show();
-			        tr.addClass('shown')
-
-			    }
-			} );
-		</script>
 		{% endif %}
 	{% endfor %}
 <!-- Datatables for Projects end !-->
