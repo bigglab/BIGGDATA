@@ -191,8 +191,8 @@ $(document).ready(function() {
 	} );
 
 	$('#{{project.id}}dataset tbody').on( 'click', 'td.details-control', function () {
-		var tr = $(this).closest('tr');
 		var child = table{{project.id}}.row( tr ).child;
+		var tr = $(this).closest('tr');
 	    
 	    if ( child.isShown() ) {
 	        child.hide();
