@@ -183,6 +183,7 @@ class Dataset(db.Model):
         chain_types_sequenced = db.Column(postgresql.ARRAY(db.String(20)))
         primary_data_files_ids = Column(postgresql.ARRAY(db.Integer))
         directory = Column(String(256))
+        species = Column(String(256))
         projects = association_proxy('dataset_projects', 'project')
 
         def __repr__(self): 

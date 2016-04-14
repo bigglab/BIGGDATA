@@ -1,0 +1,139 @@
+{% extends '_base.html' %}
+
+{% block content %}
+
+
+<div class="container">
+<h3>Building Analysis Run For Dataset {{dataset.id}}: </h3>
+</div>
+
+
+<br>
+
+<div class="container">
+<table class="table table-striped" >
+<thead>
+<h4> Analysis Configuration:</h4>
+</thead>
+<tbody>
+	<form method="POST" action="/analysis/create/{{dataset.id}}">
+    {{ form.csrf_token }}
+    <tr>
+    <th>{{ form.name.label }} {{ form.name(size=20) }}</th>
+    <th>{{ form.description.label }} {{ form.description(size=40) }}</th>
+    <th>{{ form.insert_into_db.label }}: {{ form.insert_into_db }}</th>
+    <th>{{ form.file_ids.label }}: {{ form.file_ids }}</th>
+    </tr>
+    <tr>
+    <th>Pair Overlaps If Possible: {{ form.pair_overlaps }}</th>
+    <th>Pair Interchain If Possible: {{ form.pair_interchain }}</th>
+    <th>Trim Illumina Adapters: {{ form.trim }}</th>
+    <th>Cluster: {{ form.cluster }}</th>
+    <th><input type="submit" value="RUN PIPELINE"></th>
+    </tr>
+  </form>
+</tbody>
+</table>
+</div>
+
+<br>
+<br>
+
+
+<div class='container'>
+{% if status != [] %}
+{% for ln in status %}
+    <h4>{{ln}}</h4>
+{% endfor %}
+{% endif %}
+<br>
+{% if async_task_id %}
+<p>Async Task ID: {{async_task_id}}</p>
+{% endif %}
+</div>
+
+
+<br>
+<br>
+
+
+<div class="container">
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Dataset Name</th>
+				<th>Description</th>
+				<th>IG Type</th>
+				<th>VDJ+VJ Paired</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+				<tr>
+					<th><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></th>
+					<th>{{dataset.description}}</th>
+					<th>{{dataset.ig_type}}</th>
+					{% if dataset.paired %}
+						<th>YES</th>
+					{% else %}
+						<th>NO</th>
+					{% endif %}
+				</tr>
+				<tr>
+				{% set files = dataset.files %}
+				{% include "partials/files.html" with context %}
+				</tr>
+		</tbody>
+	</table>
+</div>
+
+
+
+
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+
+
+
+
+{%endblock content %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
