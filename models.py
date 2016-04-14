@@ -214,6 +214,20 @@ class Dataset(db.Model):
                 files = [f for f in all_files if f.id in self.primary_data_files_ids]
             return files 
 
+        def role(self, user):
+            dataset_role = None
+
+            for project in projects:
+                project_role = project.role(user)
+
+                if project_role == "Owner":
+                    return "Owner"
+                elif project_role == "Editor":
+                    dataset_role = "Editor"
+                elif project_role == "Read Only" and dataset_role != "Editor":
+                    dataset_role = "Read Only"
+            return dataset_role
+
         def files_by_type(self, type_string):
             all_files = self.files.all()
             if all_files == None: return []
