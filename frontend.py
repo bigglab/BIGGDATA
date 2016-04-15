@@ -406,7 +406,7 @@ def datasets():
 
     projects = Set(current_user.projects)
     projects.discard(None)
-    projects = sorted(projects, key=lambda x: x.id, reverse=False)
+    projects = sorted(projects, key=lambda x: x.id, reverse=True)
     project_tuples = []
 
     if len(projects) > 0:
@@ -414,6 +414,7 @@ def datasets():
             if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
                 project_tuples.append( (str(project.id), project.project_name))
         if len(project_tuples) > 0:
+            project_tuples.append(('new', 'New Project'))
             form.project.choices = project_tuples
 
     if request.method == 'POST':
@@ -429,19 +430,12 @@ def datasets():
             db.session.flush()
 
             # check if the user has selected the default project (i.e., the user has no projects)
-            if form.project.data == 'default':
-                # if the user has no projects, add one
-                if len(projects) != 0:
-                    # really shouldn't get here, if the user has projects, add it to the first one (sorted by id#)
-                    for project in projects:
-                        if project.role(current_user) == 'Owner':
-                            project.datasets.append(d)
-                            db.session.commit()
-                            return redirect(url_for('.datasets'))
+            if form.project.data == 'new':
                 # create a new project here with the name default, add the user and dataset to the new project
-                new_project = Project(user_id = current_user.id, project_name = 'Default')
+                new_project = Project(user_id = current_user.id, project_name = 'Project')
                 db.session.add(new_project)
                 db.session.flush()
+                new_project.project_name = 'Project ' + str(new_project.id)
                 new_project.users = [current_user]
                 new_project.datasets = [d]
                 db.session.commit()

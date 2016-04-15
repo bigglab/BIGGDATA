@@ -87,7 +87,7 @@ class CreateDatasetForm(Form):
     description = TextField()
     paired = BooleanField()
     ig_type = TextField()
-    project  = SelectField(u'Project', choices=[('default', 'Default')], validators=[validators.input_required()])
+    project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
 
 
     # experiment_id = db.Column(db.Integer, db.ForeignKey('experiment.id'))
