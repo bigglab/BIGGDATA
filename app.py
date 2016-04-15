@@ -1001,29 +1001,17 @@ def create_datasets_from_JSON_string(json_string, project = None):
             dataset_name = 'Dataset ' + str(json_counter)
             json_counter = json_counter + 1 
 
-        # flatten lists here
-        for field in json_flatten_fields:
-            if type(json_dataset[field]) == list:
-                json_dataset[field] = " ".join(json_dataset[field])
-
-        # flatten comma lists here
-        for field in json_comma_fields:
-            if type(json_dataset[field]) == list:
-                json_dataset[field] = ", ".join(json_dataset[field])
-
-        for field in json_expected_fields:
-            if type(json_dataset[field]) != list:
-                print ' "' + field + '", is a ' +  str(type(json_dataset[field]))
-
-        # flatten special fields here
         post_sequencing_processing = {}
-        for field in json_psp_fields:
-            if field in json_dataset:
+        for field in json_expected_fields:    
+            if field in json_flatten_fields and type(json_dataset[field]) == list: # flatten lists here
+                json_dataset[field] = " ".join(json_dataset[field])
+            if field in json_comma_fields and type(json_dataset[field]) == list: # flatten comma lists here    
+                json_dataset[field] = ", ".join(json_dataset[field])
+            if field in json_psp_fields and field in json_dataset: # flatten special fields here
                 post_sequencing_processing[field] = json_dataset[field]
+        
         post_sequencing_processing = str(post_sequencing_processing)
         
-        print "post_sequencing_processing: " + post_sequencing_processing
-
         contains_rna_seq_data = False
         if json_dataset[ "CONTAINS_RNA_SEQ_DATA" ] == "True":
             contains_rna_seq_data = True
@@ -1066,99 +1054,19 @@ def create_datasets_from_JSON_string(json_string, project = None):
         db.session.flush()
         db.session.refresh(new_dataset)
 
-        print "Project ID:"
-        print project.id
-        print
-        print "Dataset ID:"
-        print new_dataset.id
-        print
-
         if project:
             new_relationship = ProjectDatasets(new_dataset, project)
             db.session.add(new_relationship)
             db.session.flush()
-            # manually add the new dataset/project relationship
-            # dataset = None, project = None):
-            # self.project = project
-            # self.dataset = dataset
         else:
-            print "Warning: new dataset not added to any project"
+            print "Warning: new dataset {} not added to any project".format(new_dataset.id)
+
+        if current_user:
+            current_user.datasets.append(new_dataset)
+            db.session.flush()
+            db.session.refresh(current_user)
 
     return None
-
-# post_sequencing_processing_dict = 
-# primary_data_files_ids = 
-# files = 
-# sequences = 
-# analyses = 
-# annotations = 
-# json_project_name = 
-# publications = 
-# lab = 
-# post_sequencing_processing:quality_filter = 
-# post_sequencing_processing:process_r1_r2_file = 
-# post_sequencing_processing:phi_x_filter = 
-
-    # @Dave - scratch below for JSON info...
-
-    # "LAB_NOTEBOOK_SOURCE": "", 
-    # "SEQUENCING_SUBMISSION_NUMBER": [], 
-    # "CHAIN_TYPES_SEQUENCED": [
-    # "beta"
-    # ], 
-    # "CONTAINS_RNA_SEQ_DATA": false, 
-    # "REVERSE_PRIMER_USED_IN_RT_STEP": "oligo dT", 
-    # "LIST_OF_POLYMERASES_USED": [
-    # "FastStart High Fidelity"
-    # ], 
-    # "SEQUENCING_PLATFORM": "MiSeq 2x300", 
-    # "VH:VL_PAIRED": false, 
-    # "PROJECT_NAME": "mTCR", 
-    # "TARGET_READS": 2750000, 
-    # "CELL_MARKERS_USED": [], 
-    # "READ_ACCESS": [
-    # "sschaetzle"
-    # ], 
-    # "ADJUVANT": "", 
-    # "POST_SEQUENCING_PROCESSING:PHI_X_FILTER": false, 
-    # "CELL_TYPES_SEQUENCED": [
-    # "mTc"
-    # ], 
-    # "SPECIES": "Mus musculus", 
-    # "PUBLICATIONS": [], 
-    # "POST_SEQUENCING_PROCESSING:QUALITY_FILTER": "q20p50", 
-    # "OWNERS_OF_EXPERIMENT": [
-    # "sschaetzle"
-    # ], 
-    # "CELL_SELECTION_KIT_NAME": "", 
-    # "ISOTYPES_SEQUENCED": [
-    # "n/a"
-    # ], 
-    # "POST_SEQUENCING_PROCESSING:PROCESS_R1_R2_FILE": "pear", 
-    # "SAMPLE_PREPARATION_DATE": "05/2015", 
-    # "GSAF_BARCODE": "", 
-    # "MID_TAG": [
-    # "TGCCTAGTCA"
-    # ], 
-    # "DESCRIPTION": [
-    # "mTCR Sequencing Mouse", 
-    # "Mouse C1 Library 1"
-    # ], 
-    # "CELL_NUMBER": null, 
-    # "PRIMER_SET_NAME": [
-    # "mTCR"
-    # ], 
-    # "LAB": [
-    # "GEORGIOU"
-    # ], 
-    # "TEMPLATE_TYPE": "cDNA", 
-    # "EXPERIMENT_NAME": "memTCR_C1", 
-    # "PERSON_WHO_PREPARED_LIBRARY": [
-    # "Sebastian Schaetzle"
-    # ], 
-    # "PAIRING_TECHNIQUE": "", 
-    # "_id": "556774349eb6360c29931524"
-
 
 ######
 #

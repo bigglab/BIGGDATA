@@ -80,7 +80,10 @@ from models import *
 #   /data/user/filtered/
 # Make these celery tasks
 # 
-# Add role function for files
+# Add user role function for files
+#
+# Add glyphicon for adding files
+#
 
 projects_blueprint = Blueprint('projects', __name__)
 
@@ -210,15 +213,10 @@ def create_project():
             flash('There was an error in uploading your JSON file.','warning')
 
         db.session.commit()
+
         flash('Your new project has been created.', 'success')
         return redirect( url_for('projects.manage_projects') )
-        
-        
 
-        
-
-        flash('Your got this file: {}'.format(create_project_form.file.data),'success')
-        return render_template("create_project.html", create_project_form = create_project_form)
     else:
         flash_errors(create_project_form)
 
@@ -366,11 +364,29 @@ def edit_project(project_id):
                 project.publications = edit_project_form.publications.data
                 project.species = edit_project_form.species.data
                 project.lab = edit_project_form.lab.data
-                
+
                 db.session.commit()
 
+                # determine if a JSON was submitted to be added to the project
+                try:
+                    if request.files['file'].filename != '':
+
+                        request_file = request.files['file']
+                        json_string = request_file.read()
+
+                        # if this function returns a string, it describes the error
+                        error = create_datasets_from_JSON_string(json_string, project)
+                        if error:
+                            flash(error, 'warning')    
+                        else:
+                            # now, we need to update the list of datasets in the project
+                            db.session.commit()
+                            flash('Success!!! Your new project has been updated.', 'success')
+                            return redirect( url_for('projects.edit_project', project_id = project.id) )
+                except:
+                    flash('There was an error in uploading your JSON file.','warning')
+                
                 flash('Success!!! Your new project has been updated.', 'success')
-                #return redirect( url_for('projects.manage_projects') )
 
                 # painfully redundant, but this will clean up and form issues where there is a double viewer/editor selection:
                 for user in users:
