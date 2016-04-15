@@ -1,6 +1,6 @@
 {% extends '_base.html' %}
 
-{% block content %}
+{% block wide_content %}
 <div class="container">
 <h2>Showing information about Dataset {{dataset.id}}: </h2>
 </div>
@@ -33,9 +33,240 @@
 			{% endfor %}
 		</tbody>
 	</table>
+
+	<div id="accordion">
+        <table cellpadding="5" cellspacing="0" border="0">
+            <tbody class="accordian-control">
+                <tr>
+                    <td class="collapse-control"></td>
+                    <td valign="center"><label>Show detailed dataset information...</label></td>
+                </tr>
+            </tbody>
+        </table>
+        <div id="collapseOne" class="collapse">
+        	<br>
+
+
+			<div class="panel panel-default">
+			    <div class="panel-heading">
+			    	<table width="100%">
+			    		<tbody>
+				    		<tr>
+				    			<td>
+				    				<label>Sequencing Information</label>
+				    			</td>			    			
+				    			<td>
+				    				<p class="text-right"><a href="">[ EDIT ]</a></p>
+				    			</td>			    			
+				    		</tr>
+			    		</tbody>
+			    	</table>
+		    	</div>
+		     	<div class="panel-body">
+					<div class='row'>
+			            <div class="col-sm-4">
+
+							<label>Experiment Name </label><br>
+							{% if dataset.experiment_name != '' -%}								
+								{{ dataset.experiment_name }}<br><br>
+							{%- else -%}
+								None<br><br>
+							{%- endif %}
+
+							{% if dataset.cell_types_sequenced != '' -%}
+								<label>Cell Types Sequenced </label><br>
+								{{ dataset.cell_types_sequenced }}<br><br>
+							{%- endif %}
+
+							{% if dataset.chain_types_sequenced != '' -%}
+								<label>Chain Types Sequenced </label><br>
+								{{ dataset.chain_types_sequenced }}<br><br>
+							{%- endif %}
+
+							{% if dataset.sequencing_submission_number != '' -%}
+								<label>Sequencing Submission Number </label><br>
+								{{ dataset.sequencing_submission_number }}<br><br>
+							{%- endif %}
+
+							{% if dataset.contains_rna_seq_data != '' -%}
+								<label>Contains Rna Seq Data </label><br>
+								{{ dataset.contains_rna_seq_data }}<br><br>
+							{%- endif %}
+
+							{% if dataset.reverse_primer_used_in_rt_step != '' -%}
+								<label>Reverse Primer Used In rt_Step </label><br>
+								{{ dataset.reverse_primer_used_in_rt_step }}<br><br>
+							{%- endif %}
+
+							{% if dataset.pairing_technique != '' -%}
+								<label>Pairing Technique </label><br>
+								{{ dataset.pairing_technique }}<br><br>
+							{%- endif %}
+
+						</div>
+			            <div class="col-sm-4">
+							<label>Species </label><br>
+							{% if dataset.species != '' -%}
+								{{ dataset.species }}<br><br>
+							{%- else -%}
+								None<br><br>
+							{%- endif %}
+
+							{% if dataset.list_of_polymerases_used != '' -%}
+								<label>List Of Polymerases Used </label><br>
+								{{ dataset.list_of_polymerases_used }}<br><br>
+							{%- endif %}
+
+							{% if dataset.sequencing_platform != '' -%}
+								<label>Sequencing Platform </label><br>
+								{{ dataset.sequencing_platform }}<br><br>
+							{%- endif %}
+
+							{% if dataset.target_reads != '' -%}
+								<label>Target Reads </label><br>
+								{{ dataset.target_reads }}<br><br>
+							{%- endif %}
+
+							{% if dataset.cell_markers_used != '' -%}
+								<label>Cell Markers Used </label><br>
+								{{ dataset.cell_markers_used }}<br><br>
+							{%- endif %}
+
+							{% if dataset.adjuvant != '' -%}
+								<label>Adjuvant </label><br>
+								{{ dataset.adjuvant }}<br><br>
+							{%- endif %}
+
+							{% if dataset.cell_selection_kit_name != '' -%}
+								<label>Cell Selection Kit Name </label><br>
+								{{ dataset.cell_selection_kit_name }}<br><br>
+							{%- endif %}
+
+							{% if dataset.isotypes_sequenced != '' -%}
+								<label>Isotypes Sequenced </label><br>
+								{{ dataset.isotypes_sequenced }}<br><br>
+							{%- endif %}
+
+							{% if dataset.json_id != '' -%}
+								<label>Json Id </label><br>
+								{{ dataset.json_id }}<br>
+							{%- endif %}
+
+						</div>
+			            <div class="col-sm-4">
+							<label>Sample Preparation Date </label><br>
+							{% if dataset.sample_preparation_date != '' -%}
+								{{ dataset.sample_preparation_date }}<br><br>
+							{%- else -%}
+								None<br><br>
+							{%- endif %}
+
+							{% if dataset.post_sequencing_processing_dict != '' -%}
+								<label>Post Sequencing Processing Dict </label><br>
+								{{ dataset.post_sequencing_processing_dict }}<br><br>
+							{%- endif %}
+
+							{% if dataset.gsaf_barcode != '' -%}
+								<label>Gsaf Barcode </label><br>
+								{{ dataset.gsaf_barcode }}<br><br>
+							{%- endif %}
+
+							{% if dataset.cell_number != '' -%}
+								<label>Cell Number </label><br>
+								{{ dataset.cell_number }}<br><br>
+							{%- endif %}
+
+							{% if dataset.primer_set_name != '' -%}
+								<label>Primer Set Name </label><br>
+								{{ dataset.primer_set_name }}<br><br>
+							{%- endif %}
+
+							{% if dataset.template_type != '' -%}
+								<label>Template Type </label><br>
+								{{ dataset.template_type }}<br><br>
+							{%- endif %}
+
+							{% if dataset.mid_tag != '' -%}
+								<label>Mid Tag </label><br>
+								{{ dataset.mid_tag }}<br>
+							{%- endif %}
+
+						</div> <!-- /row -->
+		            </div>
+	            </div>
+            </div> <!-- /panel -->
+
+			<div class="panel panel-default">
+			    <div class="panel-heading">
+			    	<table width="100%">
+			    		<tbody>
+				    		<tr>
+				    			<td>
+				    				<label>User Information</label>
+				    			</td>			    			
+				    			<td>
+				    				<p class="text-right"><a href="">[ EDIT ]</a></p>
+				    			</td>			    			
+				    		</tr>
+			    		</tbody>
+			    	</table>
+		    	</div>
+		     	<div class="panel-body">
+					<div class='row'>            				            
+			            <div class="col-sm-4">
+				            
+							{% if dataset.person_who_prepared_library != '' -%}
+								<label>Person Who Prepared Library </label><br>
+								{{ dataset.person_who_prepared_library }}<br><br>
+							{%- endif %}
+
+							{% if dataset.lab_notebook_source != '' -%}
+								<label>Lab Notebook Source </label><br>
+								{{ dataset.lab_notebook_source }}<br><br>
+							{%- endif %}
+
+							{% if dataset.directory != '' -%}
+								<label>Dataset Directory </label><br>
+								{{ dataset.directory }}<br><br>
+							{%- endif %}
+
+						</div>
+			            <div class="col-sm-4">
+
+							{% if dataset.owners_of_experiment != [] -%}
+								<label>Owners Of Experiment </label><br>
+								{{ dataset.owners_of_experiment }}<br><br>
+							{%- endif %}
+
+							{% if dataset.read_access != [] -%}
+								<label>Users with Read Access </label><br>
+								{{ dataset.read_access }}<br><br>
+							{%- endif %}
+
+						</div>
+			            <div class="col-sm-4">
+
+							{% if dataset.projects != [] -%}
+								<label>Projects </label><br>
+								{% for project in dataset.projects %}
+									{{ project }}<br>
+								{% endfor %}
+								<br>
+							{%- endif %}
+			            </div>
+
+			            <div class="col-sm-4">
+			                <br/>
+			                <br/>  
+			            </div>
+			        </div> <!-- /row -->
+	            </div>
+            </div> <!-- /panel -->
+
+        </div>
+    </div> <!-- /accordian -->
 </div>
-
-
+<br>
 <br>
 
 {% if dataset.files.all() != [] %}
@@ -47,10 +278,9 @@
 			<tr><th><a href="{{url_for('.create_analysis', dataset_id=dataset.id)}}">RUN ANNOTATION</a></th></tr>				
 		</table>
 	</div>
+	<br><br>
 {% endif %}
-
-				
-<br><br>
+			
 
 {% if dataset.analyses.all() != [] %} 
 
@@ -68,7 +298,8 @@
 
 	</div>
 
-<br><br>
+<br>
+<br>
 
 {% endif %}
 
@@ -76,43 +307,60 @@
 
 <div class="container">
 	<h4>Files Associated With This Dataset:</h4>
-	{% set files = dataset.files %}
-	{% include "partials/files.html" with context %}
+	
+	{% if dataset.files.count() == 0 %}
+		<em>There are no files associated with this dataset. You may add some by <a href="{{ url_for( 'frontend.file_download' ) }}" >clicking here</a>.</em>
+	{% else %}
+		{% set files = dataset.files %}
+		{% include "partials/files.html" with context %}
+	{% endif %}
+
 </div>
 
-<br><br>
+<br>
+<br>
 
-
-<div class='container'>
-	<h4>Add An Available, Unassociated File To This Dataset:</h4>
-	<form role='form' method='POST' action='/datasets/{{id}}'>
-		<table class="table table-striped">
-			<tr>
-				<th>{{form.file_ids}}</th>
-				<th><input type='submit' name='submit' value='ASSOCIATE'></th>
-			</tr>
-		</table>
-	</form>
-</div>
-
-
-
+{% if form.file_ids.choices != [] %}
+	<div class='container'>
+		<h4>Add An Available, Unassociated File To This Dataset:</h4>
+		<form role='form' method='POST' action='/datasets/{{id}}'>
+			<table class="table table-striped">
+				<tr>
+					<th>{{form.file_ids}}</th>
+					<th><input type='submit' name='submit' value='ASSOCIATE'></th>
+				</tr>
+			</table>
+		</form>
+	</div>
+{% endif %}
 <br>
 
 <div class='container'>
 	<a href={{url_for('.datasets')}}><h4>Back To All Datasets</h4></a>
 </div>
 
+<script>
 
+    $('tbody.accordian-control').on( 'click', 'tr', function () {
+        var parent_accordian = $(this).closest('div')
 
+        var child_accordian = parent_accordian.children('.collapse')
+        child_accordian.collapse('toggle')
 
+        var th = $(this).closest('tbody');
 
+        if ( th.hasClass('shown') ) {
+            th.removeClass('shown');
+        }
+        else {
+            th.addClass('shown');
 
+        }
+    } );
 
+</script>
 
+{%endblock wide_content %}
 
-
-
-{%endblock content %}
 
 

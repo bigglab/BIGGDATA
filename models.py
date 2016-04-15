@@ -305,7 +305,7 @@ class Project(db.Model):
         #users = db.relationship('User', secondary = 'user_projects', back_populates = 'projects' )
 
         def __repr__(self): 
-            return "<  Project {}:  {}   :   {}    >".format(self.id, self.project_name, self.description)
+            return "{} ({})".format(self.project_name, self.id)
 
         def date_string(self):
             try:
