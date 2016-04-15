@@ -24,21 +24,21 @@
 
 .twitter-typeahead{
 	width: 100%;
-	padding-top: 5px;
+	padding-top: 3px;
 }
 .tt-dropdown-menu{
 	width: 100%;
-	padding-top: 5px;
+	padding-top: 15px;
 }
 .tt-hint{
-	padding-top: 15px;
+	padding-top: 10px;
 }
 /*
  * For editing values
  */
 
 .editable h1:hover .pencil {
-    float: right;
+    float: left;
     display:block;
 }
 
@@ -196,3 +196,19 @@ tbody.shown td.collapse-control {
     cursor: inherit;
     display: block;
 }
+
+/* 
+ * Datatables 
+ */
+td.details-control {
+    background: url('/static/img/details_open.png') no-repeat center center;
+    cursor: pointer;
+}
+
+tr.shown td.details-control {
+    background: url('/static/img/details_close.png') no-repeat center center;
+}
+
+.no-sort::after { display: none!important; }
+
+.no-sort { pointer-events: none!important; cursor: default!important; }

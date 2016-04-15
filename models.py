@@ -189,25 +189,15 @@ class Dataset(db.Model):
         reverse_primer_used_in_rt_step = db.Column(db.String(256))
         list_of_polymerases_used = db.Column(db.String(256))
         sequencing_platform = db.Column(db.String(256))
-        # json_project_name = db.Column(db.String(256)) - will use this to add to a new or existing project
         target_reads = db.Column(db.String(256))
         cell_markers_used = db.Column(db.String(256))
         read_access = db.Column(db.String(256)) # maintain this to add read access for users later
         owners_of_experiment = db.Column(db.String(256)) # - will use this to add to a new or existing project
         adjuvant = db.Column(db.String(256))
         species = db.Column(db.String(256)) 
-        # publications = db.Column(db.String(256)) - will use this to add to a new or existing project
-        # lab = db.Column(db.String(256))
-
         cell_selection_kit_name = db.Column(db.String(256))
         isotypes_sequenced = db.Column(db.String(256))
-        
-        post_sequencing_processing_dict = db.Column(db.String(512))
-
-        # post_sequencing_processing:quality_filter = db.Column(db.String(256))
-        # post_sequencing_processing:process_r1_r2_file = db.Column(db.String(256))
-        # post_sequencing_processing:phi_x_filter = db.Column(db.String(256))
-        
+        post_sequencing_processing_dict = db.Column(db.String(512))    
         sample_preparation_date = db.Column(db.String(256))
         gsaf_barcode = db.Column(db.String(256))
         mid_tag = db.Column(db.String(256))
@@ -218,6 +208,12 @@ class Dataset(db.Model):
         person_who_prepared_library = db.Column(db.String(256))
         pairing_technique = db.Column(db.String(256))
         json_id = db.Column(db.String(256))
+
+        # json_project_name = db.Column(db.String(256)) - will use this to add to a new or existing project
+        # publications = db.Column(db.String(256)) - will use this to add to a new or existing project
+        # lab = db.Column(db.String(256))
+
+        directory = db.Column(db.String(256))
 
         projects = association_proxy('dataset_projects', 'project')
 
@@ -251,6 +247,20 @@ class Dataset(db.Model):
             else: 
                 files = [f for f in all_files if f.id in self.primary_data_files_ids]
             return files 
+
+        def role(self, user):
+            dataset_role = None
+
+            for project in projects:
+                project_role = project.role(user)
+
+                if project_role == "Owner":
+                    return "Owner"
+                elif project_role == "Editor":
+                    dataset_role = "Editor"
+                elif project_role == "Read Only" and dataset_role != "Editor":
+                    dataset_role = "Read Only"
+            return dataset_role
 
         def files_by_type(self, type_string):
             all_files = self.files.all()
@@ -386,67 +396,8 @@ class UserProjects (db.Model):
         self.user = user
         self.project = project
         self.read_only = read_only
-    
-    #def make_read_only (self, user_id):
-    #    pass
-# The following fields are from the the GSAF JSON
-# "LAB_NOTEBOOK_SOURCE": "", 
-#                     "SEQUENCING_SUBMISSION_NUMBER": [], 
-#                     "CHAIN_TYPES_SEQUENCED": [
-#                         "beta"
-#                     ], 
-#                     "CONTAINS_RNA_SEQ_DATA": false, 
-#                     "REVERSE_PRIMER_USED_IN_RT_STEP": "oligo dT", 
-#                     "LIST_OF_POLYMERASES_USED": [
-#                         "FastStart High Fidelity"
-#                     ], 
-#                     "SEQUENCING_PLATFORM": "MiSeq 2x300", 
-#                     "VH:VL_PAIRED": false, 
-#                     "PROJECT_NAME": "mTCR", 
-#                     "TARGET_READS": 2750000, 
-#                     "CELL_MARKERS_USED": [], 
-#                     "READ_ACCESS": [
-#                         "sschaetzle"
-#                     ], 
-#                     "ADJUVANT": "", 
-#                     "POST_SEQUENCING_PROCESSING:PHI_X_FILTER": false, 
-#                     "CELL_TYPES_SEQUENCED": [
-#                         "mTc"
-#                     ], 
-#                     "SPECIES": "Mus musculus", 
-#                     "PUBLICATIONS": [], 
-#                     "POST_SEQUENCING_PROCESSING:QUALITY_FILTER": "q20p50", 
-#                     "OWNERS_OF_EXPERIMENT": [
-#                         "sschaetzle"
-#                     ], 
-#                     "CELL_SELECTION_KIT_NAME": "", 
-#                     "ISOTYPES_SEQUENCED": [
-#                         "n/a"
-#                     ], 
-#                     "POST_SEQUENCING_PROCESSING:PROCESS_R1_R2_FILE": "pear", 
-#                     "SAMPLE_PREPARATION_DATE": "05/2015", 
-#                     "GSAF_BARCODE": "", 
-#                     "MID_TAG": [
-#                         "TGCCTAGTCA"
-#                     ], 
-#                     "DESCRIPTION": [
-#                         "mTCR Sequencing Mouse", 
-#                         "Mouse C1 Library 1"
-#                     ], 
-#                     "CELL_NUMBER": null, 
-#                     "PRIMER_SET_NAME": [
-#                         "mTCR"
-#                     ], 
-#                     "LAB": [
-#                         "GEORGIOU"
-#                     ], 
-#                     "TEMPLATE_TYPE": "cDNA", 
-#                     "EXPERIMENT_NAME": "memTCR_C1", 
-#                     "PERSON_WHO_PREPARED_LIBRARY": [
-#                         "Sebastian Schaetzle"
-#                     ], 
-#                     "PAIRING_TECHNIQUE": "", 
-#                     "_id": "556774349eb6360c29931524"
+
+
 
 
 
@@ -479,6 +430,7 @@ class Annotation(db.Model):
         analysis_name = Column(String())
         recombination_type = Column(String())
         strand = Column(String(10))
+        strand_corrected_sequence = Column(String())
         read_sequences = Column(String())
         read_qualities = Column(String())
         header = Column(String())
@@ -563,6 +515,7 @@ class Analysis(db.Model):
         params = Column(JSON)
         commands = Column(postgresql.ARRAY(String(1024)))
         responses = Column(postgresql.ARRAY(Integer))
+        files_to_analyze = Column(postgresql.ARRAY(Integer))
         vdj_count = Column(Integer)
         vj_count = Column(Integer)
         tcra_count = Column(Integer)
@@ -574,6 +527,8 @@ class Analysis(db.Model):
         notes = Column(String(1000))
         available = Column(Boolean)
         inserted_into_db = Column(Boolean)
+        directory = Column(String(256))
+        error = Column(String(256))
 
         annotations = db.relationship('Annotation', backref='analysis', lazy='dynamic')
         files = db.relationship('File', backref='analysis', lazy='dynamic')

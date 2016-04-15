@@ -164,7 +164,7 @@ def create_user():
     login_user(new_user, remember=True)
     flash("new user created and logged in", 'success')
     #create home and scratch if necessary 
-    result = instantiate_user_with_directories.apply_async((new_user.id, ), queue='default')
+    result = instantiate_user_with_directories.apply_async((new_user.id, ), queue=celery_queue)
     return redirect(url_for(".index"))
 
 
@@ -253,7 +253,7 @@ def file_download(status=[], bucket='', key=''):
         print status 
         # result_id NOT WORKING - STILL REDUNDANT IF THEY CLICK TWICE!!
         if not 'async_result_id' in session.__dict__:
-            result = download_file.apply_async((file.url, file.path, file.id), queue='default')
+            result = download_file.apply_async((file.url, file.path, file.id), queue=celery_queue)
             flash('file downloading from {}'.format(file.url))
             session['async_result_id'] = result.id
         time.sleep(1)
@@ -275,7 +275,7 @@ def transfer_to_s3(file_id):
         f.s3_status = 'Staging On S3'
         db.session.add(f)
         db.session.commit()
-        result = transfer_file_to_s3.apply_async((f.id,), queue='default')
+        result = transfer_file_to_s3.apply_async((f.id,), queue=celery_queue)
         return redirect(url_for('.files'))
 
 
@@ -289,10 +289,11 @@ def files(status=[], bucket=None, key=None):
     form = Form()
 
     #creates list of datasets
-    datasetnames = ["test", "test2"]
-    for x in current_user.datasets:
-        name = str(x.name) 
-        datasetnames.append(name)
+    projectnames = []
+    for x in current_user.projects:
+        projectid = str(x.id)
+        name = str(x.project_name) 
+        projectnames.append(name + ' - ' + projectid)
     if bucket and key: 
         status.append('https://s3.amazon.com/{}/{}'.format(bucket, key))
     if request.method == 'POST' and os.path.isfile(request.form['submit']):
@@ -307,17 +308,80 @@ def files(status=[], bucket=None, key=None):
         else: 
             flash('file metadata already created to your user')
             dropbox_file_paths = get_dropbox_files(current_user)
-        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status, datasetnames=map(json.dumps, datasetnames))
+        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status, projectnames=map(json.dumps, projectnames))
     else: 
         dropbox_file_paths = get_dropbox_files(current_user)
-        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status, datasetnames=map(json.dumps, datasetnames))
+        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status, projectnames=map(json.dumps, projectnames))
  
 
-@frontend.route('/files/<int:id>', methods=['GET'])
+@frontend.route('/files/<int:id>', methods=['GET','POST'])
 @login_required
 def file(id):
     f = db.session.query(File).filter(File.id==id).first()
-    return render_template("file.html", file=f)
+
+    # This part is to ensure that you have permissions to look/edit the selected file
+    if f.dataset is None:
+        flash('There is no dataset on this file', 'warning')
+        if f.user_id is current_user.id:
+            edit='edit'
+        else:
+            edit='none'
+    else:
+        projects = f.dataset.projects
+        if f.user_id is current_user.id:
+            edit = 'edit'
+        else:
+            edit = ''
+        for project in projects:
+            if project.role(f.user_id) is "Owner" or "Editor":
+                edit = 'edit'
+            elif project.role(f.user_id) is "Read Only" and edit != 'edit':
+                edit = 'read'
+            elif edit != 'edit' and edit != 'read':
+                edit = None
+
+    if edit is 'None':
+        flash('You do not have permission to access this file', 'warning')
+        return redirect( url_for('files'))
+    else:
+
+        editfileform = FileEditForm()
+        if f.dataset != None:
+            editfileform.paired_partner.choices = [(x.id, x.name) for x in f.dataset.files if ((x.user_id != None) and (x.name != f.name))]
+            editfileform.paired_partner.choices.append((0, None))
+        else:
+            editfileform.paired_partner.choices = [(x.id, x.name) for x in f.user.files if ((x.user_id != None) and (x.dataset == None) and (x.name != f.name))]
+            editfileform.paired_partner.choices.append((0, None))
+
+        if editfileform.validate_on_submit():
+            f.name = editfileform.name.data
+            if f.paired_partner != None:
+                f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
+
+                if f2.id == editfileform.paired_partner.id:
+                    flash('Edited ' + f.name, 'success')
+                elif editfileform.paired_partner.data is 0:
+                    f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
+                    f2.paired_partner = None
+                    f.paired_partner = None
+                    flash('Removed partner', 'success')
+                else:
+                    f.paired_partner = editfileform.paired_partner.data
+                    f3 = db.session.query(File).filter(File.id==f.paired_partner).first()
+                    f3.paired_partner=f.id
+                    f2.paired_partner=None
+            else:
+                f.paired_partner = editfileform.paired_partner.data
+                f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
+                f2.paired_partner = f.id
+
+            f.chain = editfileform.chain.data
+            db.session.commit()
+            flash('Edited ' + f.name, 'success')
+        else:
+            flash_errors(editfileform)
+
+        return render_template("file.html", file=f, editfileform=editfileform, edit=edit)
 
 @frontend.route('/files/download/<int:id>')
 @login_required
@@ -392,6 +456,8 @@ def datasets():
                 flash('Error: you do not have permission to add a dataset to that project.','warning')
                 return redirect(url_for('.datasets'))
             db.session.commit()
+            d.directory = current_user.scratch_path + '/Directory_' + d.id 
+            db.session.commit()
         return redirect(url_for('.datasets')) # render_template("datasets.html", datadict=datadict, form=Form())
     else: 
         return render_template("datasets.html", datadict=datadict, form=form)
@@ -453,7 +519,7 @@ def mixcr(dataset_id, status=[]):
     status = []
     if request.method == 'POST' and dataset:
         status.append('MIXCR Launch Detected')
-        result = run_mixcr_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'trim': form.trim.data, 'cluster': form.cluster.data}, queue='default')
+        result = run_mixcr_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'trim': form.trim.data, 'cluster': form.cluster.data}, queue=celery_queue)
         status.append(result.__repr__())
         status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
         time.sleep(1)
@@ -475,7 +541,7 @@ def pandaseq(dataset_id, status=[]):
     status = []
     if request.method == 'POST' and dataset:
         status.append('PANDASEQ Launch Detected')
-        result = run_pandaseq_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'algorithm': form.algorithm.data}, queue='default')
+        result = run_pandaseq_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'algorithm': form.algorithm.data}, queue=celery_queue)
         status.append(result.__repr__())
         status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
         time.sleep(1)
@@ -488,6 +554,32 @@ def pandaseq(dataset_id, status=[]):
         # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
     else: 
         return render_template("pandaseq.html", dataset=dataset, form=form, status=status) 
+
+
+@frontend.route('/analysis/create/<int:dataset_id>', methods=['GET', 'POST'])
+@login_required
+def create_analysis(dataset_id, status=[]):
+    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+    form = CreateAnalysisForm()
+    file_options = map(lambda f: [f.id, f.name], [f for f in dataset.files if 'FASTQ' in f.file_type])
+    form.file_ids.choices = file_options
+    status = []
+    if request.method == 'POST' and dataset:
+        status.append('Analysis Launch Detected')
+        result = run_analysis.apply_async((dataset_id, form.file_ids.data),  {'analysis_type': 'IGFFT', 'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'trim': form.trim.data, 'cluster': form.cluster.data, 'overlap': form.overlap.data, 'paired': form.paired.data}, queue=celery_queue)
+        status.append(result.__repr__())
+        status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
+        time.sleep(1)
+        # return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
+        analyses = current_user.analyses.all()
+        analysis_file_dict = OrderedDict()
+        for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
+            analysis_file_dict[analysis] = analysis.files.all() 
+        return redirect(url_for('.analyses', status=status))
+        # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
+    else: 
+        return render_template("create_analysis.html", dataset=dataset, form=form, status=status) 
+
 
 @frontend.route('/browse_sequences', methods=['GET', 'POST'])
 @login_required
@@ -610,7 +702,7 @@ def import_sra():
         if 'SRR' in form.accession.data: 
             status.append('Import SRA Started for Accession {}'.format(form.accession.data))
             status.append('Once complete, a dataset named {} will automatically be created containing these single or paired-end read files'.format(form.accession.data))
-            result = import_from_sra.apply_async((form.accession.data,), {'name': form.accession.data, 'user_id': current_user.id, 'chain':form.chain.data}, queue='default')
+            result = import_from_sra.apply_async((form.accession.data,), {'name': form.accession.data, 'user_id': current_user.id, 'chain':form.chain.data}, queue=celery_queue)
             # status.append(result.__dict__)
         else: 
             status.append('Accession does not start with SRR or ERR?')

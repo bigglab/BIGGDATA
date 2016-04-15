@@ -40,6 +40,19 @@ class CreateMixcrAnalysisForm(Form):
     cluster = BooleanField(u'Cluster Sequences')
 
 
+class CreateAnalysisForm(Form): 
+    dataset_id = IntegerField()
+    name = TextField(u'Name')
+    analysis_type = TextField(u'Name', default='IGFFT')
+    description = TextField(u'Description')
+    file_ids = SelectMultipleField(u'Files To Analyze')
+    trim = BooleanField(u'Trim Illumina Adapters')
+    overlap = BooleanField(u'Pair Overlaps')
+    paired = BooleanField(u'Pair Interchain')
+    insert_into_db = BooleanField(u'Insert Into DB')
+    cluster = BooleanField(u'Cluster Sequences')
+
+
 class CreatePandaseqAnalysisForm(Form): 
     dataset_id = IntegerField()
     name = TextField(u'Name', )
@@ -89,8 +102,9 @@ class ImportSraAsDatasetForm(Form):
     chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
 
 class FileEditForm(Form):
-    name = TextField()
-    paired_partner = TextField()
+    name = TextField('File name', [validators.length(max=256)])
+    paired_partner = SelectField('Paired partner', coerce=int)
+    chain  = SelectField('Chain', choices=(('HEAVY', 'HEAVY'), ('LIGHT', 'LIGHT'), ('HEAVY/LIGHT', 'HEAVY/LIGHT'), ('TCRA', 'TCRA'), ('TCRB', 'TCRB'), ('TCRA/B', 'TCRA/B')))
 
 class CreateProjectForm(Form):
         user_id = 'user.id'
