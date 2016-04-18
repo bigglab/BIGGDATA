@@ -251,7 +251,7 @@ class Dataset(db.Model):
         def role(self, user):
             dataset_role = None
 
-            for project in projects:
+            for project in self.projects:
                 project_role = project.role(user)
 
                 if project_role == "Owner":
