@@ -132,7 +132,7 @@ class EditDatasetForm(Form):
     cell_types_sequenced = TextField('Cell Types Sequenced (Array)')
     chain_types_sequenced = TextField('Chain Types Sequenced (Array)')
     primary_data_files_ids = TextField('Primary Data Files Ids (Array)')
-    
+
     lab_notebook_source = TextField()
     sequencing_submission_number = TextField()
     contains_rna_seq_data = TextField()
@@ -144,7 +144,10 @@ class EditDatasetForm(Form):
     read_access = TextField()
     owners_of_experiment = TextField()
     adjuvant = TextField()
-    species = TextField()
+
+    #species = TextField('Species', [validators.length(max=128)])
+    species = SelectField( 'Species', choices=[('', ''), ('H. sapiens', 'H. sapiens'), ('M. musculus', 'M. musculus')] )
+
     cell_selection_kit_name = TextField()
     isotypes_sequenced = TextField()
     post_sequencing_processing_dict = TextField()
