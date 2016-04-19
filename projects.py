@@ -59,16 +59,10 @@ from functions import *
 from models import * 
 
 # 
-# Dataset notes: only support human and mouse
 # Add parameters for PANDASEQ and MIXCR to datasets
 # Figure out how to cascade changes to User/Project/UserProject tables
-# Read up on SQLAlchemy sessions
-#
-# add create new project option for adding datasets
-# add edit dataset page
 #
 # Add public user functionality --> See and example project, etc
-# Add tabs for yours, shared, and read-only 
 #
 # get a list of projects based on a dataset query
 # dataset.project

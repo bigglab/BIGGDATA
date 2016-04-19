@@ -140,7 +140,15 @@ def login():
 @frontend.route("/users/create", methods=["POST"])
 def create_user():
     form = RegistrationForm()
-    # add some validations / cleansing 
+    # add some validations / cleansing
+
+    # check to see if that username is already taken
+    test_user = db.session.query(User).filter(User.username == form.username.data).first()
+    if test_user:
+        flash('Error: that username is taken.', 'warning')
+        login_form = LoginForm()
+        return render_template("login.html", login_form=login_form, create_user_form=form, current_user=current_user)
+
     user = load_user(form.email.data)
     if user:
         if bcrypt.check_password_hash(user.password_hash, form.password.data):
@@ -148,14 +156,17 @@ def create_user():
             user.authenticated = True
             db.session.add(user)
             db.session.commit()
-        flash('email already exists!', 'error')
+        flash('Error: that email has already been registered!', 'error')
         return redirect(url_for(".login"))
+
+    # begin instantiating new user
     new_user = User()
     new_user.first_name = form.first_name.data
     new_user.last_name = form.last_name.data 
     new_user.email = form.email.data
     new_user.username = form.username.data
     new_user.password_hash = bcrypt.generate_password_hash(form.password.data)
+    
     # Just authorize automatically, for now
     new_user.authenticated = True 
     new_user.dropbox_path = '{}/{}{}'.format(app.config['DROPBOX_ROOT'], form.first_name.data, form.last_name.data)
@@ -166,7 +177,7 @@ def create_user():
     flash("new user created and logged in", 'success')
     #create home and scratch if necessary 
     result = instantiate_user_with_directories.apply_async((new_user.id, ), queue=celery_queue)
-    return redirect(url_for(".index"))
+    return redirect(url_for("frontend.index"))
 
 
 
