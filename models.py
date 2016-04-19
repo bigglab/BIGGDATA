@@ -80,8 +80,14 @@ class User(db.Model):
         data = db.Column(db.Text())
         authenticated = db.Column(db.Boolean, default=False)
         user_type = db.Column(db.String(128))
+
+        # user paths
+        #root_path = db.Column(db.String(256))
+        #old_dropbox_path = db.Column(db.String(256))
+        #old_scratch_path = db.Column(db.String(256))
         dropbox_path = db.Column(db.String(256))
         scratch_path = db.Column(db.String(256))
+
         files = db.relationship('File', backref='user', lazy='dynamic')
         datasets = db.relationship('Dataset', backref='user', lazy='dynamic')
         analyses = db.relationship('Analysis', backref='user', lazy='dynamic')
@@ -92,7 +98,7 @@ class User(db.Model):
         @hybrid_property
         def name(self):
             return self.first_name + ' ' + self.last_name
-        
+
         def get_id(self):
             """Return the email address to satisfy Flask-Login's requirements."""
             return self.email
@@ -114,6 +120,43 @@ class User(db.Model):
 
         def __init__(self): 
             self.user_type = 'researcher'
+
+        #   /data/user/raw/original.fastq.gz
+        #   /data/user/scratch/ 
+        #   /data/user/filtered/
+
+        @hybrid_property
+        def raw_path(self):
+            return self.root_path + 'raw/'
+
+        # @hybrid_property
+        # def dropbox_path(self):
+        #     return self.raw_path        
+
+        # @hybrid_property
+        # def scratch_path(self):
+        #     return self.root_path + 'scratch/'
+
+        @hybrid_property
+        def filtered_path(self):
+            return self.root_path + 'filtered/'
+
+        # returns all user paths, beginning with the user root path
+        # intended for use in instantiating user directories
+        @hybrid_property
+        def all_paths(self):
+            paths = [self.root_path, self.raw_path, self.scratch_path, self.filtered_path]
+            return paths
+
+        def is_migrated(self):
+            if self.old_dropbox_path != '' or self.old_scratch_path != '':
+                return False
+            return True
+
+        # temporary function to migrate data, if necessary
+        def migrate_data(self):
+            pass
+
 
 class File(db.Model):
         __tablename__ = 'file'
@@ -250,6 +293,9 @@ class Dataset(db.Model):
 
         def role(self, user):
             dataset_role = None
+
+            if self.user_id == current_user.id:
+                return "Owner"
 
             for project in self.projects:
                 project_role = project.role(user)

@@ -70,6 +70,9 @@ celery.config_from_object('celery_config')
 # CELERY QUEUE TO SEND JOBS TO - USE FOR DEVELOPMENT 
 celery_queue = 'default'
 
+# change celery_queue to anything celery -Q
+# 
+
 # @Dave - temporary edit for local environ
 s3 = boto.connect_s3(app.config['AWSACCESSKEYID'], app.config['AWSSECRETKEY'])
 s3_bucket = s3.get_bucket(app.config['S3_BUCKET'])
@@ -863,6 +866,7 @@ def run_analysis(dataset_id, file_ids, user_id=6, analysis_type='IGFFT', analysi
         print 'annotated files from igfft: {}'.format(annotated_files)
     # PAIR 
     # CLUSTER
+
 
 def run_igrep_annotation_on_dataset_files(dataset, files, user_id=6, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]):
     # dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
