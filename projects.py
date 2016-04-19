@@ -59,6 +59,12 @@ from functions import *
 from models import * 
 
 # 
+# main goal is clustering and outputting mass spec database
+# this code is currently in IGREP
+# clean up UI while doing walkthrough
+# 
+# IGREP - biggigrep - public repo on github
+# 
 # Add parameters for PANDASEQ and MIXCR to datasets
 # Figure out how to cascade changes to User/Project/UserProject tables
 #
@@ -72,12 +78,46 @@ from models import *
 #   /data/user/raw/original.fastq.gz
 #   /data/user/scratch/ 
 #   /data/user/filtered/
+#   /data/user/dropbox/
+#   /data/user/
+#
+# NavBar: 
+# Files / Projects / Analyses
+#
+# igfft : can run through celery
+# looks different from mixcr output
+# parse and compare both outputs in a PANDAS panel
+#
+# Native file output
+# TSV
+# Common table
+# Cluster and generate mass spec database
+# 11 clones, 90 reads
+# Need a new clustering software (USEARCH) - FASTA
+# sorted by sequence length
+# name each sequence
+#
+# queue - development
+#
+# Walk throughs - two files, run mixcr
+# 
+# 
 # Make these celery tasks
 # 
-# Add user role function for files
 #
+# Check duplicate dataset names in database
+# add dashboard to dashboard route
 # Add glyphicon for adding files
 #
+# Walk-through
+#
+# Dataset 158 10K reads good for analysis
+# in Project 
+
+# Add link to projects on dataset view. 
+
+# Add dataset using urls
+# Run an analysis
 
 projects_blueprint = Blueprint('projects', __name__)
 
