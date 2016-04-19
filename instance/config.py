@@ -21,6 +21,8 @@ MIGMAP = 'java -Xmx2g -jar /home/russ/software/migmap-0.9.8/migmap-0.9.8.jar'
 DROPBOX_ROOT='/data/dropboxes'
 SCRATCH_ROOT='/data/scratch'
 SHARE_ROOT = '/data/dropboxes/shared'
+#SCRATCH_ROOT='/data/<username>/scratch'
+USER_ROOT='/data/<username>/'
 
 # Heroku-specific vars 
 if 'DATABASE_URL' in os.environ.keys():  # HACK TO CHECK IF WE'RE IN PRODUCTION ON HEROKU: 

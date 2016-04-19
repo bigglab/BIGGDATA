@@ -179,7 +179,24 @@ def create_user():
     result = instantiate_user_with_directories.apply_async((new_user.id, ), queue=celery_queue)
     return redirect(url_for("frontend.index"))
 
+@frontend.route("/users/migrate_files", methods=["GET"])
+@login_required
+def migrate_files():
+    if not current_user.is_migrated:
+        
+        pass # migrate files here
 
+        # if migration successful:
+
+        # else:
+        db.commit()
+        
+        flash('Success. Your files have been migrated.','success')
+        return redirect(url_for("frontend.index"))
+
+    else:
+        flash('Your files have already been migrated.','success')
+        return redirect(url_for("frontend.index"))
 
 @frontend.route("/logout", methods=["GET"])
 def logout():
