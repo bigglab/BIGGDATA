@@ -59,13 +59,16 @@ from functions import *
 from models import * 
 
 # 
-# Dataset notes: only support human and mouse
+# main goal is clustering and outputting mass spec database
+# this code is currently in IGREP
+# clean up UI while doing walkthrough
+# 
+# IGREP - biggigrep - public repo on github
+# 
 # Add parameters for PANDASEQ and MIXCR to datasets
 # Figure out how to cascade changes to User/Project/UserProject tables
-# Read up on SQLAlchemy sessions
 #
 # Add public user functionality --> See and example project, etc
-# Add tabs for yours, shared, and read-only 
 #
 # get a list of projects based on a dataset query
 # dataset.project
@@ -75,9 +78,46 @@ from models import *
 #   /data/user/raw/original.fastq.gz
 #   /data/user/scratch/ 
 #   /data/user/filtered/
+#   /data/user/dropbox/
+#   /data/user/
+#
+# NavBar: 
+# Files / Projects / Analyses
+#
+# igfft : can run through celery
+# looks different from mixcr output
+# parse and compare both outputs in a PANDAS panel
+#
+# Native file output
+# TSV
+# Common table
+# Cluster and generate mass spec database
+# 11 clones, 90 reads
+# Need a new clustering software (USEARCH) - FASTA
+# sorted by sequence length
+# name each sequence
+#
+# queue - development
+#
+# Walk throughs - two files, run mixcr
+# 
+# 
 # Make these celery tasks
 # 
-# Add role function for files
+#
+# Check duplicate dataset names in database
+# add dashboard to dashboard route
+# Add glyphicon for adding files
+#
+# Walk-through
+#
+# Dataset 158 10K reads good for analysis
+# in Project 
+
+# Add link to projects on dataset view. 
+
+# Add dataset using urls
+# Run an analysis
 
 projects_blueprint = Blueprint('projects', __name__)
 
@@ -178,7 +218,7 @@ def create_project():
 
         db.session.add(new_project)
         db.session.flush()
-
+        
         # if the owner set read-only access for users, then we have to update the read-only setting in the association table manually
         if len(user_read_list) > 0:
             db.session.refresh(new_project)
@@ -191,9 +231,24 @@ def create_project():
                 except:
                     print "Error setting read_only attribute for {}".format(user)
 
+        # determine if a JSON was submitted to be added to the project
+        try:
+            if request.files['file'].filename != '':
+                db.session.refresh(new_project)
+
+                request_file = request.files['file']
+                json_string = request_file.read()
+
+                # if this function returns a string, it describes the error
+                error = create_datasets_from_JSON_string(json_string, new_project)
+                if error:
+                    flash(error, 'warning')            
+        except:
+            flash('There was an error in uploading your JSON file.','warning')
+
         db.session.commit()
 
-        flash('Success!!! Your new project has been created.', 'success')
+        flash('Your new project has been created.', 'success')
         return redirect( url_for('projects.manage_projects') )
 
     else:
@@ -343,11 +398,29 @@ def edit_project(project_id):
                 project.publications = edit_project_form.publications.data
                 project.species = edit_project_form.species.data
                 project.lab = edit_project_form.lab.data
-                
+
                 db.session.commit()
 
+                # determine if a JSON was submitted to be added to the project
+                try:
+                    if request.files['file'].filename != '':
+
+                        request_file = request.files['file']
+                        json_string = request_file.read()
+
+                        # if this function returns a string, it describes the error
+                        error = create_datasets_from_JSON_string(json_string, project)
+                        if error:
+                            flash(error, 'warning')    
+                        else:
+                            # now, we need to update the list of datasets in the project
+                            db.session.commit()
+                            flash('Success!!! Your new project has been updated.', 'success')
+                            return redirect( url_for('projects.edit_project', project_id = project.id) )
+                except:
+                    flash('There was an error in uploading your JSON file.','warning')
+                
                 flash('Success!!! Your new project has been updated.', 'success')
-                #return redirect( url_for('projects.manage_projects') )
 
                 # painfully redundant, but this will clean up and form issues where there is a double viewer/editor selection:
                 for user in users:

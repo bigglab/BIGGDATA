@@ -7,6 +7,7 @@ import time
 import random
 from shutil import copyfile
 import operator
+import ast
 from sets import Set
 # import urllib
 os.environ['http_proxy']=''
@@ -139,7 +140,15 @@ def login():
 @frontend.route("/users/create", methods=["POST"])
 def create_user():
     form = RegistrationForm()
-    # add some validations / cleansing 
+    # add some validations / cleansing
+
+    # check to see if that username is already taken
+    test_user = db.session.query(User).filter(User.username == form.username.data).first()
+    if test_user:
+        flash('Error: that username is taken.', 'warning')
+        login_form = LoginForm()
+        return render_template("login.html", login_form=login_form, create_user_form=form, current_user=current_user)
+
     user = load_user(form.email.data)
     if user:
         if bcrypt.check_password_hash(user.password_hash, form.password.data):
@@ -147,14 +156,17 @@ def create_user():
             user.authenticated = True
             db.session.add(user)
             db.session.commit()
-        flash('email already exists!', 'error')
+        flash('Error: that email has already been registered!', 'error')
         return redirect(url_for(".login"))
+
+    # begin instantiating new user
     new_user = User()
     new_user.first_name = form.first_name.data
     new_user.last_name = form.last_name.data 
     new_user.email = form.email.data
     new_user.username = form.username.data
     new_user.password_hash = bcrypt.generate_password_hash(form.password.data)
+    
     # Just authorize automatically, for now
     new_user.authenticated = True 
     new_user.dropbox_path = '{}/{}{}'.format(app.config['DROPBOX_ROOT'], form.first_name.data, form.last_name.data)
@@ -165,9 +177,26 @@ def create_user():
     flash("new user created and logged in", 'success')
     #create home and scratch if necessary 
     result = instantiate_user_with_directories.apply_async((new_user.id, ), queue=celery_queue)
-    return redirect(url_for(".index"))
+    return redirect(url_for("frontend.index"))
 
+@frontend.route("/users/migrate_files", methods=["GET"])
+@login_required
+def migrate_files():
+    if not current_user.is_migrated:
+        
+        pass # migrate files here
 
+        # if migration successful:
+
+        # else:
+        db.commit()
+        
+        flash('Success. Your files have been migrated.','success')
+        return redirect(url_for("frontend.index"))
+
+    else:
+        flash('Your files have already been migrated.','success')
+        return redirect(url_for("frontend.index"))
 
 @frontend.route("/logout", methods=["GET"])
 def logout():
@@ -406,7 +435,7 @@ def datasets():
 
     projects = Set(current_user.projects)
     projects.discard(None)
-    projects = sorted(projects, key=lambda x: x.id, reverse=False)
+    projects = sorted(projects, key=lambda x: x.id, reverse=True)
     project_tuples = []
 
     if len(projects) > 0:
@@ -414,6 +443,7 @@ def datasets():
             if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
                 project_tuples.append( (str(project.id), project.project_name))
         if len(project_tuples) > 0:
+            project_tuples.append(('new', 'New Project'))
             form.project.choices = project_tuples
 
     if request.method == 'POST':
@@ -429,19 +459,12 @@ def datasets():
             db.session.flush()
 
             # check if the user has selected the default project (i.e., the user has no projects)
-            if form.project.data == 'default':
-                # if the user has no projects, add one
-                if len(projects) != 0:
-                    # really shouldn't get here, if the user has projects, add it to the first one (sorted by id#)
-                    for project in projects:
-                        if project.role(current_user) == 'Owner':
-                            project.datasets.append(d)
-                            db.session.commit()
-                            return redirect(url_for('.datasets'))
+            if form.project.data == 'new':
                 # create a new project here with the name default, add the user and dataset to the new project
-                new_project = Project(user_id = current_user.id, project_name = 'Default')
+                new_project = Project(user_id = current_user.id, project_name = 'Project')
                 db.session.add(new_project)
                 db.session.flush()
+                new_project.project_name = 'Project ' + str(new_project.id)
                 new_project.users = [current_user]
                 new_project.datasets = [d]
                 db.session.commit()
@@ -465,9 +488,15 @@ def datasets():
 @frontend.route('/datasets/<int:id>', methods=['GET', 'POST'])
 @login_required
 def dataset(id):
+
     # print request.__dict__
     print 'finding dataset with {}'.format(id)
     dataset = db.session.query(Dataset).filter(Dataset.id==id).first()
+
+    if not dataset:
+        flash('Error: Dataset {} not found.'.format(str(id)), 'warning')
+        return redirect( url_for('frontend.datasets') )
+
     form = AssociateFilesToDatasetForm()
     form.dataset_id.data = dataset.id 
     file_choices = [f for f in db.session.query(File).filter(File.user_id==current_user.id).all() if f.dataset_id == None and f.available == True]
@@ -484,6 +513,128 @@ def dataset(id):
         return render_template("dataset.html", datadict=datadict, form=form, id=id, dataset=dataset)
     else: 
         return render_template("dataset.html", datadict=datadict, form=form, id=id, dataset=dataset)
+
+@frontend.route('/edit_dataset/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_dataset(id):
+    # print request.__dict__
+    print 'finding dataset with {}'.format(id)
+    dataset = db.session.query(Dataset).filter(Dataset.id==id).first()
+
+    if not dataset:
+        flash('Error: Dataset {} not found.'.format(str(id)), 'warning')
+        return redirect( url_for('frontend.datasets') )
+
+    if dataset.role(current_user) != "Owner":
+        flash('Error: You do not have permission to edit Dataset {}.'.format(str(id)), 'warning')
+        return redirect( url_for('frontend.datasets') )
+
+    edit_dataset_form = EditDatasetForm()
+    edit_dataset_form.dataset_id.data = dataset.id
+
+    # for the other version of the form
+    form = AssociateFilesToDatasetForm()
+    form.dataset_id.data = dataset.id 
+    datadict = {dataset : dataset.files.all()}
+
+    if request.method == 'POST':
+
+        if edit_dataset_form.validate_on_submit():
+
+            dataset.name = edit_dataset_form.name.data
+            dataset.description = edit_dataset_form.description.data
+            dataset.paired = edit_dataset_form.paired.data
+            dataset.ig_type = edit_dataset_form.ig_type.data
+
+            # special treatment for arrays
+            try: 
+                dataset.cell_types_sequenced = ast.literal_eval(edit_dataset_form.cell_types_sequenced.data)
+            except:
+                pass # no change
+
+            try: 
+                dataset.chain_types_sequenced = ast.literal_eval(edit_dataset_form.chain_types_sequenced.data)
+            except:
+                pass # no change
+
+            try:
+                dataset.primary_data_files_ids = ast.literal_eval(edit_dataset_form.primary_data_files_ids.data)
+            except:
+                pass # no change
+
+            dataset.lab_notebook_source = edit_dataset_form.lab_notebook_source.data
+            dataset.sequencing_submission_number = edit_dataset_form.sequencing_submission_number.data
+            dataset.contains_rna_seq_data = edit_dataset_form.contains_rna_seq_data.data
+            dataset.reverse_primer_used_in_rt_step = edit_dataset_form.reverse_primer_used_in_rt_step.data
+            dataset.list_of_polymerases_used = edit_dataset_form.list_of_polymerases_used.data
+            dataset.sequencing_platform = edit_dataset_form.sequencing_platform.data
+            dataset.target_reads = edit_dataset_form.target_reads.data
+            dataset.cell_markers_used = edit_dataset_form.cell_markers_used.data
+            dataset.read_access = edit_dataset_form.read_access.data
+            dataset.owners_of_experiment = edit_dataset_form.owners_of_experiment.data
+            dataset.adjuvant = edit_dataset_form.adjuvant.data
+            dataset.species = edit_dataset_form.species.data
+            dataset.cell_selection_kit_name = edit_dataset_form.cell_selection_kit_name.data
+            dataset.isotypes_sequenced = edit_dataset_form.isotypes_sequenced.data
+            dataset.post_sequencing_processing_dict = edit_dataset_form.post_sequencing_processing_dict.data
+            dataset.sample_preparation_date = edit_dataset_form.sample_preparation_date.data
+            dataset.gsaf_barcode = edit_dataset_form.gsaf_barcode.data
+            dataset.mid_tag = edit_dataset_form.mid_tag.data
+            dataset.cell_number = edit_dataset_form.cell_number.data
+            dataset.primer_set_name = edit_dataset_form.primer_set_name.data
+            dataset.template_type = edit_dataset_form.template_type.data
+            dataset.experiment_name = edit_dataset_form.experiment_name.data
+            dataset.person_who_prepared_library = edit_dataset_form.person_who_prepared_library.data
+            dataset.pairing_technique = edit_dataset_form.pairing_technique.data
+            dataset.json_id = edit_dataset_form.json_id.data
+
+            db.session.commit()
+            flash('Success! Your dataset has been updated.', 'success')
+            return redirect ( url_for( 'frontend.datasets', id = id ) )
+
+        else:
+            flash_errors(edit_dataset_form)
+            return render_template("edit_dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form)
+
+    else: # this is the get method
+
+        # set the form variables appropriately
+        edit_dataset_form.name.data = dataset.name
+        edit_dataset_form.description.data = dataset.description
+        edit_dataset_form.paired.data = dataset.paired
+        edit_dataset_form.ig_type.data = dataset.ig_type
+
+        edit_dataset_form.cell_types_sequenced.data = dataset.cell_types_sequenced
+        edit_dataset_form.chain_types_sequenced.data = dataset.chain_types_sequenced
+        edit_dataset_form.primary_data_files_ids.data = dataset.primary_data_files_ids
+
+        edit_dataset_form.lab_notebook_source.data = dataset.lab_notebook_source
+        edit_dataset_form.sequencing_submission_number.data = dataset.sequencing_submission_number
+        edit_dataset_form.contains_rna_seq_data.data = dataset.contains_rna_seq_data
+        edit_dataset_form.reverse_primer_used_in_rt_step.data = dataset.reverse_primer_used_in_rt_step
+        edit_dataset_form.list_of_polymerases_used.data = dataset.list_of_polymerases_used
+        edit_dataset_form.sequencing_platform.data = dataset.sequencing_platform
+        edit_dataset_form.target_reads.data = dataset.target_reads
+        edit_dataset_form.cell_markers_used.data = dataset.cell_markers_used
+        edit_dataset_form.read_access.data = dataset.read_access
+        edit_dataset_form.owners_of_experiment.data = dataset.owners_of_experiment
+        edit_dataset_form.adjuvant.data = dataset.adjuvant
+        edit_dataset_form.species.data = dataset.species
+        edit_dataset_form.cell_selection_kit_name.data = dataset.cell_selection_kit_name
+        edit_dataset_form.isotypes_sequenced.data = dataset.isotypes_sequenced
+        edit_dataset_form.post_sequencing_processing_dict.data = dataset.post_sequencing_processing_dict
+        edit_dataset_form.sample_preparation_date.data = dataset.sample_preparation_date
+        edit_dataset_form.gsaf_barcode.data = dataset.gsaf_barcode
+        edit_dataset_form.mid_tag.data = dataset.mid_tag
+        edit_dataset_form.cell_number.data = dataset.cell_number
+        edit_dataset_form.primer_set_name.data = dataset.primer_set_name
+        edit_dataset_form.template_type.data = dataset.template_type
+        edit_dataset_form.experiment_name.data = dataset.experiment_name
+        edit_dataset_form.person_who_prepared_library.data = dataset.person_who_prepared_library
+        edit_dataset_form.pairing_technique.data = dataset.pairing_technique
+        edit_dataset_form.json_id.data = dataset.json_id
+
+        return render_template("edit_dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form)
 
 @frontend.route('/analysis', methods=['GET', 'POST'])
 @login_required

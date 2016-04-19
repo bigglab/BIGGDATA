@@ -163,6 +163,40 @@ input.search-input {
     height: auto;
 }
 
+/* used for accordian style expand/collapse buttons */
+td.collapse-control {
+    width: 25px;
+    height:  25px;
+
+    background: url('/static/img/details_open.png') no-repeat;
+    cursor: pointer;
+}
+
+tbody.shown td.collapse-control {
+    background: url('/static/img/details_close.png') no-repeat;
+}
+
+/* used for file buttons */
+.btn-file {
+    position: relative;
+    overflow: hidden;
+}
+.btn-file input[type=file] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 100%;
+    min-height: 100%;
+    font-size: 100px;
+    text-align: right;
+    filter: alpha(opacity=0);
+    opacity: 0;
+    outline: none;
+    background: white;
+    cursor: inherit;
+    display: block;
+}
+
 /* 
  * Datatables 
  */

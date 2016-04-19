@@ -80,8 +80,14 @@ class User(db.Model):
         data = db.Column(db.Text())
         authenticated = db.Column(db.Boolean, default=False)
         user_type = db.Column(db.String(128))
+
+        # user paths
+        #root_path = db.Column(db.String(256))
+        #old_dropbox_path = db.Column(db.String(256))
+        #old_scratch_path = db.Column(db.String(256))
         dropbox_path = db.Column(db.String(256))
         scratch_path = db.Column(db.String(256))
+
         files = db.relationship('File', backref='user', lazy='dynamic')
         datasets = db.relationship('Dataset', backref='user', lazy='dynamic')
         analyses = db.relationship('Analysis', backref='user', lazy='dynamic')
@@ -92,7 +98,7 @@ class User(db.Model):
         @hybrid_property
         def name(self):
             return self.first_name + ' ' + self.last_name
-        
+
         def get_id(self):
             """Return the email address to satisfy Flask-Login's requirements."""
             return self.email
@@ -114,6 +120,43 @@ class User(db.Model):
 
         def __init__(self): 
             self.user_type = 'researcher'
+
+        #   /data/user/raw/original.fastq.gz
+        #   /data/user/scratch/ 
+        #   /data/user/filtered/
+
+        @hybrid_property
+        def raw_path(self):
+            return self.root_path + 'raw/'
+
+        # @hybrid_property
+        # def dropbox_path(self):
+        #     return self.raw_path        
+
+        # @hybrid_property
+        # def scratch_path(self):
+        #     return self.root_path + 'scratch/'
+
+        @hybrid_property
+        def filtered_path(self):
+            return self.root_path + 'filtered/'
+
+        # returns all user paths, beginning with the user root path
+        # intended for use in instantiating user directories
+        @hybrid_property
+        def all_paths(self):
+            paths = [self.root_path, self.raw_path, self.scratch_path, self.filtered_path]
+            return paths
+
+        def is_migrated(self):
+            if self.old_dropbox_path != '' or self.old_scratch_path != '':
+                return False
+            return True
+
+        # temporary function to migrate data, if necessary
+        def migrate_data(self):
+            pass
+
 
 class File(db.Model):
         __tablename__ = 'file'
@@ -182,8 +225,39 @@ class Dataset(db.Model):
         cell_types_sequenced = db.Column(postgresql.ARRAY(db.String(50)))
         chain_types_sequenced = db.Column(postgresql.ARRAY(db.String(20)))
         primary_data_files_ids = Column(postgresql.ARRAY(db.Integer))
-        directory = Column(String(256))
-        species = Column(String(256))
+
+        lab_notebook_source = db.Column(db.String(256))
+        sequencing_submission_number = db.Column(db.String(256))
+        contains_rna_seq_data = db.Column(db.String(256))
+        reverse_primer_used_in_rt_step = db.Column(db.String(256))
+        list_of_polymerases_used = db.Column(db.String(256))
+        sequencing_platform = db.Column(db.String(256))
+        target_reads = db.Column(db.String(256))
+        cell_markers_used = db.Column(db.String(256))
+        read_access = db.Column(db.String(256)) # maintain this to add read access for users later
+        owners_of_experiment = db.Column(db.String(256)) # - will use this to add to a new or existing project
+        adjuvant = db.Column(db.String(256))
+        species = db.Column(db.String(256)) 
+        cell_selection_kit_name = db.Column(db.String(256))
+        isotypes_sequenced = db.Column(db.String(256))
+        post_sequencing_processing_dict = db.Column(db.String(512))    
+        sample_preparation_date = db.Column(db.String(256))
+        gsaf_barcode = db.Column(db.String(256))
+        mid_tag = db.Column(db.String(256))
+        cell_number = db.Column(db.String(256))
+        primer_set_name = db.Column(db.String(256))
+        template_type = db.Column(db.String(256))
+        experiment_name = db.Column(db.String(256))
+        person_who_prepared_library = db.Column(db.String(256))
+        pairing_technique = db.Column(db.String(256))
+        json_id = db.Column(db.String(256))
+
+        # json_project_name = db.Column(db.String(256)) - will use this to add to a new or existing project
+        # publications = db.Column(db.String(256)) - will use this to add to a new or existing project
+        # lab = db.Column(db.String(256))
+
+        directory = db.Column(db.String(256))
+
         projects = association_proxy('dataset_projects', 'project')
 
         def __repr__(self): 
@@ -191,6 +265,8 @@ class Dataset(db.Model):
 
         def __init__(self):
             self.primary_data_files_ids = []
+
+
 
         def primary_data_files(self):
             all_files = self.files.all()
@@ -218,7 +294,10 @@ class Dataset(db.Model):
         def role(self, user):
             dataset_role = None
 
-            for project in projects:
+            if self.user_id == current_user.id:
+                return "Owner"
+
+            for project in self.projects:
                 project_role = project.role(user)
 
                 if project_role == "Owner":
@@ -272,7 +351,7 @@ class Project(db.Model):
         #users = db.relationship('User', secondary = 'user_projects', back_populates = 'projects' )
 
         def __repr__(self): 
-            return "<  Project {}:  {}   :   {}    >".format(self.id, self.project_name, self.description)
+            return "{} ({})".format(self.project_name, self.id)
 
         def date_string(self):
             try:
@@ -363,67 +442,8 @@ class UserProjects (db.Model):
         self.user = user
         self.project = project
         self.read_only = read_only
-    
-    #def make_read_only (self, user_id):
-    #    pass
-# The following fields are from the the GSAF JSON
-# "LAB_NOTEBOOK_SOURCE": "", 
-#                     "SEQUENCING_SUBMISSION_NUMBER": [], 
-#                     "CHAIN_TYPES_SEQUENCED": [
-#                         "beta"
-#                     ], 
-#                     "CONTAINS_RNA_SEQ_DATA": false, 
-#                     "REVERSE_PRIMER_USED_IN_RT_STEP": "oligo dT", 
-#                     "LIST_OF_POLYMERASES_USED": [
-#                         "FastStart High Fidelity"
-#                     ], 
-#                     "SEQUENCING_PLATFORM": "MiSeq 2x300", 
-#                     "VH:VL_PAIRED": false, 
-#                     "PROJECT_NAME": "mTCR", 
-#                     "TARGET_READS": 2750000, 
-#                     "CELL_MARKERS_USED": [], 
-#                     "READ_ACCESS": [
-#                         "sschaetzle"
-#                     ], 
-#                     "ADJUVANT": "", 
-#                     "POST_SEQUENCING_PROCESSING:PHI_X_FILTER": false, 
-#                     "CELL_TYPES_SEQUENCED": [
-#                         "mTc"
-#                     ], 
-#                     "SPECIES": "Mus musculus", 
-#                     "PUBLICATIONS": [], 
-#                     "POST_SEQUENCING_PROCESSING:QUALITY_FILTER": "q20p50", 
-#                     "OWNERS_OF_EXPERIMENT": [
-#                         "sschaetzle"
-#                     ], 
-#                     "CELL_SELECTION_KIT_NAME": "", 
-#                     "ISOTYPES_SEQUENCED": [
-#                         "n/a"
-#                     ], 
-#                     "POST_SEQUENCING_PROCESSING:PROCESS_R1_R2_FILE": "pear", 
-#                     "SAMPLE_PREPARATION_DATE": "05/2015", 
-#                     "GSAF_BARCODE": "", 
-#                     "MID_TAG": [
-#                         "TGCCTAGTCA"
-#                     ], 
-#                     "DESCRIPTION": [
-#                         "mTCR Sequencing Mouse", 
-#                         "Mouse C1 Library 1"
-#                     ], 
-#                     "CELL_NUMBER": null, 
-#                     "PRIMER_SET_NAME": [
-#                         "mTCR"
-#                     ], 
-#                     "LAB": [
-#                         "GEORGIOU"
-#                     ], 
-#                     "TEMPLATE_TYPE": "cDNA", 
-#                     "EXPERIMENT_NAME": "memTCR_C1", 
-#                     "PERSON_WHO_PREPARED_LIBRARY": [
-#                         "Sebastian Schaetzle"
-#                     ], 
-#                     "PAIRING_TECHNIQUE": "", 
-#                     "_id": "556774349eb6360c29931524"
+
+
 
 
 
