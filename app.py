@@ -312,7 +312,14 @@ def import_from_sra(accession, name=None, user_id=57, chain=None):
         return False
 
 @celery.task 
-def import_files_as_dataset(filepath_array, filename_array=None, chain=None, user_id=57, name=None):
+def import_files_as_dataset(filepath_array, user_id, filename_array=None, chain=None, name=None):
+    
+    current_user = db.session.query(User).filter(User.id==user_id).first()
+
+    if not current_user:
+        print "Error: user with id {} not found.".format(user_id)
+        return False
+
     d = Dataset()
     d.user_id = user_id
     d.name = name
@@ -320,9 +327,9 @@ def import_files_as_dataset(filepath_array, filename_array=None, chain=None, use
     d.chain_types_sequenced = [chain]
     db.session.add(d)
     db.session.commit()
-    d.directory = current_user.scratch_path + '/Dataset_' + d.id
-    if not os.path.exists(dataset.directory):
-        os.makedirs(dataset.directory)
+    d.directory = current_user.scratch_path + '/Dataset_' + str(d.id)
+    if not os.path.exists(d.directory):
+        os.makedirs(d.directory)
     db.session.commit()
     files = []
     for index, filepath in enumerate(filepath_array):
@@ -422,6 +429,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     output_files = []
     # Instantiate Source Files
     alignment_file = File()
+    alignment_file.user_id = dataset.user_id
     alignment_file.path = '{}.aln.vdjca'.format(basepath)
     alignment_file.name = "{}.aln.vdjca".format(basename)
     # MIGHT NEED TO ADD THIS ARGUMENT to align   -OjParameters.parameters.mapperMaxSeedsDistance=5
@@ -429,11 +437,13 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     alignment_file.file_type = 'MIXCR_ALIGNMENTS'
     files_to_execute.append(alignment_file)    
     clone_index_file = File()
+    clone_index_file.user_id = dataset.user_id
     clone_index_file.file_type = 'MIXCR_CLONE_INDEX'
     clone_index_file.path = '{}.aln.clns.index'.format(basepath)
     clone_index_file.name = '{}.aln.clns.index'.format(basename)
     clone_index_file.command = 'echo "Indexing Done On Clone Assemble Step"'
     clone_file = File()
+    clone_file.user_id = dataset.user_id
     clone_file.file_type = 'MIXCR_CLONES'
     clone_file.path = '{}.aln.clns'.format(basepath)
     clone_file.name = '{}.aln.clns'.format(basename)
@@ -445,6 +455,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     db.session.commit()
     # Commit To Get Parent IDs
     clone_output_file = File()
+    clone_output_file.user_id = dataset.user_id    
     clone_output_file.parent_id = clone_file.id 
     clone_output_file.path = '{}.txt'.format(clone_file.path)
     clone_output_file.file_type = 'MIXCR_CLONES_TEXT'
@@ -452,6 +463,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     clone_output_file.command = 'mixcr exportClones -f {} {}'.format(clone_file.path, clone_output_file.path)
     files_to_execute.append(clone_output_file)
     alignment_output_file = File()
+    alignment_output_file.user_id = dataset.user_id    
     alignment_output_file.parent_id = alignment_file.id
     alignment_output_file.path = '{}.txt'.format(alignment_file.path)
     alignment_output_file.file_type = 'MIXCR_ALIGNMENT_TEXT'
@@ -459,6 +471,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     alignment_output_file.command = 'mixcr exportAlignments -cloneId {}  -f -readId -descrR1 --preset full  {} {}'.format(clone_index_file.path, alignment_file.path, alignment_output_file.path)
     files_to_execute.append(alignment_output_file)
     pretty_alignment_file = File()
+    pretty_alignment_file.user_id = dataset.user_id    
     pretty_alignment_file.parent_id = alignment_file.id 
     pretty_alignment_file.path = '{}.pretty.txt'.format(alignment_file.path)
     pretty_alignment_file.file_type = 'MIXCR_PRETTY_ALIGNMENT_TEXT'
@@ -623,6 +636,7 @@ def run_pandaseq_analysis_with_files(analysis, files, algorithm='pear'):
     output_files = []
     # Instantiate Source Files
     alignment_file = File()
+    alignment_file.user_id = dataset.user_id
     alignment_file.path = '{}.pandaseq_{}.fastq'.format(basepath, algorithm)
     alignment_file.name = "{}.pandaseq_{}.fastq".format(basename, algorithm)
     alignment_file.command = 'pandaseq -f {} -r {} -F -T 4 -A {} -w {} 2> {}.log'.format(files[0].path, files[1].path, algorithm, alignment_file.path, alignment_file.path)
@@ -680,6 +694,7 @@ def run_trim_analysis_with_files(analysis, files):
     # Instantiate Source Files
     if len(files) == 1: 
         output_file = File()
+        output_file.user_id = dataset.user_id
         output_file.path = '{}.trimmed.fastq'.format(basepath)
         output_file.name = "{}.trimmed.fastq".format(basename)
         output_file.command = '{} SE -phred33 -threads 4 {} {} ILLUMINACLIP:{}/TruSeq3-SE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMAMATIC'], files[0].path, output_file.path, app.config['TRIMMAMATIC_ADAPTERS'])
@@ -687,10 +702,12 @@ def run_trim_analysis_with_files(analysis, files):
         files_to_execute.append(output_file)
     if len(files) == 2: 
         r1_output_file = File()
+        r1_output_file.user_id = dataset.user_id
         r1_output_file.path = '{}.R1.trimmed.fastq'.format(basepath)
         r1_output_file.name = "{}.R2.trimmed.fastq".format(basename)
         r1_output_file.file_type = 'TRIMMED_FASTQ'
         r2_output_file = File()
+        r2_output_file.user_id = dataset.user_id
         r2_output_file.path = '{}.R1.trimmed.fastq'.format(basepath)
         r2_output_file.name = "{}.R2.trimmed.fastq".format(basename)
         r2_output_file.file_type = 'TRIMMED_FASTQ'
@@ -743,16 +760,19 @@ def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
     output_files = []
     # Instantiate Source Files
     consensus_output_file = File()
+    consensus_output_file.user_id = dataset.user_id
     consensus_output_file.path = '{}.uclust_consensus.fasta'.format(basepath)
     consensus_output_file.name = "{}.uclust_consensus.fasta".format(basename)
     consensus_output_file.command = ""
     consensus_output_file.file_type = 'CLUSTERED_CONSENSUS_FASTA'
     uclust_output_file = File()
+    uclust_output_file.user_id = dataset.user_id
     uclust_output_file.path = '{}.uclust.tab'.format(basepath)
     uclust_output_file.name = "{}.uclust.tab".format(basename)
     uclust_output_file.command = ""
     uclust_output_file.file_type = 'UCLUST_OUTPUT_TAB_TEXT'
     centroid_output_file = File()
+    centroid_output_file.user_id = dataset.user_id
     centroid_output_file.path = '{}.uclust_centroids.fasta'.format(basepath)
     centroid_output_file.name = "{}.uclust_centroids.fasta".format(basename)
     centroid_output_file.file_type = 'CLUSTERED_CENTROIDS_FASTA'
@@ -790,7 +810,7 @@ def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
 
 
 @celery.task
-def run_analysis(dataset_id, file_ids, user_id=6, analysis_type='IGFFT', analysis_name='', analysis_description='', trim=False, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]): 
+def run_analysis(dataset_id, file_ids, user_id, analysis_type='IGFFT', analysis_name='', analysis_description='', trim=False, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]): 
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
     print 'RUNNING {} ANALYSIS ON DATASET ID# {}: {}'.format(analysis_type, dataset_id, repr(dataset.__dict__))
     #CONSTRUCT AND SAVE ANALYSIS OBJECT
@@ -840,6 +860,7 @@ def run_analysis(dataset_id, file_ids, user_id=6, analysis_type='IGFFT', analysi
             #IGFFT NEEDS UNCOMPRESSED FASTQs
             if file.file_type == 'GZIPPED_FASTQ': 
                 new_file = File()
+                new_file.user_id = user_id
                 new_file.parent_id = file.id 
                 new_file.path = analysis.directory + '/' + file.name.replace('.gz','')
                 new_file.file_type = 'FASTQ'
@@ -862,13 +883,13 @@ def run_analysis(dataset_id, file_ids, user_id=6, analysis_type='IGFFT', analysi
         db.session.add(analysis)
         db.session.commit()
         if files_for_analysis == []: files_for_analysis = files 
-        annotated_files = run_igrep_annotation_on_dataset_files(dataset, files_for_analysis, user_id=6, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting)
+        annotated_files = run_igrep_annotation_on_dataset_files(dataset, files_for_analysis, user_id = dataset.user_id, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting)
         print 'annotated files from igfft: {}'.format(annotated_files)
     # PAIR 
     # CLUSTER
 
 
-def run_igrep_annotation_on_dataset_files(dataset, files, user_id=6, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]):
+def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]):
     # dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
     print 'RUNNING IGREP IGFFT ON DATASET ID# {}: {}'.format(dataset.id, repr(dataset.__dict__))
     igrep_script_path = app.config['IGREP_PIPELINES']
@@ -888,6 +909,7 @@ def run_igrep_annotation_on_dataset_files(dataset, files, user_id=6, overlap=Fal
         print 'executing script: {}'.format(script_command)
         response = os.system(script_command)
         new_file = File()
+        new_file.user_id = user_id
         new_file.parent_id = file.id 
         new_file.dataset_id = dataset.id 
         new_file.name = file.name.replace('fastq','igfft.annotation')
