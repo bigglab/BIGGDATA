@@ -126,7 +126,13 @@ def login():
                 db.session.add(user)
                 db.session.commit()
                 login_user(user, remember=True)
-                flash('logged in!', 'success')
+                flash('Success: You are logged in!', 'success')
+
+                db.session.refresh(user)
+
+                if not user.is_migrated:
+                    return migrate_files()
+
                 return redirect(url_for(".index"))
             else: 
                 flash("Password doesn't match for " + user.first_name, 'error')
@@ -169,8 +175,10 @@ def create_user():
     
     # Just authorize automatically, for now
     new_user.authenticated = True 
-    new_user.dropbox_path = '{}/{}{}'.format(app.config['DROPBOX_ROOT'], form.first_name.data, form.last_name.data)
-    new_user.scratch_path = '{}/{}{}'.format(app.config['SCRATCH_ROOT'], form.first_name.data, form.last_name.data)
+    new_user.root_path = app.config['USER_ROOT'].replace('<username>', new_user.username)
+
+    #new_user.dropbox_path = '{}/{}{}'.format(app.config['DROPBOX_ROOT'], form.first_name.data, form.last_name.data)
+    #new_user.scratch_path = '{}/{}{}'.format(app.config['SCRATCH_ROOT'], form.first_name.data, form.last_name.data)
     db.session.add(new_user)
     db.session.commit()
     login_user(new_user, remember=True)
@@ -183,20 +191,17 @@ def create_user():
 @login_required
 def migrate_files():
     if not current_user.is_migrated:
-        
-        pass # migrate files here
 
-        # if migration successful:
+        # update the database with the user root path
+        if not current_user.root_path:
+            current_user.root_path = app.config['USER_ROOT'].replace('<username>', current_user.username)
+            db.session.commit()
+            print 'Updated user root path to : {}'.format(current_user.root_path)
 
-        # else:
-        db.commit()
-        
-        flash('Success. Your files have been migrated.','success')
-        return redirect(url_for("frontend.index"))
+        # migrate files
+        result = migrate_user_files.apply_async(( current_user.id , ), queue=celery_queue)
 
-    else:
-        flash('Your files have already been migrated.','success')
-        return redirect(url_for("frontend.index"))
+    return redirect(url_for("frontend.index"))
 
 @frontend.route("/logout", methods=["GET"])
 def logout():

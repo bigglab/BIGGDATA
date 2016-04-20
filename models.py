@@ -82,11 +82,11 @@ class User(db.Model):
         user_type = db.Column(db.String(128))
 
         # user paths
-        #root_path = db.Column(db.String(256))
-        #old_dropbox_path = db.Column(db.String(256))
-        #old_scratch_path = db.Column(db.String(256))
-        dropbox_path = db.Column(db.String(256))
-        scratch_path = db.Column(db.String(256))
+        root_path = db.Column(db.String(256))
+        old_dropbox_path = db.Column(db.String(256))
+        old_scratch_path = db.Column(db.String(256))
+        #dropbox_path = db.Column(db.String(256))
+        #scratch_path = db.Column(db.String(256))
 
         files = db.relationship('File', backref='user', lazy='dynamic')
         datasets = db.relationship('Dataset', backref='user', lazy='dynamic')
@@ -121,21 +121,17 @@ class User(db.Model):
         def __init__(self): 
             self.user_type = 'researcher'
 
-        #   /data/user/raw/original.fastq.gz
-        #   /data/user/scratch/ 
-        #   /data/user/filtered/
-
         @hybrid_property
         def raw_path(self):
             return self.root_path + 'raw/'
 
-        # @hybrid_property
-        # def dropbox_path(self):
-        #     return self.raw_path        
+        @hybrid_property
+        def dropbox_path(self):
+            return self.root_path + 'dropbox/'
 
-        # @hybrid_property
-        # def scratch_path(self):
-        #     return self.root_path + 'scratch/'
+        @hybrid_property
+        def scratch_path(self):
+            return self.root_path + 'scratch/'
 
         @hybrid_property
         def filtered_path(self):
@@ -145,9 +141,10 @@ class User(db.Model):
         # intended for use in instantiating user directories
         @hybrid_property
         def all_paths(self):
-            paths = [self.root_path, self.raw_path, self.scratch_path, self.filtered_path]
+            paths = [self.root_path, self.raw_path, self.scratch_path, self.filtered_path, self.dropbox_path]
             return paths
 
+        @hybrid_property
         def is_migrated(self):
             if self.old_dropbox_path != '' or self.old_scratch_path != '':
                 return False

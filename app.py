@@ -3,6 +3,7 @@ import json
 import static
 import sys
 import os
+import errno
 import time
 import random
 from shutil import copyfile
@@ -15,7 +16,8 @@ import subprocess
 import boto 
 import math 
 # from filechunkio import FileChunkIO 
-from celery import Celery
+from celery import Celery, states
+from celery.exceptions import Ignore
 from collections import defaultdict, OrderedDict
 import collections
 #Flask Imports
@@ -230,25 +232,135 @@ def link_file_to_user(path, user_id, name):
     db.session.commit()
     return True
 
+# returns a string if unable to create the user directories
+# returns false otherwise. 
 @celery.task
 def instantiate_user_with_directories(new_user_id):
     new_user = db.session.query(User).filter(User.id==new_user_id).first()
-    if not os.path.isdir(new_user.dropbox_path):
-        os.makedirs(new_user.dropbox_path)
-        print 'created new directory at {}'.format(new_user.dropbox_path)
-    if not os.path.isdir(new_user.scratch_path):
-        os.makedirs(new_user.scratch_path)
-        print 'created new directory at {}'.format(new_user.dropbox_path)
-    # COPY SOME EXAMPLE FILES TO PLAY WITH
-    share_root = app.config['SHARE_ROOT'] 
-    files = os.listdir(share_root)
-    print 'copying these files to new users dropbox: {}'.format(','.join(files))
-    for f in files: 
-        fullfilepath = '{}/{}'.format(new_user.dropbox_path, f)
-        copyfile('{}/{}'.format(share_root, f), '{}/{}'.format(new_user.dropbox_path, f))
-        link_file_to_user(fullfilepath, new_user.id, f)
-    return True 
 
+    for path in new_user.all_paths:
+        try: 
+            if not os.path.isdir(path):
+                os.makedirs(path)
+                print 'Created new directory at {}'.format(path)
+        except ValueError, error:
+            return 'Failed to create directory {}: {}'.format(path, error)
+    
+    # COPY SOME EXAMPLE FILES TO PLAY WITH
+    try:
+        share_root = app.config['SHARE_ROOT'] 
+        if os.path.isdir(share_root):
+            files = os.listdir(share_root)
+        else:
+            return 'Warning: share root path "{}"" not found'.format(share_root)
+        print 'copying these files to new users dropbox: {}'.format(','.join(files))
+        for f in files: 
+            fullfilepath = '{}/{}'.format(new_user.dropbox_path, f)
+            copyfile('{}/{}'.format(share_root, f), '{}/{}'.format(new_user.dropbox_path, f))
+            link_file_to_user(fullfilepath, new_user.id, f)
+        return False 
+    except ValueError, error:
+        return 'Warning: unable to copy sample files into user\'s dropbox: {}'.format(error)
+
+@celery.task(bind = True)
+def migrate_user_files(self, user_id):
+    current_user = db.session.query(User).filter(User.id==user_id).first()
+
+    # First, synchronously instantiate user directories, if they do not exist
+    directories_needed = False
+
+    for path in current_user.all_paths:
+        if not os.path.isdir(path):
+            directories_needed = True
+            #.apply_async((current_user.id, ), queue=celery_queue)
+
+    if directories_needed:
+        result = instantiate_user_with_directories(current_user.id)
+
+        if result: # anything but false is an error:
+            print "Error instantiating new user directories: {}".format(result)
+
+    # need a better way of updating users if the new directory creation fails...
+    files = current_user.files
+
+    overall_success = True
+
+    for file in files:
+        file_path = file.path
+
+        if current_user.root_path not in file_path: # this means the file has not been moved yet...
+
+            file_path = file_path.replace('//', '/')
+            source_path, filename = os.path.split(file_path)
+            extended_path = source_path.replace(current_user.old_scratch_path, '')
+            extended_path = extended_path.replace(current_user.scratch_path, '') # just in case the original is already correct
+
+            destination_path = current_user.scratch_path + extended_path
+            source_filename = source_path + '/' + filename
+            destination_filename = destination_path + filename
+
+            # first make the source and destination file paths
+            try:
+                if not os.path.isdir(source_path):
+                    os.makedirs(source_path)
+            except OSError, e:
+                if e.errno != errno.EEXIST:
+                    raise
+
+            try:
+                if not os.path.isdir(destination_path):
+                    os.makedirs(destination_path)
+            except OSError, e:
+                if e.errno != errno.EEXIST:
+                    raise
+
+            copy_success = False
+
+            try:
+                message = 'Copying {} to {}'.format(source_filename, destination_filename)
+                self.update_state(state = states.STARTED, meta={'status': message})
+
+                if not os.access(source_path, os.R_OK):
+                    print "Error: source path '{}' not readable.".format(source_path)
+                    overall_success = False
+                else:
+                    if not os.path.isfile(source_filename):
+                        print "Warning: source file '{}' not found.".format(source_filename)
+                        overall_success = False
+
+                    elif not os.path.isdir(destination_path):
+                        print "Error: destination path '{}' not found.".format(destination_path)
+                        overall_success = False
+
+                    elif not os.access(destination_path, os.W_OK):
+                        print "Error: destination path '{}' not writable.".format(destination_path)
+                        overall_success = False
+
+                    elif os.path.isfile(destination_filename):
+                        print "Warning: destination filename '{}' already exists.".format(destination_filename) 
+                        copy_success = True
+                    else:
+                        copyfile(source_filename, destination_filename)
+                        print 'Finished copying {} to {}'.format(source_filename, destination_filename)
+                        copy_success = True 
+
+            except ValueError, error:
+                print "Error: Unable to copy file: {}.".format(error)
+                overall_success = False
+
+            if copy_success:
+                file.path = destination_filename
+                db.session.commit()
+                print 'Success: Updated file path in database.'
+
+    if overall_success:
+        current_user.old_dropbox_path = '' 
+        current_user.old_scratch_path = ''
+        db.session.commit()
+        print 'Success: Updated file path in database.'
+
+
+    return False 
 
 @celery.task
 def transfer_file_to_s3(file_id): 
@@ -950,7 +1062,11 @@ def flash_errors( form, category="warning" ):
             flash("{0} - {1}".format( getattr( form, field ).label.text, error ), category )
 
 # @Dave - function to create datasets from a JSON url
-def create_datasets_from_JSON_url(file):
+def create_datasets_from_JSON_url(url, project):
+    # get the url
+    # download the file
+    # convert to a string
+    # call create_datasets_from_JSON_string(json_string, project)
     pass
 
 # @Dave - function to create datasets from a JSON file
