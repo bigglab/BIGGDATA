@@ -59,10 +59,8 @@ from functions import *
 from models import * 
 
 # How to check results from Celery???
-# Need to backup file locations
-# Need to complete migration and get Russell to test it. 
 # Need to make a new user and make sure that the files go into the right place
-
+#
 # 
 # main goal is clustering and outputting mass spec database
 # this code is currently in IGREP
