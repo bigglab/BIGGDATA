@@ -735,7 +735,7 @@ def create_analysis(dataset_id, status=[]):
     status = []
     if request.method == 'POST' and dataset:
         status.append('Analysis Launch Detected')
-        result = run_analysis.apply_async((dataset_id, form.file_ids.data),  {'analysis_type': 'IGFFT', 'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'trim': form.trim.data, 'cluster': form.cluster.data, 'overlap': form.overlap.data, 'paired': form.paired.data}, queue=celery_queue)
+        result = run_analysis.apply_async((dataset_id, form.file_ids.data, current_user.id),  {'analysis_type': 'IGFFT', 'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'trim': form.trim.data, 'cluster': form.cluster.data, 'overlap': form.overlap.data, 'paired': form.paired.data}, queue=celery_queue)
         status.append(result.__repr__())
         status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
         time.sleep(1)
