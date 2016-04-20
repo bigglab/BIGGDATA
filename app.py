@@ -296,8 +296,11 @@ def migrate_user_files(self, user_id):
             extended_path = extended_path.replace(current_user.scratch_path, '') # just in case the original is already correct
 
             destination_path = current_user.scratch_path + extended_path
+            destination_path = destination_path.replace('//', '/')
+
             source_filename = source_path + '/' + filename
-            destination_filename = destination_path + filename
+            destination_filename = destination_path + '/'+ filename
+            destination_filename = destination_filename.replace('//', '/')
 
             # first make the source and destination file paths
             try:
@@ -357,7 +360,7 @@ def migrate_user_files(self, user_id):
         current_user.old_dropbox_path = '' 
         current_user.old_scratch_path = ''
         db.session.commit()
-        print 'Success: Updated file path in database.'
+        print 'Success: All files have been migrated.'
 
 
     return False 

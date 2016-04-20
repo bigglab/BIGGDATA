@@ -130,8 +130,8 @@ def login():
 
                 db.session.refresh(user)
 
-                if not user.is_migrated:
-                    return migrate_files()
+                #if not user.is_migrated:
+                #    return migrate_files()
 
                 return redirect(url_for(".index"))
             else: 
@@ -190,6 +190,17 @@ def create_user():
 @frontend.route("/users/migrate_files", methods=["GET"])
 @login_required
 def migrate_files():
+
+    # Associate all files with the user id
+    # unassociated_files = db.session.query(File).filter(File.dataset_id != None).filter(File.user_id == None)
+
+    # for file in unassociated_files:
+    #     dataset = db.session.query(Dataset).filter(Dataset.id == file.dataset_id).first()
+    #     if dataset:
+    #         file.user_id = dataset.user_id
+    #         #print "This would change the user_id of file {} to {}".format(file.id, dataset.user_id)
+    # db.session.commit()
+
     if not current_user.is_migrated:
 
         # update the database with the user root path
@@ -200,6 +211,8 @@ def migrate_files():
 
         # migrate files
         result = migrate_user_files.apply_async(( current_user.id , ), queue=celery_queue)
+    else:
+        flash('Your files have already been migrated.', 'success')
 
     return redirect(url_for("frontend.index"))
 
