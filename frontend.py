@@ -192,16 +192,6 @@ def create_user():
 @login_required
 def migrate_files():
 
-    # Associate all files with the user id
-    # unassociated_files = db.session.query(File).filter(File.dataset_id != None).filter(File.user_id == None)
-
-    # for file in unassociated_files:
-    #     dataset = db.session.query(Dataset).filter(Dataset.id == file.dataset_id).first()
-    #     if dataset:
-    #         file.user_id = dataset.user_id
-    #         #print "This would change the user_id of file {} to {}".format(file.id, dataset.user_id)
-    # db.session.commit()
-
     if not current_user.is_migrated:
 
         # update the database with the user root path
@@ -449,6 +439,9 @@ def datasets():
     # print request.__dict__
     files = current_user.files.all()
     datasets = current_user.datasets.all()
+    datasets = [dataset for dataset in datasets if dataset.name != '__default__']
+    #datasets = datasets.filter(Dataset.name != '__default__')
+    
     datadict = get_user_dataset_dict(current_user)
     form = CreateDatasetForm()
 
@@ -548,6 +541,10 @@ def edit_dataset(id):
         flash('Error: You do not have permission to edit Dataset {}.'.format(str(id)), 'warning')
         return redirect( url_for('frontend.datasets') )
 
+    if dataset.name == "__default__":
+        flash('Error: Please use this form to edit the default dataset settings.'.format(str(id)), 'warning')
+        return redirect( url_for('frontend.edit_default_dataset') )
+
     edit_dataset_form = EditDatasetForm()
     edit_dataset_form.dataset_id.data = dataset.id
 
@@ -569,17 +566,18 @@ def edit_dataset(id):
             try: 
                 dataset.cell_types_sequenced = ast.literal_eval(edit_dataset_form.cell_types_sequenced.data)
             except:
-                pass # no change
+                dataset.cell_types_sequenced = [edit_dataset_form.cell_types_sequenced.data] 
 
             try: 
                 dataset.chain_types_sequenced = ast.literal_eval(edit_dataset_form.chain_types_sequenced.data)
-            except:
-                pass # no change
+            except: 
+                dataset.chain_types_sequenced = [edit_dataset_form.chain_types_sequenced.data]
 
             try:
                 dataset.primary_data_files_ids = ast.literal_eval(edit_dataset_form.primary_data_files_ids.data)
             except:
-                pass # no change
+                if edit_dataset_form.primary_data_files_ids.data.isdigit():
+                    dataset.primary_data_files_ids = [int(edit_dataset_form.primary_data_files_ids.data)]
 
             dataset.lab_notebook_source = edit_dataset_form.lab_notebook_source.data
             dataset.sequencing_submission_number = edit_dataset_form.sequencing_submission_number.data
@@ -608,6 +606,11 @@ def edit_dataset(id):
             dataset.json_id = edit_dataset_form.json_id.data
 
             db.session.commit()
+
+            if edit_dataset_form.use_as_default.data == True:
+                current_user.change_dataset_defaults(dataset)
+
+
             flash('Success! Your dataset has been updated.', 'success')
             return redirect ( url_for( 'frontend.datasets', id = id ) )
 
@@ -654,6 +657,127 @@ def edit_dataset(id):
         edit_dataset_form.json_id.data = dataset.json_id
 
         return render_template("edit_dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form)
+
+@frontend.route('/edit_dataset/default', methods=['GET', 'POST'])
+@login_required
+def edit_default_dataset():
+    
+    dataset = db.session.query(Dataset). \
+                filter(Dataset.user_id==current_user.id). \
+                filter(Dataset.name == '__default__').first()
+
+    # if there isn't a dataset with the name __default__, create one
+    if not dataset: 
+        dataset = Dataset()
+        dataset.name = '__default__'
+        dataset.user_id = current_user.id
+        db.session.add(dataset)
+        db.session.commit()
+        db.session.refresh(dataset)
+        print 'added default dataset\n\n'
+
+    edit_dataset_form = EditDatasetForm()
+    edit_dataset_form.dataset_id.data = dataset.id
+
+    # for the other version of the form
+    form = AssociateFilesToDatasetForm()
+    form.dataset_id.data = dataset.id 
+    datadict = {dataset : dataset.files.all()}
+
+    if request.method == 'POST':
+
+        if edit_dataset_form.validate_on_submit():
+
+            #dataset.name = edit_dataset_form.name.data
+            #dataset.description = edit_dataset_form.description.data
+            dataset.paired = edit_dataset_form.paired.data
+            dataset.ig_type = edit_dataset_form.ig_type.data
+
+            # special treatment for arrays
+            try: 
+                dataset.cell_types_sequenced = ast.literal_eval(edit_dataset_form.cell_types_sequenced.data)
+            except:
+                dataset.cell_types_sequenced = [edit_dataset_form.cell_types_sequenced.data] 
+
+            try: 
+                dataset.chain_types_sequenced = ast.literal_eval(edit_dataset_form.chain_types_sequenced.data)
+            except: 
+                dataset.chain_types_sequenced = [edit_dataset_form.chain_types_sequenced.data]
+
+            try:
+                dataset.primary_data_files_ids = ast.literal_eval(edit_dataset_form.primary_data_files_ids.data)
+            except:
+                if edit_dataset_form.primary_data_files_ids.data.isdigit():
+                    dataset.primary_data_files_ids = [int(edit_dataset_form.primary_data_files_ids.data)]
+
+            dataset.lab_notebook_source = edit_dataset_form.lab_notebook_source.data
+            dataset.sequencing_submission_number = edit_dataset_form.sequencing_submission_number.data
+            dataset.contains_rna_seq_data = edit_dataset_form.contains_rna_seq_data.data
+            dataset.reverse_primer_used_in_rt_step = edit_dataset_form.reverse_primer_used_in_rt_step.data
+            dataset.list_of_polymerases_used = edit_dataset_form.list_of_polymerases_used.data
+            dataset.sequencing_platform = edit_dataset_form.sequencing_platform.data
+            dataset.target_reads = edit_dataset_form.target_reads.data
+            dataset.cell_markers_used = edit_dataset_form.cell_markers_used.data
+            dataset.adjuvant = edit_dataset_form.adjuvant.data
+            dataset.species = edit_dataset_form.species.data
+            dataset.cell_selection_kit_name = edit_dataset_form.cell_selection_kit_name.data
+            dataset.isotypes_sequenced = edit_dataset_form.isotypes_sequenced.data
+            dataset.post_sequencing_processing_dict = edit_dataset_form.post_sequencing_processing_dict.data
+            dataset.mid_tag = edit_dataset_form.mid_tag.data
+            dataset.cell_number = edit_dataset_form.cell_number.data
+            dataset.primer_set_name = edit_dataset_form.primer_set_name.data
+            dataset.template_type = edit_dataset_form.template_type.data
+            dataset.experiment_name = edit_dataset_form.experiment_name.data
+            dataset.person_who_prepared_library = edit_dataset_form.person_who_prepared_library.data
+            dataset.pairing_technique = edit_dataset_form.pairing_technique.data
+
+            db.session.commit()
+            flash('Success! Your dataset has been updated.', 'success')
+            return redirect ( url_for( 'frontend.datasets', id = id ) )
+
+        else:
+            flash_errors(edit_dataset_form)
+            return render_template("edit_dataset_defaults.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form)
+
+    else: # method = GET #
+
+        # set the form variables appropriately
+        # edit_dataset_form.description.data = dataset.description
+        edit_dataset_form.paired.data = dataset.paired
+        edit_dataset_form.ig_type.data = dataset.ig_type
+
+        edit_dataset_form.cell_types_sequenced.data = dataset.cell_types_sequenced
+        edit_dataset_form.chain_types_sequenced.data = dataset.chain_types_sequenced
+        edit_dataset_form.primary_data_files_ids.data = dataset.primary_data_files_ids
+
+        edit_dataset_form.lab_notebook_source.data = dataset.lab_notebook_source
+        edit_dataset_form.sequencing_submission_number.data = dataset.sequencing_submission_number
+        edit_dataset_form.contains_rna_seq_data.data = dataset.contains_rna_seq_data
+        edit_dataset_form.reverse_primer_used_in_rt_step.data = dataset.reverse_primer_used_in_rt_step
+        edit_dataset_form.list_of_polymerases_used.data = dataset.list_of_polymerases_used
+        edit_dataset_form.sequencing_platform.data = dataset.sequencing_platform
+        edit_dataset_form.target_reads.data = dataset.target_reads
+        edit_dataset_form.cell_markers_used.data = dataset.cell_markers_used
+        #edit_dataset_form.read_access.data = dataset.read_access
+        #edit_dataset_form.owners_of_experiment.data = dataset.owners_of_experiment
+        edit_dataset_form.adjuvant.data = dataset.adjuvant
+        edit_dataset_form.species.data = dataset.species
+        edit_dataset_form.cell_selection_kit_name.data = dataset.cell_selection_kit_name
+        edit_dataset_form.isotypes_sequenced.data = dataset.isotypes_sequenced
+        edit_dataset_form.post_sequencing_processing_dict.data = dataset.post_sequencing_processing_dict
+        #edit_dataset_form.sample_preparation_date.data = dataset.sample_preparation_date
+        #edit_dataset_form.gsaf_barcode.data = dataset.gsaf_barcode
+        edit_dataset_form.mid_tag.data = dataset.mid_tag
+        edit_dataset_form.cell_number.data = dataset.cell_number
+        edit_dataset_form.primer_set_name.data = dataset.primer_set_name
+        edit_dataset_form.template_type.data = dataset.template_type
+        edit_dataset_form.experiment_name.data = dataset.experiment_name
+        edit_dataset_form.person_who_prepared_library.data = dataset.person_who_prepared_library
+        edit_dataset_form.pairing_technique.data = dataset.pairing_technique
+        #edit_dataset_form.json_id.data = dataset.json_id
+
+        return render_template("edit_default_dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form)
+
 
 @frontend.route('/analysis', methods=['GET', 'POST'])
 @login_required

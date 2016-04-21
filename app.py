@@ -217,7 +217,6 @@ def parse_name_for_chain_type(name):
         chain = '' 
     return chain 
 
-
 def link_file_to_user(path, user_id, name):
     file = File()
     file.name = name 
@@ -395,7 +394,8 @@ def transfer_file_to_s3(file_id):
 def get_user_dataset_dict(user): 
     datadict = OrderedDict()
     for dataset in sorted(user.datasets, key=lambda x: x.id, reverse=True):
-        datadict[dataset] = sorted(dataset.files.all(), key=lambda x: x.file_type)
+        if dataset.name != '__default__':
+            datadict[dataset] = sorted(dataset.files.all(), key=lambda x: x.file_type)
     return datadict
 
 @celery.task 

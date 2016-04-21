@@ -58,10 +58,26 @@ from forms import *
 from functions import * 
 from models import * 
 
+# 1. Prevent users from adding a dataset named __default__
+# 2. Prevent users from seeing the default when adding projects
+# 3. Prevent users from viewing the default (or redirect them)
+# 4. Don't allow users to run analyses on empty datasets
+# 5. Prepopulate new datasets with default settings
+# 6. When creating a project for a dataset, get the project species/etc from the dataset
+# 7. And vice versa vis a vis #6
+# 8. Update arrays on import from JSON
+# 9. Instantiate users with default dataset : what are the default dataset defaults?
+# 10. Prevent datatable drop down when link clicked
+# 11. Disable datatable drop down if there are no files
+# 12. Add option for user to save dataset values as defaults
+
+# 13. Replace Pandaseq/MicCr/Annotate with "Add Files"
+
 # How to check results from Celery???
-# Need to make a new user and make sure that the files go into the right place
+# Check for duplicate directories and files in datastore
+# Add default dataset for each user
+# Automatically link files into a dataset and a project for user 
 #
-# 
 # main goal is clustering and outputting mass spec database
 # this code is currently in IGREP
 # clean up UI while doing walkthrough
@@ -76,14 +92,6 @@ from models import *
 # get a list of projects based on a dataset query
 # dataset.project
 # 
-# Make sure usernames are unique
-# Instantiate users with the following directories:
-#   /data/user/raw/original.fastq.gz
-#   /data/user/scratch/ 
-#   /data/user/filtered/
-#   /data/user/dropbox/
-#   /data/user/
-#
 # NavBar: 
 # Files / Projects / Analyses
 #
@@ -99,7 +107,6 @@ from models import *
 # Need a new clustering software (USEARCH) - FASTA
 # sorted by sequence length
 # name each sequence
-#
 # queue - development
 #
 # Walk throughs - two files, run mixcr
@@ -182,6 +189,7 @@ def create_project():
 
     datasets = Set(current_user.datasets)
     datasets.discard(None)
+    datasets.discard(current_user.default_dataset)
     datasets = sorted(datasets, key=lambda x: x.id, reverse=False)
     dataset_choices = [(str(dataset.id), dataset.name + ' (' + str(dataset.id) + ')' ) for dataset in datasets]
     create_project_form.datasets.choices = dataset_choices # choices should be a tuple (id, username)
@@ -223,6 +231,10 @@ def create_project():
         for dataset in datasets:
             if str(dataset.id) not in create_project_form.datasets.data:
                 dataset_selection.append(dataset)
+
+        if current_user.default_dataset:
+            dataset_selection.append(current_user.default_dataset) 
+
         new_project.datasets = dataset_selection
 
         db.session.add(new_project)
@@ -309,6 +321,7 @@ def edit_project(project_id):
 
     datasets = Set(current_user.datasets)
     datasets.discard(None)
+    datasets.discard(current_user.default_dataset)
     datasets = sorted(datasets, key=lambda x: x.id, reverse=False)
 
     dataset_choices = [(str(dataset.id), dataset.name + ' (' + str(dataset.id) + ')' ) for dataset in datasets]

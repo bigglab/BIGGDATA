@@ -85,15 +85,12 @@ class User(db.Model):
         root_path = db.Column(db.String(256))
         old_dropbox_path = db.Column(db.String(256))
         old_scratch_path = db.Column(db.String(256))
-        #dropbox_path = db.Column(db.String(256))
-        #scratch_path = db.Column(db.String(256))
 
         files = db.relationship('File', backref='user', lazy='dynamic')
         datasets = db.relationship('Dataset', backref='user', lazy='dynamic')
         analyses = db.relationship('Analysis', backref='user', lazy='dynamic')
 
         projects = association_proxy('user_projects', 'project')
-        #projects = db.relationship('Project', secondary = 'user_projects', back_populates = 'users' )
 
         @hybrid_property
         def name(self):
@@ -150,10 +147,61 @@ class User(db.Model):
                 return False
             return True
 
-        # temporary function to migrate data, if necessary
-        def migrate_data(self):
-            pass
+        @hybrid_property
+        def default_dataset(self):
+            for dataset in self.datasets:
+                if dataset.name == '__default__':
+                    return dataset
+            return None
 
+        def change_dataset_defaults(self, dataset):
+            default_dataset = self.default_dataset
+            if not default_dataset:
+                default_dataset = Dataset()
+                default_dataset.name = '__default__'
+                default_dataset.user_id = current_user.id
+                db.session.add(default_dataset)
+                db.session.commit()
+                db.session.refresh(default_dataset)
+                self.datasets.append(default_dataset)
+
+            try:
+
+                if default_dataset:
+                    default_dataset.ig_type = dataset.ig_type
+                    default_dataset.paired = dataset.paired
+
+                    default_dataset.cell_types_sequenced = dataset.cell_types_sequenced
+                    default_dataset.chain_types_sequenced = dataset.chain_types_sequenced
+                    default_dataset.primary_data_files_ids = dataset.primary_data_files_ids
+
+                    default_dataset.lab_notebook_source = dataset.lab_notebook_source
+                    default_dataset.sequencing_submission_number = dataset.sequencing_submission_number
+                    default_dataset.contains_rna_seq_data = dataset.contains_rna_seq_data
+                    default_dataset.reverse_primer_used_in_rt_step = dataset.reverse_primer_used_in_rt_step
+                    default_dataset.list_of_polymerases_used = dataset.list_of_polymerases_used
+                    default_dataset.sequencing_platform = dataset.sequencing_platform
+                    default_dataset.target_reads = dataset.target_reads
+                    default_dataset.cell_markers_used = dataset.cell_markers_used
+                    default_dataset.adjuvant = dataset.adjuvant
+                    default_dataset.species = dataset.species
+                    default_dataset.cell_selection_kit_name = dataset.cell_selection_kit_name
+                    default_dataset.isotypes_sequenced = dataset.isotypes_sequenced
+                    default_dataset.post_sequencing_processing_dict = dataset.post_sequencing_processing_dict
+                    default_dataset.mid_tag = dataset.mid_tag
+                    default_dataset.cell_number = dataset.cell_number
+                    default_dataset.primer_set_name = dataset.primer_set_name
+                    default_dataset.template_type = dataset.template_type
+                    default_dataset.experiment_name = dataset.experiment_name
+                    default_dataset.person_who_prepared_library = dataset.person_who_prepared_library
+                    default_dataset.pairing_technique = dataset.pairing_technique
+                    
+                    db.session.commit()
+                    return False
+                    
+
+            except:
+                return "Error: no default dataset found."
 
 class File(db.Model):
         __tablename__ = 'file'
@@ -263,8 +311,6 @@ class Dataset(db.Model):
         def __init__(self):
             self.primary_data_files_ids = []
 
-
-
         def primary_data_files(self):
             all_files = self.files.all()
             if all_files == None: return []
@@ -322,6 +368,49 @@ class Dataset(db.Model):
             except:
                 pass
             return None
+
+        def populate_with_defaults(self, user):
+            if not user:
+                return 'Error: no user passed.'
+            try:
+                default_dataset = user.default_dataset
+                if default_dataset:
+                    self.ig_type = default_dataset.ig_type
+                    self.paired = default_dataset.paired
+
+                    self.cell_types_sequenced = default_dataset.cell_types_sequenced
+                    self.chain_types_sequenced = default_dataset.chain_types_sequenced
+                    self.primary_data_files_ids = default_dataset.primary_data_files_ids
+
+                    self.lab_notebook_source = default_dataset.lab_notebook_source
+                    self.sequencing_submission_number = default_dataset.sequencing_submission_number
+                    self.contains_rna_seq_data = default_dataset.contains_rna_seq_data
+                    self.reverse_primer_used_in_rt_step = default_dataset.reverse_primer_used_in_rt_step
+                    self.list_of_polymerases_used = default_dataset.list_of_polymerases_used
+                    self.sequencing_platform = default_dataset.sequencing_platform
+                    self.target_reads = default_dataset.target_reads
+                    self.cell_markers_used = default_dataset.cell_markers_used
+                    self.adjuvant = default_dataset.adjuvant
+                    self.species = default_dataset.species
+                    self.cell_selection_kit_name = default_dataset.cell_selection_kit_name
+                    self.isotypes_sequenced = default_dataset.isotypes_sequenced
+                    self.post_sequencing_processing_dict = default_dataset.post_sequencing_processing_dict
+                    self.mid_tag = default_dataset.mid_tag
+                    self.cell_number = default_dataset.cell_number
+                    self.primer_set_name = default_dataset.primer_set_name
+                    self.template_type = default_dataset.template_type
+                    self.experiment_name = default_dataset.experiment_name
+                    self.person_who_prepared_library = default_dataset.person_who_prepared_library
+                    self.pairing_technique = default_dataset.pairing_technique
+                    return False
+                else:
+                    # if there are any overall defaults, initialize them here
+                    pass
+
+            except:
+                return "Error: no default dataset found."
+
+
 
 class Project(db.Model):
         __tablename__ = 'project'
