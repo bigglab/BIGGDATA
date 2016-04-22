@@ -212,3 +212,20 @@ tr.shown td.details-control {
 .no-sort::after { display: none!important; }
 
 .no-sort { pointer-events: none!important; cursor: default!important; }
+
+/*
+ *
+ * Styles for tabbed content
+ *
+*/
+
+.tab-content {
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    padding: 10px;
+}
+
+.nav-tabs {
+    margin-bottom: 0;
+}

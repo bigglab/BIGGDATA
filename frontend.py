@@ -61,13 +61,8 @@ frontend = Blueprint('frontend', __name__)
 
 nav.register_element('frontend_top', Navbar(
     View('BIGG DATA', 'frontend.index'),
-    View('Home', 'frontend.index'),
     View('Dashboard', 'frontend.analyses'),
-    Subgroup(
-        'Login',
-        View('Login', 'frontend.login'),
-        View('Logout', 'frontend.logout'),
-        ),
+        
     Subgroup(
         'Import Data', 
         View('My Files', 'frontend.files'), 
@@ -99,21 +94,55 @@ nav.register_element('frontend_top', Navbar(
         Link('Flask-Bootstrap', 'http://pythonhosted.org/Flask-Bootstrap'),
         Link('Flask-AppConfig', 'https://github.com/mbr/flask-appconfig'),
         Link('Flask-Debug', 'https://github.com/mbr/flask-debug'),
-        # Separator(),
-        # Text('Bootstrap'),
-        # Link('Getting started', 'http://getbootstrap.com/getting-started/'),
-        # Link('CSS', 'http://getbootstrap.com/css/'),
-        # Link('Components', 'http://getbootstrap.com/components/'),
-        # Link('Javascript', 'http://getbootstrap.com/javascript/'),
-        # Link('Customize', 'http://getbootstrap.com/customize/'),
     ),
-    Link('Powered by {}'.format('Python and Flask'), 'https://github.com/russelldurrett/BIGGDATA'),
-))
+    View('Login', 'frontend.login'),
+    ))
+
+nav.register_element('frontend_user', Navbar(
+    View('BIGG DATA', 'frontend.index'),
+    View('Dashboard', 'frontend.analyses'),
+        
+    Subgroup(
+        'Import Data', 
+        View('My Files', 'frontend.files'), 
+        View('Import File', 'frontend.file_download'),
+        View('Import From NCBI', 'frontend.import_sra'), 
+        ),
+    Subgroup(
+        'Manage Projects',
+        View('New Project', 'projects.create_project'),
+        View('My Projects', 'projects.manage_projects'),
+        # Link('Other Tasks', 'under_construction'), 
+        ),
+    Subgroup(
+        'Run Analysis', 
+        View('Run On Dataset', 'frontend.datasets'),
+        View('My Analyses', 'frontend.analyses'),
+        View('VDJ VIZualizer', 'frontend.vdj_visualizer'),
+        # View('Browse Sequences', 'frontend.browse_sequences'),
+        # Link('Download Lots of Data', 'under_construction'),
+        # Link('Download For Mass Spec', 'under_construction')
+        ),
+    Subgroup(
+        'Documentation', 
+        View('BIGG DATA Overview', 'frontend.overview'), 
+        View('BIGG DB Schema', 'frontend.schema'), 
+        # Link('Confluence', 'under_construction'), 
+        Separator(),
+        Text('External Docs'),
+        Link('Flask-Bootstrap', 'http://pythonhosted.org/Flask-Bootstrap'),
+        Link('Flask-AppConfig', 'https://github.com/mbr/flask-appconfig'),
+        Link('Flask-Debug', 'https://github.com/mbr/flask-debug'),
+    ),
+    View('Logout', 'frontend.logout'),
+    ))
 
 @frontend.route('/', methods=['GET', 'POST'])
 def index():
+    login_form = LoginForm()
+    registration_form = RegistrationForm()
     results = db.session.query(User).all()
-    return render_template("index.html", results=results, user=current_user)
+    return render_template("index.html", results=results, current_user=current_user, login_form = login_form, registration_form = registration_form)
 
 @frontend.route("/login", methods=["GET", "POST"])
 def login():
@@ -141,8 +170,8 @@ def login():
         else: 
             flash("couldn't find that user... try registering a new user", 'normal')
     #also supply create_user_form here for convenience
-    create_user_form = RegistrationForm()
-    return render_template("login.html", login_form=login_form, create_user_form=create_user_form, current_user=current_user)
+    registration_form = RegistrationForm()
+    return render_template("login.html", login_form=login_form, registration_form=registration_form, current_user=current_user)
 
 @frontend.route("/users/create", methods=["POST"])
 def create_user():
@@ -255,7 +284,7 @@ def file_upload():
         return redirect(url_for('.files'))
     else:
         dl_form = FileDownloadForm()
-        return render_template("file_upload.html", upload_form=form, download_form=dl_form)
+        return render_template("file_upload.html", upload_form=form, download_form=dl_form, current_user=current_user)
 
 @frontend.route('/file_download', methods=['GET', 'POST'])
 @login_required
@@ -303,7 +332,7 @@ def file_download(status=[], bucket='', key=''):
         flash('file uploaded to {}'.format(file.path))
     else:
         r=''
-    return render_template("file_download.html", download_form=form, status=status, r=r)
+    return render_template("file_download.html", download_form=form, status=status, r=r, current_user=current_user)
 
 @frontend.route('/files/transfer_to_s3/<int:file_id>', methods=['GET'])
 @login_required
@@ -419,7 +448,7 @@ def file(id):
         else:
             flash_errors(editfileform)
 
-        return render_template("file.html", file=f, editfileform=editfileform, edit=edit)
+        return render_template("file.html", file=f, editfileform=editfileform, edit=edit, current_user=current_user)
 
 @frontend.route('/files/download/<int:id>')
 @login_required
@@ -515,7 +544,7 @@ def datasets():
             db.session.commit()
         return redirect(url_for('.datasets')) # render_template("datasets.html", datadict=datadict, form=Form())
     else: 
-        return render_template("datasets.html", datadict=datadict, form=form)
+        return render_template("datasets.html", datadict=datadict, form=form, current_user=current_user)
 
 @frontend.route('/datasets/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -550,9 +579,9 @@ def dataset(id):
         f.dataset_id = dataset.id 
         db.session.commit()
         flash('dataset saved')
-        return render_template("dataset.html", datadict=datadict, form=form, id=id, dataset=dataset)
+        return render_template("dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, current_user=current_user)
     else: 
-        return render_template("dataset.html", datadict=datadict, form=form, id=id, dataset=dataset)
+        return render_template("dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, current_user=current_user)
 
 @frontend.route('/edit_dataset/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -646,7 +675,7 @@ def edit_dataset(id):
 
         else:
             flash_errors(edit_dataset_form)
-            return render_template("edit_dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form)
+            return render_template("edit_dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form, current_user=current_user)
 
     else: # this is the get method
 
@@ -686,7 +715,7 @@ def edit_dataset(id):
         edit_dataset_form.pairing_technique.data = dataset.pairing_technique
         edit_dataset_form.json_id.data = dataset.json_id
 
-        return render_template("edit_dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form)
+        return render_template("edit_dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form, current_user=current_user)
 
 @frontend.route('/edit_dataset/default', methods=['GET', 'POST'])
 @login_required
@@ -767,7 +796,7 @@ def edit_default_dataset():
 
         else:
             flash_errors(edit_dataset_form)
-            return render_template("edit_dataset_defaults.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form)
+            return render_template("edit_dataset_defaults.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form, current_user=current_user)
 
     else: # method = GET #
 
@@ -806,7 +835,7 @@ def edit_default_dataset():
         edit_dataset_form.pairing_technique.data = dataset.pairing_technique
         #edit_dataset_form.json_id.data = dataset.json_id
 
-        return render_template("edit_default_dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form)
+        return render_template("edit_default_dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form, current_user=current_user)
 
 
 @frontend.route('/analysis', methods=['GET', 'POST'])
@@ -817,7 +846,7 @@ def analyses(status=[]):
     analysis_file_dict = OrderedDict()
     for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
         analysis_file_dict[analysis] = analysis.files.all() 
-    return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
+    return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status, current_user=current_user)
 
 # @frontend.route('/analysis/<int:analysis_id>/export_to_msdb/<string(length=3):ig_type>')
 # @login_required
@@ -833,7 +862,7 @@ def analysis(id):
     # cdr3_aa_counts = db.engine.execute("select  cdr3_aa, count(1) from annotation a WHERE a.analysis_id = {} GROUP BY cdr3_aa ORDER BY count(1) DESC;".format(analysis.id)).fetchall()
     # v_hit_counts = db.engine.execute("select  v_top_hit, count(1) from annotation a WHERE a.analysis_id = {} GROUP BY v_top_hit ORDER BY count(1) DESC;".format(analysis.id)).fetchall()
     # v_hit_loci_counts = db.engine.execute("select  v_top_hit_locus, count(1) from annotation a WHERE a.analysis_id = {} GROUP BY v_top_hit_locus ORDER BY count(1) DESC;".format(analysis.id)).fetchall()
-    return render_template("analysis.html", analysis=analysis) #, cdr3_aa_counts=cdr3_aa_counts, v_hit_counts=v_hit_counts, v_hit_loci_counts=v_hit_loci_counts)
+    return render_template("analysis.html", analysis=analysis, current_user=current_user) #, cdr3_aa_counts=cdr3_aa_counts, v_hit_counts=v_hit_counts, v_hit_loci_counts=v_hit_loci_counts)
     
 @frontend.route('/analysis/mixcr/<int:dataset_id>', methods=['GET', 'POST'])
 @login_required
@@ -855,7 +884,7 @@ def mixcr(dataset_id, status=[]):
         return redirect(url_for('.analyses', status=status))
         # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
     else: 
-        return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
+        return render_template("mixcr.html", dataset=dataset, form=form, status=status, current_user=current_user) 
 
 @frontend.route('/analysis/pandaseq/<int:dataset_id>', methods=['GET', 'POST'])
 @login_required
@@ -877,7 +906,7 @@ def pandaseq(dataset_id, status=[]):
         return redirect(url_for('.analyses', status=status))
         # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
     else: 
-        return render_template("pandaseq.html", dataset=dataset, form=form, status=status) 
+        return render_template("pandaseq.html", dataset=dataset, form=form, status=status, current_user=current_user) 
 
 
 @frontend.route('/analysis/create/<int:dataset_id>', methods=['GET', 'POST'])
@@ -902,7 +931,7 @@ def create_analysis(dataset_id, status=[]):
         return redirect(url_for('.analyses', status=status))
         # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
     else: 
-        return render_template("create_analysis.html", dataset=dataset, form=form, status=status) 
+        return render_template("create_analysis.html", dataset=dataset, form=form, status=status, current_user=current_user) 
 
 
 @frontend.route('/browse_sequences', methods=['GET', 'POST'])
@@ -919,25 +948,25 @@ def browse_sequences():
     form = Form()
     golden = retrieve_golden()
     err = False
-    return render_template("browse_sequences.html", form=form, files=files, datasets=datasets, datadict=datadict, err=err, gif_path=golden, seq_count=seq_count, ann_count=ann_count)
+    return render_template("browse_sequences.html", form=form, files=files, datasets=datasets, datadict=datadict, err=err, gif_path=golden, seq_count=seq_count, ann_count=ann_count, current_user=current_user)
 
 
 @frontend.route('/developers/schema', methods=['GET'])
 def schema():
     schema_url = url_for('static', filename='schema.png')
-    return render_template("schema.html", schema_url=schema_url)
+    return render_template("schema.html", schema_url=schema_url, current_user=current_user)
 
 @frontend.route('/developers/overview', methods=['GET'])
 def overview():
     schema_url = url_for('static', filename='schema.png')
     infrastructure_image_url = url_for('static', filename='bigg_data_infrastructure.png')
-    return render_template("infrastructure.html", schema_url=schema_url, infrastructure_image_url=infrastructure_image_url)
+    return render_template("infrastructure.html", schema_url=schema_url, infrastructure_image_url=infrastructure_image_url, current_user=current_user)
 
 
 @frontend.route('/vdjviz', methods=['GET'])
 def vdj_visualizer():
     vdjviz_url = 'http://vdjviz.rsldrt.com:9000/account'
-    return render_template("vdjviz.html", vdjviz_url=vdjviz_url)
+    return render_template("vdjviz.html", vdjviz_url=vdjviz_url, current_user=current_user)
 
 
 
@@ -950,7 +979,7 @@ def add_page(num):
     async_result = add.AsyncResult(result.id)
     r = async_result.info
     template = templateEnv.get_template('add1.html')
-    return template.render(input=num, result=r)
+    return template.render(input=num, result=r, current_user=current_user)
 
     # return make_response(render_template('index.html'))
     # return '<h4>Hi</h4>'
@@ -960,7 +989,7 @@ def add_page(num):
 @frontend.route('/example', methods=['GET', 'POST'])
 def example_index():
     if request.method == 'GET':
-        return render_template('example_index.html', email=session.get('email', 'example'))
+        return render_template('example_index.html', email=session.get('email', 'example'), current_user=current_user)
     email = request.form['email']
     session['email'] = email
 
@@ -1030,7 +1059,7 @@ def import_sra():
             # status.append(result.__dict__)
         else: 
             status.append('Accession does not start with SRR or ERR?')
-    return render_template('sra_import.html', status=status, form=form, result=result)
+    return render_template('sra_import.html', status=status, form=form, result=result, current_user=current_user)
 
 
 

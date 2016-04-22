@@ -17,16 +17,14 @@ class LoginForm(Form):
 	# first_name = StringField(u'First Name', validators=[validators.input_required()])
 	# last_name  = StringField(u'Last Name', validators=[validators.input_required()])
 	email = StringField('Email', validators=[validators.input_required()])
-	password = PasswordField('password', validators=[validators.input_required()])
-
-
+	password = PasswordField('Password', validators=[validators.input_required()])
 
 class RegistrationForm(Form):
     username = StringField(u'Username', validators=[validators.input_required()])
     first_name = StringField(u'First Name', validators=[validators.input_required()])
     last_name  = StringField(u'Last Name', validators=[validators.input_required()])
     email = StringField('Email', validators=[validators.input_required()])
-    password = PasswordField('password', validators=[validators.input_required()])
+    password = PasswordField('Password', validators=[validators.input_required()])
 
 
 class CreateMixcrAnalysisForm(Form): 

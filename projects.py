@@ -179,7 +179,7 @@ def manage_projects():
     if len(projects) == 0:
         projects = None
 
-    return render_template("manage_projects.html", projects = projects, edit_project_form = edit_project_form)
+    return render_template("manage_projects.html", projects = projects, edit_project_form = edit_project_form, current_user=current_user)
 
 @projects_blueprint.route('/create_project', methods=['GET', 'POST'])
 @login_required
@@ -288,7 +288,7 @@ def create_project():
     dataset_defaults = [(str(dataset.id)) for dataset in datasets]
     create_project_form.datasets.data = dataset_defaults 
 
-    return render_template("create_project.html", create_project_form = create_project_form)
+    return render_template("create_project.html", create_project_form = create_project_form, current_user=current_user)
 
 @projects_blueprint.route('/edit_project/<project_id>', methods=['GET','POST'])
 @login_required
@@ -366,7 +366,7 @@ def edit_project(project_id):
             edit_project_form.publications.data = project.publications
             edit_project_form.species.data = project.species
             edit_project_form.lab.data = project.lab 
-            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner)
+            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner, current_user=current_user)
 
         else:
             if edit_project_form.validate_on_submit():
@@ -462,12 +462,12 @@ def edit_project(project_id):
             else:
                 flash_errors(edit_project_form)
 
-            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner)
+            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner, current_user=current_user)
     else:
         flash('Error: the project was not found or you do not have permission to edit the project.', 'warning')
         return redirect( url_for('projects.manage_projects') )
 
-    return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id)
+    return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, current_user=current_user)
 
 @projects_blueprint.route('/view_project/<project_id>', methods=['GET', 'POST'])
 @login_required
@@ -518,6 +518,7 @@ def view_project(project_id):
         owner = owner,
         read_only_list = read_only_list,
         write_user_list = write_user_list,
-        dataset_list = dataset_list)
+        dataset_list = dataset_list, 
+        current_user=current_user)
 
 

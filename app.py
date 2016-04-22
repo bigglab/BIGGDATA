@@ -141,7 +141,8 @@ def retrieve_golden():
 @login_manager.unauthorized_handler
 def unauthorized():
     gif_path=retrieve_golden()
-    return render_template("unauthorized.html", git_path=gif_path)
+    flash('You must login or register to view that page.','success')
+    return redirect( url_for('frontend.login') )
 
 def get_filepaths(directory_path):
     file_paths = []
