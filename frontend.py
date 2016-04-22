@@ -70,7 +70,7 @@ nav.register_element('frontend_top', Navbar(
         View('Import From NCBI', 'frontend.import_sra'), 
         ),
     Subgroup(
-        'Manage Projects',
+        'Manage Data',
         View('New Project', 'projects.create_project'),
         View('My Projects', 'projects.manage_projects'),
         # Link('Other Tasks', 'under_construction'), 
@@ -100,7 +100,7 @@ nav.register_element('frontend_top', Navbar(
 
 nav.register_element('frontend_user', Navbar(
     View('BIGG DATA', 'frontend.index'),
-    View('Dashboard', 'frontend.analyses'),
+    View('Dashboard', 'frontend.dashboard'),
         
     Subgroup(
         'Import Data', 
@@ -109,7 +109,7 @@ nav.register_element('frontend_user', Navbar(
         View('Import From NCBI', 'frontend.import_sra'), 
         ),
     Subgroup(
-        'Manage Projects',
+        'Manage Data',
         View('New Project', 'projects.create_project'),
         View('My Projects', 'projects.manage_projects'),
         # Link('Other Tasks', 'under_construction'), 
@@ -163,7 +163,7 @@ def login():
                 #if not user.is_migrated:
                 #    return migrate_files()
 
-                return redirect(url_for(".index"))
+                return redirect(url_for("frontend.dashboard"))
             else: 
                 flash("Password doesn't match for " + user.first_name, 'error')
                 print "password didnt match for " + user.first_name 
@@ -212,29 +212,30 @@ def create_user():
     db.session.add(new_user)
     db.session.commit()
     login_user(new_user, remember=True)
-    flash("new user created and logged in", 'success')
+    flash("Success! New user created and logged in.", 'success')
     #create home and scratch if necessary 
     result = instantiate_user_with_directories.apply_async((new_user.id, ), queue=celery_queue)
-    return redirect(url_for("frontend.index"))
+    return redirect(url_for("frontend.dashboard"))
 
-@frontend.route("/users/migrate_files", methods=["GET"])
-@login_required
-def migrate_files():
-
-    if not current_user.is_migrated:
-
-        # update the database with the user root path
-        if not current_user.root_path:
-            current_user.root_path = app.config['USER_ROOT'].replace('<username>', current_user.username)
-            db.session.commit()
-            print 'Updated user root path to : {}'.format(current_user.root_path)
-
-        # migrate files
-        result = migrate_user_files.apply_async(( current_user.id , ), queue=celery_queue)
-    else:
-        flash('Your files have already been migrated.', 'success')
-
-    return redirect(url_for("frontend.index"))
+# Will not be needed for clean start
+# @frontend.route("/users/migrate_files", methods=["GET"])
+# @login_required
+# def migrate_files():
+#
+#     if not current_user.is_migrated:
+#
+#         # update the database with the user root path
+#         if not current_user.root_path:
+#             current_user.root_path = app.config['USER_ROOT'].replace('<username>', current_user.username)
+#             db.session.commit()
+#             print 'Updated user root path to : {}'.format(current_user.root_path)
+#
+#         # migrate files
+#         result = migrate_user_files.apply_async(( current_user.id , ), queue=celery_queue)
+#     else:
+#         flash('Your files have already been migrated.', 'success')
+#
+#     return redirect(url_for("frontend.index"))
 
 @frontend.route("/logout", methods=["GET"])
 def logout():
@@ -245,7 +246,7 @@ def logout():
         db.session.add(user)
         db.session.commit()
         logout_user()
-        flash('you have been logged out', 'success')
+        flash('You have been logged out.', 'success')
         return redirect(url_for('.login'))
     else: 
         flash('no user logged in')
@@ -256,6 +257,17 @@ def logout():
 def under_construction():
     gif_path=retrieve_golden()
     return render_template("under_construction.html", gif_path=gif_path)
+
+@frontend.route('/dashboard', methods=['GET', 'POST'])
+@login_required
+def dashboard(status=[]):
+    status = request.args.getlist('status')
+    analyses = current_user.analyses.all()
+    analysis_file_dict = OrderedDict()
+    for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
+        analysis_file_dict[analysis] = analysis.files.all() 
+    return render_template("dashboard.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status, current_user=current_user)
+
 
 @frontend.route('/file_upload', methods=['GET', 'POST'])
 @login_required
@@ -868,6 +880,16 @@ def analysis(id):
 @login_required
 def mixcr(dataset_id, status=[]):
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+
+    try:
+        if dataset and dataset.name == "__default__":
+            flash('Error: that dataset cannot be analyzed','warning')
+            return redirect( url_for('frontend.dashboard') )
+    except:
+        flash('Error: that dataset cannot be analyzed','warning')
+        return redirect( url_for('frontend.dashboard') )
+
+
     form = CreateMixcrAnalysisForm()
     status = []
     if request.method == 'POST' and dataset:
@@ -890,6 +912,15 @@ def mixcr(dataset_id, status=[]):
 @login_required
 def pandaseq(dataset_id, status=[]):
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+
+    try:
+        if dataset and dataset.name == "__default__":
+            flash('Error: that dataset cannot be analyzed','warning')
+            return redirect( url_for('frontend.dashboard') )
+    except:
+        flash('Error: that dataset cannot be analyzed','warning')
+        return redirect( url_for('frontend.dashboard') )
+
     form = CreatePandaseqAnalysisForm()
     status = []
     if request.method == 'POST' and dataset:
@@ -913,6 +944,16 @@ def pandaseq(dataset_id, status=[]):
 @login_required
 def create_analysis(dataset_id, status=[]):
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+
+    try:
+        if dataset and dataset.name == "__default__":
+            flash('Error: that dataset cannot be analyzed','warning')
+            return redirect( url_for('frontend.dashboard') )
+    except:
+        flash('Error: that dataset cannot be analyzed','warning')
+        return redirect( url_for('frontend.dashboard') )
+
+    
     form = CreateAnalysisForm()
     file_options = map(lambda f: [f.id, f.name], [f for f in dataset.files if 'FASTQ' in f.file_type])
     form.file_ids.choices = file_options

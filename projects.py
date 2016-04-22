@@ -69,14 +69,16 @@ from models import *
 # 9. Instantiate files with new default dataset : what are the default dataset defaults?
 # 10. Prevent datatable drop down when link clicked
 # 11. Disable datatable drop down if there are no files
-# 12. Add option for user to save dataset values as defaults
-# 13. No analysis on defaults
+# 12. DONE Add option for user to save dataset values as defaults
+# 13. TEST No analysis on defaults
 # 14. Replace Pandaseq/MixCr/Annotate with "Add Files"
 # 15. Auto clear form
 # 16. Auto populate form
 # 17. Start using new directory structure with dataset_#
 # 18. Add dashboard page
 # 19. Clean up NavBar
+# 20. Clean up add/upload Files
+# 21. Clean up files listing
 
 # How to check results from Celery???
 # Check for duplicate directories and files in datastore

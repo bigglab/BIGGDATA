@@ -1,0 +1,109 @@
+{% extends '_base.html' %}
+
+{% block wide_content %}
+
+<div class="container">
+	<h3 align="center">BIGG Data Dashboard</h3>
+	<br>
+</div>
+
+
+<div class="row">
+	<div class="col-md-4">
+	    <div class="panel panel-default">
+	        <div class="panel-heading"><b>User Information</b></div>
+
+	        <div class="panel-body">
+				<label>User: {{current_user.first_name}} {{current_user.last_name}}</label><br>
+				<br>
+				<table id="fixed" class="table" >
+					<tbody>
+						<tr>
+							<td>
+								<label>Username</label>
+							</td>
+							<td>
+								{{current_user.username}}
+							</td>
+						</tr>
+						<tr>
+							<td ><label>Email</label></td>
+							<td class="ellipsis mightOverflow">{{current_user.email}}</td>
+						</tr>
+						<tr>
+							<td ><label>Directory</label></td>
+							<td class="ellipsis mightOverflow">{{current_user.root_path}}</td>
+						</tr>
+					</tbody>
+				</table>
+				<br>
+	        </div>
+	    </div>
+	</div>
+
+	<div class="col-md-4">
+	    <div class="panel panel-default">
+	        <div class="panel-heading"><b>Data Management</b></div>
+
+	        <div class="panel-body">
+	           <label>Projects</label><br>
+	        	<a href="{{ url_for('projects.create_project') }}">Add a Project</a><br>
+	        	<a href="{{ url_for('projects.manage_projects') }}">View/Edit a Project</a><br>
+	        	<br>
+	        	<label>Datasets</label><br>
+	        	<a href="{{ url_for('frontend.datasets') }}">Add a Dataset</a><br>
+	        	<a href="{{ url_for('frontend.datasets') }}">View/Edit a Dataset</a><br>
+	        	<a href="{{ url_for('frontend.edit_default_dataset') }}">Edit Dataset Defaults</a><br>
+	        	<br>
+	        	<label>Files</label><br>
+	        	<a href="{{ url_for('frontend.file_download') }}">Upload a File from Your Computer</a><br>
+	        	<a href="{{ url_for('frontend.import_sra') }}">Upload a File from NCBI</a><br>
+	        	<a href="{{ url_for('frontend.files') }}">View All Files</a><br>
+	        	<br>
+	        </div>
+	    </div>
+
+	</div>
+
+	<div class="col-md-4">
+	    <div class="panel panel-default">
+	        <div class="panel-heading"><b>Data Analysis</b></div>
+	        <div class="panel-body">
+	        	<label>Quickstart</label><br>
+	        	<a>Single Page Upload and Analyze</a><br>
+	        	<br>
+	        	<label>Analyses</label><br>
+	        	<a href="{{ url_for('frontend.datasets') }}">Analyze Dataset</a><br>
+	        	<a href="{{ url_for('frontend.analyses') }}">Analyses Results</a><br>
+	        	<a href="{{ url_for('frontend.vdj_visualizer') }}">VDJ VIZualizer</a><br>
+	        	<br>
+	        	<label>BIGG Data Documentation</label><br>
+		        <a href="{{ url_for('frontend.overview') }}">BIGG DATA Overview</a><br>
+		        <a href="{{ url_for('frontend.schema') }}">BIGG DB Schema</a><br>
+		        <br>
+		        <label>External Documentation</label><br>
+		        <a href="http://pythonhosted.org/Flask-Bootstrap">Flask-Bootstrap</a><br>
+		        <a href="https://github.com/mbr/flask-appconfig">Flask-AppConfig</a><br>
+		        <a href="https://github.com/mbr/flask-debug">Flask-Debug</a><br>
+	        	<br>
+	        </div>
+        </div>
+	</div>
+</div>
+
+<script>
+$('.mightOverflow').bind('mouseenter', function(){
+    var $this = $(this);
+
+    if(this.offsetWidth < this.scrollWidth && !$this.attr('title')){
+        $this.attr('title', $this.text());
+    }
+});
+</script>
+
+
+
+
+{% endblock wide_content %}
+
+
