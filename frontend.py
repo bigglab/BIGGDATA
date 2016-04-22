@@ -71,8 +71,9 @@ nav.register_element('frontend_top', Navbar(
         ),
     Subgroup(
         'Manage Data',
-        View('New Project', 'projects.create_project'),
+        View('Add a Project', 'projects.create_project'),
         View('My Projects', 'projects.manage_projects'),
+        View('My Datasets', 'frontend.datasets'),
         # Link('Other Tasks', 'under_construction'), 
         ),
     Subgroup(
@@ -112,6 +113,7 @@ nav.register_element('frontend_user', Navbar(
         'Manage Data',
         View('New Project', 'projects.create_project'),
         View('My Projects', 'projects.manage_projects'),
+        View('My Datasets', 'frontend.datasets'),
         # Link('Other Tasks', 'under_construction'), 
         ),
     Subgroup(
@@ -273,6 +275,38 @@ def dashboard(status=[]):
 @login_required
 def file_upload():
     form = FileUploadForm()
+
+    # get a list of user datasets for the form
+    datasets = Set(current_user.datasets)
+    datasets.discard(None)
+    datasets.discard(current_user.default_dataset)
+
+    datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
+    dataset_tuples = []
+
+    if len(datasets) > 0:
+        for dataset in datasets:
+            dataset_tuples.append( (str(dataset.id), dataset.name))
+
+        if len(dataset_tuples) > 0:
+            #dataset_tuples.append(('new', 'New Dataset'))
+            dataset_tuples.insert(0,('new', 'New Dataset'))
+            form.dataset.choices = dataset_tuples
+
+    # get a list of user projects for the form
+    projects = Set(current_user.projects)
+    projects.discard(None)
+    projects = sorted(projects, key=lambda x: x.id, reverse=True)
+    project_tuples = []
+
+    if len(projects) > 0:
+        for project in projects:
+            if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
+                project_tuples.append( (str(project.id), project.project_name))
+        if len(project_tuples) > 0:
+            project_tuples.insert(0, ('new', 'New Project'))
+            form.project.choices = project_tuples
+
     if request.method == 'POST':
         request_file = request.files['file']
         print 'request file: '
@@ -284,7 +318,9 @@ def file_upload():
         file.chain = form.chain.data
         file.paired_partner = form.paired_partner.data 
         file.dataset_id = form.dataset_id.data
-        file.path = '{}/{}'.format(current_user.scratch_path, file.name) 
+        file.path = '{}/{}'.format(current_user.scratch_path, file.name)
+        file.path.replace('//', '') 
+ 
         file.user_id = current_user.id
         print 'Saving uploaded file to {}'.format(file.path)
         request_file.save(file.path)
@@ -309,6 +345,38 @@ def file_download(status=[], bucket='', key=''):
         form = FileDownloadForm(data={'url':'https://s3.amazonaws.com/{}/{}'.format(bucket, key)})
     else: 
         form = FileDownloadForm()
+
+        # set the dataset options
+        datasets = Set(current_user.datasets)
+        datasets.discard(None)
+        datasets.discard(current_user.default_dataset)
+
+        datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
+        dataset_tuples = []
+
+        if len(datasets) > 0:
+            for dataset in datasets:
+                dataset_tuples.append( (str(dataset.id), dataset.name))
+
+            if len(dataset_tuples) > 0:
+                #dataset_tuples.append(('new', 'New Dataset'))
+                dataset_tuples.insert(0,('new', 'New Dataset'))
+                form.dataset.choices = dataset_tuples
+
+        # get a list of user projects for the form
+        projects = Set(current_user.projects)
+        projects.discard(None)
+        projects = sorted(projects, key=lambda x: x.id, reverse=True)
+        project_tuples = []
+
+        if len(projects) > 0:
+            for project in projects:
+                if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
+                    project_tuples.append( (str(project.id), project.project_name))
+            if len(project_tuples) > 0:
+                project_tuples.insert(0, ('new', 'New Project'))
+                form.project.choices = project_tuples
+
     if request.method == 'POST':
         file = File()
         file.url = form.url.data.rstrip()
@@ -318,7 +386,8 @@ def file_download(status=[], bucket='', key=''):
         file.chain = form.chain.data
         file.paired_partner = form.paired_partner.data 
         file.dataset_id = form.dataset_id.data
-        file.path = '{}/{}'.format(current_user.scratch_path, file.name) 
+        file.path = '{}/{}'.format(current_user.scratch_path, file.name)
+        file.path.replace('//', '') 
         file.user_id = current_user.id
         file.available = False 
         file.s3_status = ''
@@ -326,6 +395,76 @@ def file_download(status=[], bucket='', key=''):
         print 'Saving File Metadata to Postgres: {}'.format(file.__dict__)
         db.session.add(file)
         db.session.commit()
+
+#######
+        # check if the user has selected the default project (i.e., the user has no projects)
+        file_dataset = None
+        if form.dataset.data == 'new':
+            # create a new project here with the name default, add the user and dataset to the new project
+            new_dataset = Dataset()
+            new_dataset.user_id = current_user.id
+            new_dataset.populate_with_defaults(current_user)
+            new_dataset.name = 'Dataset'
+            db.session.add(new_dataset)
+            db.session.flush()
+            new_dataset.name = 'Dataset ' + str(new_dataset.id)
+            new_dataset.files = [file]
+            new_dataset.cell_types_sequenced = str(dataset.cell_types_sequenced)
+            new_dataset.species = dataset.species
+            db.session.commit()
+            file_dataset = new_dataset
+            flash('New file will be added to dataset "{}".'.format(new_dataset.name), 'success')
+        else: # check if the user has selected a project which they have access to
+            user_has_permission = False
+            for dataset in user.datasets:
+                if str(dataset.id) == form.dataset.data:
+                    dataset.files.append(file)
+                    file_dataset = new_dataset
+                    user_has_permission = True
+
+                    # if current_user.default_dataset == None:
+                    #     d.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                    #     d.species = project.species
+            if not user_has_permission:
+                flash('Error: you do not have permission to add a file to that dataset.','warning')
+        db.session.commit()
+
+
+        # now do the same with projects, with the qualification that we add the dataset to the project if it's not there already
+        # check if the user has selected the default project (i.e., the user has no projects)
+        if file_dataset:
+            if form.project.data == 'new':
+                # create a new project here with the name default, add the user and dataset to the new project
+                new_project = Project()
+                new_project.user_id = current_user.id
+                new_project.project_name = 'Project'
+                db.session.add(new_project)
+                db.session.flush()
+                new_project.project_name = 'Project ' + str(new_project.id)
+                new_project.users = [current_user]
+                new_project.datasets = [file_dataset]
+                new_project.cell_types_sequenced = str(dataset.cell_types_sequenced)
+                new_project.species = dataset.species
+
+                db.session.commit()
+            else: # check if the user has selected a project which they have access to
+                user_has_permission = False
+                for project in projects:
+                    if str(project.id) == form.project.data:
+                        if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
+                            project.datasets.append(file_dataset)
+                            user_has_permission = True
+
+                            if current_user.default_dataset == None:
+                                file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                                file_dataset.species = project.species
+
+                            db.session.commit()
+                if not user_has_permission:
+                    flash('Error: you do not have permission to add a dataset to that project.','warning')
+                db.session.commit()        
+
+#######
         status.append('Started background task to download file from {}'.format(file.url))
         status.append('Saving File To {}'.format(file.path))
         status.append('This file will be visible in "My Files", and available for use after the download completes.')
@@ -391,7 +530,6 @@ def files(status=[], bucket=None, key=None):
     else: 
         dropbox_file_paths = get_dropbox_files(current_user)
         return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status, projectnames=map(json.dumps, projectnames))
- 
 
 @frontend.route('/files/<int:id>', methods=['GET','POST'])
 @login_required
@@ -953,7 +1091,7 @@ def create_analysis(dataset_id, status=[]):
         flash('Error: that dataset cannot be analyzed','warning')
         return redirect( url_for('frontend.dashboard') )
 
-    
+
     form = CreateAnalysisForm()
     file_options = map(lambda f: [f.id, f.name], [f for f in dataset.files if 'FASTQ' in f.file_type])
     form.file_ids.choices = file_options

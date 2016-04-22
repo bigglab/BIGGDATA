@@ -27,8 +27,15 @@
     			        <th>{{ form.description(size=15, class="form-control") }}</th>
     			        <!-- <th>Ig Type: {{ form.ig_type(size=10) }}</th> -->
     			        <th>{{ form.project(class="form-control") }}</th>
-    			        <th>Expect VH/VL Paired Data? : {{ form.paired }}</th>
-    			        <th><input type="submit" value="Submit"></th>
+    			        <th>
+							<div class="checkbox" class="pull-right">
+                                        <label>
+										{{ form.paired }}
+                                        Expect VH/VL Paired Data?
+                                        </label><br/>
+                            </div>
+    			        </th>
+    			        <th><input class="btn btn-default form-control" type="submit" value="Submit"></th>
     		        </tr>
 		        </tbody>
 	            </table>

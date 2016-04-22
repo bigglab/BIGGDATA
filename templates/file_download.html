@@ -23,9 +23,37 @@
 <br>
 <br>
 
-
-
 <div class="container">
+    <form method="POST" action="/file_download" enctype="multipart/form-data">
+            <table class='table'> 
+                <thead>
+                    <h4>Upload a File from a URL:</h4>
+                    <tr>
+                        {{ download_form.csrf_token }}
+                        <th>{{ download_form.url.label }}:</th>
+                        <th><label>Description:</label></th>
+                        <th><label>Chain:</label></th>
+                        <th><label>Add to Dataset/Project:</label></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ download_form.url(size=30, class="form-control") }}</td>
+                        <td>{{ download_form.description(size=15, rows=1, class="form-control") }}</td>
+                        <td>{{ download_form.chain(class="form-control") }}</td>
+                        <td>
+                            {{ download_form.dataset(class="form-control") }}<br>
+                            {{ download_form.project(class="form-control") }}
+                        </td>
+                        <td><input class="btn btn-default form-control" type="submit" value="Submit"></td>
+                    </tr>
+                </tbody>
+                </table>
+    </form>
+</div>
+
+<!-- <div class="container">
 <h3>Download a file from a URL: </h3>
     <form method="POST" action="/file_download" enctype="multipart/form-data">
     <table class="table table-striped">
@@ -47,7 +75,7 @@
         </tbody>
     </table>
     </form>
-</div>
+</div> -->
 
 <br>
 <br>
