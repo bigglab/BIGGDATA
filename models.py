@@ -1,4 +1,5 @@
 #System Imports
+import ast
 import json
 import static
 import sys
@@ -171,9 +172,22 @@ class User(db.Model):
                     default_dataset.ig_type = dataset.ig_type
                     default_dataset.paired = dataset.paired
 
-                    default_dataset.cell_types_sequenced = dataset.cell_types_sequenced
-                    default_dataset.chain_types_sequenced = dataset.chain_types_sequenced
-                    default_dataset.primary_data_files_ids = dataset.primary_data_files_ids
+                    # special treatment for arrays
+                    try:
+                        default_dataset.cell_types_sequenced = ast.literal_eval(str(dataset.cell_types_sequenced))
+                    except:
+                        default_dataset.cell_types_sequenced = [str(dataset.cell_types_sequenced)] 
+
+                    try: 
+                        default_dataset.chain_types_sequenced = ast.literal_eval(str(dataset.chain_types_sequenced))
+                    except: 
+                        default_dataset.chain_types_sequenced = [str(dataset.chain_types_sequenced)]
+
+                    try:
+                        default_dataset.primary_data_files_ids = ast.literal_eval(str(dataset.primary_data_files_ids))
+                    except:
+                        if dataset.primary_data_files_ids.isdigit():
+                            default_dataset.primary_data_files_ids = [int(dataset.primary_data_files_ids)]
 
                     default_dataset.lab_notebook_source = dataset.lab_notebook_source
                     default_dataset.sequencing_submission_number = dataset.sequencing_submission_number

@@ -58,20 +58,25 @@ from forms import *
 from functions import * 
 from models import * 
 
-# 1. Prevent users from adding a dataset named __default__
-# 2. Prevent users from seeing the default when adding projects
-# 3. Prevent users from viewing the default (or redirect them)
+# 1. DONE Prevent users from adding a dataset named __default__
+# 2. DONE Prevent users from seeing the default when adding projects
+# 3. DONE Prevent users from viewing the default (or redirect them)
 # 4. Don't allow users to run analyses on empty datasets
-# 5. Prepopulate new datasets with default settings
-# 6. When creating a project for a dataset, get the project species/etc from the dataset
-# 7. And vice versa vis a vis #6
-# 8. Update arrays on import from JSON
-# 9. Instantiate users with default dataset : what are the default dataset defaults?
+# 5. TEST Prepopulate new datasets with default settings: d.populate_with_defaults(current_user)
+# 6. TEST When creating a project for a dataset, get the project species/etc from the dataset
+# 7. TEST vice versa vis a vis #6
+# 8. TEST Update arrays on import from JSON
+# 9. Instantiate files with new default dataset : what are the default dataset defaults?
 # 10. Prevent datatable drop down when link clicked
 # 11. Disable datatable drop down if there are no files
 # 12. Add option for user to save dataset values as defaults
-
-# 13. Replace Pandaseq/MicCr/Annotate with "Add Files"
+# 13. No analysis on defaults
+# 14. Replace Pandaseq/MixCr/Annotate with "Add Files"
+# 15. Auto clear form
+# 16. Auto populate form
+# 17. Start using new directory structure with dataset_#
+# 18. Add dashboard page
+# 19. Clean up NavBar
 
 # How to check results from Celery???
 # Check for duplicate directories and files in datastore
@@ -134,6 +139,8 @@ from models import *
 # user can edit any dataset where they can edit the project
 # user can view any dataset where they are a reader of the project
 # 
+
+# Prevent users from running analyses 
 
 projects_blueprint = Blueprint('projects', __name__)
 

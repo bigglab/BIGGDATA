@@ -1,4 +1,5 @@
 #System Imports
+import ast
 import json
 import static
 import sys
@@ -1167,9 +1168,28 @@ def create_datasets_from_JSON_string(json_string, project = None):
         new_dataset.name = dataset_name
         new_dataset.description = json_dataset[ "DESCRIPTION" ]
         new_dataset.ig_type = ""
-        new_dataset.cell_types_sequenced = json_dataset[ "CELL_TYPES_SEQUENCED" ]
-        new_dataset.chain_types_sequenced = json_dataset[ "CHAIN_TYPES_SEQUENCED" ]
-        new_dataset.lab_notebook_source = json_dataset[ "LAB_NOTEBOOK_SOURCE" ]
+
+
+        # special treatment for arrays
+        try:
+            new_dataset.cell_types_sequenced = ast.literal_eval(str(json_dataset[ "CELL_TYPES_SEQUENCED" ]))
+        except:
+            new_dataset.cell_types_sequenced = [str(json_dataset[ "CELL_TYPES_SEQUENCED" ])] 
+
+        try: 
+            new_dataset.chain_types_sequenced = ast.literal_eval(str(json_dataset[ "CHAIN_TYPES_SEQUENCED" ]))
+        except: 
+            new_dataset.chain_types_sequenced = [str(json_dataset[ "CHAIN_TYPES_SEQUENCED" ])]
+
+        try:
+            new_dataset.primary_data_files_ids = ast.literal_eval(str(dataset.primary_data_files_ids))
+        except:
+            if str(json_dataset[ "LAB_NOTEBOOK_SOURCE" ]).isdigit():
+                new_dataset.primary_data_files_ids = [int(json_dataset[ "LAB_NOTEBOOK_SOURCE" ])]
+            else:
+                new_dataset.lab_notebook_source = json_dataset[ "LAB_NOTEBOOK_SOURCE" ]
+
+
         new_dataset.sequencing_submission_number = json_dataset[ "SEQUENCING_SUBMISSION_NUMBER" ]
         new_dataset.contains_rna_seq_data = contains_rna_seq_data
         new_dataset.reverse_primer_used_in_rt_step = json_dataset[ "REVERSE_PRIMER_USED_IN_RT_STEP" ]

@@ -460,8 +460,18 @@ def datasets():
 
     if request.method == 'POST':
         if form.name.data: 
-            d = Dataset() 
-            d.name = form.name.data 
+            d = Dataset()
+
+            # use default values for the new dataset, if given
+            if current_user.default_dataset:
+                d.populate_with_defaults(current_user)
+
+            d.name = form.name.data
+
+            if d.name == '__default__':
+                flash('Error: cannot create a dataset with that name.', 'warning')
+                return redirect(url_for('.datasets'))
+
             d.description = form.description.data
             d.paired = form.paired.data 
             d.ig_type = form.ig_type.data 
@@ -473,12 +483,17 @@ def datasets():
             # check if the user has selected the default project (i.e., the user has no projects)
             if form.project.data == 'new':
                 # create a new project here with the name default, add the user and dataset to the new project
-                new_project = Project(user_id = current_user.id, project_name = 'Project')
+                new_project = Project()
+                new_project.user_id = current_user.id
+                new_project.project_name = 'Project'
                 db.session.add(new_project)
                 db.session.flush()
                 new_project.project_name = 'Project ' + str(new_project.id)
                 new_project.users = [current_user]
                 new_project.datasets = [d]
+                new_project.cell_types_sequenced = str(dataset.cell_types_sequenced)
+                new_project.species = dataset.species
+
                 db.session.commit()
                 return redirect(url_for('.datasets'))
             else: # check if the user has selected a project which they have access to
@@ -486,12 +501,17 @@ def datasets():
                     if str(project.id) == form.project.data:
                         if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
                             project.datasets.append(d)
+
+                            if current_user.default_dataset == None:
+                                d.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                                d.species = project.species
+
                             db.session.commit()
                             return redirect(url_for('.datasets'))
                 flash('Error: you do not have permission to add a dataset to that project.','warning')
                 return redirect(url_for('.datasets'))
             db.session.commit()
-            d.directory = current_user.scratch_path + '/Directory_' + d.id 
+            d.directory = current_user.scratch_path + '/dataset_' + d.id 
             db.session.commit()
         return redirect(url_for('.datasets')) # render_template("datasets.html", datadict=datadict, form=Form())
     else: 
@@ -508,6 +528,14 @@ def dataset(id):
     if not dataset:
         flash('Error: Dataset {} not found.'.format(str(id)), 'warning')
         return redirect( url_for('frontend.datasets') )
+
+    if dataset.role(current_user) == None:
+        flash('Error: you do not have permission to access that dataset.', 'warning')
+        return redirect( url_for('frontend.datasets') )
+
+    if dataset.name == "__default__":
+        flash('Error: Please use this form to edit the default dataset settings.'.format(str(id)), 'warning')
+        return redirect( url_for('frontend.edit_default_dataset') )
 
     form = AssociateFilesToDatasetForm()
     form.dataset_id.data = dataset.id 
@@ -606,6 +634,8 @@ def edit_dataset(id):
             dataset.json_id = edit_dataset_form.json_id.data
 
             db.session.commit()
+            db.session.refresh(dataset)
+
 
             if edit_dataset_form.use_as_default.data == True:
                 current_user.change_dataset_defaults(dataset)
