@@ -386,8 +386,7 @@ def file_download(status=[], bucket='', key=''):
         file.chain = form.chain.data
         file.paired_partner = form.paired_partner.data 
         file.dataset_id = form.dataset_id.data
-        file.path = '{}/{}'.format(current_user.scratch_path, file.name)
-        file.path.replace('//', '') 
+        file.path = '{}/{}'.format(current_user.scratch_path.rstrip('/'), file.name)
         file.user_id = current_user.id
         file.available = False 
         file.s3_status = ''
@@ -409,17 +408,17 @@ def file_download(status=[], bucket='', key=''):
             db.session.flush()
             new_dataset.name = 'Dataset ' + str(new_dataset.id)
             new_dataset.files = [file]
-            new_dataset.cell_types_sequenced = str(dataset.cell_types_sequenced)
+            new_dataset.cell_types_sequenced = [str(dataset.cell_types_sequenced)]
             new_dataset.species = dataset.species
             db.session.commit()
             file_dataset = new_dataset
             flash('New file will be added to dataset "{}".'.format(new_dataset.name), 'success')
         else: # check if the user has selected a project which they have access to
             user_has_permission = False
-            for dataset in user.datasets:
+            for dataset in current_user.datasets:
                 if str(dataset.id) == form.dataset.data:
                     dataset.files.append(file)
-                    file_dataset = new_dataset
+                    file_dataset = dataset
                     user_has_permission = True
 
                     # if current_user.default_dataset == None:
@@ -443,7 +442,7 @@ def file_download(status=[], bucket='', key=''):
                 new_project.project_name = 'Project ' + str(new_project.id)
                 new_project.users = [current_user]
                 new_project.datasets = [file_dataset]
-                new_project.cell_types_sequenced = str(dataset.cell_types_sequenced)
+                new_project.cell_types_sequenced = [str(dataset.cell_types_sequenced)]
                 new_project.species = dataset.species
 
                 db.session.commit()
@@ -452,7 +451,9 @@ def file_download(status=[], bucket='', key=''):
                 for project in projects:
                     if str(project.id) == form.project.data:
                         if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
-                            project.datasets.append(file_dataset)
+                            # if the dataset is not in the project, add it
+                            if file_dataset not in project.datasets:
+                                project.datasets.append(file_dataset)
                             user_has_permission = True
 
                             if current_user.default_dataset == None:
@@ -464,15 +465,31 @@ def file_download(status=[], bucket='', key=''):
                     flash('Error: you do not have permission to add a dataset to that project.','warning')
                 db.session.commit()        
 
+        # modify the path with the new style, the new hotness if you will
+        if file_dataset:
+            file.path = '{}/{}/{}'.format(
+                current_user.scratch_path.rstrip('/'),
+                'Dataset_' + str(file_dataset.id), 
+                file.name)
+
+        # check if the file path we settled on is available.
+        print file.path
+        if os.path.isfile(file.path):
+            file.path = os.path.splitext(file.path)[0] + '_1' + os.path.splitext(file.path)[1]
 #######
-        status.append('Started background task to download file from {}'.format(file.url))
-        status.append('Saving File To {}'.format(file.path))
-        status.append('This file will be visible in "My Files", and available for use after the download completes.')
+
+        # Making the status message a single line. 
+        status_message = 'Started background task to download file from {}. Saving File To {}. This file will be visible in "My Files", and available for use after the download completes.'.format(file.url, file.path)
+        status.append(status_message)
+        # status.append('Started background task to download file from {}'.format(file.url))
+        # status.append('Saving File To {}'.format(file.path))
+        # status.append('This file will be visible in "My Files", and available for use after the download completes.')
         print status 
         # result_id NOT WORKING - STILL REDUNDANT IF THEY CLICK TWICE!!
+        flash_message = ''
         if not 'async_result_id' in session.__dict__:
             result = download_file.apply_async((file.url, file.path, file.id), queue=celery_queue)
-            flash('file downloading from {}'.format(file.url))
+            #flash_message = 'File downloading from {}. '.format(file.url)
             session['async_result_id'] = result.id
         time.sleep(1)
         async_result = add.AsyncResult(session['async_result_id'])
@@ -480,7 +497,8 @@ def file_download(status=[], bucket='', key=''):
         r = result.__dict__
         r['async_result.info'] = async_result.info 
         db.session.commit()
-        flash('file uploaded to {}'.format(file.path))
+        #flash_message = flash_message + 'File uploaded to {}. '.format(file.path)
+        #flash(flash_message, 'success')
     else:
         r=''
     return render_template("file_download.html", download_form=form, status=status, r=r, current_user=current_user)

@@ -16,7 +16,7 @@
 				<th>Name</th>
 				<th>Description</th>
 				<th>IG Type</th>
-				<th></th>
+				<th>Pairing</th>
 				<th></th>
 			</tr>
 		</thead>
@@ -25,15 +25,19 @@
 					<th>{{edit_dataset_form.name(class_="form-control") }}</th>
 					<th>{{edit_dataset_form.description(class_="form-control") }}</th>
 					<th>{{edit_dataset_form.ig_type(class_="form-control") }}</th>
-					<th>Heavy/Light Paired? {{edit_dataset_form.paired}}</th>
+					<th>
+                        <div class="checkbox" class="pull-right">
+                            <label>
+                                {{ edit_dataset_form.paired }} 
+                                Heavy/Light Paired?
+                            </label><br/>
+                        </div>
 					<th>
 					</th>
 				</tr>
 		</tbody>
 	</table>
-
     <br>
-
     <div class="panel panel-default">
         <div class="panel-heading">
             <table width="100%">

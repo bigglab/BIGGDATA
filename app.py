@@ -484,7 +484,13 @@ def import_files_as_dataset(filepath_array, user_id, filename_array=None, chain=
 
 @celery.task
 def download_file(url, path, file_id):
-    print 'urllib2 downloading file from {}'.format(url)
+    print 'Using urllib2 to download file from {}'.format(url)
+
+    # check if the directory for the file exists. If not, make the directory path with makedirs
+    directory = os.path.dirname(path)
+    if not os.path.exists(directory): 
+        os.makedirs(directory)
+
     response = urllib2.urlopen(url)
     CHUNK = 16 * 1024
     with open(path, 'wb') as outfile: 
@@ -496,6 +502,7 @@ def download_file(url, path, file_id):
     f.available = True
     f.file_size = os.path.getsize(f.path)
     db.session.commit()
+    print 'File download complete.'
     return True 
 
 @celery.task

@@ -66,19 +66,32 @@ from models import *
 # 6. TEST When creating a project for a dataset, get the project species/etc from the dataset
 # 7. TEST vice versa vis a vis #6
 # 8. TEST Update arrays on import from JSON
-# 9. Instantiate files with new default dataset : what are the default dataset defaults?
-# 10. Prevent datatable drop down when link clicked
-# 11. Disable datatable drop down if there are no files
+# 9. DONE for url uploads. Instantiate files with new default dataset : what are the default dataset defaults?
+# 10. DONE Prevent datatable drop down when link clicked
+# 11. DONE Disable datatable drop down if there are no files
 # 12. DONE Add option for user to save dataset values as defaults
 # 13. TEST No analysis on defaults
-# 14. Replace Pandaseq/MixCr/Annotate with "Add Files"
-# 15. Auto clear form
-# 16. Auto populate form
+# 14. DONE Replace Pandaseq/MixCr/Annotate with "Add Files"
+# 15. Auto clear form for editing dataset
+# 16. Auto populate form for editing dataset
 # 17. Start using new directory structure with dataset_#
-# 18. Add dashboard page
-# 19. Clean up NavBar
-# 20. Clean up add/upload Files
+#       File from URL: DONE
+# 18. STARTED Add dashboard page
+# 19. DONE. Clean up NavBar
+# 20. DONE. Clean up add/upload Files
+#       Upload files: DONE
+#       Add files: DONE (can't test)
 # 21. Clean up files listing
+# 22. Add Celery Task Monitor to Dashboard page
+# 23. Add single page for running an analysis on a file/dataset
+# 24. Add one-time welcome notice to dashboard page. 
+# 25. Add page describing project/dataset/file concept
+# 25. Clean up import from NCBI Page
+
+# Issues:
+# DONE. Download new file not placing the file in the dataset directory.
+# DONE. Download new file placing // in file path.
+# DONE. Remove some of the extra messages on file download response.  
 
 # How to check results from Celery???
 # Check for duplicate directories and files in datastore
