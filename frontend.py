@@ -843,7 +843,14 @@ def edit_dataset(id):
 
         else:
             flash_errors(edit_dataset_form)
-            return render_template("edit_dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form, current_user=current_user)
+            return render_template("edit_dataset.html", 
+                datadict=datadict, 
+                form=form, 
+                id=id, 
+                dataset=dataset, 
+                edit_dataset_form = edit_dataset_form, 
+                current_user=current_user, 
+                default_dataset = current_user.default_dataset)
 
     else: # this is the get method
 
@@ -883,7 +890,14 @@ def edit_dataset(id):
         edit_dataset_form.pairing_technique.data = dataset.pairing_technique
         edit_dataset_form.json_id.data = dataset.json_id
 
-        return render_template("edit_dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form, current_user=current_user)
+        return render_template("edit_dataset.html", 
+            datadict=datadict, 
+            form=form, 
+            id=id, 
+            dataset=dataset, 
+            edit_dataset_form = edit_dataset_form, 
+            current_user=current_user, 
+            default_dataset = current_user.default_dataset)
 
 @frontend.route('/edit_dataset/default', methods=['GET', 'POST'])
 @login_required
@@ -1246,13 +1260,45 @@ def taskstatus(task_id):
 @login_required
 def import_sra():
     form = ImportSraAsDatasetForm()
+
+    # set the dataset options
+    datasets = Set(current_user.datasets)
+    datasets.discard(None)
+    datasets.discard(current_user.default_dataset)
+
+    datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
+    dataset_tuples = []
+
+    if len(datasets) > 0:
+        for dataset in datasets:
+            dataset_tuples.append( (str(dataset.id), dataset.name))
+
+        if len(dataset_tuples) > 0:
+            #dataset_tuples.append(('new', 'New Dataset'))
+            dataset_tuples.insert(0,('new', 'New Dataset'))
+            form.dataset.choices = dataset_tuples
+
+    # get a list of user projects for the form
+    projects = Set(current_user.projects)
+    projects.discard(None)
+    projects = sorted(projects, key=lambda x: x.id, reverse=True)
+    project_tuples = []
+
+    if len(projects) > 0:
+        for project in projects:
+            if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
+                project_tuples.append( (str(project.id), project.project_name))
+        if len(project_tuples) > 0:
+            project_tuples.insert(0, ('new', 'New Project'))
+            form.project.choices = project_tuples
+
     result = None
     status = []
     if request.method == 'POST':
         if 'SRR' in form.accession.data: 
             status.append('Import SRA Started for Accession {}'.format(form.accession.data))
             status.append('Once complete, a dataset named {} will automatically be created containing these single or paired-end read files'.format(form.accession.data))
-            result = import_from_sra.apply_async((form.accession.data,), {'name': form.accession.data, 'user_id': current_user.id, 'chain':form.chain.data}, queue=celery_queue)
+            result = import_from_sra.apply_async((form.accession.data,), {'name': form.accession.data, 'user_id': current_user.id, 'chain':form.chain.data, 'project_selection':form.project.data , 'dataset_selection':form.dataset.data}, queue=celery_queue)
             # status.append(result.__dict__)
         else: 
             status.append('Accession does not start with SRR or ERR?')

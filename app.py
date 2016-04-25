@@ -89,6 +89,11 @@ login_manager.init_app(app)
 templateLoader = jinja2.FileSystemLoader( searchpath="{}/templates".format(app.config['HOME']) )
 templateEnv = jinja2.Environment( loader=templateLoader, extensions=['jinja2.ext.with_'])
 
+# Add a custom filter to escape characters for Javascript/JQuery insertion
+# Usage: {{ some.js_insertion_text | escapejs }}
+# js_insertion_text = "$(this);" | escaptjs --> "$(this)\\u003B"  
+app.jinja_env.filters['escapejs'] = jinja2_escapejs_filter
+
 def include_file(name):
     return jinja2.Markup(loader.get_source(env, name)[0])
 app.jinja_env.globals['include_file'] = include_file
@@ -401,8 +406,95 @@ def get_user_dataset_dict(user):
     return datadict
 
 @celery.task 
-def import_from_sra(accession, name=None, user_id=57, chain=None):
+def import_from_sra(accession, name=None, user_id=57, chain=None, project_selection = None, dataset_selection = None):
     user = db.session.query(User).filter(User.id==user_id).first()
+
+    if not user:
+        print "Unable to find user with id {}.".format(user_id)
+        return False
+
+    # check if the user has selected the default project (i.e., the user has no projects)
+    file_dataset = None
+    if dataset_selection == 'new':
+        # create a new project here with the name default, add the user and dataset to the new project
+        new_dataset = Dataset()
+        new_dataset.user_id = user.id
+        new_dataset.populate_with_defaults(user)
+        new_dataset.name = 'Dataset'
+        db.session.add(new_dataset)
+        db.session.flush()
+        new_dataset.name = 'Dataset ' + str(new_dataset.id)
+        new_dataset.files = [file]
+        new_dataset.cell_types_sequenced = [str(dataset.cell_types_sequenced)]
+        new_dataset.species = dataset.species
+        db.session.commit()
+        file_dataset = new_dataset
+        flash('New file will be added to dataset "{}".'.format(new_dataset.name), 'success')
+    else: # check if the user has selected a project which they have access to
+        user_has_permission = False
+        for dataset in user.datasets:
+            if str(dataset.id) == dataset_selection:
+                dataset.files.append(file)
+                file_dataset = dataset
+                user_has_permission = True
+
+                # if user.default_dataset == None:
+                #     d.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                #     d.species = project.species
+        if not user_has_permission:
+            flash('Error: you do not have permission to add a file to that dataset.','warning')
+    db.session.commit()
+
+
+    # now do the same with projects, with the qualification that we add the dataset to the project if it's not there already
+    # check if the user has selected the default project (i.e., the user has no projects)
+    if file_dataset:
+        if project_selection == 'new':
+            # create a new project here with the name default, add the user and dataset to the new project
+            new_project = Project()
+            new_project.user_id = user.id
+            new_project.project_name = 'Project'
+            db.session.add(new_project)
+            db.session.flush()
+            new_project.project_name = 'Project ' + str(new_project.id)
+            new_project.users = [user]
+            new_project.datasets = [file_dataset]
+            new_project.cell_types_sequenced = [str(dataset.cell_types_sequenced)]
+            new_project.species = dataset.species
+
+            db.session.commit()
+        else: # check if the user has selected a project which they have access to
+            user_has_permission = False
+            for project in projects:
+                if str(project.id) == project_selection:
+                    if project.role(user) == 'Owner' or project.role(user) == 'Editor':
+                        # if the dataset is not in the project, add it
+                        if file_dataset not in project.datasets:
+                            project.datasets.append(file_dataset)
+                        user_has_permission = True
+
+                        if user.default_dataset == None:
+                            file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                            file_dataset.species = project.species
+
+                        db.session.commit()
+            if not user_has_permission:
+                flash('Error: you do not have permission to add a dataset to that project.','warning')
+            db.session.commit()        
+
+    # modify the path with the new style, the new hotness if you will
+    if file_dataset:
+        file.path = '{}/{}/{}'.format(
+            user.scratch_path.rstrip('/'),
+            'Dataset_' + str(file_dataset.id), 
+            file.name)
+
+    # check if the file path we settled on is available.
+    print file.path
+    if os.path.isfile(file.path):
+        file.path = os.path.splitext(file.path)[0] + '_1' + os.path.splitext(file.path)[1]
+
+
     if not name: 
         name = accession 
     print 'Fetching SRA data from NCBI {}'.format(accession)

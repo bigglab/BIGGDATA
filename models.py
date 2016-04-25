@@ -212,7 +212,6 @@ class User(db.Model):
                     
                     db.session.commit()
                     return False
-                    
 
             except:
                 return "Error: no default dataset found."

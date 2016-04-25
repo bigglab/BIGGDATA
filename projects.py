@@ -72,8 +72,8 @@ from models import *
 # 12. DONE Add option for user to save dataset values as defaults
 # 13. TEST No analysis on defaults
 # 14. DONE Replace Pandaseq/MixCr/Annotate with "Add Files"
-# 15. Auto clear form for editing dataset
-# 16. Auto populate form for editing dataset
+# 15. DONE Auto clear form for editing dataset
+# 16. DONE Auto populate form for editing dataset
 # 17. Start using new directory structure with dataset_#
 #       File from URL: DONE
 # 18. STARTED Add dashboard page
@@ -83,6 +83,7 @@ from models import *
 #       Add files: DONE (can't test)
 # 21. Clean up files listing
 # 22. Add Celery Task Monitor to Dashboard page
+#       Standardize Celery logging
 # 23. Add single page for running an analysis on a file/dataset
 # 24. Add one-time welcome notice to dashboard page. 
 # 25. Add page describing project/dataset/file concept

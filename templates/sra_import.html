@@ -2,29 +2,34 @@
 {% block content %}
 <br>
 
-
 <div class="container">
-<h3>Import from an SRA Accession: </h3>
-    <h4>Currently files from NCBI's SRA must be transferred, so these files might take a minute or two to become available.</h4>
+    <h4>Import from an SRA Accession</h4>
+    <p>Currently files from NCBI's SRA must be transferred, so these files might take a minute or two to become available.</p>
     <form method="POST" action="/files/import_sra" enctype="multipart/form-data">
-    <table class="table table-striped">
-        {{ form.csrf_token }}
-        <thead>
-            <tr>
-                <th>Accession (begins with 'SRR', SRR1525443 for instance)</th>
-                <th>Description</th>
-                <th>Chain</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <th>{{ form.accession(size=20) }}</th>
-                <th> {{ form.description(size=60) }}</th>
-                <th>{{ form.chain  }}</th>
-                <th><input type="submit" value="Submit"></th>
-            </tr>
-        </tbody>
-    </table>
+        <table class='table'> 
+            <thead>
+                <tr>
+                    {{ form.csrf_token }}
+                    <th><label>Accession</label> (begins with 'SRR', SRR1525443 for instance):</th>
+                    <th><label>Description:</label></th>
+                    <th><label>Chain:</label></th>
+                    <th><label>Add to Dataset/Project:</label></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ form.accession(size=20, class="form-control") }}</td>
+                    <td>{{ form.description(size=25, rows=1, class="form-control") }}</td>
+                    <td>{{ form.chain(class="form-control") }}</td>
+                    <td>
+                        {{ form.dataset(class="form-control") }}<br>
+                        {{ form.project(class="form-control") }}
+                    </td>
+                    <td><input class="btn btn-default form-control" type="submit" value="Submit"></td>
+                </tr>
+            </tbody>
+        </table>
     </form>
 </div>
 

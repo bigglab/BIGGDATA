@@ -16,7 +16,7 @@
 				<th>Name</th>
 				<th>Description</th>
 				<th>IG Type</th>
-				<th></th>
+				<th>Pairing</th>
 				<th></th>
 			</tr>
 		</thead>
@@ -25,7 +25,14 @@
 					<th>Default Dataset Setting</th>
 					<th>These settings are used as defaults for new datasets.</th>
 					<th>{{edit_dataset_form.ig_type(class_="form-control") }}</th>
-					<th>Heavy/Light Paired? {{edit_dataset_form.paired}}</th>
+					<th>
+                        <div class="checkbox" class="pull-right">
+                            <label>
+                                {{ edit_dataset_form.paired }} 
+                                Heavy/Light Paired?
+                            </label><br/>
+                        </div>
+                    </th>
 					<th>
 					</th>
 				</tr>
@@ -41,7 +48,10 @@
                     <tr>
                         <td>
                             <label>Sequencing Information</label>
-                        </td>                                               
+                        </td>   
+                        <td align=right>
+                            <button type="button" value="Reset" class="btn btn-default reset">Clear Form</button>
+                        </td>                                            
                     </tr>
                 </tbody>
             </table>
@@ -149,6 +159,13 @@
 </div>
 
 <script>
+
+    $(".reset").click(function() {
+        $(this).closest('form').find("input[type=text], textarea").not( ".no-clear" ).val("");
+        $(this).closest('form').find("select[name=species], textarea").not( ".no-clear" ).val("").change();
+        $(this).closest('form').find("input[name=paired], textarea").attr('checked', false).change();
+
+    });
 
     $('tbody.accordian-control').on( 'click', 'tr', function () {
         var parent_accordian = $(this).closest('div')

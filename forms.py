@@ -171,6 +171,10 @@ class ImportSraAsDatasetForm(Form):
     accession = TextField()
     description = TextField()
     chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
+    dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
+    project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
+    
+
 
 class FileEditForm(Form):
     name = TextField('File name', [validators.length(max=256)])
