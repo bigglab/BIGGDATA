@@ -413,6 +413,19 @@ def import_from_sra(accession, name=None, user_id=57, chain=None, project_select
         print "Unable to find user with id {}.".format(user_id)
         return False
 
+    # load projects and datasets
+    # set the dataset options
+    datasets = Set(user.datasets)
+    datasets.discard(None)
+    datasets.discard(user.default_dataset)
+    datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
+
+    # get a list of user projects for the form
+    projects = Set(user.projects)
+    projects.discard(None)
+    projects = sorted(projects, key=lambda x: x.id, reverse=True)
+
+
     # check if the user has selected the default project (i.e., the user has no projects)
     file_dataset = None
     if dataset_selection == 'new':
@@ -423,18 +436,16 @@ def import_from_sra(accession, name=None, user_id=57, chain=None, project_select
         new_dataset.name = 'Dataset'
         db.session.add(new_dataset)
         db.session.flush()
-        new_dataset.name = 'Dataset ' + str(new_dataset.id)
-        new_dataset.files = [file]
-        new_dataset.cell_types_sequenced = [str(dataset.cell_types_sequenced)]
-        new_dataset.species = dataset.species
-        db.session.commit()
+        new_dataset.name = accession + '_' + str(new_dataset.id)
+        new_dataset.directory = "{}/{}".format(user.scratch_path.rstrip('/') , new_dataset.name)
         file_dataset = new_dataset
-        flash('New file will be added to dataset "{}".'.format(new_dataset.name), 'success')
+        print 'New file will be added to dataset "{}".'.format(new_dataset.name)
+        db.session.commit()
+
     else: # check if the user has selected a project which they have access to
         user_has_permission = False
         for dataset in user.datasets:
             if str(dataset.id) == dataset_selection:
-                dataset.files.append(file)
                 file_dataset = dataset
                 user_has_permission = True
 
@@ -442,7 +453,7 @@ def import_from_sra(accession, name=None, user_id=57, chain=None, project_select
                 #     d.cell_types_sequenced = [str(project.cell_types_sequenced)]
                 #     d.species = project.species
         if not user_has_permission:
-            flash('Error: you do not have permission to add a file to that dataset.','warning')
+            print 'Error: you do not have permission to add a file to that dataset.'
     db.session.commit()
 
 
@@ -459,8 +470,8 @@ def import_from_sra(accession, name=None, user_id=57, chain=None, project_select
             new_project.project_name = 'Project ' + str(new_project.id)
             new_project.users = [user]
             new_project.datasets = [file_dataset]
-            new_project.cell_types_sequenced = [str(dataset.cell_types_sequenced)]
-            new_project.species = dataset.species
+            new_project.cell_types_sequenced = [str(file_dataset.cell_types_sequenced)]
+            new_project.species = file_dataset.species
 
             db.session.commit()
         else: # check if the user has selected a project which they have access to
@@ -479,41 +490,52 @@ def import_from_sra(accession, name=None, user_id=57, chain=None, project_select
 
                         db.session.commit()
             if not user_has_permission:
-                flash('Error: you do not have permission to add a dataset to that project.','warning')
+                print 'Error: you do not have permission to add a dataset to that project.'
             db.session.commit()        
-
-    # modify the path with the new style, the new hotness if you will
-    if file_dataset:
-        file.path = '{}/{}/{}'.format(
-            user.scratch_path.rstrip('/'),
-            'Dataset_' + str(file_dataset.id), 
-            file.name)
-
-    # check if the file path we settled on is available.
-    print file.path
-    if os.path.isfile(file.path):
-        file.path = os.path.splitext(file.path)[0] + '_1' + os.path.splitext(file.path)[1]
-
 
     if not name: 
         name = accession 
+
+    # modify the path with the new style, the new hotness if you will
+    if file_dataset:
+        path = '{}/{}/{}'.format(
+            user.scratch_path.rstrip('/'),
+            'Dataset_' + str(file_dataset.id), 
+            accession)
+    else:
+        path = '{}/{}'.format(
+            user.scratch_path.rstrip('/'), 
+            accession)
+
+#####
+    # check if the file path we settled on is available.
+    directory = os.path.dirname(path)
+    if not os.path.exists(directory): 
+        os.makedirs(directory)
+
+    if os.path.isfile(path):
+        path = os.path.splitext(path)[0] + '_1' + os.path.splitext(path)[1]
+
+#####
+
     print 'Fetching SRA data from NCBI {}'.format(accession)
-    command = "fastq-dump --gzip --defline-qual '+' --split-files -T -F --outdir {} {}".format(user.scratch_path, accession) 
+    command = "fastq-dump --gzip --defline-qual '+' --split-files -T -F --outdir {} {}".format(directory, accession) 
     response = os.system(command)
     if response == 0: 
         file_paths = []
-        dirs = os.listdir('{}/{}'.format(user.scratch_path, accession))
+
+        dirs = os.listdir('{}/{}'.format(directory, accession))
         if dirs == ['1']:
-            file_paths = ['{}/{}/1/fastq.gz'.format(user.scratch_path, accession)]
+            file_paths = ['{}/{}/1/fastq.gz'.format(directory, accession)]
             filename_array = ['{}.fastq.gz'.format(accession)]
         if dirs == ['1','2'] or dirs == ['2','1']:
-            file_paths = ['{}/{}/1/fastq.gz'.format(user.scratch_path, accession), '{}/{}/2/fastq.gz'.format(user.scratch_path, accession)]
+            file_paths = ['{}/{}/1/fastq.gz'.format(directory, accession), '{}/{}/2/fastq.gz'.format(directory, accession)]
             filename_array = ['{}.R1.fastq.gz'.format(accession), '{}.R2.fastq.gz'.format(accession)]
         else: 
             print 'Number of files from SRA export not one or two...'
             return False 
-        print 'Writing sra output files to {}'.format(user.scratch_path)
-        dataset = import_files_as_dataset(file_paths, filename_array=filename_array, user_id=user_id, name=name, chain=chain)
+        print 'Writing sra output files to {}'.format(directory)
+        dataset = import_files_as_dataset(file_paths, filename_array=filename_array, user_id=user_id, name=name, chain=chain, dataset = file_dataset)
         print 'Dataset from SRA Accession {} created for user {}'.format(accession, user.username) 
         return True
     else: 
@@ -521,7 +543,7 @@ def import_from_sra(accession, name=None, user_id=57, chain=None, project_select
         return False
 
 @celery.task 
-def import_files_as_dataset(filepath_array, user_id, filename_array=None, chain=None, name=None):
+def import_files_as_dataset(filepath_array, user_id, filename_array=None, chain=None, name=None, dataset = None):
     
     current_user = db.session.query(User).filter(User.id==user_id).first()
 
@@ -529,17 +551,26 @@ def import_files_as_dataset(filepath_array, user_id, filename_array=None, chain=
         print "Error: user with id {} not found.".format(user_id)
         return False
 
-    d = Dataset()
-    d.user_id = user_id
-    d.name = name
-    d.description = 'Dataset generated from file import'
-    d.chain_types_sequenced = [chain]
-    db.session.add(d)
-    db.session.commit()
-    d.directory = current_user.scratch_path + '/Dataset_' + str(d.id)
+    if not dataset:
+        d = Dataset()
+        d.user_id = user_id
+        d.name = name
+        d.description = 'Dataset generated from file import'
+        d.chain_types_sequenced = [chain]
+        db.session.add(d)
+        db.session.commit()
+        d.directory = current_user.scratch_path.rstrip('/') + '/Dataset_' + str(d.id)
+    else:
+        d = dataset
+
+    if not d.directory:
+        d.directory = current_user.scratch_path.rstrip('/') + '/Dataset_' + str(d.id)
+        db.session.commit()
+
     if not os.path.exists(d.directory):
         os.makedirs(d.directory)
     db.session.commit()
+
     files = []
     for index, filepath in enumerate(filepath_array):
         f = File()
@@ -1138,11 +1169,6 @@ def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False
         annotated_files.append(new_file)
 
     return annotated_files 
-
-
-
-
-
 
 
 # should really break out tasks to celery_tasks.py or something 

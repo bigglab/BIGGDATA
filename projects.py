@@ -87,7 +87,8 @@ from models import *
 # 23. Add single page for running an analysis on a file/dataset
 # 24. Add one-time welcome notice to dashboard page. 
 # 25. Add page describing project/dataset/file concept
-# 25. Clean up import from NCBI Page
+# 26. TEST Clean up import from NCBI Page
+# 27. Add links to datasets on view project page
 
 # Issues:
 # DONE. Download new file not placing the file in the dataset directory.

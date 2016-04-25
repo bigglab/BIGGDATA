@@ -399,7 +399,7 @@ def file_download(status=[], bucket='', key=''):
         # check if the user has selected the default project (i.e., the user has no projects)
         file_dataset = None
         if form.dataset.data == 'new':
-            # create a new project here with the name default, add the user and dataset to the new project
+            # create a new dataset here with the name default, add the user and dataset to the new project
             new_dataset = Dataset()
             new_dataset.user_id = current_user.id
             new_dataset.populate_with_defaults(current_user)
@@ -408,8 +408,6 @@ def file_download(status=[], bucket='', key=''):
             db.session.flush()
             new_dataset.name = 'Dataset ' + str(new_dataset.id)
             new_dataset.files = [file]
-            new_dataset.cell_types_sequenced = [str(dataset.cell_types_sequenced)]
-            new_dataset.species = dataset.species
             db.session.commit()
             file_dataset = new_dataset
             flash('New file will be added to dataset "{}".'.format(new_dataset.name), 'success')
@@ -442,8 +440,8 @@ def file_download(status=[], bucket='', key=''):
                 new_project.project_name = 'Project ' + str(new_project.id)
                 new_project.users = [current_user]
                 new_project.datasets = [file_dataset]
-                new_project.cell_types_sequenced = [str(dataset.cell_types_sequenced)]
-                new_project.species = dataset.species
+                new_project.cell_types_sequenced = [str(file_dataset.cell_types_sequenced)]
+                new_project.species = file_dataset.species
 
                 db.session.commit()
             else: # check if the user has selected a project which they have access to
@@ -473,7 +471,6 @@ def file_download(status=[], bucket='', key=''):
                 file.name)
 
         # check if the file path we settled on is available.
-        print file.path
         if os.path.isfile(file.path):
             file.path = os.path.splitext(file.path)[0] + '_1' + os.path.splitext(file.path)[1]
 #######
