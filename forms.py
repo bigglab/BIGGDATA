@@ -39,7 +39,6 @@ class CreateMixcrAnalysisForm(Form):
     insert_into_db = BooleanField(u'Insert Into DB')
     cluster = BooleanField(u'Cluster Sequences')
 
-
 class CreateAnalysisForm(Form): 
     dataset_id = IntegerField()
     name = TextField(u'Name')
@@ -83,6 +82,9 @@ class AssociateFilesToDatasetForm(Form):
     submit = SubmitField()
 
 class CreateDatasetForm(Form):
+    use_as_default = BooleanField('Use These Values as Defaults')
+
+
     dataset_id = IntegerField()
 
     name = TextField()
@@ -122,6 +124,8 @@ class CreateDatasetForm(Form):
     json_id = TextField()
 
 class EditDatasetForm(Form):
+    use_as_default = BooleanField('Use These Values as Defaults')
+
     dataset_id = IntegerField()
 
     name = TextField()

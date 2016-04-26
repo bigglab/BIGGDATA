@@ -1,8 +1,10 @@
 #System Imports
+import ast
 import json
 import static
 import sys
 import os
+import errno
 import time
 import random
 from shutil import copyfile
@@ -15,7 +17,8 @@ import subprocess
 import boto 
 import math 
 # from filechunkio import FileChunkIO 
-from celery import Celery
+from celery import Celery, states
+from celery.exceptions import Ignore
 from collections import defaultdict, OrderedDict
 import collections
 #Flask Imports
@@ -215,7 +218,6 @@ def parse_name_for_chain_type(name):
         chain = '' 
     return chain 
 
-
 def link_file_to_user(path, user_id, name):
     file = File()
     file.name = name 
@@ -230,25 +232,138 @@ def link_file_to_user(path, user_id, name):
     db.session.commit()
     return True
 
+# returns a string if unable to create the user directories
+# returns false otherwise. 
 @celery.task
 def instantiate_user_with_directories(new_user_id):
     new_user = db.session.query(User).filter(User.id==new_user_id).first()
-    if not os.path.isdir(new_user.dropbox_path):
-        os.makedirs(new_user.dropbox_path)
-        print 'created new directory at {}'.format(new_user.dropbox_path)
-    if not os.path.isdir(new_user.scratch_path):
-        os.makedirs(new_user.scratch_path)
-        print 'created new directory at {}'.format(new_user.dropbox_path)
-    # COPY SOME EXAMPLE FILES TO PLAY WITH
-    share_root = app.config['SHARE_ROOT'] 
-    files = os.listdir(share_root)
-    print 'copying these files to new users dropbox: {}'.format(','.join(files))
-    for f in files: 
-        fullfilepath = '{}/{}'.format(new_user.dropbox_path, f)
-        copyfile('{}/{}'.format(share_root, f), '{}/{}'.format(new_user.dropbox_path, f))
-        link_file_to_user(fullfilepath, new_user.id, f)
-    return True 
 
+    for path in new_user.all_paths:
+        try: 
+            if not os.path.isdir(path):
+                os.makedirs(path)
+                print 'Created new directory at {}'.format(path)
+        except ValueError, error:
+            return 'Failed to create directory {}: {}'.format(path, error)
+    
+    # COPY SOME EXAMPLE FILES TO PLAY WITH
+    try:
+        share_root = app.config['SHARE_ROOT'] 
+        if os.path.isdir(share_root):
+            files = os.listdir(share_root)
+        else:
+            return 'Warning: share root path "{}"" not found'.format(share_root)
+        print 'copying these files to new users dropbox: {}'.format(','.join(files))
+        for f in files: 
+            fullfilepath = '{}/{}'.format(new_user.dropbox_path, f)
+            copyfile('{}/{}'.format(share_root, f), '{}/{}'.format(new_user.dropbox_path, f))
+            link_file_to_user(fullfilepath, new_user.id, f)
+        return False 
+    except ValueError, error:
+        return 'Warning: unable to copy sample files into user\'s dropbox: {}'.format(error)
+
+@celery.task(bind = True)
+def migrate_user_files(self, user_id):
+    current_user = db.session.query(User).filter(User.id==user_id).first()
+
+    # First, synchronously instantiate user directories, if they do not exist
+    directories_needed = False
+
+    for path in current_user.all_paths:
+        if not os.path.isdir(path):
+            directories_needed = True
+            #.apply_async((current_user.id, ), queue=celery_queue)
+
+    if directories_needed:
+        result = instantiate_user_with_directories(current_user.id)
+
+        if result: # anything but false is an error:
+            print "Error instantiating new user directories: {}".format(result)
+
+    # need a better way of updating users if the new directory creation fails...
+    files = current_user.files
+
+    overall_success = True
+
+    for file in files:
+        file_path = file.path
+
+        if current_user.root_path not in file_path: # this means the file has not been moved yet...
+
+            file_path = file_path.replace('//', '/')
+            source_path, filename = os.path.split(file_path)
+            extended_path = source_path.replace(current_user.old_scratch_path, '')
+            extended_path = extended_path.replace(current_user.scratch_path, '') # just in case the original is already correct
+
+            destination_path = current_user.scratch_path + extended_path
+            destination_path = destination_path.replace('//', '/')
+
+            source_filename = source_path + '/' + filename
+            destination_filename = destination_path + '/'+ filename
+            destination_filename = destination_filename.replace('//', '/')
+
+            # first make the source and destination file paths
+            try:
+                if not os.path.isdir(source_path):
+                    os.makedirs(source_path)
+            except OSError, e:
+                if e.errno != errno.EEXIST:
+                    raise
+
+            try:
+                if not os.path.isdir(destination_path):
+                    os.makedirs(destination_path)
+            except OSError, e:
+                if e.errno != errno.EEXIST:
+                    raise
+
+            copy_success = False
+
+            try:
+                message = 'Copying {} to {}'.format(source_filename, destination_filename)
+                self.update_state(state = states.STARTED, meta={'status': message})
+
+                if not os.access(source_path, os.R_OK):
+                    print "Error: source path '{}' not readable.".format(source_path)
+                    overall_success = False
+                else:
+                    if not os.path.isfile(source_filename):
+                        print "Warning: source file '{}' not found.".format(source_filename)
+                        overall_success = False
+
+                    elif not os.path.isdir(destination_path):
+                        print "Error: destination path '{}' not found.".format(destination_path)
+                        overall_success = False
+
+                    elif not os.access(destination_path, os.W_OK):
+                        print "Error: destination path '{}' not writable.".format(destination_path)
+                        overall_success = False
+
+                    elif os.path.isfile(destination_filename):
+                        print "Warning: destination filename '{}' already exists.".format(destination_filename) 
+                        copy_success = True
+                    else:
+                        copyfile(source_filename, destination_filename)
+                        print 'Finished copying {} to {}'.format(source_filename, destination_filename)
+                        copy_success = True 
+
+            except ValueError, error:
+                print "Error: Unable to copy file: {}.".format(error)
+                overall_success = False
+
+            if copy_success:
+                file.path = destination_filename
+                db.session.commit()
+                print 'Success: Updated file path in database.'
+
+    if overall_success:
+        current_user.old_dropbox_path = '' 
+        current_user.old_scratch_path = ''
+        db.session.commit()
+        print 'Success: All files have been migrated.'
+
+
+    return False 
 
 @celery.task
 def transfer_file_to_s3(file_id): 
@@ -280,7 +395,8 @@ def transfer_file_to_s3(file_id):
 def get_user_dataset_dict(user): 
     datadict = OrderedDict()
     for dataset in sorted(user.datasets, key=lambda x: x.id, reverse=True):
-        datadict[dataset] = sorted(dataset.files.all(), key=lambda x: x.file_type)
+        if dataset.name != '__default__':
+            datadict[dataset] = sorted(dataset.files.all(), key=lambda x: x.file_type)
     return datadict
 
 @celery.task 
@@ -312,7 +428,14 @@ def import_from_sra(accession, name=None, user_id=57, chain=None):
         return False
 
 @celery.task 
-def import_files_as_dataset(filepath_array, filename_array=None, chain=None, user_id=57, name=None):
+def import_files_as_dataset(filepath_array, user_id, filename_array=None, chain=None, name=None):
+    
+    current_user = db.session.query(User).filter(User.id==user_id).first()
+
+    if not current_user:
+        print "Error: user with id {} not found.".format(user_id)
+        return False
+
     d = Dataset()
     d.user_id = user_id
     d.name = name
@@ -320,9 +443,9 @@ def import_files_as_dataset(filepath_array, filename_array=None, chain=None, use
     d.chain_types_sequenced = [chain]
     db.session.add(d)
     db.session.commit()
-    d.directory = current_user.scratch_path + '/Dataset_' + d.id
-    if not os.path.exists(dataset.directory):
-        os.makedirs(dataset.directory)
+    d.directory = current_user.scratch_path + '/Dataset_' + str(d.id)
+    if not os.path.exists(d.directory):
+        os.makedirs(d.directory)
     db.session.commit()
     files = []
     for index, filepath in enumerate(filepath_array):
@@ -422,6 +545,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     output_files = []
     # Instantiate Source Files
     alignment_file = File()
+    alignment_file.user_id = dataset.user_id
     alignment_file.path = '{}.aln.vdjca'.format(basepath)
     alignment_file.name = "{}.aln.vdjca".format(basename)
     # MIGHT NEED TO ADD THIS ARGUMENT to align   -OjParameters.parameters.mapperMaxSeedsDistance=5
@@ -429,11 +553,13 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     alignment_file.file_type = 'MIXCR_ALIGNMENTS'
     files_to_execute.append(alignment_file)    
     clone_index_file = File()
+    clone_index_file.user_id = dataset.user_id
     clone_index_file.file_type = 'MIXCR_CLONE_INDEX'
     clone_index_file.path = '{}.aln.clns.index'.format(basepath)
     clone_index_file.name = '{}.aln.clns.index'.format(basename)
     clone_index_file.command = 'echo "Indexing Done On Clone Assemble Step"'
     clone_file = File()
+    clone_file.user_id = dataset.user_id
     clone_file.file_type = 'MIXCR_CLONES'
     clone_file.path = '{}.aln.clns'.format(basepath)
     clone_file.name = '{}.aln.clns'.format(basename)
@@ -445,6 +571,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     db.session.commit()
     # Commit To Get Parent IDs
     clone_output_file = File()
+    clone_output_file.user_id = dataset.user_id    
     clone_output_file.parent_id = clone_file.id 
     clone_output_file.path = '{}.txt'.format(clone_file.path)
     clone_output_file.file_type = 'MIXCR_CLONES_TEXT'
@@ -452,6 +579,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     clone_output_file.command = 'mixcr exportClones -f {} {}'.format(clone_file.path, clone_output_file.path)
     files_to_execute.append(clone_output_file)
     alignment_output_file = File()
+    alignment_output_file.user_id = dataset.user_id    
     alignment_output_file.parent_id = alignment_file.id
     alignment_output_file.path = '{}.txt'.format(alignment_file.path)
     alignment_output_file.file_type = 'MIXCR_ALIGNMENT_TEXT'
@@ -459,6 +587,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     alignment_output_file.command = 'mixcr exportAlignments -cloneId {}  -f -readId -descrR1 --preset full  {} {}'.format(clone_index_file.path, alignment_file.path, alignment_output_file.path)
     files_to_execute.append(alignment_output_file)
     pretty_alignment_file = File()
+    pretty_alignment_file.user_id = dataset.user_id    
     pretty_alignment_file.parent_id = alignment_file.id 
     pretty_alignment_file.path = '{}.pretty.txt'.format(alignment_file.path)
     pretty_alignment_file.file_type = 'MIXCR_PRETTY_ALIGNMENT_TEXT'
@@ -623,6 +752,7 @@ def run_pandaseq_analysis_with_files(analysis, files, algorithm='pear'):
     output_files = []
     # Instantiate Source Files
     alignment_file = File()
+    alignment_file.user_id = dataset.user_id
     alignment_file.path = '{}.pandaseq_{}.fastq'.format(basepath, algorithm)
     alignment_file.name = "{}.pandaseq_{}.fastq".format(basename, algorithm)
     alignment_file.command = 'pandaseq -f {} -r {} -F -T 4 -A {} -w {} 2> {}.log'.format(files[0].path, files[1].path, algorithm, alignment_file.path, alignment_file.path)
@@ -680,6 +810,7 @@ def run_trim_analysis_with_files(analysis, files):
     # Instantiate Source Files
     if len(files) == 1: 
         output_file = File()
+        output_file.user_id = dataset.user_id
         output_file.path = '{}.trimmed.fastq'.format(basepath)
         output_file.name = "{}.trimmed.fastq".format(basename)
         output_file.command = '{} SE -phred33 -threads 4 {} {} ILLUMINACLIP:{}/TruSeq3-SE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMAMATIC'], files[0].path, output_file.path, app.config['TRIMMAMATIC_ADAPTERS'])
@@ -687,10 +818,12 @@ def run_trim_analysis_with_files(analysis, files):
         files_to_execute.append(output_file)
     if len(files) == 2: 
         r1_output_file = File()
+        r1_output_file.user_id = dataset.user_id
         r1_output_file.path = '{}.R1.trimmed.fastq'.format(basepath)
         r1_output_file.name = "{}.R2.trimmed.fastq".format(basename)
         r1_output_file.file_type = 'TRIMMED_FASTQ'
         r2_output_file = File()
+        r2_output_file.user_id = dataset.user_id
         r2_output_file.path = '{}.R1.trimmed.fastq'.format(basepath)
         r2_output_file.name = "{}.R2.trimmed.fastq".format(basename)
         r2_output_file.file_type = 'TRIMMED_FASTQ'
@@ -743,16 +876,19 @@ def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
     output_files = []
     # Instantiate Source Files
     consensus_output_file = File()
+    consensus_output_file.user_id = dataset.user_id
     consensus_output_file.path = '{}.uclust_consensus.fasta'.format(basepath)
     consensus_output_file.name = "{}.uclust_consensus.fasta".format(basename)
     consensus_output_file.command = ""
     consensus_output_file.file_type = 'CLUSTERED_CONSENSUS_FASTA'
     uclust_output_file = File()
+    uclust_output_file.user_id = dataset.user_id
     uclust_output_file.path = '{}.uclust.tab'.format(basepath)
     uclust_output_file.name = "{}.uclust.tab".format(basename)
     uclust_output_file.command = ""
     uclust_output_file.file_type = 'UCLUST_OUTPUT_TAB_TEXT'
     centroid_output_file = File()
+    centroid_output_file.user_id = dataset.user_id
     centroid_output_file.path = '{}.uclust_centroids.fasta'.format(basepath)
     centroid_output_file.name = "{}.uclust_centroids.fasta".format(basename)
     centroid_output_file.file_type = 'CLUSTERED_CENTROIDS_FASTA'
@@ -790,7 +926,7 @@ def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
 
 
 @celery.task
-def run_analysis(dataset_id, file_ids, user_id=6, analysis_type='IGFFT', analysis_name='', analysis_description='', trim=False, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]): 
+def run_analysis(dataset_id, file_ids, user_id, analysis_type='IGFFT', analysis_name='', analysis_description='', trim=False, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]): 
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
     print 'RUNNING {} ANALYSIS ON DATASET ID# {}: {}'.format(analysis_type, dataset_id, repr(dataset.__dict__))
     #CONSTRUCT AND SAVE ANALYSIS OBJECT
@@ -840,6 +976,7 @@ def run_analysis(dataset_id, file_ids, user_id=6, analysis_type='IGFFT', analysi
             #IGFFT NEEDS UNCOMPRESSED FASTQs
             if file.file_type == 'GZIPPED_FASTQ': 
                 new_file = File()
+                new_file.user_id = user_id
                 new_file.parent_id = file.id 
                 new_file.path = analysis.directory + '/' + file.name.replace('.gz','')
                 new_file.file_type = 'FASTQ'
@@ -862,13 +999,13 @@ def run_analysis(dataset_id, file_ids, user_id=6, analysis_type='IGFFT', analysi
         db.session.add(analysis)
         db.session.commit()
         if files_for_analysis == []: files_for_analysis = files 
-        annotated_files = run_igrep_annotation_on_dataset_files(dataset, files_for_analysis, user_id=6, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting)
+        annotated_files = run_igrep_annotation_on_dataset_files(dataset, files_for_analysis, user_id = dataset.user_id, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting)
         print 'annotated files from igfft: {}'.format(annotated_files)
     # PAIR 
     # CLUSTER
 
 
-def run_igrep_annotation_on_dataset_files(dataset, files, user_id=6, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]):
+def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]):
     # dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
     print 'RUNNING IGREP IGFFT ON DATASET ID# {}: {}'.format(dataset.id, repr(dataset.__dict__))
     igrep_script_path = app.config['IGREP_PIPELINES']
@@ -888,6 +1025,7 @@ def run_igrep_annotation_on_dataset_files(dataset, files, user_id=6, overlap=Fal
         print 'executing script: {}'.format(script_command)
         response = os.system(script_command)
         new_file = File()
+        new_file.user_id = user_id
         new_file.parent_id = file.id 
         new_file.dataset_id = dataset.id 
         new_file.name = file.name.replace('fastq','igfft.annotation')
@@ -950,7 +1088,11 @@ def flash_errors( form, category="warning" ):
             flash("{0} - {1}".format( getattr( form, field ).label.text, error ), category )
 
 # @Dave - function to create datasets from a JSON url
-def create_datasets_from_JSON_url(file):
+def create_datasets_from_JSON_url(url, project):
+    # get the url
+    # download the file
+    # convert to a string
+    # call create_datasets_from_JSON_string(json_string, project)
     pass
 
 # @Dave - function to create datasets from a JSON file
@@ -1026,9 +1168,28 @@ def create_datasets_from_JSON_string(json_string, project = None):
         new_dataset.name = dataset_name
         new_dataset.description = json_dataset[ "DESCRIPTION" ]
         new_dataset.ig_type = ""
-        new_dataset.cell_types_sequenced = json_dataset[ "CELL_TYPES_SEQUENCED" ]
-        new_dataset.chain_types_sequenced = json_dataset[ "CHAIN_TYPES_SEQUENCED" ]
-        new_dataset.lab_notebook_source = json_dataset[ "LAB_NOTEBOOK_SOURCE" ]
+
+
+        # special treatment for arrays
+        try:
+            new_dataset.cell_types_sequenced = ast.literal_eval(str(json_dataset[ "CELL_TYPES_SEQUENCED" ]))
+        except:
+            new_dataset.cell_types_sequenced = [str(json_dataset[ "CELL_TYPES_SEQUENCED" ])] 
+
+        try: 
+            new_dataset.chain_types_sequenced = ast.literal_eval(str(json_dataset[ "CHAIN_TYPES_SEQUENCED" ]))
+        except: 
+            new_dataset.chain_types_sequenced = [str(json_dataset[ "CHAIN_TYPES_SEQUENCED" ])]
+
+        try:
+            new_dataset.primary_data_files_ids = ast.literal_eval(str(dataset.primary_data_files_ids))
+        except:
+            if str(json_dataset[ "LAB_NOTEBOOK_SOURCE" ]).isdigit():
+                new_dataset.primary_data_files_ids = [int(json_dataset[ "LAB_NOTEBOOK_SOURCE" ])]
+            else:
+                new_dataset.lab_notebook_source = json_dataset[ "LAB_NOTEBOOK_SOURCE" ]
+
+
         new_dataset.sequencing_submission_number = json_dataset[ "SEQUENCING_SUBMISSION_NUMBER" ]
         new_dataset.contains_rna_seq_data = contains_rna_seq_data
         new_dataset.reverse_primer_used_in_rt_step = json_dataset[ "REVERSE_PRIMER_USED_IN_RT_STEP" ]
