@@ -66,17 +66,34 @@ from models import *
 # 6. TEST When creating a project for a dataset, get the project species/etc from the dataset
 # 7. TEST vice versa vis a vis #6
 # 8. TEST Update arrays on import from JSON
-# 9. Instantiate files with new default dataset : what are the default dataset defaults?
-# 10. Prevent datatable drop down when link clicked
-# 11. Disable datatable drop down if there are no files
-# 12. Add option for user to save dataset values as defaults
-# 13. No analysis on defaults
-# 14. Replace Pandaseq/MixCr/Annotate with "Add Files"
-# 15. Auto clear form
-# 16. Auto populate form
+# 9. DONE for url uploads. Instantiate files with new default dataset : what are the default dataset defaults?
+# 10. DONE Prevent datatable drop down when link clicked
+# 11. DONE Disable datatable drop down if there are no files
+# 12. DONE Add option for user to save dataset values as defaults
+# 13. TEST No analysis on defaults
+# 14. DONE Replace Pandaseq/MixCr/Annotate with "Add Files"
+# 15. DONE Auto clear form for editing dataset
+# 16. DONE Auto populate form for editing dataset
 # 17. Start using new directory structure with dataset_#
-# 18. Add dashboard page
-# 19. Clean up NavBar
+#       File from URL: DONE
+# 18. STARTED Add dashboard page
+# 19. DONE. Clean up NavBar
+# 20. DONE. Clean up add/upload Files
+#       Upload files: DONE
+#       Add files: DONE (can't test)
+# 21. Clean up files listing
+# 22. Add Celery Task Monitor to Dashboard page
+#       Standardize Celery logging
+# 23. Add single page for running an analysis on a file/dataset
+# 24. Add one-time welcome notice to dashboard page. 
+# 25. Add page describing project/dataset/file concept
+# 26. TEST Clean up import from NCBI Page
+# 27. Add links to datasets on view project page
+
+# Issues:
+# DONE. Download new file not placing the file in the dataset directory.
+# DONE. Download new file placing // in file path.
+# DONE. Remove some of the extra messages on file download response.  
 
 # How to check results from Celery???
 # Check for duplicate directories and files in datastore
@@ -179,7 +196,7 @@ def manage_projects():
     if len(projects) == 0:
         projects = None
 
-    return render_template("manage_projects.html", projects = projects, edit_project_form = edit_project_form)
+    return render_template("manage_projects.html", projects = projects, edit_project_form = edit_project_form, current_user=current_user)
 
 @projects_blueprint.route('/create_project', methods=['GET', 'POST'])
 @login_required
@@ -288,7 +305,7 @@ def create_project():
     dataset_defaults = [(str(dataset.id)) for dataset in datasets]
     create_project_form.datasets.data = dataset_defaults 
 
-    return render_template("create_project.html", create_project_form = create_project_form)
+    return render_template("create_project.html", create_project_form = create_project_form, current_user=current_user)
 
 @projects_blueprint.route('/edit_project/<project_id>', methods=['GET','POST'])
 @login_required
@@ -366,7 +383,7 @@ def edit_project(project_id):
             edit_project_form.publications.data = project.publications
             edit_project_form.species.data = project.species
             edit_project_form.lab.data = project.lab 
-            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner)
+            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner, current_user=current_user)
 
         else:
             if edit_project_form.validate_on_submit():
@@ -462,12 +479,12 @@ def edit_project(project_id):
             else:
                 flash_errors(edit_project_form)
 
-            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner)
+            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner, current_user=current_user)
     else:
         flash('Error: the project was not found or you do not have permission to edit the project.', 'warning')
         return redirect( url_for('projects.manage_projects') )
 
-    return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id)
+    return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, current_user=current_user)
 
 @projects_blueprint.route('/view_project/<project_id>', methods=['GET', 'POST'])
 @login_required
@@ -518,6 +535,7 @@ def view_project(project_id):
         owner = owner,
         read_only_list = read_only_list,
         write_user_list = write_user_list,
-        dataset_list = dataset_list)
+        dataset_list = dataset_list, 
+        current_user=current_user)
 
 

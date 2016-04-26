@@ -1,109 +1,73 @@
 {% extends "_base.html" %}
-{% block content %}
-
-<br>
-<br>
-
+{% block wide_content %}
 {% if current_user.is_anonymous() == False %}
-<div class="container">
     <br>
-    <p>You are currently logged in as {{current_user.first_name}} {{current_user.last_name}}</p>
-    <p><a href="{{url_for('.logout')}}">Click here to logout</a>
     <br>
-    </p>
-</div>
+    <p>You are currently logged in as {{current_user.first_name}} {{current_user.last_name}}. 
+    <a href="{{url_for('.logout')}}">Click here to logout</a>.</p>
+    <br>
+{% else %}
+    <center><h1>Login or Register for BIGG Data</h1></center>
+    <br>
+    <!-- login start -->
+    <div class="row center-block">
+        <div class="col-md-1">
+        </div>
+
+        <div class="col-md-4">
+            <div class="panel panel-default">
+                <div class="panel-heading">Login</div>
+
+                <div class="panel-body">
+                    <form method="POST" action="/login"> 
+                        
+                        {{ login_form.csrf_token }}
+                        {{ login_form.email.label }}<br>
+                        {{ login_form.email(class_="form-control") }}<br>
+                        {{ login_form.password.label }}<br> 
+                        {{ login_form.password(class_="form-control") }}<br>    
+                        <input class="btn btn-info" type="submit" value="Login">
+                    </form>                
+                </div>
+            </div>
+            
+        </div>
+
+        <div class="col-md-2">
+        </div>
+
+        <div class="col-md-4">
+            <div class="panel panel-default">
+                <div class="panel-heading">Register</div>
+
+                <div class="panel-body">
+                    <form method="POST" action="/users/create">
+                        {{ registration_form.csrf_token }}
+                        {{ registration_form.first_name.label }}<br>
+                        {{ registration_form.first_name(class_="form-control") }}<br>
+
+                        {{ registration_form.last_name.label }}<br>
+                        {{ registration_form.last_name(class_="form-control") }}<br>
+
+                        {{ registration_form.username.label }}<br>
+                        {{ registration_form.username(class_="form-control") }}<br>
+
+                        {{ registration_form.email.label }}<br>
+                        {{ registration_form.email(class_="form-control") }}<br>
+
+                        {{ registration_form.password.label }}<br>
+                        {{ registration_form.password(class_="form-control") }}<br>
+                        <input class="btn btn-info" type="submit" value="Register">
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div> <!-- /row -->
+    <br>
+
+
 {% endif %}
 
-<!-- login start -->
-<div class="container">
-    <div class="loginbox text-center">
-        <form method="POST" action="/login"> 
-            <div class="row">
-                <div class="text-center">
-                    <h4 class=>Sign in to BIGG DATA</h4> 
-                </div>
-            </div>
-            <p>{{ login_form.csrf_token }}</p>
-            <div class="row">
-                    {{ login_form.email.label }}:
-            </div>
-            <div class="row">
-                    {{ login_form.email(size=20) }}
-            </div>
-            <div class="row">
-                    <strong>Password: </strong>
-            </div>
-            <div class="row">
-                    {{ login_form.password(size=20) }}
-            </div>
-            <br>
-            <div class="row">
-                    <input class="btn-success btn" type="submit" value="Login">
-            </div>
-        </form>
-    </div>
-</div>
-
-<br>
-
-<div class="container text-center">
-    <div class="row">
-       <p>New User? <a data-toggle="collapse" data-target="#newuser">Click Here to Register</a></p> 
-    </div>
-
-    <br>
-    <br>
-
-    <div id="newuser" class="collapse" class="loginbox" aria-expanded="false">
-        <form method="POST" action="/users/create">
-            <div>{{ create_user_form.csrf_token }}</div>
-            <div class="loginbox">
-                <div class="row">
-                    <h4>Create A New User</h4>
-                </div>
-                <!-- First and Last names -->
-                <div class="row">
-                    <div class="col-xs-3 col-xs-offset-3 col-md-2 col-md-offset-4">
-                        First name
-                    </div>
-                    <div class="col-xs-3 col-md-2 col-xs-offset-0">
-                        Last name
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-xs-3 col-xs-offset-3 col-md-2 col-md-offset-4">
-                        {{ create_user_form.first_name(size=20) }}
-                    </div>
-                    <div class="col-xs-3 col-md-2">
-                        {{ create_user_form.last_name(size=20) }}
-                    </div>
-                </div>
-                <!-- Username, email, password -->
-                <div class="row">
-                        Username
-                </div>
-                <div class="row">
-                        {{ create_user_form.username(size=40) }}
-                </div>
-                <div class="row">
-                        Email                
-                </div>
-                <div class="row">
-                        {{ create_user_form.email(size=40) }}
-                </div>
-                <div class="row">
-                    Password
-                </div>
-                <div class="row">
-                        {{ create_user_form.password(size=40) }}
-                </div>
-                <br>
-                <div class="row">
-                    <input class="btn btn-info" type="submit" value="Create User">
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
 
 {% endblock %}

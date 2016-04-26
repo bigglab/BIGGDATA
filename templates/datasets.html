@@ -27,8 +27,15 @@
     			        <th>{{ form.description(size=15, class="form-control") }}</th>
     			        <!-- <th>Ig Type: {{ form.ig_type(size=10) }}</th> -->
     			        <th>{{ form.project(class="form-control") }}</th>
-    			        <th>Expect VH/VL Paired Data? : {{ form.paired }}</th>
-    			        <th><input type="submit" value="Submit"></th>
+    			        <th>
+							<div class="checkbox" class="pull-right">
+                                        <label>
+										{{ form.paired }}
+                                        Expect VH/VL Paired Data?
+                                        </label><br/>
+                            </div>
+    			        </th>
+    			        <th><input class="btn btn-default form-control" type="submit" value="Submit"></th>
     		        </tr>
 		        </tbody>
 	            </table>
@@ -53,7 +60,7 @@
 		<tbody>
 			{% for dataset, files in datadict.iteritems() %}
 				<tr>
-					<td class='details-control'></td>
+					<td {% if dataset.files.all() != [] -%}class='details-control'{%- endif -%}></td>
 					<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.id}}</a></td>
 					<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
 					<td>{{dataset.description}}</td>
@@ -63,7 +70,13 @@
 					{% else %}
 						<td></td>
 					{% endif %}
-					<td><a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a> <a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">MIXCR</a> <a href="{{url_for('.create_analysis', dataset_id=dataset.id)}}">ANNOTATE</a></td>
+					<td>
+						{%- if dataset.files.all() == [] -%}
+							<a href="{{url_for('.dataset', id=dataset.id)}}">Click To Add Files</a>
+						{% else %}
+							<a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a> <a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">MIXCR</a> <a href="{{url_for('.create_analysis', dataset_id=dataset.id)}}">ANNOTATE</a>
+						{% endif %}
+					</td>
 				</tr>
 			{% endfor %}
 			
@@ -94,7 +107,8 @@
 	table.rows().every( function () {
 	    this.child( table_data[this.index()] );
 	} );
-	$('#datasets tbody').on( 'click', 'tr', function () {
+
+	$('#datasets tbody').on( 'click', 'td.details-control', function () {
 	    var child = table.row( this ).child;
 		var tr = $(this).closest('tr');
 	    

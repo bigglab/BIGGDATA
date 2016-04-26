@@ -16,24 +16,28 @@
 				<th>Name</th>
 				<th>Description</th>
 				<th>IG Type</th>
-				<th></th>
+				<th>Pairing</th>
 				<th></th>
 			</tr>
 		</thead>
 		<tbody>
 				<tr>
-					<th>{{edit_dataset_form.name(class_="form-control") }}</th>
-					<th>{{edit_dataset_form.description(class_="form-control") }}</th>
-					<th>{{edit_dataset_form.ig_type(class_="form-control") }}</th>
-					<th>Heavy/Light Paired? {{edit_dataset_form.paired}}</th>
+					<th>{{edit_dataset_form.name(class_="form-control no-clear") }}</th>
+					<th>{{edit_dataset_form.description(class_="form-control no-clear") }}</th>
+					<th>{{edit_dataset_form.ig_type(class_="form-control no-clear") }}</th>
+					<th>
+                        <div class="checkbox" class="pull-right">
+                            <label>
+                                {{ edit_dataset_form.paired }} 
+                                Heavy/Light Paired?
+                            </label><br/>
+                        </div>
 					<th>
 					</th>
 				</tr>
 		</tbody>
 	</table>
-
     <br>
-
     <div class="panel panel-default">
         <div class="panel-heading">
             <table width="100%">
@@ -41,6 +45,10 @@
                     <tr>
                         <td>
                             <label>Sequencing Information</label>
+                        </td>
+                        <td align=right>
+                        <button type="button" value="Default" class="btn btn-default default">Use Defaults</button>
+                        <button type="button" value="Reset" class="btn btn-default reset">Clear Form</button>
                         </td>                                               
                     </tr>
                 </tbody>
@@ -215,6 +223,44 @@
 </div>
 
 <script>
+
+    $(".reset").click(function() {
+        $(this).closest('form').find("input[type=text], textarea").not( ".no-clear" ).val("");
+        $(this).closest('form').find("select[name=species], textarea").not( ".no-clear" ).val("").change();
+        $(this).closest('form').find("input[name=paired], textarea").attr('checked', false).change();
+
+    });
+
+    $(".default").click(function() {
+        {% if default_dataset %}
+            $(this).closest('form').find("select[name=species], textarea").val("{{default_dataset.species }}").change();
+            $(this).closest('form').find("input[name=paired], textarea").val("{{default_dataset.paired }}").change();
+
+
+            $(this).closest('form').find("input[name=ig_type], textarea").val("{{default_dataset.ig_type | escapejs  }}");
+            $(this).closest('form').find("input[name=experiment_name], textarea").val("{{default_dataset.experiment_name | escapejs }}");
+            $(this).closest('form').find("input[name=cell_types_sequenced], textarea").val("{{default_dataset.cell_types_sequenced | escapejs }}");
+            $(this).closest('form').find("input[name=chain_types_sequenced], textarea").val("{{default_dataset.chain_types_sequenced | escapejs }}");
+            $(this).closest('form').find("input[name=sequencing_submission_number], textarea").val("{{default_dataset.sequencing_submission_number | escapejs }}");
+            $(this).closest('form').find("input[name=contains_rna_seq_data], textarea").val("{{default_dataset.contains_rna_seq_data | escapejs }}");
+            $(this).closest('form').find("input[name=reverse_primer_used_in_rt_step], textarea").val("{{default_dataset.reverse_primer_used_in_rt_step | escapejs }}");
+            $(this).closest('form').find("input[name=pairing_technique], textarea").val("{{default_dataset.pairing_technique | escapejs }}");
+            $(this).closest('form').find("input[name=list_of_polymerases_used], textarea").val("{{default_dataset.list_of_polymerases_used | escapejs }}");
+            $(this).closest('form').find("input[name=sequencing_platform], textarea").val("{{default_dataset.sequencing_platform | escapejs }}");
+            $(this).closest('form').find("input[name=target_reads], textarea").val("{{default_dataset.target_reads | escapejs }}");
+            $(this).closest('form').find("input[name=cell_markers_used], textarea").val("{{default_dataset.cell_markers_used | escapejs }}");
+            $(this).closest('form').find("input[name=cell_selection_kit_name], textarea").val("{{default_dataset.cell_selection_kit_name | escapejs }}");
+            $(this).closest('form').find("input[name=isotypes_sequenced], textarea").val("{{default_dataset.isotypes_sequenced | escapejs }}");
+            $(this).closest('form').find("input[name=post_sequencing_processing_dict], textarea").val("{{default_dataset.post_sequencing_processing_dict | escapejs }}");
+            $(this).closest('form').find("input[name=cell_number], textarea").val("{{default_dataset.cell_number | escapejs }}");
+            $(this).closest('form').find("input[name=primer_set_name], textarea").val("{{default_dataset.primer_set_name | escapejs }}");
+            $(this).closest('form').find("input[name=template_type], textarea").val("{{default_dataset.template_type | escapejs }}");
+            $(this).closest('form').find("input[name=mid_tag], textarea").val("{{default_dataset.mid_tag | escapejs }}");
+            $(this).closest('form').find("input[name=adjuvant], textarea").val("{{default_dataset.adjuvant | escapejs }}");
+            $(this).closest('form').find("input[name=person_who_prepared_library], textarea").val("{{default_dataset.person_who_prepared_library | escapejs }}");
+            $(this).closest('form').find("input[name=lab_notebook_source], textarea").val("{{default_dataset.lab_notebook_source | escapejs }}");
+        {% endif %}
+    });
 
     $('tbody.accordian-control').on( 'click', 'tr', function () {
         var parent_accordian = $(this).closest('div')

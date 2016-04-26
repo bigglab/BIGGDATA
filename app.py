@@ -89,6 +89,11 @@ login_manager.init_app(app)
 templateLoader = jinja2.FileSystemLoader( searchpath="{}/templates".format(app.config['HOME']) )
 templateEnv = jinja2.Environment( loader=templateLoader, extensions=['jinja2.ext.with_'])
 
+# Add a custom filter to escape characters for Javascript/JQuery insertion
+# Usage: {{ some.js_insertion_text | escapejs }}
+# js_insertion_text = "$(this);" | escaptjs --> "$(this)\\u003B"  
+app.jinja_env.filters['escapejs'] = jinja2_escapejs_filter
+
 def include_file(name):
     return jinja2.Markup(loader.get_source(env, name)[0])
 app.jinja_env.globals['include_file'] = include_file
@@ -141,7 +146,8 @@ def retrieve_golden():
 @login_manager.unauthorized_handler
 def unauthorized():
     gif_path=retrieve_golden()
-    return render_template("unauthorized.html", git_path=gif_path)
+    flash('You must login or register to view that page.','success')
+    return redirect( url_for('frontend.login') )
 
 def get_filepaths(directory_path):
     file_paths = []
@@ -400,27 +406,136 @@ def get_user_dataset_dict(user):
     return datadict
 
 @celery.task 
-def import_from_sra(accession, name=None, user_id=57, chain=None):
+def import_from_sra(accession, name=None, user_id=57, chain=None, project_selection = None, dataset_selection = None):
     user = db.session.query(User).filter(User.id==user_id).first()
+
+    if not user:
+        print "Unable to find user with id {}.".format(user_id)
+        return False
+
+    # load projects and datasets
+    # set the dataset options
+    datasets = Set(user.datasets)
+    datasets.discard(None)
+    datasets.discard(user.default_dataset)
+    datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
+
+    # get a list of user projects for the form
+    projects = Set(user.projects)
+    projects.discard(None)
+    projects = sorted(projects, key=lambda x: x.id, reverse=True)
+
+
+    # check if the user has selected the default project (i.e., the user has no projects)
+    file_dataset = None
+    if dataset_selection == 'new':
+        # create a new project here with the name default, add the user and dataset to the new project
+        new_dataset = Dataset()
+        new_dataset.user_id = user.id
+        new_dataset.populate_with_defaults(user)
+        new_dataset.name = 'Dataset'
+        db.session.add(new_dataset)
+        db.session.flush()
+        new_dataset.name = accession + '_' + str(new_dataset.id)
+        new_dataset.directory = "{}/{}".format(user.scratch_path.rstrip('/') , new_dataset.name)
+        file_dataset = new_dataset
+        print 'New file will be added to dataset "{}".'.format(new_dataset.name)
+        db.session.commit()
+
+    else: # check if the user has selected a project which they have access to
+        user_has_permission = False
+        for dataset in user.datasets:
+            if str(dataset.id) == dataset_selection:
+                file_dataset = dataset
+                user_has_permission = True
+
+                # if user.default_dataset == None:
+                #     d.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                #     d.species = project.species
+        if not user_has_permission:
+            print 'Error: you do not have permission to add a file to that dataset.'
+    db.session.commit()
+
+
+    # now do the same with projects, with the qualification that we add the dataset to the project if it's not there already
+    # check if the user has selected the default project (i.e., the user has no projects)
+    if file_dataset:
+        if project_selection == 'new':
+            # create a new project here with the name default, add the user and dataset to the new project
+            new_project = Project()
+            new_project.user_id = user.id
+            new_project.project_name = 'Project'
+            db.session.add(new_project)
+            db.session.flush()
+            new_project.project_name = 'Project ' + str(new_project.id)
+            new_project.users = [user]
+            new_project.datasets = [file_dataset]
+            new_project.cell_types_sequenced = [str(file_dataset.cell_types_sequenced)]
+            new_project.species = file_dataset.species
+
+            db.session.commit()
+        else: # check if the user has selected a project which they have access to
+            user_has_permission = False
+            for project in projects:
+                if str(project.id) == project_selection:
+                    if project.role(user) == 'Owner' or project.role(user) == 'Editor':
+                        # if the dataset is not in the project, add it
+                        if file_dataset not in project.datasets:
+                            project.datasets.append(file_dataset)
+                        user_has_permission = True
+
+                        if user.default_dataset == None:
+                            file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                            file_dataset.species = project.species
+
+                        db.session.commit()
+            if not user_has_permission:
+                print 'Error: you do not have permission to add a dataset to that project.'
+            db.session.commit()        
+
     if not name: 
         name = accession 
+
+    # modify the path with the new style, the new hotness if you will
+    if file_dataset:
+        path = '{}/{}/{}'.format(
+            user.scratch_path.rstrip('/'),
+            'Dataset_' + str(file_dataset.id), 
+            accession)
+    else:
+        path = '{}/{}'.format(
+            user.scratch_path.rstrip('/'), 
+            accession)
+
+#####
+    # check if the file path we settled on is available.
+    directory = os.path.dirname(path)
+    if not os.path.exists(directory): 
+        os.makedirs(directory)
+
+    if os.path.isfile(path):
+        path = os.path.splitext(path)[0] + '_1' + os.path.splitext(path)[1]
+
+#####
+
     print 'Fetching SRA data from NCBI {}'.format(accession)
-    command = "fastq-dump --gzip --defline-qual '+' --split-files -T -F --outdir {} {}".format(user.scratch_path, accession) 
+    command = "fastq-dump --gzip --defline-qual '+' --split-files -T -F --outdir {} {}".format(directory, accession) 
     response = os.system(command)
     if response == 0: 
         file_paths = []
-        dirs = os.listdir('{}/{}'.format(user.scratch_path, accession))
+
+        dirs = os.listdir('{}/{}'.format(directory, accession))
         if dirs == ['1']:
-            file_paths = ['{}/{}/1/fastq.gz'.format(user.scratch_path, accession)]
+            file_paths = ['{}/{}/1/fastq.gz'.format(directory, accession)]
             filename_array = ['{}.fastq.gz'.format(accession)]
         if dirs == ['1','2'] or dirs == ['2','1']:
-            file_paths = ['{}/{}/1/fastq.gz'.format(user.scratch_path, accession), '{}/{}/2/fastq.gz'.format(user.scratch_path, accession)]
+            file_paths = ['{}/{}/1/fastq.gz'.format(directory, accession), '{}/{}/2/fastq.gz'.format(directory, accession)]
             filename_array = ['{}.R1.fastq.gz'.format(accession), '{}.R2.fastq.gz'.format(accession)]
         else: 
             print 'Number of files from SRA export not one or two...'
             return False 
-        print 'Writing sra output files to {}'.format(user.scratch_path)
-        dataset = import_files_as_dataset(file_paths, filename_array=filename_array, user_id=user_id, name=name, chain=chain)
+        print 'Writing sra output files to {}'.format(directory)
+        dataset = import_files_as_dataset(file_paths, filename_array=filename_array, user_id=user_id, name=name, chain=chain, dataset = file_dataset)
         print 'Dataset from SRA Accession {} created for user {}'.format(accession, user.username) 
         return True
     else: 
@@ -428,7 +543,7 @@ def import_from_sra(accession, name=None, user_id=57, chain=None):
         return False
 
 @celery.task 
-def import_files_as_dataset(filepath_array, user_id, filename_array=None, chain=None, name=None):
+def import_files_as_dataset(filepath_array, user_id, filename_array=None, chain=None, name=None, dataset = None):
     
     current_user = db.session.query(User).filter(User.id==user_id).first()
 
@@ -436,17 +551,26 @@ def import_files_as_dataset(filepath_array, user_id, filename_array=None, chain=
         print "Error: user with id {} not found.".format(user_id)
         return False
 
-    d = Dataset()
-    d.user_id = user_id
-    d.name = name
-    d.description = 'Dataset generated from file import'
-    d.chain_types_sequenced = [chain]
-    db.session.add(d)
-    db.session.commit()
-    d.directory = current_user.scratch_path + '/Dataset_' + str(d.id)
+    if not dataset:
+        d = Dataset()
+        d.user_id = user_id
+        d.name = name
+        d.description = 'Dataset generated from file import'
+        d.chain_types_sequenced = [chain]
+        db.session.add(d)
+        db.session.commit()
+        d.directory = current_user.scratch_path.rstrip('/') + '/Dataset_' + str(d.id)
+    else:
+        d = dataset
+
+    if not d.directory:
+        d.directory = current_user.scratch_path.rstrip('/') + '/Dataset_' + str(d.id)
+        db.session.commit()
+
     if not os.path.exists(d.directory):
         os.makedirs(d.directory)
     db.session.commit()
+
     files = []
     for index, filepath in enumerate(filepath_array):
         f = File()
@@ -483,7 +607,13 @@ def import_files_as_dataset(filepath_array, user_id, filename_array=None, chain=
 
 @celery.task
 def download_file(url, path, file_id):
-    print 'urllib2 downloading file from {}'.format(url)
+    print 'Using urllib2 to download file from {}'.format(url)
+
+    # check if the directory for the file exists. If not, make the directory path with makedirs
+    directory = os.path.dirname(path)
+    if not os.path.exists(directory): 
+        os.makedirs(directory)
+
     response = urllib2.urlopen(url)
     CHUNK = 16 * 1024
     with open(path, 'wb') as outfile: 
@@ -495,6 +625,7 @@ def download_file(url, path, file_id):
     f.available = True
     f.file_size = os.path.getsize(f.path)
     db.session.commit()
+    print 'File download complete.'
     return True 
 
 @celery.task
@@ -1038,11 +1169,6 @@ def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False
         annotated_files.append(new_file)
 
     return annotated_files 
-
-
-
-
-
 
 
 # should really break out tasks to celery_tasks.py or something 
