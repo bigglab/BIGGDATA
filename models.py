@@ -84,8 +84,6 @@ class User(db.Model):
 
         # user paths
         root_path = db.Column(db.String(256))
-        old_dropbox_path = db.Column(db.String(256))
-        old_scratch_path = db.Column(db.String(256))
 
         files = db.relationship('File', backref='user', lazy='dynamic')
         datasets = db.relationship('Dataset', backref='user', lazy='dynamic')
@@ -142,11 +140,11 @@ class User(db.Model):
             paths = [self.root_path, self.raw_path, self.scratch_path, self.filtered_path, self.dropbox_path]
             return paths
 
-        @hybrid_property
-        def is_migrated(self):
-            if self.old_dropbox_path != '' or self.old_scratch_path != '':
-                return False
-            return True
+        # @hybrid_property
+        # def is_migrated(self):
+        #     if self.old_dropbox_path != '' or self.old_scratch_path != '':
+        #         return False
+        #     return True
 
         @hybrid_property
         def default_dataset(self):
