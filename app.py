@@ -1114,7 +1114,7 @@ def run_analysis(dataset_id, file_ids, user_id, analysis_type='IGFFT', analysis_
                 new_file.command = 'gunzip -c {} > {}'.format(file.path, new_file.path)
                 analysis.status = 'GUNZIPPING'
                 db.session.commit()
-                response = os.system(f.command)
+                response = os.system(new_file.command)
                 if response == 0: 
                     new_file.available = True 
                     db.session.add(new_file)
