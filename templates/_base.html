@@ -61,8 +61,12 @@
 
 {% block body %}
     
-    {% block navbar %} 
-        {{nav.frontend_top.render()}}
+    {% block navbar %}
+        {% if current_user and current_user.is_authenticated() %}
+            {{nav.frontend_user.render()}}
+        {% else %}
+            {{nav.frontend_top.render()}}
+        {% endif %}
     {% endblock %}
 
     <a class="sr-only" href="#content">Skip To Content</a>
@@ -91,22 +95,21 @@
         </div>
     {% endblock messages %}
 
-
     {% block header_content %}
     {% endblock header_content %}
 
-
     <section id="content">
         <div class="container">
+            {% block wide_content %}
+
             <div class="row">
                 <div id="main-content" class="col-md-8">
                     {% block content %}
-                    <h1>App content goes here - when specified...</h1>
+                    {# App content goes here - when specified... #}
                     {% endblock content %}
                 </div>
 
             </div>
-            {% block wide_content %}
             {% endblock wide_content %}
         </div>
     </section>

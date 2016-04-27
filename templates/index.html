@@ -1,65 +1,106 @@
 {% extends '_base.html' %}
 
-{% block content %}
-<div class="container">
-	<h1>Welcome to the Data Analysis Portal For The</h1>
-	<h1><b>B</b>rent <b>I</b>verson, <b>G</b>eorge <b>G</b>eorgiou Laboratory</h1>
-	<br>
-	{% if user.is_authenticated() %}
-		<h4>Good to see you here, {{user.first_name}}</h4>
-		<br>
-		{% if user.files.all() == [] %}
-			<h4>Looks like you need to import some files! <a href="{{url_for('.import_sra')}}">Import a sample set from NCBI</a> or <a href="{{url_for('.file_download')}}">upload a file from your computer or url</a>.</h4>
-		{% else %}
-			{% if user.datasets.all() == [] %}
-			<h4>You've got <a href="{{url_for('.files')}}">some files</a>, but no datasets!</h4>
-			<h4><a href="{{url_for('.datasets')}}">Create a Dataset</a> and add some files to run an analysis</h4>
+{% block wide_content %}
+<center>
+			<h1>BIGG Data Analysis Portal</h1>
+			<h4><b>B</b>rent <b>I</b>verson, <b>G</b>eorge <b>G</b>eorgiou Laboratory</h4>
+			<br>
+</center>
+	<div class="row">
+		<div class="col-md-8 {% if current_user.is_authenticated() -%}center-block{%- endif %}">	
+			<h4>Welcome</h4>
+			{% if current_user.is_authenticated() %}
+				<p>Good to see you here, {{current_user.first_name}}. 
+				{% if current_user.files.all() == [] -%}
+					To get started running some analyses, you must import some files. You can <a href="{{url_for('.import_sra')}}">import a sample set from NCBI</a> or <a href="{{url_for('.file_download')}}">upload a file from your computer or url</a>. </p>
+				{% elif current_user.datasets.all() == [] -%}
+					You've got <a href="{{url_for('.files')}}">some files</a>, but no datasets! 
+					<a href="{{url_for('.datasets')}}">Create a Dataset</a> and add some files to run an analysis. </p>
+				{% else %}
+							Looks like you're up and running:</p>
+							<br>
+							<a href="{{url_for('.datasets')}}">Go To My Datasets</a><br>
+							<a href="{{url_for('.analyses')}}">Go To My Analyses</a><br>
+				{% endif %}
 			{% else %}
-					<h4>Looks like you're up and running:</h4>
-					<br>
-					<h4><a href="{{url_for('.datasets')}}">Go To My Datasets</a></h4>
-					<h4><a href="{{url_for('.analyses')}}">Go To My Analyses</a></h4>
-			{% endif %}
+					<p>Welcome to BIGG Data! You may login or create a new user using the form to the right. </p>
+			{% endif %}	
+			<br>	
+
+			<h4>Background / Utility</h4>
+			<p>The BIGG Data portal is intended to faciliitate VDJ-type recombination analysis from Immunorepertoire (IG + TCR) sequencing data. You can upload or link your own datasets, run alignments of consensus data to VDJ genes, and vizualize repertoire distribution.</p>
+			<br>
+			<h4>How It Works</h4>
+			<p>BIGG Data organizes your information into projects, datasets, and files to help automate analysis. Datasets represent a set of sequencing files coming from a particular Illumina library.</p>
+			<p>By defining attributes such as chain and species when adding a dataset, you can populate new analyses with the most appropriate default settings. This will also enable auto-analysis of data when it becomes available.</p>
+			<p>When running an analysis on a pair of overlapping reads from the same locus, reads should be pre-processed for overlap alignments and the higher confidence consensus sequences taken into analysis. This is done by default if neccesary, but you can also pre-run the overlap alignment with alternative settings if you like. The overlaps from the freshest alignment will be analyzed.</p> 
+
+			<br>
+			<br>
+
+		</div>
+		
+		{%- if not current_user.is_authenticated() -%}
+			<div class="col-md-4">
+				<br>
+				<ul class="nav nav-tabs">
+				  <li class="active"><a href="#tab1" data-toggle="tab">Login</a></li>
+				  <li><a href="#tab2" data-toggle="tab">Register</a></li>
+				</ul>
+				<div class="tab-content">
+					<div class="tab-pane active" id="tab1">
+					    <form method="POST" action="/login"> 
+					        {{ login_form.csrf_token }}
+					        <br>
+			                {{ login_form.email.label }}<br>
+			                {{ login_form.email(class_="form-control") }}<br>
+			                {{ login_form.password.label }}<br>	
+			                {{ login_form.password(class_="form-control") }}<br>	
+			                <input class="btn btn-default" type="submit" value="Login">
+					    </form>
+					</div>
+					<div class="tab-pane" id="tab2">
+
+			        	<form method="POST" action="/users/create">
+				            {{ registration_form.csrf_token }}
+				            <br>
+							{{ registration_form.first_name.label }}<br>
+							{{ registration_form.first_name(class_="form-control") }}<br>
+
+							{{ registration_form.last_name.label }}<br>
+							{{ registration_form.last_name(class_="form-control") }}<br>
+
+							{{ registration_form.username.label }}<br>
+							{{ registration_form.username(class_="form-control") }}<br>
+
+							{{ registration_form.email.label }}<br>
+							{{ registration_form.email(class_="form-control") }}<br>
+
+							{{ registration_form.password.label }}<br>
+							{{ registration_form.password(class_="form-control") }}<br>
+			                <input class="btn btn-default" type="submit" value="Register">
+
+						</form>
+					</div>
+				</div>
+
+			</div>
 		{% endif %}
-	{% else %}
-			<h4>Go To <a href="{{url_for('.login')}}">Login</a> To Create A New User</h4>
-	{% endif %}
-</div>
+	</div> <!-- /row -->
 
-
-<br>
-<br>
-
-<div class='container'>
-	<h2>BACKGROUND / UTILITY</h2>
-	<h4>This portal is intended to faciliitate VDJ-type recombination analysis from Immunorepertoire (IG + TCR) sequencing data.</h4>
-	<h4>You can upload or link your own datasets, run alignments of consensus data to VDJ genes, and vizualize repertoire distribution.</h4>
 </div>
 
 <br>
 <br>
 <br>
-
-<div class="container">
-	<h2>Some Key Points On How This Website Works</h2>
-	<h4>Datasets represent a set of sequencing files coming from a particular Illumina library.</h4>
-	<h4>By defining attributes such as chain and species when adding a dataset, we can populate new analyses with the most appropriate default settings. This will also enable auto-analysis of data when it becomes available.</h4>
-	<h4>When running an analysis on a pair of overlapping reads from the same locus, reads should be pre-processed for overlap alignments and the higher confidence consensus sequences taken into analysis. This is done by default if neccesary, but you can also pre-run the overlap alignment with alternative settings if you like. The overlaps from the freshest alignment will be analyzed.</h4> 
-</div>
-
-	<br>
-	<br>
 
 <!-- <div class="container">
 	<h4>Bear in mind this is in pre-release development, but we're heading toward <b>multi-dataset comparisons</b> to generate the plots we all want and need.</h4>
 </div>
  -->
-<br>
-<br>
-<br>
-<br>
-<br>
 
-{%endblock content %}
+
+
+{%endblock wide_content %}
 
 

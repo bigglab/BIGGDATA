@@ -23,62 +23,106 @@
 <br>
 <br>
 
-
-
 <div class="container">
-<h3>Download a file from a URL: </h3>
+    <h4>Upload a File from a URL</h4>
     <form method="POST" action="/file_download" enctype="multipart/form-data">
-    <table class="table table-striped">
-        {{ download_form.csrf_token }}
-        <thead>
-            <tr>
-                <th>File URL</th>
-                <th>Description</th>
-                <th>Chain</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <th>{{ download_form.url(size=60) }}</th>
-                <th> {{ download_form.description }}</th>
-                <th>{{ download_form.chain  }}</th>
-                <th><input type="submit" value="Submit"></th>
-            </tr>
-        </tbody>
-    </table>
+            <table class='table'> 
+                <thead>
+                    <tr>
+                        {{ download_form.csrf_token }}
+                        <th>{{ download_form.url.label }}:</th>
+                        <th><label>Description:</label></th>
+                        <th><label>Chain:</label></th>
+                        <th><label>Add to Dataset/Project:</label></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ download_form.url(size=30, class="form-control") }}</td>
+                        <td>{{ download_form.description(size=15, rows=1, class="form-control") }}</td>
+                        <td>{{ download_form.chain(class="form-control") }}</td>
+                        <td>
+                            {{ download_form.dataset(class="form-control") }}<br>
+                            {{ download_form.project(class="form-control") }}
+                        </td>
+                        <td><input class="btn btn-default form-control" type="submit" value="Submit"></td>
+                    </tr>
+                </tbody>
+                </table>
+    </form>
+</div>
+
+<br>
+<br>
+<div class="container">
+    <h4>Upload a Local File</h4>
+    <p>If you want to use a local file, upload it to Amazon S3 first, and then import to our system using the URL   with the form above.</p>
+    <form action="http://biggdata_uploads.s3.amazonaws.com/" method="post" enctype="multipart/form-data">
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <input type="hidden" name="acl" value="public-read" />
+        <input type="hidden" name="success_action_redirect" value="http://biggdata.rsldrt.com/file_download"/>
+
+        <table class='table'> 
+            <thead>
+                <tr>
+                    {{ download_form.csrf_token }}
+                    <th width=40%><label>Enter A Unique File Name:</label></th>
+                    <th width=40%> <label>Choose the file:</label></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><input type="input" name="key" value="" class="form-control"/></td>
+                    <td>
+                        <div class="input-group">
+                            <span class="input-group-btn">
+                                <span class="btn btn-default btn-file">
+                                    Browse...<input id="file" name="file" type="file"> 
+                                </span>
+                            </span>
+                            <input type="text" class="form-control" readonly>
+                        </div>
+                        <!-- <input type="file" name="file" value="" class="form-control"/> -->
+                    </td>
+                    <td>
+                        <input class="btn btn-default form-control" type="submit" value="Upload to Amazon S3">
+                    </td>
+                </tr>
+            </tbody>
+            </table>
     </form>
 </div>
 
 <br>
 <br>
 
-
-<div class="container">
-<h4>If you want to use a local file, upload it here first and then import to our system with the form above:</h4>
-<br>
-<form action="http://biggdata_uploads.s3.amazonaws.com/" method="post" enctype="multipart/form-data">
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<input type="hidden" name="acl" value="public-read" />
-<!-- <input type="hidden" name="success_action_redirect" value="http://0.0.0.0:5000/file_download" /> -->
-<input type="hidden" name="success_action_redirect" value="http://biggdata.rsldrt.com/file_download" />
-<table style="table table-striped">
-<tr>
-    <th>Enter A Unique File Name: <input type="input" name="key" value="" /> </th>
-    <th><input type="file" name="file" /></th>
-    <th><input type="submit" name="submit" value="Upload to Amazon S3" /></th>
-</tr>
-</table> 
-</form>
-</div>
-
-
-<br>
-<br>
-
-
 <div class="container">
 <a href="{{url_for('.files')}}"><h4>Back To My Files</h4></a>
 </div>
+
+<script>
+    
+    $(document).on('change', '.btn-file :file', function() {
+        var input = $(this),
+            numFiles = input.get(0).files ? input.get(0).files.length : 1,
+            label = input.val().replace(/\\/g, '/').replace(/.*\//, '');
+            //label = input.val();
+        input.trigger('fileselect', [numFiles, label]);
+    });
+    
+    $(document).ready( function() {
+      
+        $('.btn-file :file').on('fileselect', function(event, numFiles, label) {
+            var parent_input_group = $(this).closest('div')
+            var child_input = parent_input_group.children('input')
+            child_input.val(label)
+
+        });
+    });
+
+</script>
 
 
 <!-- <h4>{{ r }}</h4> -->

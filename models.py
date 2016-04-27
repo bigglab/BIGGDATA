@@ -1,4 +1,5 @@
 #System Imports
+import ast
 import json
 import static
 import sys
@@ -80,19 +81,22 @@ class User(db.Model):
         data = db.Column(db.Text())
         authenticated = db.Column(db.Boolean, default=False)
         user_type = db.Column(db.String(128))
-        dropbox_path = db.Column(db.String(256))
-        scratch_path = db.Column(db.String(256))
+
+        # user paths
+        root_path = db.Column(db.String(256))
+        old_dropbox_path = db.Column(db.String(256))
+        old_scratch_path = db.Column(db.String(256))
+
         files = db.relationship('File', backref='user', lazy='dynamic')
         datasets = db.relationship('Dataset', backref='user', lazy='dynamic')
         analyses = db.relationship('Analysis', backref='user', lazy='dynamic')
 
         projects = association_proxy('user_projects', 'project')
-        #projects = db.relationship('Project', secondary = 'user_projects', back_populates = 'users' )
 
         @hybrid_property
         def name(self):
             return self.first_name + ' ' + self.last_name
-        
+
         def get_id(self):
             """Return the email address to satisfy Flask-Login's requirements."""
             return self.email
@@ -114,6 +118,103 @@ class User(db.Model):
 
         def __init__(self): 
             self.user_type = 'researcher'
+
+        @hybrid_property
+        def raw_path(self):
+            return self.root_path + 'raw/'
+
+        @hybrid_property
+        def dropbox_path(self):
+            return self.root_path + 'dropbox/'
+
+        @hybrid_property
+        def scratch_path(self):
+            return self.root_path + 'scratch/'
+
+        @hybrid_property
+        def filtered_path(self):
+            return self.root_path + 'filtered/'
+
+        # returns all user paths, beginning with the user root path
+        # intended for use in instantiating user directories
+        @hybrid_property
+        def all_paths(self):
+            paths = [self.root_path, self.raw_path, self.scratch_path, self.filtered_path, self.dropbox_path]
+            return paths
+
+        @hybrid_property
+        def is_migrated(self):
+            if self.old_dropbox_path != '' or self.old_scratch_path != '':
+                return False
+            return True
+
+        @hybrid_property
+        def default_dataset(self):
+            for dataset in self.datasets:
+                if dataset.name == '__default__':
+                    return dataset
+            return None
+
+        def change_dataset_defaults(self, dataset):
+            default_dataset = self.default_dataset
+            if not default_dataset:
+                default_dataset = Dataset()
+                default_dataset.name = '__default__'
+                default_dataset.user_id = current_user.id
+                db.session.add(default_dataset)
+                db.session.commit()
+                db.session.refresh(default_dataset)
+                self.datasets.append(default_dataset)
+
+            try:
+
+                if default_dataset:
+                    default_dataset.ig_type = dataset.ig_type
+                    default_dataset.paired = dataset.paired
+
+                    # special treatment for arrays
+                    try:
+                        default_dataset.cell_types_sequenced = ast.literal_eval(str(dataset.cell_types_sequenced))
+                    except:
+                        default_dataset.cell_types_sequenced = [str(dataset.cell_types_sequenced)] 
+
+                    try: 
+                        default_dataset.chain_types_sequenced = ast.literal_eval(str(dataset.chain_types_sequenced))
+                    except: 
+                        default_dataset.chain_types_sequenced = [str(dataset.chain_types_sequenced)]
+
+                    try:
+                        default_dataset.primary_data_files_ids = ast.literal_eval(str(dataset.primary_data_files_ids))
+                    except:
+                        if dataset.primary_data_files_ids.isdigit():
+                            default_dataset.primary_data_files_ids = [int(dataset.primary_data_files_ids)]
+
+                    default_dataset.lab_notebook_source = dataset.lab_notebook_source
+                    default_dataset.sequencing_submission_number = dataset.sequencing_submission_number
+                    default_dataset.contains_rna_seq_data = dataset.contains_rna_seq_data
+                    default_dataset.reverse_primer_used_in_rt_step = dataset.reverse_primer_used_in_rt_step
+                    default_dataset.list_of_polymerases_used = dataset.list_of_polymerases_used
+                    default_dataset.sequencing_platform = dataset.sequencing_platform
+                    default_dataset.target_reads = dataset.target_reads
+                    default_dataset.cell_markers_used = dataset.cell_markers_used
+                    default_dataset.adjuvant = dataset.adjuvant
+                    default_dataset.species = dataset.species
+                    default_dataset.cell_selection_kit_name = dataset.cell_selection_kit_name
+                    default_dataset.isotypes_sequenced = dataset.isotypes_sequenced
+                    default_dataset.post_sequencing_processing_dict = dataset.post_sequencing_processing_dict
+                    default_dataset.mid_tag = dataset.mid_tag
+                    default_dataset.cell_number = dataset.cell_number
+                    default_dataset.primer_set_name = dataset.primer_set_name
+                    default_dataset.template_type = dataset.template_type
+                    default_dataset.experiment_name = dataset.experiment_name
+                    default_dataset.person_who_prepared_library = dataset.person_who_prepared_library
+                    default_dataset.pairing_technique = dataset.pairing_technique
+                    
+                    db.session.commit()
+                    return False
+
+            except:
+                return "Error: no default dataset found."
 
 class File(db.Model):
         __tablename__ = 'file'
@@ -182,8 +283,39 @@ class Dataset(db.Model):
         cell_types_sequenced = db.Column(postgresql.ARRAY(db.String(50)))
         chain_types_sequenced = db.Column(postgresql.ARRAY(db.String(20)))
         primary_data_files_ids = Column(postgresql.ARRAY(db.Integer))
-        directory = Column(String(256))
-        species = Column(String(256))
+
+        lab_notebook_source = db.Column(db.String(256))
+        sequencing_submission_number = db.Column(db.String(256))
+        contains_rna_seq_data = db.Column(db.String(256))
+        reverse_primer_used_in_rt_step = db.Column(db.String(256))
+        list_of_polymerases_used = db.Column(db.String(256))
+        sequencing_platform = db.Column(db.String(256))
+        target_reads = db.Column(db.String(256))
+        cell_markers_used = db.Column(db.String(256))
+        read_access = db.Column(db.String(256)) # maintain this to add read access for users later
+        owners_of_experiment = db.Column(db.String(256)) # - will use this to add to a new or existing project
+        adjuvant = db.Column(db.String(256))
+        species = db.Column(db.String(256)) 
+        cell_selection_kit_name = db.Column(db.String(256))
+        isotypes_sequenced = db.Column(db.String(256))
+        post_sequencing_processing_dict = db.Column(db.String(512))    
+        sample_preparation_date = db.Column(db.String(256))
+        gsaf_barcode = db.Column(db.String(256))
+        mid_tag = db.Column(db.String(256))
+        cell_number = db.Column(db.String(256))
+        primer_set_name = db.Column(db.String(256))
+        template_type = db.Column(db.String(256))
+        experiment_name = db.Column(db.String(256))
+        person_who_prepared_library = db.Column(db.String(256))
+        pairing_technique = db.Column(db.String(256))
+        json_id = db.Column(db.String(256))
+
+        # json_project_name = db.Column(db.String(256)) - will use this to add to a new or existing project
+        # publications = db.Column(db.String(256)) - will use this to add to a new or existing project
+        # lab = db.Column(db.String(256))
+
+        directory = db.Column(db.String(256))
+
         projects = association_proxy('dataset_projects', 'project')
 
         def __repr__(self): 
@@ -218,7 +350,10 @@ class Dataset(db.Model):
         def role(self, user):
             dataset_role = None
 
-            for project in projects:
+            if self.user_id == current_user.id:
+                return "Owner"
+
+            for project in self.projects:
                 project_role = project.role(user)
 
                 if project_role == "Owner":
@@ -247,6 +382,49 @@ class Dataset(db.Model):
                 pass
             return None
 
+        def populate_with_defaults(self, user):
+            if not user:
+                return 'Error: no user passed.'
+            try:
+                default_dataset = user.default_dataset
+                if default_dataset:
+                    self.ig_type = default_dataset.ig_type
+                    self.paired = default_dataset.paired
+
+                    self.cell_types_sequenced = default_dataset.cell_types_sequenced
+                    self.chain_types_sequenced = default_dataset.chain_types_sequenced
+                    self.primary_data_files_ids = default_dataset.primary_data_files_ids
+
+                    self.lab_notebook_source = default_dataset.lab_notebook_source
+                    self.sequencing_submission_number = default_dataset.sequencing_submission_number
+                    self.contains_rna_seq_data = default_dataset.contains_rna_seq_data
+                    self.reverse_primer_used_in_rt_step = default_dataset.reverse_primer_used_in_rt_step
+                    self.list_of_polymerases_used = default_dataset.list_of_polymerases_used
+                    self.sequencing_platform = default_dataset.sequencing_platform
+                    self.target_reads = default_dataset.target_reads
+                    self.cell_markers_used = default_dataset.cell_markers_used
+                    self.adjuvant = default_dataset.adjuvant
+                    self.species = default_dataset.species
+                    self.cell_selection_kit_name = default_dataset.cell_selection_kit_name
+                    self.isotypes_sequenced = default_dataset.isotypes_sequenced
+                    self.post_sequencing_processing_dict = default_dataset.post_sequencing_processing_dict
+                    self.mid_tag = default_dataset.mid_tag
+                    self.cell_number = default_dataset.cell_number
+                    self.primer_set_name = default_dataset.primer_set_name
+                    self.template_type = default_dataset.template_type
+                    self.experiment_name = default_dataset.experiment_name
+                    self.person_who_prepared_library = default_dataset.person_who_prepared_library
+                    self.pairing_technique = default_dataset.pairing_technique
+                    return False
+                else:
+                    # if there are any overall defaults, initialize them here
+                    pass
+
+            except:
+                return "Error: no default dataset found."
+
+
+
 class Project(db.Model):
         __tablename__ = 'project'
         id = db.Column(db.Integer, primary_key=True)
@@ -272,7 +450,7 @@ class Project(db.Model):
         #users = db.relationship('User', secondary = 'user_projects', back_populates = 'projects' )
 
         def __repr__(self): 
-            return "<  Project {}:  {}   :   {}    >".format(self.id, self.project_name, self.description)
+            return "{} ({})".format(self.project_name, self.id)
 
         def date_string(self):
             try:
@@ -363,67 +541,8 @@ class UserProjects (db.Model):
         self.user = user
         self.project = project
         self.read_only = read_only
-    
-    #def make_read_only (self, user_id):
-    #    pass
-# The following fields are from the the GSAF JSON
-# "LAB_NOTEBOOK_SOURCE": "", 
-#                     "SEQUENCING_SUBMISSION_NUMBER": [], 
-#                     "CHAIN_TYPES_SEQUENCED": [
-#                         "beta"
-#                     ], 
-#                     "CONTAINS_RNA_SEQ_DATA": false, 
-#                     "REVERSE_PRIMER_USED_IN_RT_STEP": "oligo dT", 
-#                     "LIST_OF_POLYMERASES_USED": [
-#                         "FastStart High Fidelity"
-#                     ], 
-#                     "SEQUENCING_PLATFORM": "MiSeq 2x300", 
-#                     "VH:VL_PAIRED": false, 
-#                     "PROJECT_NAME": "mTCR", 
-#                     "TARGET_READS": 2750000, 
-#                     "CELL_MARKERS_USED": [], 
-#                     "READ_ACCESS": [
-#                         "sschaetzle"
-#                     ], 
-#                     "ADJUVANT": "", 
-#                     "POST_SEQUENCING_PROCESSING:PHI_X_FILTER": false, 
-#                     "CELL_TYPES_SEQUENCED": [
-#                         "mTc"
-#                     ], 
-#                     "SPECIES": "Mus musculus", 
-#                     "PUBLICATIONS": [], 
-#                     "POST_SEQUENCING_PROCESSING:QUALITY_FILTER": "q20p50", 
-#                     "OWNERS_OF_EXPERIMENT": [
-#                         "sschaetzle"
-#                     ], 
-#                     "CELL_SELECTION_KIT_NAME": "", 
-#                     "ISOTYPES_SEQUENCED": [
-#                         "n/a"
-#                     ], 
-#                     "POST_SEQUENCING_PROCESSING:PROCESS_R1_R2_FILE": "pear", 
-#                     "SAMPLE_PREPARATION_DATE": "05/2015", 
-#                     "GSAF_BARCODE": "", 
-#                     "MID_TAG": [
-#                         "TGCCTAGTCA"
-#                     ], 
-#                     "DESCRIPTION": [
-#                         "mTCR Sequencing Mouse", 
-#                         "Mouse C1 Library 1"
-#                     ], 
-#                     "CELL_NUMBER": null, 
-#                     "PRIMER_SET_NAME": [
-#                         "mTCR"
-#                     ], 
-#                     "LAB": [
-#                         "GEORGIOU"
-#                     ], 
-#                     "TEMPLATE_TYPE": "cDNA", 
-#                     "EXPERIMENT_NAME": "memTCR_C1", 
-#                     "PERSON_WHO_PREPARED_LIBRARY": [
-#                         "Sebastian Schaetzle"
-#                     ], 
-#                     "PAIRING_TECHNIQUE": "", 
-#                     "_id": "556774349eb6360c29931524"
+
+
 
 
 

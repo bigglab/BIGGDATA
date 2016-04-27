@@ -1,0 +1,287 @@
+{% extends '_base.html' %}
+
+{% block wide_content %}
+<div class="container">
+<h2>Edit Dataset {{dataset.id}}: </h2>
+</div>
+<br>
+
+<form method="POST" action="{{url_for('frontend.edit_dataset', id = dataset.id)}}" >
+{{ edit_dataset_form.hidden_tag() }}
+
+<div class="container">
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Name</th>
+				<th>Description</th>
+				<th>IG Type</th>
+				<th>Pairing</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+				<tr>
+					<th>{{edit_dataset_form.name(class_="form-control no-clear") }}</th>
+					<th>{{edit_dataset_form.description(class_="form-control no-clear") }}</th>
+					<th>{{edit_dataset_form.ig_type(class_="form-control no-clear") }}</th>
+					<th>
+                        <div class="checkbox" class="pull-right">
+                            <label>
+                                {{ edit_dataset_form.paired }} 
+                                Heavy/Light Paired?
+                            </label><br/>
+                        </div>
+					<th>
+					</th>
+				</tr>
+		</tbody>
+	</table>
+    <br>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <table width="100%">
+                <tbody>
+                    <tr>
+                        <td>
+                            <label>Sequencing Information</label>
+                        </td>
+                        <td align=right>
+                        <button type="button" value="Default" class="btn btn-default default">Use Defaults</button>
+                        <button type="button" value="Reset" class="btn btn-default reset">Clear Form</button>
+                        </td>                                               
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="panel-body">
+            <div class='row'>
+                <div class="col-sm-4">
+
+                    {{ edit_dataset_form.experiment_name.label }}<br/>
+                    {{ edit_dataset_form.experiment_name(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.cell_types_sequenced.label }}<br/>
+                    {{ edit_dataset_form.cell_types_sequenced(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.chain_types_sequenced.label }}<br/>
+                    {{ edit_dataset_form.chain_types_sequenced(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.sequencing_submission_number.label }}<br/>
+                    {{ edit_dataset_form.sequencing_submission_number(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.contains_rna_seq_data.label }}<br/>
+                    {{ edit_dataset_form.contains_rna_seq_data(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.reverse_primer_used_in_rt_step.label }}<br/>
+                    {{ edit_dataset_form.reverse_primer_used_in_rt_step(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.pairing_technique.label }}<br/>
+                    {{ edit_dataset_form.pairing_technique(class_="form-control") }} <br/>
+
+                </div>
+                <div class="col-sm-4">
+                    {{ edit_dataset_form.species.label }}<br/>
+                    {{ edit_dataset_form.species(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.list_of_polymerases_used.label }}<br/>
+                    {{ edit_dataset_form.list_of_polymerases_used(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.sequencing_platform.label }}<br/>
+                    {{ edit_dataset_form.sequencing_platform(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.target_reads.label }}<br/>
+                    {{ edit_dataset_form.target_reads(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.cell_markers_used.label }}<br/>
+                    {{ edit_dataset_form.cell_markers_used(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.cell_selection_kit_name.label }}<br/>
+                    {{ edit_dataset_form.cell_selection_kit_name(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.isotypes_sequenced.label }}<br/>
+                    {{ edit_dataset_form.isotypes_sequenced(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.json_id.label }}<br/>
+                    {{ edit_dataset_form.json_id(class_="form-control") }} <br/>
+
+                </div>
+                <div class="col-sm-4">
+                    {{ edit_dataset_form.sample_preparation_date.label }}<br/>
+                    {{ edit_dataset_form.sample_preparation_date(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.post_sequencing_processing_dict.label }}<br/>
+                    {{ edit_dataset_form.post_sequencing_processing_dict(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.gsaf_barcode.label }}<br/>
+                    {{ edit_dataset_form.gsaf_barcode(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.cell_number.label }}<br/>
+                    {{ edit_dataset_form.cell_number(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.primer_set_name.label }}<br/>
+                    {{ edit_dataset_form.primer_set_name(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.template_type.label }}<br/>
+                    {{ edit_dataset_form.template_type(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.mid_tag.label }}<br/>
+                    {{ edit_dataset_form.mid_tag(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.adjuvant.label }}<br/>
+                    {{ edit_dataset_form.adjuvant(class_="form-control") }} <br/>
+
+                </div> <!-- /row -->
+            </div>
+        </div>
+    </div> <!-- /panel -->
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <table width="100%">
+                <tbody>
+                    <tr>
+                        <td>
+                            <label>User Information</label>
+                        </td>                           
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="panel-body">
+            <div class='row'>                                       
+                <div class="col-sm-4">
+                    
+                    {{ edit_dataset_form.person_who_prepared_library.label }}<br/>
+                    {{ edit_dataset_form.person_who_prepared_library(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.lab_notebook_source.label }}<br/>
+                    {{ edit_dataset_form.lab_notebook_source(class_="form-control") }} <br/>
+
+                    <label>Directory</label><br/>
+                    {{ dataset.directory }} <br/><br/>
+                    
+                    <br>
+                    <table width="100%">
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <button type="submit" value="submit" class="btn btn-default">Update</button>                    
+                                </td>
+                                <td align="right">
+                                    <div class="checkbox" class="pull-right">
+                                        <label>
+                                            {{ edit_dataset_form.use_as_default }} 
+                                            {{ edit_dataset_form.use_as_default.label.text }}
+                                        </label><br/>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+<!--                     <button type="submit" value="submit" class="btn btn-default">Update</button>
+                    <div class="checkbox">
+                        <label>
+                            {{ edit_dataset_form.use_as_default }} 
+                            {{ edit_dataset_form.use_as_default.label.text }}
+                        </label><br/>
+                    </div>
+ -->
+                </div>
+                <div class="col-sm-4">
+
+                    {{ edit_dataset_form.owners_of_experiment.label }}<br/>
+                    {{ edit_dataset_form.owners_of_experiment(class_="form-control") }} <br/>
+
+                    {{ edit_dataset_form.read_access.label }}<br/>
+                    {{ edit_dataset_form.read_access(class_="form-control") }} <br/>
+
+                </div>
+                <div class="col-sm-4">
+                <label>Projects</label><br/>
+                    {% if dataset.projects != [] -%}
+                        {% for project in dataset.projects %}
+                            {{ project }}<br>
+                        {% endfor %}
+                        <br>
+                    {%- endif %}
+                </div>
+
+            </div> <!-- /row -->
+        </div>
+    </div> <!-- /panel -->
+</div>
+
+</form>
+
+<br>
+<br>
+
+
+<div class='container'>
+	<a href={{url_for('.datasets')}}><h4>Return To All Datasets Without Saving...</h4></a>
+</div>
+
+<script>
+
+    $(".reset").click(function() {
+        $(this).closest('form').find("input[type=text], textarea").not( ".no-clear" ).val("");
+        $(this).closest('form').find("select[name=species], textarea").not( ".no-clear" ).val("").change();
+        $(this).closest('form').find("input[name=paired], textarea").attr('checked', false).change();
+
+    });
+
+    $(".default").click(function() {
+        {% if default_dataset %}
+            $(this).closest('form').find("select[name=species], textarea").val("{{default_dataset.species }}").change();
+            $(this).closest('form').find("input[name=paired], textarea").val("{{default_dataset.paired }}").change();
+
+
+            $(this).closest('form').find("input[name=ig_type], textarea").val("{{default_dataset.ig_type | escapejs  }}");
+            $(this).closest('form').find("input[name=experiment_name], textarea").val("{{default_dataset.experiment_name | escapejs }}");
+            $(this).closest('form').find("input[name=cell_types_sequenced], textarea").val("{{default_dataset.cell_types_sequenced | escapejs }}");
+            $(this).closest('form').find("input[name=chain_types_sequenced], textarea").val("{{default_dataset.chain_types_sequenced | escapejs }}");
+            $(this).closest('form').find("input[name=sequencing_submission_number], textarea").val("{{default_dataset.sequencing_submission_number | escapejs }}");
+            $(this).closest('form').find("input[name=contains_rna_seq_data], textarea").val("{{default_dataset.contains_rna_seq_data | escapejs }}");
+            $(this).closest('form').find("input[name=reverse_primer_used_in_rt_step], textarea").val("{{default_dataset.reverse_primer_used_in_rt_step | escapejs }}");
+            $(this).closest('form').find("input[name=pairing_technique], textarea").val("{{default_dataset.pairing_technique | escapejs }}");
+            $(this).closest('form').find("input[name=list_of_polymerases_used], textarea").val("{{default_dataset.list_of_polymerases_used | escapejs }}");
+            $(this).closest('form').find("input[name=sequencing_platform], textarea").val("{{default_dataset.sequencing_platform | escapejs }}");
+            $(this).closest('form').find("input[name=target_reads], textarea").val("{{default_dataset.target_reads | escapejs }}");
+            $(this).closest('form').find("input[name=cell_markers_used], textarea").val("{{default_dataset.cell_markers_used | escapejs }}");
+            $(this).closest('form').find("input[name=cell_selection_kit_name], textarea").val("{{default_dataset.cell_selection_kit_name | escapejs }}");
+            $(this).closest('form').find("input[name=isotypes_sequenced], textarea").val("{{default_dataset.isotypes_sequenced | escapejs }}");
+            $(this).closest('form').find("input[name=post_sequencing_processing_dict], textarea").val("{{default_dataset.post_sequencing_processing_dict | escapejs }}");
+            $(this).closest('form').find("input[name=cell_number], textarea").val("{{default_dataset.cell_number | escapejs }}");
+            $(this).closest('form').find("input[name=primer_set_name], textarea").val("{{default_dataset.primer_set_name | escapejs }}");
+            $(this).closest('form').find("input[name=template_type], textarea").val("{{default_dataset.template_type | escapejs }}");
+            $(this).closest('form').find("input[name=mid_tag], textarea").val("{{default_dataset.mid_tag | escapejs }}");
+            $(this).closest('form').find("input[name=adjuvant], textarea").val("{{default_dataset.adjuvant | escapejs }}");
+            $(this).closest('form').find("input[name=person_who_prepared_library], textarea").val("{{default_dataset.person_who_prepared_library | escapejs }}");
+            $(this).closest('form').find("input[name=lab_notebook_source], textarea").val("{{default_dataset.lab_notebook_source | escapejs }}");
+        {% endif %}
+    });
+
+    $('tbody.accordian-control').on( 'click', 'tr', function () {
+        var parent_accordian = $(this).closest('div')
+
+        var child_accordian = parent_accordian.children('.collapse')
+        child_accordian.collapse('toggle')
+
+        var th = $(this).closest('tbody');
+
+        if ( th.hasClass('shown') ) {
+            th.removeClass('shown');
+        }
+        else {
+            th.addClass('shown');
+
+        }
+    } );
+
+</script>
+
+{%endblock wide_content %}
+
+
+

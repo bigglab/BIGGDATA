@@ -17,17 +17,14 @@ class LoginForm(Form):
 	# first_name = StringField(u'First Name', validators=[validators.input_required()])
 	# last_name  = StringField(u'Last Name', validators=[validators.input_required()])
 	email = StringField('Email', validators=[validators.input_required()])
-	password = PasswordField('password', validators=[validators.input_required()])
-
-
+	password = PasswordField('Password', validators=[validators.input_required()])
 
 class RegistrationForm(Form):
     username = StringField(u'Username', validators=[validators.input_required()])
     first_name = StringField(u'First Name', validators=[validators.input_required()])
     last_name  = StringField(u'Last Name', validators=[validators.input_required()])
     email = StringField('Email', validators=[validators.input_required()])
-    password = PasswordField('password', validators=[validators.input_required()])
-
+    password = PasswordField('Password', validators=[validators.input_required()])
 
 class CreateMixcrAnalysisForm(Form): 
     dataset_id = IntegerField()
@@ -38,7 +35,6 @@ class CreateMixcrAnalysisForm(Form):
     pair_interchain = BooleanField(u'Pair Interchain')
     insert_into_db = BooleanField(u'Insert Into DB')
     cluster = BooleanField(u'Cluster Sequences')
-
 
 class CreateAnalysisForm(Form): 
     dataset_id = IntegerField()
@@ -67,6 +63,8 @@ class FileDownloadForm(Form):
     chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
     paired_partner  = IntegerField()
     dataset_id = IntegerField()
+    dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
+    project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
 
 
 class FileUploadForm(Form):
@@ -75,6 +73,8 @@ class FileUploadForm(Form):
     chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB']), validators=[validators.input_required()])
     paired_partner  = IntegerField()
     dataset_id = IntegerField()
+    dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
+    project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
 
 
 class AssociateFilesToDatasetForm(Form):
@@ -83,23 +83,98 @@ class AssociateFilesToDatasetForm(Form):
     submit = SubmitField()
 
 class CreateDatasetForm(Form):
+    use_as_default = BooleanField('Use These Values as Defaults')
+
+
+    dataset_id = IntegerField()
+
     name = TextField()
     description = TextField()
     paired = BooleanField()
     ig_type = TextField()
-    project  = SelectField(u'Project', choices=[('default', 'Default')], validators=[validators.input_required()])
+    project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
 
+    cell_types_sequenced = TextField('Cell Types Sequenced (Array)')
+    chain_types_sequenced = TextField('Chain Types Sequenced (Array)')
+    primary_data_files_ids = TextField('Primary Data Files Ids (Array)')
 
-    # experiment_id = db.Column(db.Integer, db.ForeignKey('experiment.id'))
-    # files = db.relationship('File', backref='dataset', lazy='dynamic')
-    # sequences = db.relationship('Sequence', backref='dataset', lazy='dynamic')
-    # analyses = db.relationship('Analysis', backref='dataset', lazy='dynamic')
-    # annotations = db.relationship('Annotation', backref='dataset', lazy='dynamic')
+    lab_notebook_source = TextField()
+    sequencing_submission_number = TextField()
+    contains_rna_seq_data = TextField()
+    reverse_primer_used_in_rt_step = TextField()
+    list_of_polymerases_used = TextField()
+    sequencing_platform = TextField()
+    target_reads = TextField()
+    cell_markers_used = TextField()
+    read_access = TextField()
+    owners_of_experiment = TextField()
+    adjuvant = TextField()
+    species = TextField()
+    cell_selection_kit_name = TextField()
+    isotypes_sequenced = TextField()
+    post_sequencing_processing_dict = TextField()
+    sample_preparation_date = TextField()
+    gsaf_barcode = TextField()
+    mid_tag = TextField()
+    cell_number = TextField()
+    primer_set_name = TextField()
+    template_type = TextField()
+    experiment_name = TextField()
+    person_who_prepared_library = TextField()
+    pairing_technique = TextField()
+    json_id = TextField()
+
+class EditDatasetForm(Form):
+    use_as_default = BooleanField('Use These Values as Defaults')
+
+    dataset_id = IntegerField()
+
+    name = TextField()
+    description = TextField()
+    paired = BooleanField()
+    ig_type = TextField()
+
+    cell_types_sequenced = TextField('Cell Types Sequenced (Array)')
+    chain_types_sequenced = TextField('Chain Types Sequenced (Array)')
+    primary_data_files_ids = TextField('Primary Data Files Ids (Array)')
+
+    lab_notebook_source = TextField()
+    sequencing_submission_number = TextField()
+    contains_rna_seq_data = TextField()
+    reverse_primer_used_in_rt_step = TextField()
+    list_of_polymerases_used = TextField()
+    sequencing_platform = TextField()
+    target_reads = TextField()
+    cell_markers_used = TextField()
+    read_access = TextField()
+    owners_of_experiment = TextField()
+    adjuvant = TextField()
+
+    #species = TextField('Species', [validators.length(max=128)])
+    species = SelectField( 'Species', choices=[('', ''), ('H. sapiens', 'H. sapiens'), ('M. musculus', 'M. musculus')] )
+
+    cell_selection_kit_name = TextField()
+    isotypes_sequenced = TextField()
+    post_sequencing_processing_dict = TextField()
+    sample_preparation_date = TextField()
+    gsaf_barcode = TextField()
+    mid_tag = TextField()
+    cell_number = TextField()
+    primer_set_name = TextField()
+    template_type = TextField()
+    experiment_name = TextField()
+    person_who_prepared_library = TextField()
+    pairing_technique = TextField()
+    json_id = TextField()
 
 class ImportSraAsDatasetForm(Form):
     accession = TextField()
     description = TextField()
     chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
+    dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
+    project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
+    
+
 
 class FileEditForm(Form):
     name = TextField('File name', [validators.length(max=256)])
@@ -113,97 +188,15 @@ class CreateProjectForm(Form):
         cell_types_sequenced = TextField('Cell Types Sequenced', [validators.length(max=50)])        
         publications = TextField('Publications', [validators.length(max=256)])
         lab = TextField('Lab', [validators.length(max=128)], default = 'Georgiou')
-        editors = SelectMultipleField('Users Who Can Edit', choices=[('None','None')])
-        viewers = SelectMultipleField('Users Who Can View', choices=[('None','None')])
-        datasets = SelectMultipleField('Add Datasets to Project', choices=[('None','None')])
+        editors = SelectMultipleField('Modify Users Who Can Edit', choices=[('None','None')])
+        viewers = SelectMultipleField('Modify Users Who Can View', choices=[('None','None')])
+        datasets = SelectMultipleField('Add Existing Datasets to Project', choices=[('None','None')])
+
+        file = FileField(u'Add Datasets from JSON File')
+        url = TextField(u'JSON URL')
 
         #species = TextField('Species', [validators.length(max=128)])
         species = SelectField( 'Species', choices=[('', ''), ('H. sapiens', 'H. sapiens'), ('M. musculus', 'M. musculus')] )
-
-        #isotypes_sequenced_a = BooleanField('IgA')
-        #isotypes_sequenced_g = BooleanField('IgG')
-        #isotypes_sequenced_k = BooleanField('IgK')
-        #isotypes_sequenced_l = BooleanField('IgL')
-        #isotypes_sequenced_m = BooleanField('IgM')
-        # experiment_name = db.Column(db.String(256))
-        # experiment_name = TextField('Experiment Name', [validators.required(), validators.length(max=256)])
-        #paired = BooleanField('Paired')
-        # chain_types_heavy = BooleanField('Heavy')
-        # chain_types_heavy = BooleanField('Light')
-        
-        #read_access = db.Column(postgresql.ARRAY(db.String(50)))
-        #mid_tag = TextField('Mid Tag', [validators.required(), validators.length(max=256)])
-
-        # Filenames will become datasets, to be added later
-        # filenames = db.Column(postgresql.ARRAY(db.String(256)))
-
-        #reverse_primer_used_in_rt_step = TextField('Reverse Primer Used in RT Step', [validators.required(), validators.length(max=128)])        
-        #sample_preparation_date = DateField('Sample Preparation Date (mm/dd/yyyy)', default=datetime.today, format='%m/%d/%Y')
-
-        # uploaded_by = db.Column(db.String(128))
-
-        # sequencing_platform = db.Column(db.String(128))
-        # sequencing_platform = TextField('Sequencing Platform', [validators.required(), validators.length(max=128)])
-
-        # seq_count = db.Column(db.Integer())
-        # seq_count = IntegerField('Sequence Count', [validators.required()] )
-
-        # cell_number = db.Column(db.Integer())
-        # cell_number = IntegerField('Cell Number', [validators.required()] )
-        
-        # target_reads = db.Column(db.Integer())
-        # target_reads = IntegerField('Target Reads', [validators.required()] )
-        
-        # template_type = db.Column(db.String(128))
-        # template_type = TextField('Template Type', [validators.required(), validators.length(max=128)])
-
-        # work_order = db.Column(db.String(128))
-        # work_order = TextField('Work Order', [validators.required(), validators.length(max=128)])
-        
-        # gsaf_sample_name = db.Column(db.String(128))
-        # gsaf_sample_name = TextField('GSAF Sample Name',[validators.required(), validators.length(max=128)])
-
-        # cell_selection_kit_name = db.Column(db.String(128))
-        # cell_selection_kit_name = TextField('Cell Selection Kit Name', [validators.required(), validators.length(max=128)])
-        
-        # contains_rna_seq_data = db.Column(db.Boolean, default=False)
-        # contains_rna_seq_data = BooleanField('Contains RNA Sequence DNA', [validators.required()])
-
-        # curated = db.Column(db.Boolean, default=False)
-        # curated = BooleanField('Curated', [validators.required()])
-        
-        # gsaf_barcode = db.Column(db.String(20))
-        # gsaf_barcode = TextField('GSAF Barcode', [validators.required(), validators.length(max=20)])
-
-        # analyses_settings = db.Column(JSON())
-        # how is this populated?
-
-        # lab_notebook_source = db.Column(db.String(128))
-        # lab_notebook_source = TextField('Lab Notebook Source', [validators.required(), validators.length(max=128)])
-        
-        # pairing_technique = db.Column(db.String(128))
-        # pairing_technique = TextField('Pairing Technique', [validators.required(), validators.length(max=128)])
-        
-        # analyses_count = db.Column(JSON())
-        # how is this populated
-
-        # person_who_prepared_library = db.Column(db.String(128))
-        # person_who_prepared_library = TextField('Person Who Prepared Library', [validators.required(), validators.length(max=128)])
-
-        # cell_markers_used = db.Column(postgresql.ARRAY(db.String(100)))
-        # cell_markers_used = TextField('Cell Markers Used', [validators.required(), validators.length(max=128)])
-
-        # list_of_polymerases_used = db.Column(postgresql.ARRAY(db.String(100)))
-        # list_of_polymerases_used = TextField('List of Polymerases Used', [validators.required(), validators.length(max=128)])
-
-        # primer_set_name = db.Column(postgresql.ARRAY(db.String(100)))
-        # primer_set_name = TextField('Primer Set Name', [validators.required(), validators.length(max=128)])
-        
-        # datasets = db.relationship('Dataset', backref='experiment', lazy='dynamic')
-        # use a multiselect for this?
-
-        # establish a relationship to the association table
-        # users = db.relationship('User', secondary = user_experiments, back_populates = 'experiments' )
 
 
 

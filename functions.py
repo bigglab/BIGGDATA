@@ -4,10 +4,6 @@ import json
 
 from models import * 
 
-
-
-
-
 def _modify_function(f):
 	"""A decorator function that replaces the function it wraps with a function that captures all information necessary to call the function again:
 	the function name, its module, and the arguments it was called with. It then sends a POST request to the Immunogrep proxy server with
@@ -35,10 +31,6 @@ def _modify_function(f):
 #			return db_response
 		# return argument_dict
 	return _post_args
-
-
-
-
 
 #--- The flatten dictionary function should be put into some universal ImmunoGrep module, and shouldn't remain here.
 #--- The code is included here for prototyping porpoises.
@@ -104,8 +96,6 @@ def build_exp_from_dict(dict):
                 vetted_k = ''.format(vetted_k, c)
         setattr(ex, k.lower(), v)
     return ex
-
-
 
 def build_annotation_from_mongo_dict(d): 
     d = flatten_dictionary(d)
@@ -393,7 +383,36 @@ def build_annotation_dataframe_from_mixcr_file(file_path, dataset_id=None, analy
     df = df[cols]
     return df 
 
+#####
+#
+# Jinja Custom Filter
+#
+#####
 
+_js_escapes = {
+        '\\': '\\u005C',
+        '\'': '\\u0027',
+        '"': '\\u0022',
+        '>': '\\u003E',
+        '<': '\\u003C',
+        '&': '\\u0026',
+        '=': '\\u003D',
+        '-': '\\u002D',
+        ';': '\\u003B',
+        u'\u2028': '\\u2028',
+        u'\u2029': '\\u2029'
+}
 
+# Escape every ASCII character with a value less than 32.
+_js_escapes.update(('%c' % z, '\\u%04X' % z) for z in xrange(32))
 
+def jinja2_escapejs_filter(value):
+        retval = []
+        for letter in value:
+                if _js_escapes.has_key(letter):
+                        retval.append(_js_escapes[letter])
+                else:
+                        retval.append(letter)
+
+        return jinja2.Markup("".join(retval))
 

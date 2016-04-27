@@ -58,26 +58,106 @@ from forms import *
 from functions import * 
 from models import * 
 
+# 1. DONE Prevent users from adding a dataset named __default__
+# 2. DONE Prevent users from seeing the default when adding projects
+# 3. DONE Prevent users from viewing the default (or redirect them)
+# 4. Don't allow users to run analyses on empty datasets
+# 5. TEST Prepopulate new datasets with default settings: d.populate_with_defaults(current_user)
+# 6. TEST When creating a project for a dataset, get the project species/etc from the dataset
+# 7. TEST vice versa vis a vis #6
+# 8. TEST Update arrays on import from JSON
+# 9. DONE for url uploads. Instantiate files with new default dataset : what are the default dataset defaults?
+# 10. DONE Prevent datatable drop down when link clicked
+# 11. DONE Disable datatable drop down if there are no files
+# 12. DONE Add option for user to save dataset values as defaults
+# 13. TEST No analysis on defaults
+# 14. DONE Replace Pandaseq/MixCr/Annotate with "Add Files"
+# 15. DONE Auto clear form for editing dataset
+# 16. DONE Auto populate form for editing dataset
+# 17. Start using new directory structure with dataset_#
+#       File from URL: DONE
+# 18. STARTED Add dashboard page
+# 19. DONE. Clean up NavBar
+# 20. DONE. Clean up add/upload Files
+#       Upload files: DONE
+#       Add files: DONE (can't test)
+# 21. Clean up files listing
+# 22. Add Celery Task Monitor to Dashboard page
+#       Standardize Celery logging
+# 23. Add single page for running an analysis on a file/dataset
+# 24. Add one-time welcome notice to dashboard page. 
+# 25. Add page describing project/dataset/file concept
+# 26. TEST Clean up import from NCBI Page
+# 27. Add links to datasets on view project page
+
+# Issues:
+# DONE. Download new file not placing the file in the dataset directory.
+# DONE. Download new file placing // in file path.
+# DONE. Remove some of the extra messages on file download response.  
+
+# How to check results from Celery???
+# Check for duplicate directories and files in datastore
+# Add default dataset for each user
+# Automatically link files into a dataset and a project for user 
+#
+# main goal is clustering and outputting mass spec database
+# this code is currently in IGREP
+# clean up UI while doing walkthrough
 # 
-# Dataset notes: only support human and mouse
+# IGREP - biggigrep - public repo on github
+# 
 # Add parameters for PANDASEQ and MIXCR to datasets
 # Figure out how to cascade changes to User/Project/UserProject tables
-# Read up on SQLAlchemy sessions
 #
 # Add public user functionality --> See and example project, etc
-# Add tabs for yours, shared, and read-only 
 #
 # get a list of projects based on a dataset query
 # dataset.project
 # 
-# Make sure usernames are unique
-# Instantiate users with the following directories:
-#   /data/user/raw/original.fastq.gz
-#   /data/user/scratch/ 
-#   /data/user/filtered/
+# NavBar: 
+# Files / Projects / Analyses
+#
+# igfft : can run through celery
+# looks different from mixcr output
+# parse and compare both outputs in a PANDAS panel
+#
+# Native file output
+# TSV
+# Common table
+# Cluster and generate mass spec database
+# 11 clones, 90 reads
+# Need a new clustering software (USEARCH) - FASTA
+# sorted by sequence length
+# name each sequence
+# queue - development
+#
+# Walk throughs - two files, run mixcr
+# 
+# 
 # Make these celery tasks
 # 
-# Add role function for files
+#
+# Check duplicate dataset names in database
+# add dashboard to dashboard route
+# Add glyphicon for adding files
+#
+# Walk-through
+#
+# Dataset 158 10K reads good for analysis
+# in Project 
+#
+# Add link to projects on dataset view. 
+#
+# Add dataset using urls
+# Run an analysis
+#
+# check to make sure all datasets are viewed
+#
+# user can edit any dataset where they can edit the project
+# user can view any dataset where they are a reader of the project
+# 
+
+# Prevent users from running analyses 
 
 projects_blueprint = Blueprint('projects', __name__)
 
@@ -116,7 +196,7 @@ def manage_projects():
     if len(projects) == 0:
         projects = None
 
-    return render_template("manage_projects.html", projects = projects, edit_project_form = edit_project_form)
+    return render_template("manage_projects.html", projects = projects, edit_project_form = edit_project_form, current_user=current_user)
 
 @projects_blueprint.route('/create_project', methods=['GET', 'POST'])
 @login_required
@@ -133,6 +213,7 @@ def create_project():
 
     datasets = Set(current_user.datasets)
     datasets.discard(None)
+    datasets.discard(current_user.default_dataset)
     datasets = sorted(datasets, key=lambda x: x.id, reverse=False)
     dataset_choices = [(str(dataset.id), dataset.name + ' (' + str(dataset.id) + ')' ) for dataset in datasets]
     create_project_form.datasets.choices = dataset_choices # choices should be a tuple (id, username)
@@ -174,11 +255,15 @@ def create_project():
         for dataset in datasets:
             if str(dataset.id) not in create_project_form.datasets.data:
                 dataset_selection.append(dataset)
+
+        if current_user.default_dataset:
+            dataset_selection.append(current_user.default_dataset) 
+
         new_project.datasets = dataset_selection
 
         db.session.add(new_project)
         db.session.flush()
-
+        
         # if the owner set read-only access for users, then we have to update the read-only setting in the association table manually
         if len(user_read_list) > 0:
             db.session.refresh(new_project)
@@ -191,9 +276,24 @@ def create_project():
                 except:
                     print "Error setting read_only attribute for {}".format(user)
 
+        # determine if a JSON was submitted to be added to the project
+        try:
+            if request.files['file'].filename != '':
+                db.session.refresh(new_project)
+
+                request_file = request.files['file']
+                json_string = request_file.read()
+
+                # if this function returns a string, it describes the error
+                error = create_datasets_from_JSON_string(json_string, new_project)
+                if error:
+                    flash(error, 'warning')            
+        except:
+            flash('There was an error in uploading your JSON file.','warning')
+
         db.session.commit()
 
-        flash('Success!!! Your new project has been created.', 'success')
+        flash('Your new project has been created.', 'success')
         return redirect( url_for('projects.manage_projects') )
 
     else:
@@ -205,7 +305,7 @@ def create_project():
     dataset_defaults = [(str(dataset.id)) for dataset in datasets]
     create_project_form.datasets.data = dataset_defaults 
 
-    return render_template("create_project.html", create_project_form = create_project_form)
+    return render_template("create_project.html", create_project_form = create_project_form, current_user=current_user)
 
 @projects_blueprint.route('/edit_project/<project_id>', methods=['GET','POST'])
 @login_required
@@ -245,6 +345,7 @@ def edit_project(project_id):
 
     datasets = Set(current_user.datasets)
     datasets.discard(None)
+    datasets.discard(current_user.default_dataset)
     datasets = sorted(datasets, key=lambda x: x.id, reverse=False)
 
     dataset_choices = [(str(dataset.id), dataset.name + ' (' + str(dataset.id) + ')' ) for dataset in datasets]
@@ -282,7 +383,7 @@ def edit_project(project_id):
             edit_project_form.publications.data = project.publications
             edit_project_form.species.data = project.species
             edit_project_form.lab.data = project.lab 
-            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner)
+            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner, current_user=current_user)
 
         else:
             if edit_project_form.validate_on_submit():
@@ -343,11 +444,29 @@ def edit_project(project_id):
                 project.publications = edit_project_form.publications.data
                 project.species = edit_project_form.species.data
                 project.lab = edit_project_form.lab.data
-                
+
                 db.session.commit()
 
+                # determine if a JSON was submitted to be added to the project
+                try:
+                    if request.files['file'].filename != '':
+
+                        request_file = request.files['file']
+                        json_string = request_file.read()
+
+                        # if this function returns a string, it describes the error
+                        error = create_datasets_from_JSON_string(json_string, project)
+                        if error:
+                            flash(error, 'warning')    
+                        else:
+                            # now, we need to update the list of datasets in the project
+                            db.session.commit()
+                            flash('Success!!! Your new project has been updated.', 'success')
+                            return redirect( url_for('projects.edit_project', project_id = project.id) )
+                except:
+                    flash('There was an error in uploading your JSON file.','warning')
+                
                 flash('Success!!! Your new project has been updated.', 'success')
-                #return redirect( url_for('projects.manage_projects') )
 
                 # painfully redundant, but this will clean up and form issues where there is a double viewer/editor selection:
                 for user in users:
@@ -360,12 +479,12 @@ def edit_project(project_id):
             else:
                 flash_errors(edit_project_form)
 
-            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner)
+            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner, current_user=current_user)
     else:
         flash('Error: the project was not found or you do not have permission to edit the project.', 'warning')
         return redirect( url_for('projects.manage_projects') )
 
-    return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id)
+    return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, current_user=current_user)
 
 @projects_blueprint.route('/view_project/<project_id>', methods=['GET', 'POST'])
 @login_required
@@ -416,6 +535,7 @@ def view_project(project_id):
         owner = owner,
         read_only_list = read_only_list,
         write_user_list = write_user_list,
-        dataset_list = dataset_list)
+        dataset_list = dataset_list, 
+        current_user=current_user)
 
 
