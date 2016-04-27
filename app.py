@@ -363,8 +363,6 @@ def migrate_user_files(self, user_id):
                 print 'Success: Updated file path in database.'
 
     if overall_success:
-        current_user.old_dropbox_path = '' 
-        current_user.old_scratch_path = ''
         db.session.commit()
         print 'Success: All files have been migrated.'
 
