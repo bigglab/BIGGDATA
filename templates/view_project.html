@@ -139,7 +139,7 @@
                         {% else %}
                             <td></td>
                         {% endif %}
-                        <td><a href="{{url_for('frontend.mixcr', dataset_id=dataset.id)}}">MIXCR</a> <a href="{{url_for('frontend.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a></td>
+                        <td><a href="{{url_for('frontend.mixcr', dataset_id=dataset.id)}}">MIXCR</a> <a href="{{url_for('frontend.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a> <a href="{{url_for('frontend.create_analysis', dataset_id=dataset.id)}}">ANNOTATE</a></td>
                     </tr>
                 {% endfor %}
             </tbody>
