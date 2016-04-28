@@ -58,22 +58,32 @@ from forms import *
 from functions import * 
 from models import * 
 
-# 1. DONE Prevent users from adding a dataset named __default__
-# 2. DONE Prevent users from seeing the default when adding projects
-# 3. DONE Prevent users from viewing the default (or redirect them)
+# Find and delete where directory SRR_1 is created
+# Should only create
+# Walk through analyses
+
+# /dataset/analysis/files
+
+# Create analysis - work on the UI 
+# Add Analysis Type and Cluster setting - min, max, and step
+# Auto populate file name on upload page
+
+# Add dataset table to project page
+
+# Dataset Defaults:
+# Human
+# SP: Mi-Seq 2x300
+
+# Check trimming filename failure
+# 
+
+
 # 4. Don't allow users to run analyses on empty datasets
 # 5. TEST Prepopulate new datasets with default settings: d.populate_with_defaults(current_user)
 # 6. TEST When creating a project for a dataset, get the project species/etc from the dataset
 # 7. TEST vice versa vis a vis #6
 # 8. TEST Update arrays on import from JSON
-# 9. DONE for url uploads. Instantiate files with new default dataset : what are the default dataset defaults?
-# 10. DONE Prevent datatable drop down when link clicked
-# 11. DONE Disable datatable drop down if there are no files
-# 12. DONE Add option for user to save dataset values as defaults
 # 13. TEST No analysis on defaults
-# 14. DONE Replace Pandaseq/MixCr/Annotate with "Add Files"
-# 15. DONE Auto clear form for editing dataset
-# 16. DONE Auto populate form for editing dataset
 # 17. Start using new directory structure with dataset_#
 #       File from URL: DONE
 # 18. STARTED Add dashboard page
@@ -87,8 +97,8 @@ from models import *
 # 23. Add single page for running an analysis on a file/dataset
 # 24. Add one-time welcome notice to dashboard page. 
 # 25. Add page describing project/dataset/file concept
-# 26. TEST Clean up import from NCBI Page
-# 27. Add links to datasets on view project page
+# 26. DONE Clean up import from NCBI Page
+# 27. DONE Add links to datasets on view project page
 
 # Issues:
 # DONE. Download new file not placing the file in the dataset directory.
@@ -525,7 +535,7 @@ def view_project(project_id):
     datasets.discard(None)
     datasets = sorted(datasets, key=lambda x: x.id, reverse=False)
 
-    dataset_list = [(dataset.name + ' (' + str(dataset.id) + ')',dataset.owner.name) for dataset in datasets]
+    dataset_list = [(dataset.name + ' (' + str(dataset.id) + ')', dataset.owner.name, dataset.id) for dataset in datasets]
 
     return render_template("view_project.html", 
         view_project_form = view_project_form, 

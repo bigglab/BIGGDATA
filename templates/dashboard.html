@@ -7,6 +7,51 @@
 	<br>
 </div>
 
+{#% if task_log -%#}
+
+<div class="container">
+
+	<div class="row" id="console-container">
+		<div class="col-md-12">
+		    <div class="panel panel-default">
+		        <div class="panel-heading">
+		        	<table width="100%">
+			        	<tbody>
+				        	<tr>
+				        		<td><b>Task Console</b></td>
+				        		<td align="right">
+				        			<a onclick="update_progress()" href="#">
+				        				<span class="pencil glyphicon glyphicon-refresh" style="margin-right: 3px; color:black"></span></a>
+				        			<a onclick="minimize_console()" href="#">
+					        			<span class="pencil glyphicon glyphicon-minus" style="margin-right: 3px; color:black"></span></a>
+				        			<a onclick="maximize_console()" href="#">
+					        			<span class="pencil glyphicon glyphicon-plus" style="color:black"></span></a>
+			        			</td>
+	
+				        	</tr>
+
+			        	</tbody>
+		        	</table>
+	        	</div>
+
+		        <div class="panel-body">
+		        	<samp>
+		        	<div id ="console" class="form-control" style="overflow-y :scroll; overflow-x: wrap; height: 20ex; resize: vertical;" rows="10">
+ 					 	Loading console... <br>
+			        
+		        	</div>
+					</samp>
+				</div>
+
+		</div>
+
+	</div>
+</div>
+
+
+<!-- line-height: 2.5ex; height: 7.5ex; -->
+
+{#%- endif %#}
 
 <div class="row">
 	<div class="col-md-4">
@@ -92,6 +137,78 @@
 </div>
 
 <script>
+
+	var interval = 2500;
+	var status_url ="{{ url_for( 'frontend.json_celery_log' ) }}"
+
+    function maximize_console() {
+    	div = $('#console')
+    	space = window.innerHeight - div.offset().top - 40
+		div.css({ "height" : space });
+
+    }
+
+    function minimize_console() {
+    	div = $('#console')
+    	space = window.innerHeight - div.offset().top - 40
+		div.css({ "height" : "20ex" });
+    }
+
+    function update_progress() {
+
+
+
+		//$('#console-container').css({"bottom":"0", "height" : "100%" });
+
+
+       $.getJSON(status_url, function(data) {
+
+		if ( data['interval'] ){
+
+			if (interval != data['interval']){
+				interval = data['interval']
+		
+				if (timeout){
+				    clearTimeout(timeout);
+				}
+
+				timeout = setTimeout( update_progress , interval); 
+			
+			}
+
+
+		}
+
+			$('#console').html( data['message'] );
+
+		}).error(function(jqXHR, textStatus, errorThrown) {
+	        
+            if (jqXHR.readyState == 0) {  
+		        $('#console').html('There was an error: Could not connect to BIGG Data Server.<br>\n' );
+		    } else {
+		        $('#console').html("There was an error - " + textStatus + ':<br>\n' + jqXHR.responseText);
+		    }
+
+        	// console.log( 'Ready state: ' + jqXHR.readyState)
+        	// console.log( 'Status: ' + jqXHR.status)
+
+         //    if (jqXHR.readyState === 4) {  
+		       //  if (jqXHR.status === 200) {  
+		       //    console.log(jqXHR.responseText)  
+		       //  } else {  
+		       //     console.log("Error", jqXHR.statusText);  
+		       //  }   
+
+	   	});		
+
+		timeout = setTimeout(function() {
+			update_progress();
+		}, interval); 
+
+	};
+
+	update_progress();
+
 $('.mightOverflow').bind('mouseenter', function(){
     var $this = $(this);
 

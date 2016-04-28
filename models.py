@@ -84,14 +84,15 @@ class User(db.Model):
 
         # user paths
         root_path = db.Column(db.String(256))
-        old_dropbox_path = db.Column(db.String(256))
-        old_scratch_path = db.Column(db.String(256))
 
         files = db.relationship('File', backref='user', lazy='dynamic')
         datasets = db.relationship('Dataset', backref='user', lazy='dynamic')
         analyses = db.relationship('Analysis', backref='user', lazy='dynamic')
 
+        celery_tasks = db.relationship('CeleryTask', backref='user', lazy='dynamic', cascade="all, delete-orphan")
+
         projects = association_proxy('user_projects', 'project')
+
 
         @hybrid_property
         def name(self):
@@ -738,6 +739,30 @@ class Experiment(db.Model):
 
         def __repr__(self): 
             return "<  Experiment {}:  {}   :   {}   :   {} >".format(self.id, self.project_name, self.experiment_name, self.seq_count)
+
+class CeleryTask(db.Model):  
+        __tablename__ = 'celery_task'
+
+        id = Column(Integer(), primary_key=True)
+        user_id = Column(Integer(), ForeignKey('user.id'))
+        async_task_id = Column(String(128))
+
+        # Name of the function called
+        name = Column(String(128))
+
+        # The final result returned from a Celery Task
+        result = Column(String(512))
+
+        # Possible values for status include PENDING, STARTED, RETRY, FAILURE, SUCCESS
+        status = Column(String(16))
+        
+        # Might just turn these into hybrid attributes
+        is_complete = Column(Boolean, default=False)
+        failed = Column(Boolean, default=False)
+
+        user_alerted = Column(Boolean, default=False)
+        user_dismissed = Column(Boolean, default=False)
+
 
 ######### 
 

@@ -1,6 +1,7 @@
 #System Imports
 import ast
 import json
+import logging
 import static
 import sys
 import os
@@ -70,13 +71,18 @@ db.app = app
 celery = Celery(app.name, broker='amqp://')
 import celery_config 
 celery.config_from_object('celery_config')
+
 # CELERY QUEUE TO SEND JOBS TO - USE FOR DEVELOPMENT 
-celery_queue = 'default'
+celery_queue = 'dev'
+
+# Add a celery logger.
+# Usage:
+#   logger.info('Your log message here.')
+from celery.utils.log import get_task_logger
+celery_logger = get_task_logger(__name__)
 
 # change celery_queue to anything celery -Q
-# 
 
-# @Dave - temporary edit for local environ
 s3 = boto.connect_s3(app.config['AWSACCESSKEYID'], app.config['AWSSECRETKEY'])
 s3_bucket = s3.get_bucket(app.config['S3_BUCKET'])
 
