@@ -13,7 +13,6 @@ from celery import uuid
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 
-
 import operator
 import ast
 from sets import Set
@@ -26,7 +25,6 @@ import boto
 import math 
 # from filechunkio import FileChunkIO 
 from celery import Celery
-from celery import Task
 from collections import defaultdict, OrderedDict
 import collections
 #Flask Imports
@@ -491,10 +489,11 @@ def file_download(status=[], bucket='', key=''):
         # status.append('Saving File To {}'.format(file.path))
         # status.append('This file will be visible in "My Files", and available for use after the download completes.')
         print status 
+        
         # result_id NOT WORKING - STILL REDUNDANT IF THEY CLICK TWICE!!
         flash_message = ''
         if not 'async_result_id' in session.__dict__:
-            result = download_file.apply_async((file.url, file.path, file.id), queue=celery_queue)
+            result = download_file.apply_async((file.url, file.path, file.id), {'user_id': current_user.id}, queue=celery_queue)
             #flash_message = 'File downloading from {}. '.format(file.url)
             session['async_result_id'] = result.id
         time.sleep(1)
@@ -505,6 +504,8 @@ def file_download(status=[], bucket='', key=''):
         db.session.commit()
         #flash_message = flash_message + 'File uploaded to {}. '.format(file.path)
         #flash(flash_message, 'success')
+        return redirect( url_for('frontend.dashboard') )
+
     else:
         r=''
     return render_template("file_download.html", download_form=form, status=status, r=r, current_user=current_user)
@@ -519,7 +520,6 @@ def transfer_to_s3(file_id):
         db.session.commit()
         result = transfer_file_to_s3.apply_async((f.id,), queue=celery_queue)
         return redirect(url_for('.files'))
-
 
 @frontend.route('/files', methods=['GET', 'POST'])
 @login_required
@@ -1285,145 +1285,12 @@ def import_sra():
             status.append('Import SRA Started for Accession {}'.format(form.accession.data))
             status.append('Once complete, a dataset named {} will automatically be created containing these single or paired-end read files'.format(form.accession.data))
             result = import_from_sra.apply_async((form.accession.data,), {'name': form.accession.data, 'user_id': current_user.id, 'chain':form.chain.data, 'project_selection':form.project.data , 'dataset_selection':form.dataset.data}, queue=celery_queue)
-
+            return redirect( url_for('frontend.dashboard') )
         else: 
             status.append('Accession does not start with SRR or ERR?')
+            return render_template('sra_import.html', status=status, form=form, result=result, current_user=current_user)
 
     return render_template('sra_import.html', status=status, form=form, result=result, current_user=current_user)
-
-from celery.utils.log import get_task_logger
-from celery.utils.log import ColorFormatter
-import logging
-from celery import states
-
-def initiate_celery_task_logger(logger_id, logfile):
-    logger = get_task_logger( logger_id )
-    logger.setLevel(logging.DEBUG)
-    logger.propagate = False
-
-    logger.handers = []
-    handler = logging.FileHandler( logfile )
-    handler.setLevel( logging.INFO )
-
-    formatter = ColorFormatter
-    format = '[%(asctime)s: %(levelname)s] %(message)s'
-    handler.setFormatter( formatter(format, use_color = False) )
-    logger.addHandler(handler)
-
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    format = '%(name)s: %(message)s'
-    stdout_handler.setFormatter(formatter(format, use_color = True) )
-    stdout_handler.setLevel(logging.DEBUG)
-    logger.addHandler(stdout_handler)
-
-    return logger
-
-
-# Base Class used to log celery tasks to the database
-class LogTask(Task):
-    abstract = True
-
-    user_found = False
-    celery_task = None
-    logger = None
-    request_id = None
-
-    def __call__(self, *args, **kw):
-
-        self.celery_task = CeleryTask()
-        logger_id = self.request.id
-        self.request_id = self.request.id
-
-        self.user_found = False
-
-        if 'user_id' in kw:
-            user_id = kw['user_id']
-            celery_logger.debug( 'User Id: {}'.format( user_id ) )
-            user = db.session.query(User).filter_by( id = user_id ).first()
-
-            if user:
-                self.user_found = True
-                logfile = '{}/{}.log'.format( user.scratch_path.rstrip('/') , logger_id )
-                celery_logger.debug( 'Starting log file at {}'.format( logfile ) )
-            else:
-                user_found = False
-                celery_logger.warning( 'Warning({}): User ID ({}) not found. The decorator "log_celery_task" cannot log information without a user_id passed parametrically to the function decorated.'.format(f.func_name, kw['user_id']) )
-                logfile = '/data/logs/{}.log'.format( request_id )
-        else:
-            celery_logger.debug( 'Warning({}): The decorator "log_celery_task" cannot log information without a user_id passed parametrically to the function decorated.'.format(f.func_name) )
-            logfile = '/data/logs/{}.log'.format( request_id )
-
-        logger = initiate_celery_task_logger( logger_id = logger_id , logfile = logfile )
-        self.logger = logger
-
-        # Initiate Database Record
-        if self.user_found:
-            self.celery_task = CeleryTask()
-            self.celery_task.user_id = user_id
-            self.celery_task.name = self.__name__
-            self.celery_task.async_task_id = self.request_id
-            result = celery.AsyncResult(self.request_id)
-            self.celery_task.status = 'STARTED'
-
-            db.session.add(self.celery_task)
-            db.session.commit()
-
-        self.update_state(state='STARTED', meta={ 'status': 'Task Started' })
-
-        return self.run(*args, **kw)
-
-    def on_failure(self, exc, task_id, args, kwargs, einfo): 
-        # Close Database Record
-        if self.user_found:
-            result = celery.AsyncResult(task_id)
-            self.celery_task.status = 'FAILURE'
-            self.celery_task.result = '{}: {}'.format( einfo.type.__name__ , exc ) 
-            self.celery_task.is_complete = True                
-            self.celery_task.failed = True                
-
-            db.session.commit()
-
-    def on_success(self, retval, task_id, args, kwargs):
-        # Close Database Record
-        if self.user_found:
-            result = celery.AsyncResult(task_id)
-            print 'On Success Result Status: {}'.format( result.status )
-            
-            self.celery_task.status = 'SUCCESS'
-            self.celery_task.result = str(retval)
-            self.celery_task.is_complete = True                
-            db.session.commit()
-
-    # def after_return(self, status, retval, task_id, args, kwargs, einfo):
-    #   pass
-
-
-@celery.task(base= LogTask, bind = True)
-def output_celery_log(self, user_id = None):
-
-    print "The Celery Logger is beginning..."
-
-    task_id = self.request.id
-
-    for i in range(1,15):
-        time.sleep(1)
-        # print "Running: {}".format(i)
-        self.logger.info("Running: {}".format(i))
-
-        self.update_state(state='PROGRESS',
-                           meta={'status': 'Running: {}'.format(i) })
-
-
-    self.logger.warning("This is about to end.")
-    self.logger.error("This is over.")
-
-    print "The Celery Logger has ended."
-
-    self.update_state(state='SUCCESS', meta={'status': 'Final status' })
-
-    #THIS = THAT
-
-    return "This task is finished."
 
 @frontend.route('/delete_task/<task_id>', methods=['GET', 'POST'])
 @login_required
@@ -1446,7 +1313,7 @@ def delete_task(task_id):
                 pass
             discard_task = task
 
-    tasks.discard( task )
+    tasks.discard( discard_task )
     current_user.celery_tasks = tasks
     db.session.commit()
 
@@ -1455,6 +1322,7 @@ def delete_task(task_id):
 @frontend.route('/json_celery_log', methods=['GET', 'POST'])
 @login_required
 def json_celery_log():
+
 
     interval = 60000
     tasks = Set(current_user.celery_tasks)
@@ -1469,7 +1337,8 @@ def json_celery_log():
 
         for task in tasks:
             entry = ''
-            task_result = celery.AsyncResult(task.async_task_id)
+
+            async_task_result = celery.AsyncResult(task.async_task_id)
 
             if task.result:
                 task_message = task.result
@@ -1483,10 +1352,14 @@ def json_celery_log():
                 task_heading_color = 'green'
             elif task.status == 'FAILURE':
                 task_heading_color = 'red'
+            else:
+                task_heading_color = 'green'
 
             log_entries = ''
 
             logfile = '{}/{}.log'.format( current_user.scratch_path.rstrip('/') , task.async_task_id )
+
+            async_task_progress = ''
 
             try:
                 with open(logfile) as file:
@@ -1496,32 +1369,108 @@ def json_celery_log():
                             color = 'orange'
                         elif 'ERROR' in line:
                             color = 'red'
-                        log_entries = log_entries + '<font color="{}">{}</font><br>\n'.format( color , line )
+    
+                        if 'PROGRESS' in line:
+                            line_parts = tuple(line.strip().split(']'))
+                            progress_info = tuple(line_parts[1].strip().split(','))
+
+                            try:
+                                async_task_state = 'PROGRESS'
+                                async_task_status = progress_info[1]
+                                async_task_current = progress_info[2]
+                                async_task_total = progress_info[3]
+                                async_task_units = progress_info[4]
+                            except Exception, message:
+                                print "Error: {}".format(message)
+                            else:
+                                if async_task_units == '%':
+                                    progress_message = '{} {} %'.format(async_task_status, async_task_current)
+                                else:
+                                    progress_message = '{} {}/{} {}'.format(async_task_status, async_task_current, async_task_total, async_task_units)
+
+                                try:
+                                    percent = int( float( int(async_task_current) ) / float( int(async_task_total) ) * 100 )
+                                except:
+                                    percent = 0
+
+                                if percent == 100:
+                                    async_task_state = ''
+                                    async_task_current = 0
+                                    async_task_total = 0
+                                    async_task_status = ''
+                                    async_task_units = ''
+                                    async_task_progress = ''
+                                else:
+                                    async_task_progress = """
+                                        <div class="progress" style="position: relative;">
+                                            <div class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="{0}" aria-valuemin="0" aria-valuemax="{1}" style="width:{2}%;"></div>
+                                           <span class = "progress-value" style="position:absolute; right:0; left:0; width:100%; text-align:center; z-index:2; color:black;">{3}</span>
+                                        </div>
+                                    """.format(  async_task_current, async_task_total, percent, progress_message)
+
+                        else:
+                            log_entries = log_entries + '<font color="{}">{}</font><br>\n'.format( color , line )
             except:
                 pass
 
             if log_entries == '':
                 log_entries = '<br>\n'
 
+            # Check for any ongoing progress from a task
+            # If there is progress, add a progress bar!
+
+            if async_task_progress != '' and task.status != 'DOWNLOADING' and task.status != 'SUCCESS' and task.status != 'FAILURE' and async_task_result.state == 'PROGRESS':
+                try:
+                    async_task_state = async_task_result.state
+                    async_task_current = async_task_result.info.get('current')
+                    async_task_total = async_task_result.info.get('total')
+                    async_task_status = async_task_result.info.get('status')
+                    async_task_units = async_task_result.info.get('units')
+
+
+
+                except Exception, exception: 
+                    print 'There was an error in getting the task progress: {}'.format(exception)
+                else:
+                    #async_task_progress = """[{}] {}: {}/{} {}<br>\n""".format( async_task_state, async_task_status, async_task_current, async_task_total, async_task_units)
+                    if async_task_units == '%':
+                        progress_message = '{} {} %'.format(async_task_status, async_task_current)
+                    else:
+                        progress_message = '{} {}/{} {}'.format(async_task_status, async_task_current, async_task_total, async_task_units)
+
+                    try:
+                        percent = int( float( int(async_task_current) ) / float( int(async_task_total) ) * 100 )
+                    except:
+                        percent = 0
+
+                    async_task_progress = """
+                        <div class="progress" style="position: relative;">
+                            <div class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="{0}" aria-valuemin="0" aria-valuemax="{1}" style="width:{2}%;"></div>
+                           <span class = "progress-value" style="position:absolute; right:0; left:0; width:100%; text-align:center; z-index:2; color:black;">{3}</span>
+                        </div>
+                    """.format(  async_task_current, async_task_total, percent, progress_message)
+
+
             entry = """
             <table width="100%">
                 <tbody>
                     <tr>
                         <td><font color="{}">[Task {} ({}) - {}] {}</font><br>
-                        {}</td>
+                        {}{}</td>
                         <td align="right" valign="top">[<a href="{}">X</a>]</td>
                     </tr>
                 </tbody>
             </table>
-            <br>""".format( task_heading_color , task.id, task.name , task.status, task_message , log_entries , url_for( 'frontend.delete_task', task_id = task.id )  )
+            <br>""".format( task_heading_color , task.id, task.name , task.status, task_message , log_entries, async_task_progress , url_for( 'frontend.delete_task', task_id = task.id )  )
 
             message = message + entry
+
     else:
         message = """
             <table width="100%">
                 <tbody>
                     <tr>
-                        <td>There are no tasks running at this time. (Checking again in 60 s...)</td>
+                        <td>There are no tasks running at this time. (Checking again in <span id="interval">60</span> s...)</td>
                         
                     </tr>
                 </tbody>
@@ -1541,6 +1490,8 @@ def json_celery_log():
         'total': 1
      }  # this is the exception raised
 
+
+
     return jsonify( response )
 
 from flask import Markup
@@ -1552,216 +1503,14 @@ def test_celery_log():
 
     message = Markup('<a href="{}">Test Again</a>.'.format( url_for('frontend.test_celery_log') ) )
     flash(message , 'success' )
-    
+
+    time.sleep(3)    
     return redirect( url_for('frontend.dashboard') )
 
     # Here in task:
     self.update_state(state='PROGRESS',
                         meta={ 'current': i, 'total': total, 'status': message} )
 
-# @frontend.route('/status/<task_id>')
-# def taskstatus(task_id):
-#     task = long_task.AsyncResult(task_id)
-#     if task.state == 'PENDING':
-#         response = {
-#             'state': task.state,
-#             'current': 0,
-#             'total': 1,
-#             'status': 'Pending...'
-#         }
-#     elif task.state != 'FAILURE':
-#         response = {
-#             'state': task.state,
-#             'current': task.info.get('current', 0),
-#             'total': task.info.get('total', 1),
-#             'status': task.info.get('status', '')
-#         }
-#         if 'result' in task.info:
-#             response['result'] = task.info['result']
-#     else:
-#         # something went wrong in the background job
-#         response = {
-#             'state': task.state,
-#             'current': 1,
-#             'total': 1,
-#             'status': str(task.info),  # this is the exception raised
-#         }
-#     return jsonify(response)
 
-            #print '[{}]'.format( task.async_task_id)
-            #print '----- Database -----'
-            #print 'Status: {} '.format( task.status )
-            #print 'Result: {} '.format( task.status  )
-            #print '----- Celery -----'
-            #print 'Status: {}'.format(task_result.status)
-            #if task_result.info:
-            #    print 'Status Message'.format( task_result.info )
-
-                # print 'Status Message'.format( task_result.info.get('status', '') )
-            #print 'Result: {}'.format( task_result.result )
-
-
-            # message = message +  \
-            #     "[{} - {}]".format( task.async_task_id , task_result.status )
-            # if task_result.info:
-            #     message = message + ' Status: {} <br>\n'.format( task.status )
-
-            # if task_result.status == 'PENDING':
-            #     tasks_pending = True
-
-            # if task_result.status == 'SUCCESS' and task_result.result:
-            #     message = message + ' Result: {} <br>\n'.format( task_result.result )
-
-# Decorator to log a celery task for a user
-# This decorator will not work unless user_id is passed parametrically to the function being called
-# def log_celery_task(f):
-#     """Instantiate a logger at the asynchronous task level."""
-#     def wrapper(*args, **kw):
-
-#         celery_task = CeleryTask()
-#         logger_id = args[0].request.id
-#         request_id = args[0].request.id
-
-#         user_found = False
-
-#         if 'user_id' in kw:
-#             user_id = kw['user_id']
-#             celery_logger.debug( 'User Id: {}'.format( user_id ) )
-#             user = db.session.query(User).filter_by( id = user_id ).first()
-
-#             if user:
-#                 self.user_found = True
-#                 logfile = '{}/{}.log'.format( user.scratch_path.rstrip('/') , logger_id )
-#                 celery_logger.info( 'Starting log file at {}'.format( logfile ) )
-#             else:
-#                 user_found = False
-#                 celery_logger.warning( 'Warning({}): User ID ({}) not found. The decorator "log_celery_task" cannot log information without a user_id passed parametrically to the function decorated.'.format(f.func_name, kw['user_id']) )
-#                 logfile = '/data/logs/{}.log'.format( request_id )
-#         else:
-#             celery_logger.debug( 'Warning({}): The decorator "log_celery_task" cannot log information without a user_id passed parametrically to the function decorated.'.format(f.func_name) )
-#             logfile = '/data/logs/{}.log'.format( request_id )
-
-#         logger = initiate_celery_task_logger( logger_id = logger_id , logfile = logfile )
-#         f.func_globals['logger'] = logger
-
-#         # Initiate Database Record
-#         if self.user_found:
-#             celery_task = CeleryTask()
-#             celery_task.user_id = user_id
-#             celery_task.async_task_id = request_id
-            
-#             result = celery.AsyncResult(request_id)
-#             celery_task.status = result.status
-
-
-#             db.session.add(celery_task)
-#             db.session.commit()
-
-#         try:
-#             response = f(*args, **kw)
-#         except:
-#             # Close Database Record
-#             if user_found:
-#                 result = celery.AsyncResult(request_id)
-#                 celery_task.status = result.status
-#                 if 'exc_message' in celery_task.result and 'exc_type' in celery_task.result:
-#                     celery_task.result = 'Exception: {} - {}'.format( celery_task.result['exc_type'] , celery_task.result['exc_message'] )
-#                 elif 'exc_message' in celery_task.result:
-#                     celery_task.result = 'Exception - {}'.format( celery_task.result['exc_message'] )
-#                 else:
-#                      celery_task.result = str(response)
-                   
-#                 celery_task.is_complete = True
-#                 celery_task.failed = True
-#                 db.session.commit()
-#             raise 
-#         else:
-#             # Close Database Record
-#             if user_found:
-
-#                 result = celery.AsyncResult(request_id)
-#                 celery_task.status = result.status
-#                 celery_task.result = str(response)
-#                 celery_task.is_complete = True                
-#                 db.session.commit()
-
-#         return response
-#     return wrapper
-
-#@log_celery_task
-
-# @frontend.route('/json_celery_status/<task_id>', methods=['GET', 'POST'])
-# @login_required
-# def json_celery_status(task_id):
-
-#     task = long_task.AsyncResult(task_id)
-
-#     if task.state == 'PENDING':
-#        response = {
-#             'state': task.state,
-#             'current': 0,
-#             'total': 1,
-#             'status': 'Pending...' }
-#     elif task.state != 'FAILURE':
-#         response = {
-#             'state': task.state,
-#             'current': task.info.get('current', 0),
-#             'total': task.info.get('total', 1),
-#             'status': task.info.get('status', '') }
-#     else:
-#         # something went wrong in the background job
-#         response = {
-#             'state': task.state,
-#             'current': 1,
-#             'total': 1,
-#             'status': str(task.info) }  # this is the exception raised
-
-#     return flask.jsonify( response )
-
-
-# There in response:
-    # task = long_task.AsyncResult(task_id)
-    # if task.state == 'PENDING':
-    #     // job did not start yet
-    #     response = {
-    #         'state': task.state,
-    #         'current': 0,
-    #         'total': 1,
-    #         'status': 'Pending...'
-    #     }
-    # elif task.state != 'FAILURE':
-    #     response = {
-    #         'state': task.state,
-    #         'current': task.info.get('current', 0),
-    #         'total': task.info.get('total', 1),
-    #         'status': task.info.get('status', '')
-    #     }
-
-
-    # UPDATE
-    # logger = celery_logger.get_task_logger( logfile = "/data/test.log")
-    # USE A SEPARATE LOG FOR EACH USER
-    # scratch/dataset/analysis
-
-    # to access the id of this task, use:
-
-    # print celery.AsyncResult.id
-    # test = AsyncResult(id=self.uuid, task_name=self.task_name)
-    # print "This might be it:"
-    # print celery_logger.request.id
-    # print self.request.id
-
-    # print "\n\n\n"
-
-    #if result:
-    #   flash('Success: Celery test initiated. ID: {}'.format(result.id),'success')
-
-    #flash(, 'success')
-
-
-    #task_id = uuid()
-    #logfile = "{}/{}.log".format( current_user.scratch_path.rstrip('/') , task_id )
-    #print "My task ID:"
-    #print task_id
  
 

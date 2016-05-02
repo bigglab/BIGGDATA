@@ -20,7 +20,7 @@
 				        	<tr>
 				        		<td><b>Task Console</b></td>
 				        		<td align="right">
-				        			<a onclick="update_progress()" href="#">
+				        			<a onclick="refresh_console()" href="#">
 				        				<span class="pencil glyphicon glyphicon-refresh" style="margin-right: 3px; color:black"></span></a>
 				        			<a onclick="minimize_console()" href="#">
 					        			<span class="pencil glyphicon glyphicon-minus" style="margin-right: 3px; color:black"></span></a>
@@ -140,11 +140,16 @@
 
 	var interval = 2500;
 	var status_url ="{{ url_for( 'frontend.json_celery_log' ) }}"
+	var new_interval = 2500;
+	var set_new_interval = false;	
 
     function maximize_console() {
     	div = $('#console')
     	space = window.innerHeight - div.offset().top - 40
 		div.css({ "height" : space });
+		set_new_interval = true;
+		new_interval = 5000;
+		update_progress();
 
     }
 
@@ -152,10 +157,18 @@
     	div = $('#console')
     	space = window.innerHeight - div.offset().top - 40
 		div.css({ "height" : "20ex" });
+
     }
 
-    function update_progress() {
+    function refresh_console() {
+		set_new_interval = true;
+    	new_interval = 5000;
+		update_progress();
 
+    }
+
+
+    function update_progress() {
 
 
 		//$('#console-container').css({"bottom":"0", "height" : "100%" });
@@ -179,7 +192,22 @@
 
 		}
 
+		if (set_new_interval){
+			interval = new_interval;
+
+			if (timeout){
+			    clearTimeout(timeout);
+			}
+
+			timeout = setTimeout( update_progress , interval); 
+
+			set_new_interval = false;
+		}
+
+			$('#inteval').html( data['message'] );
+
 			$('#console').html( data['message'] );
+			$('#interval').html( interval/1000 );
 
 		}).error(function(jqXHR, textStatus, errorThrown) {
 	        

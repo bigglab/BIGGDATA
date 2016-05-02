@@ -58,6 +58,10 @@ from forms import *
 from functions import * 
 from models import * 
 
+
+# /data/resources : all software
+# /data/resources/germlines : files reffed by system
+
 # Find and delete where directory SRR_1 is created
 # Should only create
 # Walk through analyses

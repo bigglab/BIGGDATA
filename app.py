@@ -10,6 +10,12 @@ import time
 import random
 from shutil import copyfile
 import operator
+import datetime as dt
+
+import shlex
+import subprocess
+from StringIO import StringIO
+
 # import urllib
 os.environ['http_proxy']=''
 import urllib2
@@ -18,8 +24,10 @@ import subprocess
 import boto 
 import math 
 # from filechunkio import FileChunkIO 
-from celery import Celery, states
+from celery import Celery, Task, states
 from celery.exceptions import Ignore
+from celery.utils.log import get_task_logger, ColorFormatter
+
 from collections import defaultdict, OrderedDict
 import collections
 #Flask Imports
@@ -78,7 +86,6 @@ celery_queue = 'dev'
 # Add a celery logger.
 # Usage:
 #   logger.info('Your log message here.')
-from celery.utils.log import get_task_logger
 celery_logger = get_task_logger(__name__)
 
 # change celery_queue to anything celery -Q
@@ -154,6 +161,156 @@ def unauthorized():
     gif_path=retrieve_golden()
     flash('You must login or register to view that page.','success')
     return redirect( url_for('frontend.login') )
+
+
+
+
+def initiate_celery_task_logger(logger_id, logfile):
+    logger = get_task_logger( logger_id )
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = False
+
+    logger.handers = []
+    handler = logging.FileHandler( logfile )
+    handler.setLevel( logging.INFO )
+
+    formatter = ColorFormatter
+    format = '[%(asctime)s: %(levelname)s] %(message)s'
+    handler.setFormatter( formatter(format, use_color = False) )
+    logger.addHandler(handler)
+
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    format = '%(name)s: %(message)s'
+    stdout_handler.setFormatter(formatter(format, use_color = True) )
+    stdout_handler.setLevel(logging.DEBUG)
+    logger.addHandler(stdout_handler)
+
+    return logger
+
+# Base Class used to log celery tasks to the database
+class LogTask(Task):
+    abstract = True
+
+    user_found = False
+    celery_task = None
+    logger = None
+    request_id = None
+
+    def __call__(self, *args, **kw):
+
+        self.celery_task = CeleryTask()
+        logger_id = self.request.id
+        self.request_id = self.request.id
+
+        self.user_found = False
+
+        if 'user_id' in kw:
+            user_id = kw['user_id']
+            celery_logger.debug( 'User Id: {}'.format( user_id ) )
+            
+            try:
+                user = db.session.query(User).filter_by( id = user_id ).first()
+            except:
+                time.sleep(1)
+                user = db.session.query(User).filter_by( id = user_id ).first()
+
+            if user:
+                self.user_found = True
+                logfile = '{}/{}.log'.format( user.scratch_path.rstrip('/') , logger_id )
+                celery_logger.debug( 'Starting log file at {}'.format( logfile ) )
+            else:
+                user_found = False
+                celery_logger.warning( 'Warning({}): User ID ({}) not found. The decorator "log_celery_task" cannot log information without a user_id passed parametrically to the function decorated.'.format(f.func_name, kw['user_id']) )
+                logfile = '/data/logs/{}.log'.format( request_id )
+        else:
+            celery_logger.warning( 'Warning({}): The decorator "log_celery_task" cannot log information without a user_id passed parametrically to the function decorated.'.format(self.__class__.__name__) )
+            logfile = '/data/logs/{}.log'.format( self.request_id )
+
+        logger = initiate_celery_task_logger( logger_id = logger_id , logfile = logfile )
+        self.logger = logger
+
+        # Initiate Database Record
+        if self.user_found:
+            self.celery_task = CeleryTask()
+            self.celery_task.user_id = user_id
+            self.celery_task.name = self.__name__
+            self.celery_task.async_task_id = self.request_id
+            result = celery.AsyncResult(self.request_id)
+            self.celery_task.status = 'STARTED'
+
+            db.session.add(self.celery_task)
+            db.session.commit()
+
+        self.update_state(state='STARTED', meta={ 'status': 'Task Started' })
+
+        return self.run(*args, **kw)
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo): 
+
+        # Close Database Record
+        if self.user_found:
+
+            exception_type_name = einfo.type.__name__
+
+            if exception_type_name == 'Exception':
+                exception_type_name = 'Error'
+
+            result = celery.AsyncResult(task_id)
+            self.celery_task.status = 'FAILURE'
+            self.celery_task.result = '{}: {}'.format( exception_type_name , exc ) 
+            self.celery_task.is_complete = True                
+            self.celery_task.failed = True                
+
+            db.session.commit()
+
+    def on_success(self, retval, task_id, args, kwargs):
+        # Close Database Record
+        if self.user_found:
+            result = celery.AsyncResult(task_id)
+            print 'On Success Result Status: {}'.format( result.status )
+            
+            self.celery_task.status = 'SUCCESS'
+            self.celery_task.result = str(retval)
+            self.celery_task.is_complete = True                
+            db.session.commit()
+
+    # def after_return(self, status, retval, task_id, args, kwargs, einfo):
+    #   pass
+
+@celery.task(base= LogTask, bind = True)
+def output_celery_log(self, user_id = None):
+
+    print "The Celery Logger is beginning..."
+
+    # Can test exceptions with this line
+    # raise Exception('Something went south!!!')
+
+    task_id = self.request.id
+
+    self.logger.info("Beginning count...")
+
+
+    for i in range(1,15):
+        time.sleep(2)
+        print "Running: {}".format(i)
+        #self.logger.info("Running: {}".format(i))
+
+        self.update_state(state='PROGRESS', 
+                meta={'status': 'Counting', 'current' : str(i), 'total' : str( 15 ), 'units' : '' })
+
+        # self.update_state(state='PROGRESS',
+        #                    meta={'status': 'Running: {}'.format(i) })
+
+    self.logger.info("Count finished.")
+
+    self.logger.warning("This is about to end.")
+    self.logger.error("This is over.")
+
+    print "The Celery Logger has ended."
+
+    self.update_state(state='SUCCESS', meta={'status': 'Final status' })
+
+    return "This task is finished."
 
 def get_filepaths(directory_path):
     file_paths = []
@@ -274,125 +431,24 @@ def instantiate_user_with_directories(new_user_id):
     except ValueError, error:
         return 'Warning: unable to copy sample files into user\'s dropbox: {}'.format(error)
 
-@celery.task(bind = True)
-def migrate_user_files(self, user_id):
-    current_user = db.session.query(User).filter(User.id==user_id).first()
+@celery.task(base= LogTask, bind = True)
+def transfer_file_to_s3(self, file_id, user_id = None):
+    logger = self.logger
 
-    # First, synchronously instantiate user directories, if they do not exist
-    directories_needed = False
-
-    for path in current_user.all_paths:
-        if not os.path.isdir(path):
-            directories_needed = True
-            #.apply_async((current_user.id, ), queue=celery_queue)
-
-    if directories_needed:
-        result = instantiate_user_with_directories(current_user.id)
-
-        if result: # anything but false is an error:
-            print "Error instantiating new user directories: {}".format(result)
-
-    # need a better way of updating users if the new directory creation fails...
-    files = current_user.files
-
-    overall_success = True
-
-    for file in files:
-        file_path = file.path
-
-        if current_user.root_path not in file_path: # this means the file has not been moved yet...
-
-            file_path = file_path.replace('//', '/')
-            source_path, filename = os.path.split(file_path)
-            extended_path = source_path.replace(current_user.old_scratch_path, '')
-            extended_path = extended_path.replace(current_user.scratch_path, '') # just in case the original is already correct
-
-            destination_path = current_user.scratch_path + extended_path
-            destination_path = destination_path.replace('//', '/')
-
-            source_filename = source_path + '/' + filename
-            destination_filename = destination_path + '/'+ filename
-            destination_filename = destination_filename.replace('//', '/')
-
-            # first make the source and destination file paths
-            try:
-                if not os.path.isdir(source_path):
-                    os.makedirs(source_path)
-            except OSError, e:
-                if e.errno != errno.EEXIST:
-                    raise
-
-            try:
-                if not os.path.isdir(destination_path):
-                    os.makedirs(destination_path)
-            except OSError, e:
-                if e.errno != errno.EEXIST:
-                    raise
-
-            copy_success = False
-
-            try:
-                message = 'Copying {} to {}'.format(source_filename, destination_filename)
-                self.update_state(state = states.STARTED, meta={'status': message})
-
-                if not os.access(source_path, os.R_OK):
-                    print "Error: source path '{}' not readable.".format(source_path)
-                    overall_success = False
-                else:
-                    if not os.path.isfile(source_filename):
-                        print "Warning: source file '{}' not found.".format(source_filename)
-                        overall_success = False
-
-                    elif not os.path.isdir(destination_path):
-                        print "Error: destination path '{}' not found.".format(destination_path)
-                        overall_success = False
-
-                    elif not os.access(destination_path, os.W_OK):
-                        print "Error: destination path '{}' not writable.".format(destination_path)
-                        overall_success = False
-
-                    elif os.path.isfile(destination_filename):
-                        print "Warning: destination filename '{}' already exists.".format(destination_filename) 
-                        copy_success = True
-                    else:
-                        copyfile(source_filename, destination_filename)
-                        print 'Finished copying {} to {}'.format(source_filename, destination_filename)
-                        copy_success = True 
-
-            except ValueError, error:
-                print "Error: Unable to copy file: {}.".format(error)
-                overall_success = False
-
-            if copy_success:
-                file.path = destination_filename
-                db.session.commit()
-                print 'Success: Updated file path in database.'
-
-    if overall_success:
-        current_user.old_dropbox_path = '' 
-        current_user.old_scratch_path = ''
-        db.session.commit()
-        print 'Success: All files have been migrated.'
-
-
-    return False 
-
-@celery.task
-def transfer_file_to_s3(file_id): 
     f = db.session.query(File).filter(File.id==file_id).first()
     if not f: 
-        return False 
+        raise Exception( "File with ID ({}) not found.".format(file_id) )
     else: 
         if f.path:
             if f.s3_path: 
-                print 'transferring file from {} to {}'.format(f.path, f.s3_path)
+                logger.info ('Transferring file from {} to {}'.format(f.path, f.s3_path) )
             else: 
                 f.s3_path = '{}'.format(f.path)
-                print 'transferring file from {} to s3://{}/{}'.format(f.path, app.config['S3_BUCKET'], f.s3_path)
+                logger.info( 'Transferring file from {} to s3://{}/{}'.format(f.path, app.config['S3_BUCKET'], f.s3_path) ) 
                 f.s3_status = 'Staging'
                 db.session.commit()
         file_size = os.stat(f.path).st_size
-        print 'starting transfer of {} byte file'.format(file_size)
+        logger.info ( 'starting transfer of {} byte file'.format(file_size) )
         def cb(complete, total): 
             f.s3_status = 'Transferred {} of {} bytes'.format(complete, total)
             db.session.commit()
@@ -401,8 +457,7 @@ def transfer_file_to_s3(file_id):
         key.set_canned_acl('public-read')
         f.s3_status = "AVAILABLE"
         db.session.commit()
-        print "Transfer complete. {} bytes transferred from {}  to  {}".format(result, f.path, f.s3_path)
-        return True 
+        return "Transfer complete. {} bytes transferred from {}  to  {}".format(result, f.path, f.s3_path)
 
 def get_user_dataset_dict(user): 
     datadict = OrderedDict()
@@ -411,13 +466,13 @@ def get_user_dataset_dict(user):
             datadict[dataset] = sorted(dataset.files.all(), key=lambda x: x.file_type)
     return datadict
 
-@celery.task 
-def import_from_sra(accession, name=None, user_id=57, chain=None, project_selection = None, dataset_selection = None):
+@celery.task(base= LogTask, bind = True)
+def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_selection = None, dataset_selection = None):
+    logger = self.logger
     user = db.session.query(User).filter(User.id==user_id).first()
 
     if not user:
-        print "Unable to find user with id {}.".format(user_id)
-        return False
+        raise Exception( "Unable to find user with id {}.".format(user_id) )
 
     # load projects and datasets
     # set the dataset options
@@ -430,7 +485,6 @@ def import_from_sra(accession, name=None, user_id=57, chain=None, project_select
     projects = Set(user.projects)
     projects.discard(None)
     projects = sorted(projects, key=lambda x: x.id, reverse=True)
-
 
     # check if the user has selected the default project (i.e., the user has no projects)
     file_dataset = None
@@ -445,7 +499,7 @@ def import_from_sra(accession, name=None, user_id=57, chain=None, project_select
         new_dataset.name = accession + '_' + str(new_dataset.id)
         new_dataset.directory = "{}/{}".format(user.scratch_path.rstrip('/') , new_dataset.name)
         file_dataset = new_dataset
-        print 'New file will be added to dataset "{}".'.format(new_dataset.name)
+        logger.info( 'New file will be added to dataset "{}".'.format(new_dataset.name) )
         db.session.commit()
 
     else: # check if the user has selected a project which they have access to
@@ -459,7 +513,7 @@ def import_from_sra(accession, name=None, user_id=57, chain=None, project_select
                 #     d.cell_types_sequenced = [str(project.cell_types_sequenced)]
                 #     d.species = project.species
         if not user_has_permission:
-            print 'Error: you do not have permission to add a file to that dataset.'
+            logger.error( 'You do not have permission to add a file to dataset ({}).'.format(dataset_selection) )
     db.session.commit()
 
 
@@ -496,7 +550,7 @@ def import_from_sra(accession, name=None, user_id=57, chain=None, project_select
 
                         db.session.commit()
             if not user_has_permission:
-                print 'Error: you do not have permission to add a dataset to that project.'
+                logger.error( 'Error: you do not have permission to add a dataset to that project ({}).'.format( project_selection ) )
             db.session.commit()        
 
     if not name: 
@@ -513,21 +567,28 @@ def import_from_sra(accession, name=None, user_id=57, chain=None, project_select
             user.scratch_path.rstrip('/'), 
             accession)
 
-#####
     # check if the file path we settled on is available.
     directory = os.path.dirname(path)
-    if not os.path.exists(directory): 
+    if not os.path.exists(directory):
+        logger.info( 'Creating directory {}'.format(directory) ) 
         os.makedirs(directory)
 
     if os.path.isfile(path):
         path = os.path.splitext(path)[0] + '_1' + os.path.splitext(path)[1]
 
-#####
+    logger.info( 'Fetching SRA data from NCBI {}'.format(accession) )
+    command = "fastq-dump --gzip --defline-qual '+' --split-files -T -F --outdir {} {}".format(directory, accession)
+    
+    logger.info( command ) 
+    # response = os.system(command)
+    command_line_args = shlex.split(command)
+    process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT )
+    response, error = process.communicate()
 
-    print 'Fetching SRA data from NCBI {}'.format(accession)
-    command = "fastq-dump --gzip --defline-qual '+' --split-files -T -F --outdir {} {}".format(directory, accession) 
-    response = os.system(command)
-    if response == 0: 
+    for line in response.splitlines():
+        logger.info( line )
+
+    if error == None: 
         file_paths = []
 
         dirs = os.listdir('{}/{}'.format(directory, accession))
@@ -538,24 +599,22 @@ def import_from_sra(accession, name=None, user_id=57, chain=None, project_select
             file_paths = ['{}/{}/1/fastq.gz'.format(directory, accession), '{}/{}/2/fastq.gz'.format(directory, accession)]
             filename_array = ['{}.R1.fastq.gz'.format(accession), '{}.R2.fastq.gz'.format(accession)]
         else: 
-            print 'Number of files from SRA export not one or two...'
-            return False 
-        print 'Writing sra output files to {}'.format(directory)
-        dataset = import_files_as_dataset(file_paths, filename_array=filename_array, user_id=user_id, name=name, chain=chain, dataset = file_dataset)
-        print 'Dataset from SRA Accession {} created for user {}'.format(accession, user.username) 
-        return True
-    else: 
-        print 'SRA IMPORT DID NOT SUCCEED'
-        return False
+            raise Exception( 'Number of files from SRA export not one or two...' )
+        logger.info( 'Writing sra output files to {}'.format(directory) )
+        dataset = import_files_as_dataset(file_paths, filename_array=filename_array, user_id=user_id, name=name, chain=chain, dataset = file_dataset, logger = logger)
+        logger.info( 'SRA import complete.' )
 
-@celery.task 
-def import_files_as_dataset(filepath_array, user_id, filename_array=None, chain=None, name=None, dataset = None):
+        return 'Dataset from SRA Accession {} created for user {}'.format(accession, user.username) 
+    else: 
+        raise Exception( 'fastq-dump command failed:'.format(error) )
+
+@celery.task( bind = True ) 
+def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, chain=None, name=None, dataset = None, logger = celery_logger):
     
     current_user = db.session.query(User).filter(User.id==user_id).first()
 
     if not current_user:
-        print "Error: user with id {} not found.".format(user_id)
-        return False
+        raise Exception( "Error: user with id {} not found.".format(user_id) )
 
     if not dataset:
         d = Dataset()
@@ -574,10 +633,13 @@ def import_files_as_dataset(filepath_array, user_id, filename_array=None, chain=
         db.session.commit()
 
     if not os.path.exists(d.directory):
+        logger.info('Making directory {}'.format( d.directory ) )
         os.makedirs(d.directory)
     db.session.commit()
 
     files = []
+    file_str = ''
+    file_count = 0
     for index, filepath in enumerate(filepath_array):
         f = File()
         f.user_id = user_id 
@@ -585,7 +647,8 @@ def import_files_as_dataset(filepath_array, user_id, filename_array=None, chain=
             f.name = filename_array[index]
         else:
             f.name = filepath.split('/')[-1]
-        f.file_type = parse_file_ext(f.name) 
+        f.file_type = parse_file_ext(f.name)
+        file_str = file_str + ', ' + f.name 
         f.dataset_id = d.id
         # description = 
         f.available = True
@@ -604,35 +667,65 @@ def import_files_as_dataset(filepath_array, user_id, filename_array=None, chain=
         # parent_id = db.Column(db.Integer, db.ForeignKey('file.id'))
         # analysis_id = db.Column(db.Integer, db.ForeignKey('analysis.id'))
         files.append(f)
-    for f in files: 
         db.session.add(f)
+
+#    for f in files: 
+#        db.session.add(f)
+
     db.session.commit()
     d.primary_data_files_ids = map(lambda f: f.id, files)
     db.session.commit()
-    return True 
+    file_str.lstrip(', ')
+    return '{} files were added to Dataset {} (): {}'.format( file_count, d.id, d.directory, file_str ) 
 
-@celery.task
-def download_file(url, path, file_id):
-    print 'Using urllib2 to download file from {}'.format(url)
+@celery.task(base= LogTask, bind = True)
+def download_file(self, url, path, file_id, user_id = None):
+    logger = self.logger
+
+    logger.info ( 'Downloading file from: {}'.format(url) )
 
     # check if the directory for the file exists. If not, make the directory path with makedirs
     directory = os.path.dirname(path)
     if not os.path.exists(directory): 
+        logger.info ( 'Creating directory: {}'.format(directory) )
         os.makedirs(directory)
 
+    logger.info ( 'Downloading file to directory: {}'.format(directory) )
+
+    # try : ftp://ftp.ddbj.nig.ac.jp/ddbj_database/dra/fastq/SRA143/SRA143000/SRX478835/SRR1179882_2.fastq.bz2
+
     response = urllib2.urlopen(url)
+    total_size = response.info().getheader('Content-Length').strip()
+    total_size = int(total_size)
+    bytes_so_far = 0
+    logger.info ( 'File size: {}'.format(total_size) )
+
+    self.update_state(state='PROGRESS', 
+                        meta={'status': 'Downloading', 'current' : str(0), 'total' : str(1), 'units' : 'bytes' })
+    self.celery_task.status = 'DOWNLOADING'
+    db.session.commit()
+
     CHUNK = 16 * 1024
     with open(path, 'wb') as outfile: 
         while True: 
             chunk = response.read(CHUNK)
             if not chunk: break 
             outfile.write(chunk)
+            bytes_so_far += len( chunk )
+
+            logger.info( """PROGRESS, Downloading, {}, {}, {}""".format(bytes_so_far, total_size, 'bytes')  )
+            self.update_state(state='PROGRESS', 
+                    meta={'status': 'Downloading', 'current' : str(bytes_so_far), 'total' : str(total_size), 'units' : 'bytes' })
+
+    self.update_state(state='SUCCESS', meta={'status': 'Download complete.'} )
+    logger.info( """PROGRESS, Downloaded, {}, {}, {}""".format(total_size, total_size, 'bytes')  )
+    logger.info ('Download finished.')
+
     f = db.session.query(File).filter(File.id==file_id).first()
     f.available = True
     f.file_size = os.path.getsize(f.path)
     db.session.commit()
-    print 'File download complete.'
-    return True 
+    return 'File download complete.'
 
 @celery.task
 def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description='', user_id=6, trim=False, cluster=False):
@@ -820,8 +913,6 @@ def parse_and_insert_mixcr_annotation_dataframe_from_file_path(file_path, datase
     db.session.commit()
     result = annotate_analysis_from_db.apply_async((analysis.id, ), queue=celery_queue)
     return True
-
-
 
 @celery.task
 def annotate_analysis_from_db(analysis_id): 
@@ -1383,6 +1474,6 @@ nav.init_app(app)
 
 if __name__ == '__main__':
     print 'Running application on port 5000......'
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded = app.config['THREADED'])
 
 
