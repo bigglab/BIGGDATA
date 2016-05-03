@@ -9,36 +9,25 @@ SQLALCHEMY_TRACK_MODIFICATIONS = True
 SQLALCHEMY_POOL_TIMEOUT = None
 QUOTAGUARD_URL = 'http://quotaguard4189:013877db0c3e@proxy.quotaguard.com:9292'
 
-# Local Development-specific vars, override below if in production
-HOME='/Users/red/Desktop/GeorgiouProjects/BIGGDATA'
 
-TRIMMAMATIC = 'java -jar /home/russ/software/Trimmomatic-0.35/trimmomatic-0.35.jar'
-TRIMMAMATIC_ADAPTERS = '/home/russ/software/Trimmomatic-0.35/adapters'
-MIGMAP = 'java -Xmx2g -jar /home/russ/software/migmap-0.9.8/migmap-0.9.8.jar'
+HOME='/data/resources/software/BIGGDATA'
+TRIMMAMATIC = 'java -jar /data/resources/software/Trimmomatic-0.35/trimmomatic-0.35.jar'
+TRIMMAMATIC_ADAPTERS = '/data/resources/software/Trimmomatic-0.35/adapters'
+MIGMAP = 'java -Xmx2g -jar /data/resources/software/migmap-0.9.8/migmap-0.9.8.jar'
 
-# File System configurations - this is where all user data is stored! Need a more universal way.... 
-# Dropboxes and Data kept separate to efficiently use 2x local SSD on AWS c3.xlarge node 
-DROPBOX_ROOT='/data/dropboxes'
-SCRATCH_ROOT='/data/scratch'
-SHARE_ROOT = '/data/dropboxes/shared'
 #SCRATCH_ROOT='/data/<username>/scratch'
 USER_ROOT='/data/<username>/'
+
 
 # Heroku-specific vars 
 if 'DATABASE_URL' in os.environ.keys():  # HACK TO CHECK IF WE'RE IN PRODUCTION ON HEROKU: 
 	SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
 	HOME = os.environ['HOME']
 
-# AWS-specifc vars 
-if 'LESSOPEN' in os.environ.keys():  # HACK TO CHECK IF WE'RE ON AWS INSTANCE: 
-	SQLALCHEMY_DATABASE_URI = "postgres://uf8vm9gg6isrbk:p6iot5ksr6i60ff173l8f4v1ig@ec2-107-20-136-206.compute-1.amazonaws.com:6712/d30h3s4gmpmcuo"
-	# Local instance stores, for speed 
-	HOME = '/home/ubuntu/BIGGDATA'
-	TRIMMAMATIC = 'java -jar /home/ubuntu/install/Trimmomatic-0.35/trimmomatic-0.35.jar'
-	TRIMMAMATIC_ADAPTERS = '/home/ubuntu/install/Trimmomatic-0.35/adapters'
 
 
 S3_BUCKET = 'biggdata'
+
 
 # @Dave - temporary for local environment
 AWSACCESSKEYID = os.environ['AWSACCESSKEYID'] 
@@ -56,8 +45,16 @@ MONGO_USER = 'reader'
 MONGO_PASSWORD = 'cdrom'
 mongo_config = {"reader":"cdrom","writer":"rag1rag2","dbpath":"biotseq.icmb.utexas.edu"}
 
-IGREP_COMMON_TOOLS = '/home/russ/IGREP/common_tools'
-IGREP_PIPELINES = '/home/russ/IGREP/pipelines'
+IGREP_COMMON_TOOLS = '/data/resources/software/IGREP/common_tools'
+IGREP_PIPELINES = '/data/resources/software/IGREP/pipelines'
+
+
+
+
+
+
+
+
 
 # OPTIONS AVAILABLE ACCORDING TO app.config.__dict__  AFTER COMPILATION 
 

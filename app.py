@@ -71,7 +71,7 @@ celery = Celery(app.name, broker='amqp://')
 import celery_config 
 celery.config_from_object('celery_config')
 # CELERY QUEUE TO SEND JOBS TO - USE FOR DEVELOPMENT 
-celery_queue = 'default'
+celery_queue = 'dev2'
 
 # change celery_queue to anything celery -Q
 # 
@@ -517,7 +517,7 @@ def import_from_sra(accession, name=None, user_id=57, chain=None, project_select
 #####
 
     print 'Fetching SRA data from NCBI {}'.format(accession)
-    command = "fastq-dump --gzip --defline-qual '+' --split-files -T -F --outdir {} {}".format(directory, accession) 
+    command = "fastq-dump --gzip --skip-technical  --readids --dumpbase --defline-qual '+' --split-files -T -F --outdir {} {}".format(directory, accession) 
     response = os.system(command)
     if response == 0: 
         file_paths = []
@@ -678,7 +678,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     alignment_file.path = '{}.aln.vdjca'.format(basepath)
     alignment_file.name = "{}.aln.vdjca".format(basename)
     # MIGHT NEED TO ADD THIS ARGUMENT to align   -OjParameters.parameters.mapperMaxSeedsDistance=5
-    alignment_file.command = 'mixcr align --save-description -f {} {}'.format(' '.join([f.path for f in files]), alignment_file.path)
+    alignment_file.command = 'mixcr align -OvParameters.geneFeatureToAlign=VGene --save-description -f {} {}'.format(' '.join([f.path for f in files]), alignment_file.path)
     alignment_file.file_type = 'MIXCR_ALIGNMENTS'
     files_to_execute.append(alignment_file)    
     clone_index_file = File()
@@ -692,7 +692,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     clone_file.file_type = 'MIXCR_CLONES'
     clone_file.path = '{}.aln.clns'.format(basepath)
     clone_file.name = '{}.aln.clns'.format(basename)
-    clone_file.command = 'mixcr assemble --index {} -f {} {}'.format(clone_index_file.path, alignment_file.path, clone_file.path)
+    clone_file.command = 'mixcr assemble  -OassemblingFeatures=VDJRegion --index {} -f {} {}'.format(clone_index_file.path, alignment_file.path, clone_file.path)
     files_to_execute.append(clone_file)
     files_to_execute.append(clone_index_file)
     db.session.add(alignment_file)
@@ -705,7 +705,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     clone_output_file.path = '{}.txt'.format(clone_file.path)
     clone_output_file.file_type = 'MIXCR_CLONES_TEXT'
     clone_output_file.name = '{}.txt'.format(clone_file.name)
-    clone_output_file.command = 'mixcr exportClones -f {} {}'.format(clone_file.path, clone_output_file.path)
+    clone_output_file.command = 'mixcr exportClones -sequence -quality -s -f {} {}'.format(clone_file.path, clone_output_file.path)
     files_to_execute.append(clone_output_file)
     alignment_output_file = File()
     alignment_output_file.user_id = dataset.user_id    
@@ -713,7 +713,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     alignment_output_file.path = '{}.txt'.format(alignment_file.path)
     alignment_output_file.file_type = 'MIXCR_ALIGNMENT_TEXT'
     alignment_output_file.name = '{}.txt'.format(alignment_file.name)
-    alignment_output_file.command = 'mixcr exportAlignments -cloneId {}  -f -readId -descrR1 --preset full  {} {}'.format(clone_index_file.path, alignment_file.path, alignment_output_file.path)
+    alignment_output_file.command = 'mixcr exportAlignments -cloneId {}  -s -f -readId -descrR1 -descrR2 --preset full  {} {}'.format(clone_index_file.path, alignment_file.path, alignment_output_file.path)
     files_to_execute.append(alignment_output_file)
     pretty_alignment_file = File()
     pretty_alignment_file.user_id = dataset.user_id    
