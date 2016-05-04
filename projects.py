@@ -537,6 +537,7 @@ def view_project(project_id):
         write_user_list = write_user_list,
         dataset_list = dataset_list, 
         current_user=current_user,
-        datasets = datasets)
+        datasets = datasets,
+        project = project)
 
 

@@ -210,76 +210,48 @@ $(document).ready(function() {
 <!-- Datatables for Projects !-->
 	{% for project in current_user.projects %}
 		{% if project.datasets != [] %}
-		<div id="{{project.id}}" class="collapse">
-			<table id="{{project.id}}dataset" class="table table-striped table-bordered" cellspacing="0" width="100%">
-				<thead>
-					<tr>
-						<th class='no-sort'> </th>
-						<th>Dataset</th>
-						<th>Name</th>
-						<th>Description</th>
-						<th>IG Type</th>
-						<th>VDJ+VJ Paired</th>
-						<th class='no-sort'>Run Analysis</th>
-					</tr>
-				</thead>
-				<tbody>
-					{% for dataset in project.datasets %}
-						<tr>
-							<td class="details-control"></td>
-							<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.id}}</a></td>
-							<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
-							<td>{{dataset.description}}</td>
-							<td>{{dataset.ig_type}}</td>
-							{% if dataset.paired %}
-								<td>YES</td>
-							{% else %}
-								<td></td>
-							{% endif %}
-							<td><a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">MIXCR</a> <a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a> <a href="{{url_for('.create_analysis', dataset_id=dataset.id)}}">ANNOTATE</a></td>
-						</tr>
-					{% endfor %}
-				</tbody>
-			</table>
+		<div id="{{project.id}}" class="collapse table-responsive">
+			{% set datasets = project.datasets %}
+			{% include "partials/DatasetsDT.html" with context %}
 			<script>
-	var table{{project.id}}= $('#{{project.id}}dataset').DataTable({
-		columnDefs: [
-  		{ targets: 'no-sort', orderable: false }
-  		],
-  		order: [[ 1, 'asc' ]]
-	});
- 
-	var table_data{{project.id}} = [
-	{%- for dataset in project.datasets -%}
-		{%- if dataset.files.all() == [] -%}
-			`<a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
-		{%- else -%}
-			{%- set files = dataset.files -%}
-			`{%- include "partials/files.html" with context %}`,
-		{%- endif -%}
-	{%- endfor -%}
-		''
-	];
+				var table{{project.id}}= $('#{{project.id}}dataset').DataTable({
+					columnDefs: [
+			  		{ targets: 'no-sort', orderable: false }
+			  		],
+			  		order: [[ 1, 'asc' ]]
+				});
+			 
+				var table_data{{project.id}} = [
+				{%- for dataset in project.datasets -%}
+					{%- if dataset.files.all() == [] -%}
+						`<a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
+					{%- else -%}
+						{%- set files = dataset.files -%}
+						`{%- include "partials/files.html" with context %}`,
+					{%- endif -%}
+				{%- endfor -%}
+					''
+				];
 
-	table{{project.id}}.rows().every( function () {
-	    this.child( table_data{{project.id}}[this.index()] );
-	} );
+				table{{project.id}}.rows().every( function () {
+				    this.child( table_data{{project.id}}[this.index()] );
+				} );
 
-	$('#{{project.id}}dataset tbody').on( 'click', 'td.details-control', function () {
-		var child = table{{project.id}}.row( this ).child;
-		var tr = $(this).closest('tr');
-	    
-	    if ( child.isShown() ) {
-	        child.hide();
-	        tr.removeClass('shown');
-	    }
-	    else {
-	        child.show();
-	        tr.addClass('shown')
+				$('#{{project.id}}dataset tbody').on( 'click', 'td.details-control', function () {
+					var child = table{{project.id}}.row( this ).child;
+					var tr = $(this).closest('tr');
+				    
+				    if ( child.isShown() ) {
+				        child.hide();
+				        tr.removeClass('shown');
+				    }
+				    else {
+				        child.show();
+				        tr.addClass('shown')
 
-	    }
-	} );
-</script>
+				    }
+				} );
+			</script>
 		</div>
 		{% endif %}
 	{% endfor %}

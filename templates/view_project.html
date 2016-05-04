@@ -113,37 +113,8 @@
     <row>
         <h4><a data-toggle="collapse" data-target="#datasets" href='#'>Click here to access datasets</a></h4>
     </row>
-    <div class="collapse" id="datasets" aria-expanded="false">
-        <table id="dataset" class="table table-striped table-bordered" cellspacing="0" width="100%">
-            <thead>
-                <tr>
-                    <th class='no-sort'> </th>
-                    <th>Dataset</th>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>IG Type</th>
-                    <th>VDJ+VJ Paired</th>
-                    <th class='no-sort'>Run Analysis</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for dataset in datasets %}
-                    <tr>
-                        <td class="details-control"></td>
-                        <td><a href="{{url_for('frontend.dataset', id=dataset.id)}}">{{dataset.id}}</a></td>
-                        <td><a href="{{url_for('frontend.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
-                        <td>{{dataset.description}}</td>
-                        <td>{{dataset.ig_type}}</td>
-                        {% if dataset.paired %}
-                            <td>YES</td>
-                        {% else %}
-                            <td></td>
-                        {% endif %}
-                        <td><a href="{{url_for('frontend.mixcr', dataset_id=dataset.id)}}">MIXCR</a> <a href="{{url_for('frontend.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a> <a href="{{url_for('frontend.create_analysis', dataset_id=dataset.id)}}">ANNOTATE</a></td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="collapse table-responsive" id="datasets" aria-expanded="false">
+        {% include "partials/DatasetsDT.html" with context %}
     </div>
 </div>
 <script>
