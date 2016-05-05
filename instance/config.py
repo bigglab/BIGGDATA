@@ -64,6 +64,29 @@ mongo_config = {"reader":"cdrom","writer":"rag1rag2","dbpath":"biotseq.icmb.utex
 IGREP_COMMON_TOOLS = '/home/russ/IGREP/common_tools'
 IGREP_PIPELINES = '/home/russ/IGREP/pipelines'
 
+# Set config based on computer name
+# Development only
+import subprocess
+import shlex
+
+daves_machine = False
+
+try:
+	command_line_args = shlex.split('scutil --get LocalHostName')
+	command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+	response, error = command_line_process.communicate()
+	if 'Davids-MacBook-Air' in response:
+		daves_machine = True
+except subprocess.CalledProcessError as error:
+    error = error.output
+
+if daves_machine:
+	IGREP_COMMON_TOOLS = '/Users/davidmagness/IGREP/common_tools'
+	IGREP_PIPELINES = '/Users/davidmagness/IGREP/pipelines'
+
+
+
+
 # OPTIONS AVAILABLE ACCORDING TO app.config.__dict__  AFTER COMPILATION 
 
  # 'BOOTSTRAP_LOCAL_SUBDOMAIN': None, 

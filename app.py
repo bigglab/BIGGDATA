@@ -2,6 +2,7 @@
 import ast
 import json
 import logging
+import re
 import static
 import sys
 import os
@@ -11,10 +12,7 @@ import random
 from shutil import copyfile
 import operator
 import datetime as dt
-
 import shlex
-import subprocess
-from StringIO import StringIO
 
 # import urllib
 os.environ['http_proxy']=''
@@ -161,8 +159,6 @@ def unauthorized():
     gif_path=retrieve_golden()
     flash('You must login or register to view that page.','success')
     return redirect( url_for('frontend.login') )
-
-
 
 
 def initiate_celery_task_logger(logger_id, logfile):
@@ -577,16 +573,20 @@ def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_
         path = os.path.splitext(path)[0] + '_1' + os.path.splitext(path)[1]
 
     logger.info( 'Fetching SRA data from NCBI {}'.format(accession) )
-    command = "fastq-dump --gzip --defline-qual '+' --split-files -T -F --outdir {} {}".format(directory, accession)
+    command = "fastq-dump -I --gzip --defline-qual '+' --split-files -T --outdir {} {}".format(directory, accession)
     
     logger.info( command ) 
+
     # response = os.system(command)
     command_line_args = shlex.split(command)
-    process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT )
-    response, error = process.communicate()
+    command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+    for line in iter(command_line_process.stdout.readline, b''):
+        line = line.strip()
+        logger.info( line.strip() )
 
-    for line in response.splitlines():
-        logger.info( line )
+    response, error = command_line_process.communicate()
+    command_line_process.stdout.close()
+    command_line_process.wait()
 
     if error == None: 
         file_paths = []
@@ -681,7 +681,6 @@ def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, 
 @celery.task(base= LogTask, bind = True)
 def download_file(self, url, path, file_id, user_id = None):
     logger = self.logger
-
     logger.info ( 'Downloading file from: {}'.format(url) )
 
     # check if the directory for the file exists. If not, make the directory path with makedirs
@@ -692,18 +691,18 @@ def download_file(self, url, path, file_id, user_id = None):
 
     logger.info ( 'Downloading file to directory: {}'.format(directory) )
 
-    # try : ftp://ftp.ddbj.nig.ac.jp/ddbj_database/dra/fastq/SRA143/SRA143000/SRX478835/SRR1179882_2.fastq.bz2
-
+    # you can try the following large files
+    # ftp://ftp.ddbj.nig.ac.jp/ddbj_database/dra/fastq/SRA143/SRA143000/SRX478835/SRR1179882_2.fastq.bz2
+    # http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/refMrna.fa.gz
     response = urllib2.urlopen(url)
     total_size = response.info().getheader('Content-Length').strip()
     total_size = int(total_size)
     bytes_so_far = 0
     logger.info ( 'File size: {}'.format(total_size) )
 
+    # Initiate the download bar
     self.update_state(state='PROGRESS', 
                         meta={'status': 'Downloading', 'current' : str(0), 'total' : str(1), 'units' : 'bytes' })
-    self.celery_task.status = 'DOWNLOADING'
-    db.session.commit()
 
     CHUNK = 16 * 1024
     with open(path, 'wb') as outfile: 
@@ -713,12 +712,12 @@ def download_file(self, url, path, file_id, user_id = None):
             outfile.write(chunk)
             bytes_so_far += len( chunk )
 
-            logger.info( """PROGRESS, Downloading, {}, {}, {}""".format(bytes_so_far, total_size, 'bytes')  )
+            # Send a progress message with the number of bytes downloaded.
             self.update_state(state='PROGRESS', 
                     meta={'status': 'Downloading', 'current' : str(bytes_so_far), 'total' : str(total_size), 'units' : 'bytes' })
 
+    # This status will take down the progress bar and show that the download is complete.
     self.update_state(state='SUCCESS', meta={'status': 'Download complete.'} )
-    logger.info( """PROGRESS, Downloaded, {}, {}, {}""".format(total_size, total_size, 'bytes')  )
     logger.info ('Download finished.')
 
     f = db.session.query(File).filter(File.id==file_id).first()
@@ -727,10 +726,13 @@ def download_file(self, url, path, file_id, user_id = None):
     db.session.commit()
     return 'File download complete.'
 
-@celery.task
-def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description='', user_id=6, trim=False, cluster=False):
+@celery.task ( base = LogTask , bind = True )
+def run_mixcr_with_dataset_id(self, dataset_id, analysis_name='', analysis_description='', user_id=6, trim=False, cluster=False):
+
+    logger = self.logger
+
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
-    print 'RUNNING MIXCR ON DATASET ID# {}: {}'.format(dataset_id, repr(dataset.__dict__))
+    logger.info( 'Running MiXCR on Dataset {}.'.format(dataset_id ) )
     analysis = Analysis()
     analysis.db_status = 'WAITING'
     analysis.name = analysis_name
@@ -749,29 +751,34 @@ def run_mixcr_with_dataset_id(dataset_id, analysis_name='', analysis_description
     data_files_by_chain = {}
     for key, values in itertools.groupby(dataset.primary_data_files(), lambda x: x.chain): 
         data_files_by_chain[key] = list(values)
-    print "Running mixcr in these batches of files (sorted by file.chain): {}".format(data_files_by_chain)
+    logger.debug( "Running MiXCR in these batches of files (sorted by file.chain): {}".format(data_files_by_chain) )
     for chain, files in data_files_by_chain.items(): 
         if trim: 
-            print 'Running Trim on Files in Analysis {} before executing MixCR'.format(analysis.id)
-            files = run_trim_analysis_with_files(analysis, files)
-        print 'ABOUT TO RUN MIXCR ANAYSIS {} ON FILES FROM CHAIN {}'.format(repr(analysis), chain)
-        run_mixcr_analysis_id_with_files(analysis.id, files)
+            logger.info( 'Running Trim on Files in Analysis {} before executing MiXCR'.format(analysis.id) )
+            files = run_trim_analysis_with_files(analysis, files, logger)
+        logger.info ( 'About to run MiXCR analysis {} on files from chain {}.'.format(repr(analysis), chain) )
+        run_mixcr_analysis_id_with_files(analysis.id, files, logger = logger, parent_task = self)
         if cluster: 
-            print 'Clustering Output Files'
+            logger.info( 'Clustering output files.' )
             for file in files: 
                 result = run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9)
-    return True 
+    return  'MiXCR analysis completed successfully.'
 
 @celery.task
-def run_mixcr_analysis_id_with_files(analysis_id, files):
+def run_mixcr_analysis_id_with_files(analysis_id, files, logger = celery_logger, parent_task = None):
+
     analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
     dataset = analysis.dataset
     files_to_execute = []
-    print 'RUNNING MIXCR ON THESE FILES: {}'.format(files)
+    logger.debug( 'Running MiXCR on these files: {}'.format(files) )
+    
     scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
+    scratch_path = scratch_path.replace('///','/')
+    scratch_path = scratch_path.replace('//','/')
+
     basename = files[0].path.split('/')[-1].split('.')[0]
     basepath = '{}/{}'.format(scratch_path, basename)
-    print 'Writing output files to base name: {}'.format(basepath)
+    logger.info( 'Writing output files to base name: {}'.format(basepath) )
     output_files = []
     # Instantiate Source Files
     alignment_file = File()
@@ -780,6 +787,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     alignment_file.name = "{}.aln.vdjca".format(basename)
     # MIGHT NEED TO ADD THIS ARGUMENT to align   -OjParameters.parameters.mapperMaxSeedsDistance=5
     alignment_file.command = 'mixcr align --save-description -f {} {}'.format(' '.join([f.path for f in files]), alignment_file.path)
+
     alignment_file.file_type = 'MIXCR_ALIGNMENTS'
     files_to_execute.append(alignment_file)    
     clone_index_file = File()
@@ -831,15 +839,59 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
         f.dataset_id = analysis.dataset_id 
         f.analysis_id = analysis.id 
         f.chain = files[0].chain
-        print 'Executing: {}'.format(f.command)
+        logger.info( 'Executing: {}'.format(f.command) )
         analysis.active_command = f.command
         f.in_use = True 
         db.session.add(f)
         db.session.commit()
-        # MAKE THE CALL 
-        response = os.system(f.command)
-        print 'Response: {}'.format(response)
-        if response == 0: 
+
+        # MAKE THE CALL *****
+        #response = os.system(f.command)
+        error = None
+        try:
+            command_line_args = shlex.split(f.command)
+            command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+
+            for line in iter(command_line_process.stdout.readline, b''):
+                line = line.strip()
+
+                tracking_percent = False
+
+                if '%' in line:
+                    tracking_percent = True
+                    tracking_status, line = line.split(':', 1)
+                    if line.endswith('%'):
+                        percent = line.replace('%', '')
+                        eta = ''
+                    else:
+                        percent, eta = line.split('%', 1)
+                        eta = ' ({})'.format( eta.strip() )
+                    parent_task.update_state(state='PROGRESS',
+                            meta={'status': '{}{}'.format( tracking_status , eta ) , 'current' : float(percent), 'total' : 100, 'units' : '%' })
+
+                    print '{} ({}): {}/{}'.format( tracking_status , eta, percent, 100 )
+                else:
+                    if tracking_percent:
+                        tracking_percent = False
+                        parent_task.update_state(state='ANALYZING',
+                                meta={'status': tracking_status, 'current' : 100, 'total' : 100, 'units' : '%' })
+                        logger.info( '{} complete.'.format( tracking_status ) )
+                    logger.info( line.strip() )
+
+            response, error = command_line_process.communicate()
+            command_line_process.stdout.close()
+            command_line_process.wait()
+        except subprocess.CalledProcessError as error:
+            error = error.output
+            logger.error(error)
+
+        if tracking_percent:
+            tracking_percent = False
+            parent_task.update_state(state='ANALYZING',
+                    meta={'status': tracking_status, 'current' : 100, 'total' : 100, 'units' : '%' })
+            logger.info( '{} complete.'.format( tracking_status ) )
+
+        if error == None: 
             f.available = True 
             f.file_size = os.path.getsize(f.path)
             db.session.commit()
@@ -847,7 +899,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
             f.available = False
             analysis.status = 'FAILED'
             db.session.commit()
-    print 'All commands in analysis {} have been executed.'.format(analysis)
+    logger.info( 'All commands in analysis {} have been executed.'.format(analysis) )
     if set(map(lambda f: f.available, files_to_execute)) == {True}:
         analysis.status = 'SUCCESS'
         analysis.available = True
@@ -859,11 +911,11 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     # parseable_mixcr_alignments_file_path = alignment_output_file.path
     # PARSE WITH parse_and_insert_mixcr_annotation_dataframe_from_file_path to speed up? 
     # if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
-    return True 
+    return 'MiXCR analysis completed successfully.' 
 
 @celery.task
-def parse_and_insert_mixcr_annotations_from_file_path(file_path, dataset_id=None, analysis_id=None):
-    print 'Building annotations from mixcr output at {}, then inserting into postgres in batches'.format(file_path)
+def parse_and_insert_mixcr_annotations_from_file_path(file_path, dataset_id=None, analysis_id=None, logger = celery_logger):
+    print 'Building annotations from MiXCR output at {}, then inserting into postgres in batches'.format(file_path)
     if analysis_id: 
         analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
     else: 
@@ -891,8 +943,8 @@ def parse_and_insert_mixcr_annotations_from_file_path(file_path, dataset_id=None
 
 
 @celery.task
-def parse_and_insert_mixcr_annotation_dataframe_from_file_path(file_path, dataset_id=None, analysis_id=None):
-    print 'Building annotation dataframe from mixcr output at {}, then inserting into postgres'.format(file_path)
+def parse_and_insert_mixcr_annotation_dataframe_from_file_path(file_path, dataset_id=None, analysis_id=None, logger = celery_logger):
+    print 'Building annotation dataframe from MiXCR output at {}, then inserting into postgres'.format(file_path)
     if analysis_id: 
         analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
     else: 
@@ -929,16 +981,14 @@ def annotate_analysis_from_db(analysis_id):
         analysis.available = True 
         db.session.commit()
 
-
-
-
-
-@celery.task
-def run_pandaseq_with_dataset_id(dataset_id, analysis_name='', analysis_description='', user_id=6, algorithm='pear'):
+@celery.task(base = LogTask, bind = True)
+def run_pandaseq_with_dataset_id(self, dataset_id, analysis_name='', analysis_description='', user_id=6, algorithm='pear'):
+    logger = self.logger
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
-    print 'RUNNING MIXCR ON DATASET ID# {}: {}'.format(dataset_id, repr(dataset.__dict__))
+    logger.info( 'Running PANDAseq on Dataset {}.'.format( dataset_id ) )
+
     analysis = Analysis()
-    analysis.db_status = "We dont currently import raw or pandaseq'd FASTQ Data"
+    analysis.db_status = "We dont currently import raw or pandaseq'd FASTQ Data."
     analysis.name = analysis_name
     analysis.description = analysis_description
     analysis.user_id = user_id
@@ -957,27 +1007,27 @@ def run_pandaseq_with_dataset_id(dataset_id, analysis_name='', analysis_descript
     dataset.primary_data_files_ids = [] 
     db.session.add(dataset)
     db.session.commit()
-    print "Running pandaseq in these batches of files (sorted by file.chain): {}".format(data_files_by_chain)
+    logger.info( "Running PANDAseq in these batches of files (sorted by file.chain): {}".format(data_files_by_chain) )
     for chain, files in data_files_by_chain.items(): 
         if len(files) == 2: 
-            print 'ABOUT TO RUN PANDASEQ CONCATENATION ON {} FILES FROM CHAIN {}'.format(len(files), chain)
-            run_pandaseq_analysis_with_files(analysis, files, algorithm=algorithm)
+            logger.info( 'About to run PANDAseq concatenation on {} files from chain {}'.format(len(files), chain) )
+            run_pandaseq_analysis_with_files(analysis, files, algorithm=algorithm, logger = logger, parent_task = self)
         else: 
-            print 'bad request for pandaseq alignment of only {} files'.format(len(files))
-    return True 
+            logger.error( 'Bad request for pandaseq alignment of only {} files'.format(len(files)) )
+    return 'PANDAseq analysis complete.' 
 
+@celery.task( bind = True)
+def run_pandaseq_analysis_with_files(self, analysis, files, algorithm='pear', logger = celery_logger, parent_task = None):
 
-
-@celery.task
-def run_pandaseq_analysis_with_files(analysis, files, algorithm='pear'):
     dataset = analysis.dataset
     files_to_execute = []
-    print 'RUNNING PANDASEQ ON THESE FILES: {}'.format(files)
+    logger.info( 'Running PANDAseq on these files: {}'.format(files) )
     scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
     basename = files[0].path.split('/')[-1].split('.')[0]
     basepath = '{}/{}'.format(scratch_path, basename)
-    print 'Writing output files to base name: {}'.format(basepath)
+    logger.info( 'Writing output files to base name: {}'.format(basepath) )
     output_files = []
+
     # Instantiate Source Files
     alignment_file = File()
     alignment_file.user_id = dataset.user_id
@@ -988,20 +1038,55 @@ def run_pandaseq_analysis_with_files(analysis, files, algorithm='pear'):
     files_to_execute.append(alignment_file)
     analysis.status = 'EXECUTING'
     db.session.commit()
+
     for f in files_to_execute:
         f.command = f.command.encode('ascii')
         f.dataset_id = analysis.dataset_id 
         f.analysis_id = analysis.id 
         f.chain = files[0].chain
-        print 'Executing: {}'.format(f.command)
+        logger.info( 'Executing: {}'.format(f.command) )
         analysis.active_command = f.command
         f.in_use = True 
         db.session.add(f)
         db.session.commit()
-        # MAKE THE CALL 
-        response = os.system(f.command)
-        print 'Response: {}'.format(response)
-        if response == 0: 
+        # MAKE THE CALL
+        #response = os.system(f.command)
+        #print 'Response: {}'.format(response)
+        
+        error = None
+        try:
+            command_line_args = shlex.split(f.command)
+            command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+
+            start = dt.datetime.now()
+
+            for line in iter(command_line_process.stdout.readline, b''):
+                line = line.strip()
+                if 'ERR' in line or '* * *' in line:
+                    logger.error(line)
+                elif 'STAT' in line:
+                    try:
+                        if 'READS' in line:
+                            current = dt.datetime.now()
+                            elapsed = (current - start).seconds
+                            line_parts = line.split('READS', 1)
+                            reads = line_parts[1].strip()
+                            status = 'Time Elapsed: {} - Number of Reads: {}'.format(elapsed, reads)
+                            parent_task.update_state(state='STATUS', meta={'status': status })
+                    except:
+                        pass
+
+            parent_task.update_state(state='SUCCESS',
+                meta={'status': 'PANDAseq complete.' })
+
+            response, error = command_line_process.communicate()
+            command_line_process.stdout.close()
+            command_line_process.wait()
+        except subprocess.CalledProcessError as error:
+            error = error.output
+            logger.error(error)
+
+        if error == None: 
             f.available = True 
             f.file_size = os.path.getsize(f.path)
             dataset.primary_data_files_ids = [f.id]
@@ -1010,7 +1095,9 @@ def run_pandaseq_analysis_with_files(analysis, files, algorithm='pear'):
             f.available = False
             analysis.status = 'FAILED'
             db.session.commit()
-    print 'All commands in analysis {} have been executed.'.format(analysis)
+            logger.error(error)
+
+    logger.info( 'All commands in analysis {} have been executed.'.format(analysis) )
     if set(map(lambda f: f.available, files_to_execute)) == {True}:
         analysis.status = 'SUCCESS'
         analysis.available = True
@@ -1018,15 +1105,11 @@ def run_pandaseq_analysis_with_files(analysis, files, algorithm='pear'):
     analysis.active_command = ''
     analysis.finished = 'now'
     db.session.commit()
+
     # Make PandaSeq Alignment Primary Dataset Data Files! Currently done in dataset.primary_data_files() 
-    return True 
+    return 'PANDAseq analysis complete.' 
 
-
-
-
-
-
-def run_trim_analysis_with_files(analysis, files):
+def run_trim_analysis_with_files(analysis = None, files = None, logger = celery_logger):
     dataset = analysis.dataset
     files_to_execute = []
     print 'RUNNING TRIMMAMATIC ON THESE FILES: {}'.format(files)
@@ -1089,10 +1172,6 @@ def run_trim_analysis_with_files(analysis, files):
     return output_files 
 
 
-
-
-
-
 def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
     dataset = analysis.dataset
     files_to_execute = []
@@ -1153,10 +1232,16 @@ def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
     return files_to_execute
 
 
-@celery.task
-def run_analysis(dataset_id, file_ids, user_id, analysis_type='IGFFT', analysis_name='', analysis_description='', trim=False, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]): 
+@celery.task(base = LogTask, bind = True)
+def run_analysis(self, dataset_id, file_ids, user_id, analysis_type='IGFFT', analysis_name='', analysis_description='', trim=False, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]): 
+    logger = self.logger
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
-    print 'RUNNING {} ANALYSIS ON DATASET ID# {}: {}'.format(analysis_type, dataset_id, repr(dataset.__dict__))
+
+    if not dataset:
+        raise Exception( 'Dataset {} not found.'.format( dataset_id ) )
+
+    logger.info( 'Running {} analysis on dataset {}.'.format(analysis_type, dataset_id ) )
+
     #CONSTRUCT AND SAVE ANALYSIS OBJECT
     analysis = Analysis()
     analysis.name = analysis_name
@@ -1174,21 +1259,23 @@ def run_analysis(dataset_id, file_ids, user_id, analysis_type='IGFFT', analysis_
     analysis.inserted_into_db = False
     db.session.add(analysis)
     db.session.commit()
+
     if dataset.directory:
-        analysis.directory = dataset.directory + '/Analysis_' + str(analysis.id)
+        analysis.directory = dataset.directory.rstrip('/') + '/Analysis_' + str(analysis.id)
     else: 
-        analysis.directory = analysis.dataset.user.scratch_path + '/Analysis_' + str(analysis.id)
+        analysis.directory = analysis.dataset.user.scratch_path.rstrip('/') + '/Analysis_' + str(analysis.id)
     if not os.path.exists(analysis.directory):
+        logger.info ( 'Making analysis directory {}'.format( analysis.directory ) )
         os.makedirs(analysis.directory)
     files = map(lambda x: db.session.query(File).filter(File.id==x).first(), file_ids)
     
-    print 'Analysis Output Set To {}'.format(analysis.directory)
-    print 'Using these files: {}'.format(files)
+    logger.info( 'Analysis Output Set To {}'.format(analysis.directory) )
+    logger.info( 'Using these files: {}'.format(files) )
     if trim:
-        print 'Running Trim on Files in Analysis {} before executing annotation'.format(analysis.id)
+        logger.info( 'Running Trim on Files in Analysis {} before executing annotation'.format(analysis.id) )
         analysis.status = 'TRIMMING FILES' 
         db.session.commit() 
-        files = run_trim_analysis_with_files(analysis, files)
+        files = run_trim_analysis_with_files( analysis, files, logger )
     # GENERATE OVERLAPS 
     # if overlap: 
 
@@ -1200,6 +1287,8 @@ def run_analysis(dataset_id, file_ids, user_id, analysis_type='IGFFT', analysis_
 
     if analysis_type == 'IGFFT':
         files_for_analysis = [] 
+
+        logger.info('Unzipping files for analysis...')
         for file in files: 
             #IGFFT NEEDS UNCOMPRESSED FASTQs
             if file.file_type == 'GZIPPED_FASTQ': 
@@ -1213,45 +1302,190 @@ def run_analysis(dataset_id, file_ids, user_id, analysis_type='IGFFT', analysis_
                 new_file.command = 'gunzip -c {} > {}'.format(file.path, new_file.path)
                 analysis.status = 'GUNZIPPING'
                 db.session.commit()
-                response = os.system(f.command)
-                if response == 0: 
+
+                error = None
+                try:
+                    command_line_args = shlex.split(f.command)
+                    command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+
+                    for line in iter(command_line_process.stdout.readline, b''):
+                        line = line.strip()
+                        logger.info(line)
+
+                    response, error = command_line_process.communicate()
+                    command_line_process.stdout.close()
+                    command_line_process.wait()
+                except subprocess.CalledProcessError as error:
+                    error = error.output
+                    logger.error(error)
+
+                if error == None: 
                     new_file.available = True 
                     db.session.add(new_file)
                     db.session.commit()
                     files_for_analysis.append(new_file)
                 else: 
-                    print 'ERROR GUNZIPPING FILE {}: '.format(file.path, new_file.command)
+                    logger.error( 'Error G-Unzipping file {}: {}'.format(file.path, error) )
             else: 
-                files_for_analysis.append(new_file)
+                # file does not need to be unzipped, so add it to the list as-is
+                files_for_analysis.append(file)
+
         analysis.status = 'EXECUTING'
         db.session.add(analysis)
         db.session.commit()
         if files_for_analysis == []: files_for_analysis = files 
-        annotated_files = run_igrep_annotation_on_dataset_files(dataset, files_for_analysis, user_id = dataset.user_id, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting)
-        print 'annotated files from igfft: {}'.format(annotated_files)
+        annotated_files = run_igrep_annotation_on_dataset_files(dataset, files_for_analysis, user_id = dataset.user_id, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting, logger = logger, parent_task = self)
+        logger.info( 'Annotated files from igfft: {}'.format(annotated_files) )
+        return 'Analysis complete.'
     # PAIR 
     # CLUSTER
 
 
-def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]):
+def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01], logger = celery_logger, parent_task = None):
+    # Want to run IGREP without putting out EVERY line of output (~100s)
+    # So create a list of status outputs and dictionary of counts (repeated status)
+    igrep_states = ['Calcuating number of sequences', 'Running IgFFT', 'Evaluating Parameters', 
+                    'Parsing and summarizing alignment file', 'Germline Alignment', 
+                    'Performing isotyping on sequences', 
+                    'annotation complete, merging files...', 'files merged.', 'Performing isotyping', 
+                    'Processing raw fastq files', 'IgFFT run started']
+    igrep_counts = {}
+    for state in igrep_states:
+        igrep_counts[state] = 0
+
+
+# Calcuating number of sequences
+# Running IgFFT
+# Evaluating Parameters
+# Parsing and summarizing alignment file
+# Germline Alignment
+# 30 Percent Complete: 0.609781 minutes
+# Performing isotyping on sequences 
+# Count
+# annotation complete, merging files...
+# files merged.
+# //data/magness/scratch/Dataset_8/SRR1525443/1/fastq.pandaseq_ea_util.igfft.annotation
+ 
+
+
     # dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
-    print 'RUNNING IGREP IGFFT ON DATASET ID# {}: {}'.format(dataset.id, repr(dataset.__dict__))
+    logger.info( 'Running IGREP IGFFT on Dataset {}.'.format( dataset.id ) )
     igrep_script_path = app.config['IGREP_PIPELINES']
     # LOAD IGREP SCRIPTS INTO PYTHON PATH
 
+    species = ''
+
     if dataset.species == 'Human': species = 'homosapiens' 
     if dataset.species == 'Mouse': species = 'musmusculus' 
+
+    # Set default species here
+    if species == '': species = 'homosapiens' 
+
     annotated_files = []
     for file in files: 
+        loci = ''
         if file.chain == 'HEAVY': loci = 'igh'
         if file.chain == 'LIGHT': loci = 'igk,igl'
         if file.chain == 'HEAVY/LIGHT': loci = 'igh,igk,igl'
 
+        # Set default loci here
+        if loci == '': loci = 'igh,igk,igl'
+
         # annotated_f = igfft.igfft_multiprocess(f.path, file_type='FASTQ', species=species, locus=loci, parsing_settings={'isotype': isotyping_barcodes, 'remove_insertions': remove_insertions}, num_processes=number_threads, delete_alignment_file=True)           
         # annotated_files.append(annotated_f[0])
         script_command = 'python {}/gglab_igfft_single.py -species {} -locus {} {}'.format(igrep_script_path, species, loci, file.path)
-        print 'executing script: {}'.format(script_command)
-        response = os.system(script_command)
+        logger.info( 'executing script: {}'.format(script_command) )
+        
+#        response = os.system(script_command)
+
+        error = None
+        try:
+            command_line_args = shlex.split(script_command)
+            command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+
+            # keep track of the last two states
+            # that way we can tell the user what finished happening
+            last_state = ''
+            counting = False
+            start = dt.datetime.now()
+
+            pid_pattern = re.compile('\((.*?)\)')
+
+            for line in iter(command_line_process.stdout.readline, b''):
+                line = line.strip()
+                print line
+                if 'Error'  in line or 'error' in line or 'ERROR' in line:
+                    logger.error(line)
+
+                pid = None
+
+                pid_match =  pid_pattern.match(line)
+                if pid_match:
+                    pid = pid_match.group(1)
+                    line = line.replace( pid_match.group(0), '' )
+                    line = line.strip()
+
+                for state in igrep_states:
+                    if state in line:
+                        # if we were counting, let the user know it's done
+                        # sys.stdout = open(str(os.getpid()) + ".out", "w")
+                        igrep_counts[state] += 1
+
+                        if pid:
+                            current_status_number = pid
+                        else:
+                            current_status_number = igrep_counts[state]
+
+                        if counting:
+                            logger.info('{}({}) complete.'.format( last_state, current_status_number ) )
+                            counting = False
+                        last_state = state
+                        current = dt.datetime.now()
+                        elapsed = (current - start).seconds
+
+                        #status = 'Time Elapsed: {} - Number of Reads: {}'.format(elapsed, reads)
+                        #parent_task.update_state(state='STATUS', meta={'status': status })
+
+                        status = 'Time Elapsed: {} - {}({})'.format(elapsed, line, current_status_number)
+                        parent_task.update_state(state='STATUS', meta={'status': status })
+
+                    elif ('% percent done' in line):
+
+                        if pid:
+                            current_status_number = pid
+                            pid_str = 'PID: {} '.format(pid)
+                        else:
+                            current_status_number = ''
+                            pid_str = ''
+
+
+                        counting = True
+                        try:
+                            line_parts = line.split( '%', 1)
+                            percent = line_parts[0].strip()
+                            percent = float(percent)
+                        except:
+                            logger.debug( 'Couldn\'t convert {} to float'.format(percent) )
+                            percent = 0
+
+                        current = dt.datetime.now()
+                        elapsed = (current - start).seconds
+
+                        parent_task.update_state(state='PROGRESS',
+                            meta={'status': '{} ({}Time Elapsed: {})'.format( last_state , pid_str, elapsed ) , 'current' : percent, 'total' : 100, 'units' : '%' })
+
+            if counting:
+                parent_task.update_state(state='ANALYZING')
+                counting = False
+
+            response, error = command_line_process.communicate()
+            command_line_process.stdout.close()
+            command_line_process.wait()
+        except subprocess.CalledProcessError as error:
+            error = error.output
+            logger.error('Error executing command.')
+            logger.error(error)
+
         new_file = File()
         new_file.user_id = user_id
         new_file.parent_id = file.id 

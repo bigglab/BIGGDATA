@@ -59,10 +59,14 @@ from functions import *
 from models import * 
 
 
+
+# glyphicons-chevron-right
+
 # /data/resources : all software
 # /data/resources/germlines : files reffed by system
 
-# Find and delete where directory SRR_1 is created
+# Make sure that analyses can only be run on the correct files and cannot be run on empty filesets
+
 # Should only create
 # Walk through analyses
 

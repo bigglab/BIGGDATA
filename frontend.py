@@ -1065,12 +1065,17 @@ def mixcr(dataset_id, status=[]):
         flash('Error: that dataset cannot be analyzed','warning')
         return redirect( url_for('frontend.dashboard') )
 
-
     form = CreateMixcrAnalysisForm()
     status = []
     if request.method == 'POST' and dataset:
         status.append('MIXCR Launch Detected')
-        result = run_mixcr_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'trim': form.trim.data, 'cluster': form.cluster.data}, queue=celery_queue)
+        result = run_mixcr_with_dataset_id.apply_async( ( ),  
+            { 'dataset_id': dataset_id,
+            'analysis_name': form.name.data, 
+            'analysis_description': form.description.data, 
+            'user_id': current_user.id, 
+            'trim': form.trim.data, 
+            'cluster': form.cluster.data}, queue=celery_queue)
         status.append(result.__repr__())
         status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
         time.sleep(1)
@@ -1078,8 +1083,10 @@ def mixcr(dataset_id, status=[]):
         analyses = current_user.analyses.all()
         analysis_file_dict = OrderedDict()
         for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
-            analysis_file_dict[analysis] = analysis.files.all() 
-        return redirect(url_for('.analyses', status=status))
+            analysis_file_dict[analysis] = analysis.files.all()
+
+        return redirect(url_for('frontend.dashboard')) 
+        #return redirect(url_for('.analyses', status=status))
         # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
     else: 
         return render_template("mixcr.html", dataset=dataset, form=form, status=status, current_user=current_user) 
@@ -1105,6 +1112,7 @@ def pandaseq(dataset_id, status=[]):
         status.append(result.__repr__())
         status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
         time.sleep(1)
+
         # return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
         analyses = current_user.analyses.all()
         analysis_file_dict = OrderedDict()
@@ -1136,14 +1144,15 @@ def create_analysis(dataset_id, status=[]):
     if request.method == 'POST' and dataset:
         status.append('Analysis Launch Detected')
         result = run_analysis.apply_async(
-            (dataset_id, form.file_ids.data, current_user.id),  
+            (dataset_id, form.file_ids.data, ),  
                 {'analysis_type': 'IGFFT', 
                 'analysis_name': form.name.data, 
                 'analysis_description': form.description.data, 
                 'trim': form.trim.data, 
                 'cluster': form.cluster.data, 
                 'overlap': form.overlap.data, 
-                'paired': form.paired.data}, 
+                'paired': form.paired.data,
+                'user_id': current_user.id }, 
             queue=celery_queue)
         status.append(result.__repr__())
         status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
@@ -1369,7 +1378,8 @@ def json_celery_log():
                             color = 'orange'
                         elif 'ERROR' in line:
                             color = 'red'
-    
+
+                        # Progress can be passed in the logfile as a 'progress' line    
                         if 'PROGRESS' in line:
                             line_parts = tuple(line.strip().split(']'))
                             progress_info = tuple(line_parts[1].strip().split(','))
@@ -1416,18 +1426,16 @@ def json_celery_log():
             if log_entries == '':
                 log_entries = '<br>\n'
 
-            # Check for any ongoing progress from a task
-            # If there is progress, add a progress bar!
+            # Check for any ongoing progress from a task via the AMPQ server
+            # If there is progress, add a progress bar! If there is a status, post a status message
 
-            if async_task_progress != '' and task.status != 'DOWNLOADING' and task.status != 'SUCCESS' and task.status != 'FAILURE' and async_task_result.state == 'PROGRESS':
+            if async_task_progress == '' and task.status != 'DOWNLOADING' and task.status != 'SUCCESS' and task.status != 'FAILURE' and async_task_result.state == 'PROGRESS':
                 try:
                     async_task_state = async_task_result.state
                     async_task_current = async_task_result.info.get('current')
                     async_task_total = async_task_result.info.get('total')
                     async_task_status = async_task_result.info.get('status')
                     async_task_units = async_task_result.info.get('units')
-
-
 
                 except Exception, exception: 
                     print 'There was an error in getting the task progress: {}'.format(exception)
@@ -1450,6 +1458,16 @@ def json_celery_log():
                         </div>
                     """.format(  async_task_current, async_task_total, percent, progress_message)
 
+            if async_task_progress == '' and task.status != 'DOWNLOADING' and task.status != 'SUCCESS' and task.status != 'FAILURE' and async_task_result.state == 'STATUS':
+                try:
+                    async_task_state = async_task_result.state
+                    async_task_status = async_task_result.info.get('status')
+                except Exception, exception: 
+                    print 'There was an error in getting the task progress: {}'.format(exception)
+                else:
+                    async_task_progress = """
+                    {}<br>
+                    """.format(  async_task_status )
 
             entry = """
             <table width="100%">
