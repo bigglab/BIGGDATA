@@ -226,7 +226,7 @@ class File(db.Model):
         in_use = db.Column(db.Boolean)
         status = db.Column(db.String(50))
         path = db.Column(db.String(256))
-        file_size = db.Column(db.Integer)
+        file_size = db.Column(db.BigInteger)
         s3_available = db.Column(db.Boolean)
         s3_status = db.Column(db.String(50))
         s3_path = db.Column(db.String(256))
