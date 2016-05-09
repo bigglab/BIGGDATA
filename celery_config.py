@@ -1,7 +1,11 @@
 import os
-import sys 
+import sys
+import logging 
 from kombu import Exchange, Queue
 #from kombu.common import Broadcast
+
+# @Dave - to see all configuration options, see http://docs.celeryproject.org/en/latest/configuration.html
+
 
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
@@ -15,6 +19,8 @@ CELERY_RESULT_PERSISTENT = True
 default_exchange = Exchange('default', type='direct')
 ut_exchange = Exchange('ut', type='direct')
 aws_exchange = Exchange('aws', type='direct')
+dev_exchange = Exchange('dev', type='direct')
+
 
 CELERY_DEFAULT_QUEUE = 'default'
 CELERY_QUEUES = (
@@ -22,6 +28,8 @@ CELERY_QUEUES = (
   Queue('default', default_exchange, routing_key='default'),
   Queue('ut', ut_exchange, routing_key='ut'),
   Queue('aws', aws_exchange, routing_key='aws'),
+  Queue('dev', dev_exchange, routing_key='dev'),
+
 )
 
 
@@ -39,11 +47,25 @@ class TaskRouter(object):
 			# 					'exchange_type': 'default'
 			# 					'routing_key': 'default'
 			# 	}
+			# CELERYD_LOG_FILE = "/path/to/file.log"
 			return None
 
 CELERY_ROUTES = (
 	TaskRouter(), 
 )
+
+# Configure the Celery Logger
+# CELERYD_LOG_FORMAT
+# Default is [%(asctime)s: %(levelname)s/%(processName)s] %(message)s
+
+# CELERYD_TASK_LOG_FORMAT
+# Default is: [%(asctime)s: %(levelname)s/%(processName)s] [%(task_name)s(%(task_id)s)] %(message)s
+
+#CELERY_REDIRECT_STDOUTS
+# If enabled stdout and stderr will be redirected to the current logger.
+# Enabled by default. Used by celery worker and celery beat.
+
+CELERY_REDIRECT_STDOUTS_LEVEL = 'INFO'
 
 
 # @Dave - temporary edit - using local RabbitMQ for testing

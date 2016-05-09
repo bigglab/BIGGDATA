@@ -6,6 +6,13 @@ import os
 import time
 import random
 from shutil import copyfile
+
+import shlex
+
+from celery import uuid
+from celery.result import AsyncResult
+from celery.utils.log import get_task_logger
+
 import operator
 import ast
 from sets import Set
@@ -67,7 +74,8 @@ nav.register_element('frontend_top', Navbar(
         'Import Data', 
         View('My Files', 'frontend.files'), 
         View('Import File', 'frontend.file_download'),
-        View('Import From NCBI', 'frontend.import_sra'), 
+        View('Import From NCBI', 'frontend.import_sra'),
+        View('Import From GSAF', 'frontend.import_gsaf'), 
         ),
     Subgroup(
         'Manage Data',
@@ -107,7 +115,8 @@ nav.register_element('frontend_user', Navbar(
         'Import Data', 
         View('My Files', 'frontend.files'), 
         View('Import File', 'frontend.file_download'),
-        View('Import From NCBI', 'frontend.import_sra'), 
+        View('Import From NCBI', 'frontend.import_sra'),
+        View('Import From GSAF', 'frontend.import_gsaf'), 
         ),
     Subgroup(
         'Manage Data',
@@ -482,10 +491,11 @@ def file_download(status=[], bucket='', key=''):
         # status.append('Saving File To {}'.format(file.path))
         # status.append('This file will be visible in "My Files", and available for use after the download completes.')
         print status 
+        
         # result_id NOT WORKING - STILL REDUNDANT IF THEY CLICK TWICE!!
         flash_message = ''
         if not 'async_result_id' in session.__dict__:
-            result = download_file.apply_async((file.url, file.path, file.id), queue=celery_queue)
+            result = download_file.apply_async((file.url, file.path, file.id), {'user_id': current_user.id}, queue=celery_queue)
             #flash_message = 'File downloading from {}. '.format(file.url)
             session['async_result_id'] = result.id
         time.sleep(1)
@@ -496,6 +506,8 @@ def file_download(status=[], bucket='', key=''):
         db.session.commit()
         #flash_message = flash_message + 'File uploaded to {}. '.format(file.path)
         #flash(flash_message, 'success')
+        return redirect( url_for('frontend.dashboard') )
+
     else:
         r=''
     return render_template("file_download.html", download_form=form, status=status, r=r, current_user=current_user)
@@ -510,7 +522,6 @@ def transfer_to_s3(file_id):
         db.session.commit()
         result = transfer_file_to_s3.apply_async((f.id,), queue=celery_queue)
         return redirect(url_for('.files'))
-
 
 @frontend.route('/files', methods=['GET', 'POST'])
 @login_required
@@ -1120,7 +1131,6 @@ def create_analysis(dataset_id, status=[]):
         flash('Error: that dataset cannot be analyzed','warning')
         return redirect( url_for('frontend.dashboard') )
 
-
     form = CreateAnalysisForm()
     file_options = map(lambda f: [f.id, f.name], [f for f in dataset.files if 'FASTQ' in f.file_type])
     form.file_ids.choices = file_options
@@ -1128,6 +1138,16 @@ def create_analysis(dataset_id, status=[]):
     if request.method == 'POST' and dataset:
         status.append('Analysis Launch Detected')
         result = run_analysis.apply_async((dataset_id, form.file_ids.data, current_user.id),  {'analysis_type': 'IGFFT', 'analysis_name': form.name.data, 'analysis_description': form.description.data, 'trim': form.trim.data, 'cluster': form.cluster.data, 'overlap': form.overlap.data, 'paired': form.paired.data}, queue=celery_queue)
+        result = run_analysis.apply_async(
+            (dataset_id, form.file_ids.data, current_user.id),  
+                {'analysis_type': 'IGFFT', 
+                'analysis_name': form.name.data, 
+                'analysis_description': form.description.data, 
+                'trim': form.trim.data, 
+                'cluster': form.cluster.data, 
+                'overlap': form.overlap.data,
+                'paired': form.paired.data}, 
+            queue=celery_queue)
         status.append(result.__repr__())
         status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
         time.sleep(1)
@@ -1224,34 +1244,6 @@ def longtask():
                                                   task_id=task.id)}
 
 
-@frontend.route('/status/<task_id>')
-def taskstatus(task_id):
-    task = long_task.AsyncResult(task_id)
-    if task.state == 'PENDING':
-        response = {
-            'state': task.state,
-            'current': 0,
-            'total': 1,
-            'status': 'Pending...'
-        }
-    elif task.state != 'FAILURE':
-        response = {
-            'state': task.state,
-            'current': task.info.get('current', 0),
-            'total': task.info.get('total', 1),
-            'status': task.info.get('status', '')
-        }
-        if 'result' in task.info:
-            response['result'] = task.info['result']
-    else:
-        # something went wrong in the background job
-        response = {
-            'state': task.state,
-            'current': 1,
-            'total': 1,
-            'status': str(task.info),  # this is the exception raised
-        }
-    return jsonify(response)
 
 @frontend.route('/files/import_sra', methods=['GET', 'POST'])
 @login_required
@@ -1296,10 +1288,235 @@ def import_sra():
             status.append('Import SRA Started for Accession {}'.format(form.accession.data))
             status.append('Once complete, a dataset named {} will automatically be created containing these single or paired-end read files'.format(form.accession.data))
             result = import_from_sra.apply_async((form.accession.data,), {'name': form.accession.data, 'user_id': current_user.id, 'chain':form.chain.data, 'project_selection':form.project.data , 'dataset_selection':form.dataset.data}, queue=celery_queue)
-            # status.append(result.__dict__)
+            return redirect( url_for('frontend.dashboard') )
         else: 
             status.append('Accession does not start with SRR or ERR?')
+            return render_template('sra_import.html', status=status, form=form, result=result, current_user=current_user)
+
     return render_template('sra_import.html', status=status, form=form, result=result, current_user=current_user)
 
+@frontend.route('/delete_task/<task_id>', methods=['GET', 'POST'])
+@login_required
+def delete_task(task_id):
+    tasks = Set(current_user.celery_tasks)
+    tasks.discard(None)
+    tasks = Set( sorted(tasks, key=lambda x: x.id, reverse=True) )
 
+    discard_task = ''
+
+    for task in tasks:
+        if str(task.id) == task_id:
+
+            logfile = '{}/{}.log'.format( current_user.scratch_path.rstrip('/') , task.async_task_id )
+
+            print "Deleting {}...".format( logfile )
+            try:
+                os.remove( logfile )
+            except:
+                pass
+            discard_task = task
+
+    tasks.discard( discard_task )
+    current_user.celery_tasks = tasks
+    db.session.commit()
+
+    return redirect( url_for('frontend.dashboard') )
+
+@frontend.route('/json_celery_log', methods=['GET', 'POST'])
+@login_required
+def json_celery_log():
+
+
+    interval = 60000
+    tasks = Set(current_user.celery_tasks)
+    tasks.discard(None)
+    tasks = sorted(tasks, key=lambda x: x.id, reverse=True)
+
+    tasks_pending = False
+
+    message = ''
+
+    if len(tasks) > 0:
+
+        for task in tasks:
+            entry = ''
+
+            async_task_result = celery.AsyncResult(task.async_task_id)
+
+            if task.result:
+                task_message = task.result
+            else:
+                task_message = ""
+
+            if task.status == 'STARTED':
+                task_heading_color = 'green'
+                tasks_pending = True
+            elif task.status == 'SUCCESS': 
+                task_heading_color = 'green'
+            elif task.status == 'FAILURE':
+                task_heading_color = 'red'
+            else:
+                task_heading_color = 'green'
+
+            log_entries = ''
+
+            logfile = '{}/{}.log'.format( current_user.scratch_path.rstrip('/') , task.async_task_id )
+
+            async_task_progress = ''
+
+            try:
+                with open(logfile) as file:
+                    for line in file:
+                        color = 'black'
+                        if 'WARNING' in line:
+                            color = 'orange'
+                        elif 'ERROR' in line:
+                            color = 'red'
+    
+                        if 'PROGRESS' in line:
+                            line_parts = tuple(line.strip().split(']'))
+                            progress_info = tuple(line_parts[1].strip().split(','))
+
+                            try:
+                                async_task_state = 'PROGRESS'
+                                async_task_status = progress_info[1]
+                                async_task_current = progress_info[2]
+                                async_task_total = progress_info[3]
+                                async_task_units = progress_info[4]
+                            except Exception, message:
+                                print "Error: {}".format(message)
+                            else:
+                                if async_task_units == '%':
+                                    progress_message = '{} {} %'.format(async_task_status, async_task_current)
+                                else:
+                                    progress_message = '{} {}/{} {}'.format(async_task_status, async_task_current, async_task_total, async_task_units)
+
+                                try:
+                                    percent = int( float( int(async_task_current) ) / float( int(async_task_total) ) * 100 )
+                                except:
+                                    percent = 0
+
+                                if percent == 100:
+                                    async_task_state = ''
+                                    async_task_current = 0
+                                    async_task_total = 0
+                                    async_task_status = ''
+                                    async_task_units = ''
+                                    async_task_progress = ''
+                                else:
+                                    async_task_progress = """
+                                        <div class="progress" style="position: relative;">
+                                            <div class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="{0}" aria-valuemin="0" aria-valuemax="{1}" style="width:{2}%;"></div>
+                                           <span class = "progress-value" style="position:absolute; right:0; left:0; width:100%; text-align:center; z-index:2; color:black;">{3}</span>
+                                        </div>
+                                    """.format(  async_task_current, async_task_total, percent, progress_message)
+
+                        else:
+                            log_entries = log_entries + '<font color="{}">{}</font><br>\n'.format( color , line )
+            except:
+                pass
+
+            if log_entries == '':
+                log_entries = '<br>\n'
+
+            # Check for any ongoing progress from a task
+            # If there is progress, add a progress bar!
+
+            if async_task_progress != '' and task.status != 'DOWNLOADING' and task.status != 'SUCCESS' and task.status != 'FAILURE' and async_task_result.state == 'PROGRESS':
+                try:
+                    async_task_state = async_task_result.state
+                    async_task_current = async_task_result.info.get('current')
+                    async_task_total = async_task_result.info.get('total')
+                    async_task_status = async_task_result.info.get('status')
+                    async_task_units = async_task_result.info.get('units')
+
+
+
+                except Exception, exception: 
+                    print 'There was an error in getting the task progress: {}'.format(exception)
+                else:
+                    #async_task_progress = """[{}] {}: {}/{} {}<br>\n""".format( async_task_state, async_task_status, async_task_current, async_task_total, async_task_units)
+                    if async_task_units == '%':
+                        progress_message = '{} {} %'.format(async_task_status, async_task_current)
+                    else:
+                        progress_message = '{} {}/{} {}'.format(async_task_status, async_task_current, async_task_total, async_task_units)
+
+                    try:
+                        percent = int( float( int(async_task_current) ) / float( int(async_task_total) ) * 100 )
+                    except:
+                        percent = 0
+
+                    async_task_progress = """
+                        <div class="progress" style="position: relative;">
+                            <div class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="{0}" aria-valuemin="0" aria-valuemax="{1}" style="width:{2}%;"></div>
+                           <span class = "progress-value" style="position:absolute; right:0; left:0; width:100%; text-align:center; z-index:2; color:black;">{3}</span>
+                        </div>
+                    """.format(  async_task_current, async_task_total, percent, progress_message)
+
+
+            entry = """
+            <table width="100%">
+                <tbody>
+                    <tr>
+                        <td><font color="{}">[Task {} ({}) - {}] {}</font><br>
+                        {}{}</td>
+                        <td align="right" valign="top">[<a href="{}">X</a>]</td>
+                    </tr>
+                </tbody>
+            </table>
+            <br>""".format( task_heading_color , task.id, task.name , task.status, task_message , log_entries, async_task_progress , url_for( 'frontend.delete_task', task_id = task.id )  )
+
+            message = message + entry
+
+    else:
+        message = """
+            <table width="100%">
+                <tbody>
+                    <tr>
+                        <td>There are no tasks running at this time. (Checking again in <span id="interval">60</span> s...)</td>
+                        
+                    </tr>
+                </tbody>
+            </table>
+            <br>"""
+
+        ""
+        interval = 60000
+
+    if tasks_pending:
+        interval = 2500
+
+    response = {
+        'message': message,
+        'interval': interval,
+        'current': 1,
+        'total': 1
+     }  # this is the exception raised
+
+
+
+    return jsonify( response )
+
+from flask import Markup
+@frontend.route('/test_celery_log', methods=['GET', 'POST'])
+@login_required
+def test_celery_log():
+
+    result = output_celery_log.apply_async( (), { 'user_id': current_user.id, }, queue=celery_queue )
+
+    message = Markup('<a href="{}">Test Again</a>.'.format( url_for('frontend.test_celery_log') ) )
+    flash(message , 'success' )
+
+    time.sleep(3)    
+    return redirect( url_for('frontend.dashboard') )
+
+    # Here in task:
+    self.update_state(state='PROGRESS',
+                        meta={ 'current': i, 'total': total, 'status': message} )
+
+
+@frontend.route('/import_gsaf', methods=['GET'])
+@login_required
+def import_gsaf():
+    return render_template('import_gsaf.html') 
 
