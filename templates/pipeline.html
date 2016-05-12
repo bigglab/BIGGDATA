@@ -1,0 +1,663 @@
+{% extends '_base.html' %}
+
+{% block wide_content %}
+
+<div class="container">
+  <h3 align="center">BIGG Data - Build Analysis Pipeline</h3>
+  <br>
+</div>
+
+
+<div class="container">
+
+  <div class="row" id="console-container">
+    <div class="col-md-12">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <table width="100%">
+            <tbody>
+              <tr>
+                <td><b> 
+                <span id="slide0" style="color:black">
+                  <a data-target="#myCarousel" data-slide-to="0" class="active" href="#" style="color: inherit; text-decoration: none">Select Files</a> </span> 
+                <span style="color:gray"> > </span> 
+                <span id="slide1" style="color:gray">
+                  <a data-target="#myCarousel" data-slide-to="1" class="active" href="#" style="color: inherit; text-decoration: none">Choose Pre-Processing</a> </span>
+                <span style="color:gray"> > </span> 
+                <span id="slide2" style="color:gray">
+                  <a data-target="#myCarousel" data-slide-to="2" class="active" href="#" style="color: inherit; text-decoration: none">Select Analysis</a> </span>
+                <span style="color:gray"> > </span> 
+                <span id="slide3" style="color:gray">
+                  <a data-target="#myCarousel" data-slide-to="3" class="active" href="#" style="color: inherit; text-decoration: none">Select Output</a> </span>
+                </b></td>
+                <td align="right"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel-body">
+
+          <div id="myCarousel" class="carousel" data-ride="carousel" data-interval="false" data-wrap="false">
+            <!-- Indicators -->
+            <table height="400px" width="100%">
+              <tbody>
+                <tr>
+                  
+                  <td width="12%"> &nbsp; </td>
+                  <td height="100%" valign="top">
+                    <!-- Wrapper for slides -->
+                    <form role="form" method="POST" action="{{url_for('frontend.pipeline')}}">
+                      {{ build_pipeline_form.csrf_token }}
+                      <div class="carousel-inner" role="listbox">
+                        
+                        <div class="item active" name='file_source'>
+                          <center><b>Select Files to Analyze</b></center>
+
+                            <div id="accordion">
+
+                              <table width="100%" style="margin-left: 10px">
+                                <tr>
+                                  <td width="15px"></td>
+                                  <td>                              
+                                    <label class="radio">
+                                      <input id="file_source-0" name="file_source" type="radio" value="file_dataset" class="file_dataset">Files from Dataset
+                                    </label>
+                                    <div id="collapse" class="collapse file_dataset radio">
+                                      <table>
+                                        <tr>
+                                          <td>
+                                            {{ build_pipeline_form.dataset.label }}
+                                          </td>
+                                          <td>
+                                          </td>
+                                          <td>
+                                            {{ build_pipeline_form.dataset_files.label }}
+                                          </td>
+                                        </tr>
+
+                                        <tr>
+                                          <td>
+                                            {{ build_pipeline_form.dataset( style="min-width: 10em; ", size="7", class="form-control") }}
+                                          </td>
+                                          <td>
+                                            <span class="glyphicon glyphicon-chevron-right" aria-hidden="true" style="color:gray; margin: 10px;"></span>
+                                          </td>
+                                          <td>
+                                            {{ build_pipeline_form.dataset_files( style="min-width: 10em;", size="7", class="form-control"  ) }}
+                                          </td>
+                                        </tr>
+                                      </table>
+                                    </div>
+                                  </td>
+                                </tr>
+                              
+                                <tr>
+                                  <td width="15px"></td>
+                                  <td>                              
+                                    <label class="radio">
+                                      <input id="file_source-1" name="file_source" type="radio" value="file_gsaf" class="file_gsaf">Files from GSAF URL
+                                    </label>
+                                    <div id="collapse" class="collapse file_gsaf radio">
+
+                                      <table class='table table-striped'> 
+                                          <thead>
+                                              <tr>
+                                                  <th>{{ build_pipeline_form.gsaf_url.label }}:</th>
+                                                  <th></th>
+                                              </tr>
+                                          </thead>
+                                          <tbody>
+                                              <tr>
+                                                  <td>{{ build_pipeline_form.gsaf_url(size=30, class="form-control") }}</td>
+                                                  <td></td>
+                                              </tr>
+                                          </tbody>
+                                      </table>
+
+
+                                    </div>
+
+                                  </td>
+                                </tr>
+                              
+                                <tr>
+                                  <td width="15px"></td>
+                                  <td>                              
+                                    <label class="radio">
+                                      <input id="file_source-2" name="file_source" type="radio" value="file_upload" class="file_upload">File from URL
+                                    </label>
+                                    <div id="collapse" class="collapse file_upload radio">
+
+                                      <table class='table table-striped'> 
+                                          <thead>
+                                              <tr>
+                                                  <th>{{ build_pipeline_form.download_url.label }}:</th>
+                                                  <th><label>Chain:</label></th>
+                                                  <th></th>
+                                              </tr>
+                                          </thead>
+                                          <tbody>
+                                              <tr>
+                                                  <td>{{ build_pipeline_form.download_url(size=30, class="form-control") }}</td>
+                                                  <td>{{ build_pipeline_form.download_chain(class="form-control") }}</td>
+                                                  <td></td>
+                                              </tr>
+                                          </tbody>
+                                      </table>
+
+                                    </div>
+
+                                  </td>
+                                </tr>
+                              
+                                <tr>
+                                  <td width="15px"></td>
+                                  <td>                              
+                                    <label class="radio">
+                                      <input id="file_source-3" name="file_source" type="radio" value="file_ncbi" class="file_ncbi">Files from NCBI
+                                    </label>
+                                    <div id="collapse" class="collapse file_ncbi radio">
+                                      <table class='table table-striped'> 
+                                          <thead>
+                                              <tr>
+                                                  <th><label>Accession (begins with 'SRR', SRR1525443 for instance)</label>:</th>
+                                                  <th><label>Chain:</label></th>
+                                                  <th></th>
+                                              </tr>
+                                          </thead>
+                                          <tbody>
+                                              <tr>
+                                                  <td>{{ build_pipeline_form.ncbi_accession(size=20, class="form-control") }}</td>
+                                                  <td>{{ build_pipeline_form.ncbi_chain(class="form-control") }}</td>
+                                                  <td></td>
+                                              </tr>
+                                          </tbody>
+                                      </table>
+
+                                    </div>
+                                  </td>
+                                </tr>
+
+                              </table>
+
+                            </div> <!-- /accordian -->
+
+
+                        </div>
+
+                        <div class="item">
+                          <div id="accordion">
+
+                            <center><b>Choose Preprocessing Options</b></center>
+                            <table >
+                              <tr>
+                                <td>
+                                  <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                                    <label>
+                                        {{ build_pipeline_form.trim(class='trim') }}
+                                        <b>Trimmomatic:</b> Trim FASTQ data
+                                    </label>
+                                  </div> <!-- /checkbox -->
+
+                                  <div id="collapse" class="collapse trim">
+                                    <div style="margin-left: 25px">
+
+                                      <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                                        <label>
+                                            {{ build_pipeline_form.trim_slidingwindow(class='trim_slidingwindow') }}
+                                            <b>Use Sliding Window:</b> Perform a sliding window trimming, cutting once the average quality within the window falls below a threshold. Default is 80% of reads over Q30.
+                                        </label>
+                                      </div>
+
+                                      <div id="collapse" class="collapse trim_slidingwindow">
+                                        <table class='table table-striped'> 
+                                            <thead>
+                                                <tr>
+                                                    <th>{{ build_pipeline_form.trim_slidingwindow_size.label }}</th>
+                                                    <th>{{ build_pipeline_form.trim_slidingwindow_quality.label }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>{{ build_pipeline_form.trim_slidingwindow_size(type="number", maxlength=5, size=3, class="form-control") }}</td>
+                                                    <td>{{ build_pipeline_form.trim_slidingwindow_quality(type="number", maxlength=5,size=3, class="form-control") }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                      </div> <!-- /trim_slidingwindow collapse -->
+
+                                      <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                                        <label>
+                                          <input id="trim_illumina_adapters" class="trim_illumina_adapters" name="trim_illumina_adapters" type="checkbox" value="n" >
+                                            <b>Trim Illumina Adapters</b>
+                                        </label>
+                                      </div>                                      
+
+                                    </div>
+                                  </div> <!-- /trim collapse -->
+
+                                </td>
+                              </tr>
+                              <tr>
+                                <td>
+                                  <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                                    <label >
+                                        {{ build_pipeline_form.pandaseq(class='pandaseq') }}
+                                        <b>PANDAseq:</b> Assemble overlapping pair-end reads (recommended)
+                                    </label>
+                                  </div> <!-- /checkbox -->
+
+                                  <div id="collapse" class="collapse pandaseq in">
+                                      <table class='table table-striped '> 
+                                        <thead>
+                                            <tr>
+                                                <th>{{ build_pipeline_form.pandaseq_algorithm.label }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>{{ build_pipeline_form.pandaseq_algorithm( class="form-control") }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                  </div> <!-- /collapse -->
+
+                                </td>
+                                
+                              </tr>
+                            </table>
+
+                          </div> <!-- /accordian  -->
+                        </div>
+
+                        <div class="item" name="analysis_type">
+                          <center><b>Select Analysis Type</b></center>
+                            <div id="accordion">
+
+                              <table width="100%" style="margin-left: 10px">
+                                <tr>
+                                  <td width="15px"></td>
+                                  <td>                              
+                                    <label class="radio">
+                                      <input id="analysis_type-0" name="analysis_type" type="radio" value="igrep" class="igrep">IGREP/IGFFT
+                                    </label>
+                                    <div id="collapse" class="collapse igrep radio1">
+                                      <!-- <table>
+                                        <tr>
+                                          <td>
+                                            {#{ build_pipeline_form.dataset.label }#}
+                                          </td>
+                                          <td>
+                                          </td>
+                                          <td>
+                                            {#{ build_pipeline_form.dataset_files.label }#}
+                                          </td>
+                                        </tr>
+
+                                        <tr>
+                                          <td>
+                                            {#{ build_pipeline_form.dataset( style="min-width: 10em; ", size="7", class="form-control") }#}
+                                          </td>
+                                          <td>
+                                            <span class="glyphicon glyphicon-chevron-right" aria-hidden="true" style="color:gray; margin: 10px;"></span>
+                                          </td>
+                                          <td>
+                                            {#{ build_pipeline_form.dataset_files( style="min-width: 10em;", size="7", class="form-control"  ) }#}
+                                          </td>
+                                        </tr>
+                                      </table> -->
+                                    </div>
+                                  </td>
+                                </tr>
+                              
+                                <tr>
+                                  <td width="15px"></td>
+                                  <td>                              
+                                    <label class="radio">
+                                      <input id="analysis_type-1" name="analysis_type" type="radio" value="mixcr" class="mixcr">MixCR
+                                    </label>
+                                    <div id="collapse" class="collapse mixcr radio1">
+
+                                      <!-- <table class='table table-striped'> 
+                                          <thead>
+                                              <tr>
+                                                  <th>{#{ build_pipeline_form.gsaf_url.label }#}:</th>
+                                                  <th></th>
+                                              </tr>
+                                          </thead>
+                                          <tbody>
+                                              <tr>
+                                                  <td>{#{ build_pipeline_form.gsaf_url(size=30, class="form-control") }#}</td>
+                                                  <td></td>
+                                              </tr>
+                                          </tbody>
+                                      </table> -->
+
+
+                                    </div>
+
+                                  </td>
+                                </tr>
+                              
+                                <tr>
+                                  <td width="15px"></td>
+                                  <td>                              
+                                    <label class="radio">
+                                      <input id="analysis_type-2" name="analysis_type" type="radio" value="abstar" class="abstar">ABStar
+                                    </label>
+                                    <div id="collapse" class="collapse abstar radio1">
+
+                                      <!-- <table class='table table-striped'> 
+                                          <thead>
+                                              <tr>
+                                                  <th>{#{ build_pipeline_form.download_url.label }#}:</th>
+                                                  <th><label>Chain:</label></th>
+                                                  <th></th>
+                                              </tr>
+                                          </thead>
+                                          <tbody>
+                                              <tr>
+                                                  <td>{#{ build_pipeline_form.download_url(size=30, class="form-control") }#}</td>
+                                                  <td>{#{ build_pipeline_form.download_chain(class="form-control") }#}</td>
+                                                  <td></td>
+                                              </tr>
+                                          </tbody>
+                                      </table> -->
+
+                                    </div>
+
+                                  </td>
+                                </tr>
+                              </table>
+
+                            </div> <!-- /accordian -->
+
+                        </div>  <!-- /item analysis -->
+
+                        <div class="item">
+                          <center><b>Select where you would like to output your files.</b></center>
+                          <br>
+                          <table class="table table-striped">
+                            <thead>
+                              <tr>
+                                <th>Analysis Name</th>
+                                <th>Analysis Description</th>
+                                <th>Choose Output Dataset/Project</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td>{{ build_pipeline_form.name(size=25, class="form-control") }}</td>
+                                <td>{{ build_pipeline_form.description(size=25, rows=1, class="form-control") }}</td>
+                                <td>
+                                  {{ build_pipeline_form.output_dataset(class="form-control") }}<br>
+                                  {{ build_pipeline_form.output_project(class="form-control") }}
+                                  </td>
+                              </tr>
+                            </tbody>
+                          </table>
+
+                          <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                            <label >
+                                {{ build_pipeline_form.cluster }}
+                                <b>Cluster:</b> Perform USEARCH clustering on results.
+                            </label>
+                          </div> <!-- /checkbox -->
+                          <br>
+                          <br>
+                          <center>
+                            <span><input class="btn btn-default form-control" type="submit" value="Run Analysis Pipeline" style="max-width: 15em;"></span> 
+                          </center>
+                        </div> <!-- /item -->
+                      </div>
+                    </form>
+                  </td>
+                  <td width="12%"> &nbsp; </td>
+                </tr>
+                <tr>
+                  <td></td>
+                  <td>
+                    
+                  </td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <ol class="carousel-indicators">
+              <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
+              <li data-target="#myCarousel" data-slide-to="1"></li>
+              <li data-target="#myCarousel" data-slide-to="2"></li>
+              <li data-target="#myCarousel" data-slide-to="3"></li>
+            </ol>
+
+            <!-- Left and right controls -->
+            <a class="left carousel-control" href="#myCarousel" role="button" data-slide="prev">
+              <span class="glyphicon glyphicon-chevron-left" aria-hidden="true" style="color:gray"></span>
+              <span class="sr-only">Previous</span>
+            </a>
+
+            <a class="right carousel-control" href="#myCarousel" role="button" data-slide="next">
+              <span class="glyphicon glyphicon-chevron-right" aria-hidden="true" style="color:gray"></span>
+              <span class="sr-only">Next</span>
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+
+$('.carousel').on('slide.bs.carousel',function(e){
+    var slideFrom = $(this).find('.active').index();
+    var slideTo = $(e.relatedTarget).index();
+
+    switch(slideTo) {
+        case 0:
+            $('#slide0').css( "color", "black" );
+            $('#slide1').css( "color", "gray" );
+            $('#slide2').css( "color", "gray" );
+            $('#slide3').css( "color", "gray" );
+            break;
+        case 1:
+            $('#slide0').css( "color", "gray" );
+            $('#slide1').css( "color", "black" );
+            $('#slide2').css( "color", "gray" );
+            $('#slide3').css( "color", "gray" );
+            break;
+        case 2:
+            $('#slide0').css( "color", "gray" );
+            $('#slide1').css( "color", "gray" );
+            $('#slide2').css( "color", "black" );
+            $('#slide3').css( "color", "gray" );
+            break;
+
+        case 3:
+            $('#slide0').css( "color", "gray" );
+            $('#slide1').css( "color", "gray" );
+            $('#slide2').css( "color", "gray" );
+            $('#slide3').css( "color", "black" );
+
+    }
+
+});
+
+// Following code creates a dictionary for selecting files from datasets
+{% if dataset_file_dict != {} %}
+
+dataset_dict = {
+  {%- for key, dictionary in dataset_file_dict.items() %}
+  '{{key}}':{
+    {%- for file_id, file_name in dictionary.items() -%} '{{file_id}}':'{{file_name}}', {%- endfor -%}
+  },
+  {%- endfor %}
+};
+{% else %}
+dataset_dict = {};
+{% endif %}
+
+// Create a code indicating which project a dataset is in
+{% if dataset_file_dict != {} %}
+dataset_project_dict = {
+  {% for key, value in dataset_project_dict.items() -%}
+  '{{key}}':'{{value}}', 
+  {% endfor -%}
+};
+{% else %}
+dataset_project_dict = {};
+{% endif %}
+
+// Create a list of runtime attributes
+{% if runtime_attributes != {} %}
+
+runtime_attributes = [
+  {% for tuple in runtime_attributes -%}
+  {%- if tuple[2] == '' -%}
+  ['{{tuple[0]}}', '{{tuple[1]}}', true],
+  {%- else -%}
+  ['{{tuple[0]}}', '{{tuple[1]}}', '{{tuple[2]}}'],
+  {% endif %}
+  {% endfor -%}
+]
+{% else %}
+runtime_attributes = [];
+{% endif %}
+
+// Mutliple select box with single select ability
+$(function(){
+    $('#dataset').removeAttr("multiple");
+});
+
+// Set runtime attributes on load
+$(document).ready(function(){
+  for (var i=0; i<runtime_attributes.length; i++){
+    var selector = runtime_attributes[i][0];
+    var attribute = runtime_attributes[i][1];
+    var value = runtime_attributes[i][2];
+
+    if (value == true){
+      $(selector).prop(attribute, true);
+    }else{
+      $(selector).attr(attribute, value);    
+    }
+  }
+
+  $("#dataset option").each( function( index ) {
+    $(this).triggerHandler('click'); 
+  });
+  $('input[type=radio][name="file_source"]').each( function( index ) {
+    $(this).triggerHandler('change'); 
+  });
+  $('input[type=radio][name="analysis_type"]').each( function( index ) {
+    $(this).triggerHandler('change'); 
+  });
+  $('input[type=checkbox]').each( function( index ) {
+    $(this).triggerHandler('change'); 
+  });
+
+  {% if first_error_item != None -%}
+    $('#myCarousel').carousel({{first_error_item}});
+  {%- endif %}
+
+  {% if build_pipeline_form.dataset_files.default and build_pipeline_form.dataset_files.default != [] -%}
+    $('#dataset_files').val( [{%- for default in build_pipeline_form.dataset_files.default %} '{{default}}', {% endfor -%}]);
+  {%- endif %}
+
+});
+
+// Change file choices based on dataset choice
+$("#dataset option").click(function() {
+
+    checked_file_source = $('input[type=radio][name="file_source"]:checked').attr('class');
+
+    console.log(checked_file_source);
+
+    if (checked_file_source != undefined && checked_file_source != 'file_dataset'){
+      return
+    }
+
+    var dataset_id = $('select[id=dataset]').val();
+
+    if (dataset_id != null){
+
+      $('#dataset_files')
+        .find('option')
+        .remove()
+        .end();
+
+      // Based on selected dataset, autopopulate form values for output
+      $('#output_dataset').val(dataset_id);
+      $('#output_project').val(dataset_project_dict[dataset_id]);
+
+      selectValues = dataset_dict[dataset_id];
+
+      $.each(selectValues, function(key, value) {   
+        $('#dataset_files')
+          .append($('<option>', { value : key })
+          .text(value)); 
+      });
+
+    }
+
+});
+
+$('input[type=radio][name="file_source"]').on('change', function () {
+    if (!this.checked) return
+    $('.radio.collapse').not($('div.' + $(this).attr('class'))).slideUp();
+    $('.radio.collapse.' + $(this).attr('class')).slideDown();
+
+    selected_class = $(this).attr('class');
+
+    //console.log(selected_class);
+
+    if (selected_class != 'file_dataset') {
+
+      $('#output_dataset').val('new');
+      $('#output_project').val('new');
+    }
+
+    $("#dataset option").each( function( index ) {
+      $(this).triggerHandler('click'); 
+    });        
+
+
+});
+
+$('input[type=radio][name="analysis_type"]').on('change', function () {
+    if (!this.checked) return
+    $('.radio1.collapse').not($('div.' + $(this).attr('class'))).slideUp();
+    $('.radio1.collapse.' + $(this).attr('class')).slideDown();
+});
+
+$('input[type=checkbox]').on('change', function () {
+    
+    if (!this.checked){
+      $('.collapse.' + $(this).attr('class')).slideUp();
+    }else{
+      $('.collapse.' + $(this).attr('class')).slideDown();
+    }
+});
+
+
+$('.mightOverflow').bind('mouseenter', function(){
+  var $this = $(this);
+
+  if(this.offsetWidth < this.scrollWidth && !$this.attr('title')){
+    $this.attr('title', $this.text());
+  }
+});
+
+</script>
+
+
+
+
+{% endblock wide_content %}
+
+

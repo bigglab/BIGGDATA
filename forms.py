@@ -173,8 +173,6 @@ class ImportSraAsDatasetForm(Form):
     chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
     dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
     project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
-    
-
 
 class FileEditForm(Form):
     name = TextField('File name', [validators.length(max=256)])
@@ -182,22 +180,78 @@ class FileEditForm(Form):
     chain  = SelectField('Chain', choices=(('HEAVY', 'HEAVY'), ('LIGHT', 'LIGHT'), ('HEAVY/LIGHT', 'HEAVY/LIGHT'), ('TCRA', 'TCRA'), ('TCRB', 'TCRB'), ('TCRA/B', 'TCRA/B')))
 
 class CreateProjectForm(Form):
-        user_id = 'user.id'
-        project_name = TextField('Project Name', [validators.required(), validators.length(max=128)])
-        description = TextAreaField('Project Description', [validators.length(max=256)])
-        cell_types_sequenced = TextField('Cell Types Sequenced', [validators.length(max=50)])        
-        publications = TextField('Publications', [validators.length(max=256)])
-        lab = TextField('Lab', [validators.length(max=128)], default = 'Georgiou')
-        editors = SelectMultipleField('Modify Users Who Can Edit', choices=[('None','None')])
-        viewers = SelectMultipleField('Modify Users Who Can View', choices=[('None','None')])
-        datasets = SelectMultipleField('Add Existing Datasets to Project', choices=[('None','None')])
+    user_id = 'user.id'
+    project_name = TextField('Project Name', [validators.required(), validators.length(max=128)])
+    description = TextAreaField('Project Description', [validators.length(max=256)])
+    cell_types_sequenced = TextField('Cell Types Sequenced', [validators.length(max=50)])        
+    publications = TextField('Publications', [validators.length(max=256)])
+    lab = TextField('Lab', [validators.length(max=128)], default = 'Georgiou')
+    editors = SelectMultipleField('Modify Users Who Can Edit', choices=[('None','None')])
+    viewers = SelectMultipleField('Modify Users Who Can View', choices=[('None','None')])
+    datasets = SelectMultipleField('Add Existing Datasets to Project', choices=[('None','None')])
 
-        file = FileField(u'Add Datasets from JSON File')
-        url = TextField(u'JSON URL')
+    file = FileField(u'Add Datasets from JSON File')
+    url = TextField(u'JSON URL')
 
-        #species = TextField('Species', [validators.length(max=128)])
-        species = SelectField( 'Species', choices=[('', ''), ('H. sapiens', 'H. sapiens'), ('M. musculus', 'M. musculus')] )
+    #species = TextField('Species', [validators.length(max=128)])
+    species = SelectField( 'Species', choices=[('', ''), ('H. sapiens', 'H. sapiens'), ('M. musculus', 'M. musculus')] )
 
+class BuildPipelineForm(Form):
+    file_source = RadioField('Select a File Source', choices=[ ('file_dataset' , 'Files from Dataset'), ('file_gsaf' , 'Files from GSAF URL'), ('file_upload' , 'Upload Files'), ('file_ncbi' , 'Files from NCBI') ])
+    dataset = SelectMultipleField(u'Select Dataset', choices = [ ('','') ] )
+    dataset_files = SelectMultipleField(u'Select Files', choices = [ ('','') ])
+
+    name = TextField()
+    description = TextField()
+    output_dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
+    output_project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
+
+    ncbi_accession = TextField()
+    #ncbi_description = TextField()
+    ncbi_chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
+    #ncbi_dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
+    #ncbi_project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
+
+    download_url     = TextField(u'File URL', validators=[validators.input_required()], widget=TextInput())
+    #download_description  = TextAreaField(u'File Description')
+    download_chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
+    #download_dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
+    #download_project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
+
+    gsaf_url     = TextField(u'GSAF URL', validators=[validators.input_required()], widget=TextInput())
+    #gsaf_description  = TextAreaField(u'File Description')
+    gsaf_chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
+    #gsaf_dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
+    #gsaf_project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
+
+    trim = BooleanField(u'Trim Illumina Adapters')
+    trim_slidingwindow = BooleanField(u'Use Sliding Window Trimming') # Perform a sliding window trimming, cutting once the average quality within the window falls below a threshold.
+    trim_slidingwindow_size = IntegerField(u'Window Size (Integer)') # windowSize: specifies the number of bases to average across
+    trim_slidingwindow_quality = IntegerField(u'Required Quality (Integer)') # requiredQuality: specifies the average quality required.
+    trim_illumina_adapters = BooleanField(u'Trim Illumina Adapters')
+
+    pandaseq = BooleanField('PANDAseq', default='checked')
+    pandaseq_algorithm = SelectField(u'PANDAseq Algorithm', choices=(['ea_util', 'ea_util'], ['flash', 'flash'], ['pear', 'pear'], ['rdp_mle', 'rdp_mle'],  ['simple_bayesian', 'simple_bayesian'], ['stitch', 'stitch'], ['uparse', 'uparse']), validators=[validators.input_required()])
+
+    analysis_type = RadioField('Select a File Source', choices=[ ('igrep' , 'IGREP/IGFFT'), ('mixcr' , 'MixCR'), ('abstar' , 'ABStar')])
+
+    name = TextField(u'Name', )
+    description = TextField(u'Description')
+    
+    cluster = BooleanField(u'Cluster Sequences')
+
+    def validate(self):
+        if not Form.validate(self):
+            return False
+        result = True
+        seen = set()
+        for field in [self.select1, self.select2, self.select3]:
+            if field.data in seen:
+                field.errors.append('Please select three distinct choices.')
+                result = False
+            else:
+                seen.add(field.data)
+        return result
 
 
 

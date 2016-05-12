@@ -58,8 +58,11 @@ from forms import *
 from functions import * 
 from models import * 
 
+# Check for number of files submitted for analysis
+# Automatically check for R1/R2 etc
+# Require two files for PANDAseq
 
-
+# Check new trim analysis (passing analysis, files by ID)
 # glyphicons-chevron-right
 
 # /data/resources : all software
@@ -83,8 +86,6 @@ from models import *
 # SP: Mi-Seq 2x300
 
 # Check trimming filename failure
-# 
-
 
 # 4. Don't allow users to run analyses on empty datasets
 # 5. TEST Prepopulate new datasets with default settings: d.populate_with_defaults(current_user)
@@ -95,25 +96,12 @@ from models import *
 # 17. Start using new directory structure with dataset_#
 #       File from URL: DONE
 # 18. STARTED Add dashboard page
-# 19. DONE. Clean up NavBar
-# 20. DONE. Clean up add/upload Files
-#       Upload files: DONE
-#       Add files: DONE (can't test)
 # 21. Clean up files listing
-# 22. Add Celery Task Monitor to Dashboard page
-#       Standardize Celery logging
 # 23. Add single page for running an analysis on a file/dataset
 # 24. Add one-time welcome notice to dashboard page. 
 # 25. Add page describing project/dataset/file concept
-# 26. DONE Clean up import from NCBI Page
-# 27. DONE Add links to datasets on view project page
 
 # Issues:
-# DONE. Download new file not placing the file in the dataset directory.
-# DONE. Download new file placing // in file path.
-# DONE. Remove some of the extra messages on file download response.  
-
-# How to check results from Celery???
 # Check for duplicate directories and files in datastore
 # Add default dataset for each user
 # Automatically link files into a dataset and a project for user 

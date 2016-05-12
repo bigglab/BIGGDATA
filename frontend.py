@@ -6,8 +6,8 @@ import os
 import time
 import random
 from shutil import copyfile
-
 import shlex
+import validators
 
 from celery import uuid
 from celery.result import AsyncResult
@@ -1272,6 +1272,9 @@ def import_sra():
             #dataset_tuples.append(('new', 'New Dataset'))
             dataset_tuples.insert(0,('new', 'New Dataset'))
             form.dataset.choices = dataset_tuples
+    else:
+        form.dataset.choices = [ ('new', 'New Dataset') ]
+
 
     # get a list of user projects for the form
     projects = Set(current_user.projects)
@@ -1286,6 +1289,8 @@ def import_sra():
         if len(project_tuples) > 0:
             project_tuples.insert(0, ('new', 'New Project'))
             form.project.choices = project_tuples
+    else:
+        form.project.choices = [('new', 'New Project')]
 
     result = None
     status = []
@@ -1528,6 +1533,309 @@ def test_celery_log():
     # Here in task:
     self.update_state(state='PROGRESS',
                         meta={ 'current': i, 'total': total, 'status': message} )
+
+
+@frontend.route('/pipeline', methods=['GET', 'POST'])
+@login_required
+def pipeline():
+
+    build_pipeline_form = BuildPipelineForm(request.form)
+
+    # set the dataset options
+    datasets = Set(current_user.datasets)
+    datasets.discard(None)
+    datasets.discard(current_user.default_dataset)
+
+    datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
+    dataset_tuples = []
+    new_tuples = []
+
+    dataset_file_dict = {}
+    dataset_project_dict = {}
+
+    # get a list of user projects for the form
+    projects = Set(current_user.projects)
+    projects.discard(None)
+    projects = sorted(projects, key=lambda x: x.id, reverse=True)
+    project_tuples = []
+
+    # Create form choices for datasets and files
+    if len(datasets) > 0:
+        for dataset in datasets:
+            dataset_tuples.append( (str(dataset.id), dataset.name))
+            new_tuples.append( (str(dataset.id), dataset.name))
+
+            # build a dictionary indicating a project to which each dataset belongs
+            if len(dataset.projects) > 0 and dataset.projects[0] != None:
+                dataset_project_dict[str(dataset.id)] = str(dataset.projects[0].id)
+            else:
+                dataset_project_dict[str(dataset.id)] = 'new'
+
+            # build a dictionary entry indicating the files in each dataset ('dataset_id':{'file_id':'file_name'})
+            file_id_dict = {}
+            for file in dataset.files:
+                file_id_dict[ str(file.id) ] = file.name 
+
+            dataset_file_dict[ str(dataset.id) ] = file_id_dict
+
+        # This form does not need a new dataset option
+        build_pipeline_form.dataset.choices = dataset_tuples
+
+        # Other forms have the option to insert a new dataset
+        if len(dataset_tuples) > 0:
+            #dataset_tuples.append(('new', 'New Dataset'))
+            #new_tuples = dataset_tuples
+            new_tuples.insert(0,('new', 'New Dataset'))
+            build_pipeline_form.output_dataset.choices = new_tuples
+    else:
+        build_pipeline_form.output_dataset.choices = [ ('new', 'New Dataset') ]
+
+    # Create form choices for projects
+    if len(projects) > 0:
+        for project in projects:
+            if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
+                project_tuples.append( (str(project.id), project.project_name))
+        if len(project_tuples) > 0:
+            project_tuples.insert(0, ('new', 'New Project'))
+            build_pipeline_form.output_project.choices = project_tuples
+    else:
+        build_pipeline_form.output_project.choices = [ ('new', 'New Dataset') ]
+
+    # list of tuples to set arbitrary HTML tag attributes
+    # passed to JQUERY to set attributes
+    # ('selector' , 'attribute' , 'attribute value')
+    runtime_attributes = []
+    form_warning_style = 'border: 2px solid #d66; border-radius: 7px; box-shadow: 0 0 10px #d66;'
+
+    # used to scroll carousel to first error on form
+    first_error_item = None
+
+
+    if request.method == 'POST':
+
+        ##### Validate the Form #####
+        form_valid = True
+
+        if build_pipeline_form.file_source.data == 'file_dataset': 
+
+            if build_pipeline_form.dataset_files.data == []:
+                flash('Error: you must select one or more files to analyze.','warning')
+                runtime_attributes.append(('select[id=dataset_files]', 'style', form_warning_style))                                   
+                form_valid = False
+                first_error_item = 0
+            else:
+                file_ids = build_pipeline_form.dataset_files.data
+
+                for file_id in file_ids:
+                    print file_id
+                    file = db.session.query(File).get(file_id)
+                    if not file:
+                        flash('Error: file {} not found.'.format(file.id),'warning')
+                        runtime_attributes.append(('select[id=dataset_files]', 'style', form_warning_style))                                           
+                        form_valid = False
+                        first_error_item = 0
+
+                    elif file.user_id != current_user.id:
+                        flash('Error: you do not have permission to analyze this file: {}'.format(file.name),'warning')
+                        runtime_attributes.append(('select[id=dataset_files]', 'style', form_warning_style))                   
+                        form_valid = False
+                        first_error_item = 0
+
+        elif build_pipeline_form.file_source.data == 'file_gsaf':
+ 
+            if build_pipeline_form.gsaf_url.data == '':
+                flash('Error: you must provide a valid GSAF URL to upload a file, or choose another file source.','warning')
+                runtime_attributes.append(('input[id=gsaf_url]', 'style', form_warning_style))                   
+                form_valid = False
+                first_error_item = 0
+            elif not validators.url(build_pipeline_form.gsaf_url.data):
+                flash('Error: you must provide a valid GSAF URL to upload a file, or choose another file source.','warning')
+                runtime_attributes.append(('input[id=gsaf_url]', 'style', form_warning_style))                   
+                first_error_item = 0
+                form_valid = False
+
+        elif build_pipeline_form.file_source.data == 'file_upload':
+
+            if build_pipeline_form.download_url.data == '':
+                flash('Error: you must provide a URL to upload a file, or choose another file source.','warning')
+                runtime_attributes.append(('input[id=download_url]', 'style', form_warning_style))   
+                first_error_item = 0
+                form_valid = False
+            elif not validators.url(build_pipeline_form.download_url.data):
+                flash('Error: you must provide a valid URL to upload a file, or choose another file source.','warning')
+                runtime_attributes.append(('input[id=download_url]', 'style', form_warning_style))   
+                first_error_item = 0
+                form_valid = False
+
+        elif build_pipeline_form.file_source.data == 'file_ncbi': 
+
+            if build_pipeline_form.ncbi_accession.data == '':
+                flash('Error: you must choose an NCBI accession, or choose another file source.','warning')
+                runtime_attributes.append(('input[id=ncbi_accession]', 'style', form_warning_style))   
+                first_error_item = 0
+                form_valid = False
+
+        else: # file_source.data == 'None':
+            flash('Error: you must select a file source.','warning')
+            runtime_attributes.append(('div[name=file_source]', 'style', form_warning_style))   
+            first_error_item = 0
+            form_valid = False
+
+        if build_pipeline_form.trim.data:
+
+            if build_pipeline_form.trim_slidingwindow.data:
+            
+                if build_pipeline_form.trim_slidingwindow_size.data and not build_pipeline_form.trim_slidingwindow_size.data > 0: # must be positive integer
+                    flash('Error: if trimming is selected, you must choose a valid sliding window size.','warning')
+                    runtime_attributes.append(('input[id=trim_slidingwindow_size]', 'style', form_warning_style))                                   
+                    if first_error_item == None: first_error_item = 1
+                    form_valid = False
+
+                if build_pipeline_form.trim_slidingwindow_quality.data and not build_pipeline_form.trim_slidingwindow_quality.data > 0: # must be positive integer
+                    flash('Error: if trimming is selected, you must choose a valid sliding window quality.','warning')
+                    runtime_attributes.append(('input[id=trim_slidingwindow_quality]', 'style', form_warning_style))                                   
+                    if first_error_item == None: first_error_item = 1
+                    form_valid = False
+
+        if build_pipeline_form.analysis_type.data == 'None': # cannot be none
+            flash('Error: you must select an analysis method.','warning')
+            runtime_attributes.append(('div[name=analysis_type]', 'style', form_warning_style))   
+            if first_error_item == None: first_error_item = 2
+            form_valid = False
+
+
+        ##### Check output dataset and project #####
+        if form_valid:
+
+            # check if the user has selected the default project (i.e., the user has no projects)
+            output_file_dataset = None
+            if build_pipeline_form.output_dataset.data == 'new':
+                # create a new dataset here with the name default, add the user and dataset to the new project
+                new_dataset = Dataset()
+                new_dataset.user_id = current_user.id
+                new_dataset.populate_with_defaults(current_user)
+                new_dataset.name = 'Dataset'
+                db.session.add(new_dataset)
+                db.session.flush()
+                new_dataset.name = 'Dataset ' + str(new_dataset.id)
+                #####new_dataset.files = [file]
+                db.session.commit()
+                output_file_dataset = new_dataset
+                flash('New files will be added to dataset "{}".'.format(new_dataset.name), 'success')
+
+                # used to pass the dataset selection to the celery task
+                build_pipeline_form.output_dataset.data = str(output_file_dataset.id)
+            else: # check if the user has selected a project which they have access to
+                user_has_permission = False
+                for dataset in current_user.datasets:
+                    if str(dataset.id) == build_pipeline_form.output_dataset.data:
+                        #####dataset.files.append(file)
+                        file_dataset = dataset
+                        user_has_permission = True
+
+                        # if current_user.default_dataset == None:
+                        #     d.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                        #     d.species = project.species
+                if not user_has_permission:
+                    flash('Error: you do not have permission to add a file to that dataset.','warning')
+                    if first_error_item == None : first_error_item = 3
+                    form_valid = False
+
+            db.session.commit()
+
+        if form_valid:
+
+            # now do the same with projects, with the qualification that we add the dataset to the project if it's not there already
+            # check if the user has selected the default project (i.e., the user has no projects)
+            if output_file_dataset:
+
+                if build_pipeline_form.output_project.data == 'new':
+                    # create a new project here with the name default, add the user and dataset to the new project
+                    new_project = Project()
+                    new_project.user_id = current_user.id
+                    new_project.project_name = 'Project'
+                    db.session.add(new_project)
+                    db.session.flush()
+                    new_project.project_name = 'Project ' + str(new_project.id)
+                    new_project.users = [current_user]
+                    new_project.datasets = [output_file_dataset]
+                    new_project.cell_types_sequenced = [str(output_file_dataset.cell_types_sequenced)]
+                    new_project.species = output_file_dataset.species
+
+                    db.session.commit()
+                else: # check if the user has selected a project which they have access to
+                    user_has_permission = False
+                    for project in projects:
+                        if str(project.id) == form.output_project.data:
+                            if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
+                                # if the dataset is not in the project, add it
+                                if output_file_dataset not in project.datasets:
+                                    project.datasets.append(output_file_dataset)
+                                user_has_permission = True
+
+                                if current_user.default_dataset == None:
+                                    output_file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                                    output_file_dataset.species = project.species
+
+                                db.session.commit()
+                    if not user_has_permission:
+                        flash('Error: you do not have permission to add a dataset to that project.','warning')
+                    db.session.commit()        
+
+        ##### End check of output dataset and project #####
+
+
+        if not form_valid:
+
+            # set attributes to render the form correctly
+            if build_pipeline_form.file_source.data != 'None':
+                runtime_attributes.append(('input[value={}]'.format(build_pipeline_form.file_source.data), 'checked', 'checked'))
+            if build_pipeline_form.analysis_type.data != 'None':
+                runtime_attributes.append(('input[value={}]'.format(build_pipeline_form.analysis_type.data), 'checked', 'checked'))
+
+            build_pipeline_form.dataset_files.default = build_pipeline_form.dataset_files.data
+
+            return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes, first_error_item = first_error_item )
+
+        else:
+
+            # put the form contents into a format that can be serialized and sent to a celery task
+            form_output_dict = {
+                'user_id' : current_user.id,    
+                'file_source' : build_pipeline_form.file_source.data,
+                'dataset' : build_pipeline_form.dataset.data,
+                'dataset_files' : build_pipeline_form.dataset_files.data,
+                'description' : build_pipeline_form.description.data,
+                'name' : build_pipeline_form.name.data,
+                'output_dataset' : build_pipeline_form.output_dataset.data,
+                'output_project' : build_pipeline_form.output_project.data,
+                'ncbi_accession' : build_pipeline_form.ncbi_accession.data,
+                'ncbi_chain' : build_pipeline_form.ncbi_chain.data,
+                'download_url' : build_pipeline_form.download_url.data,
+                'download_chain' : build_pipeline_form.download_chain.data,
+                'gsaf_url' : build_pipeline_form.gsaf_url.data,
+                'gsaf_chain' : build_pipeline_form.gsaf_chain.data,
+                'trim' : build_pipeline_form.trim.data,
+                'trim_slidingwindow' : build_pipeline_form.trim_slidingwindow.data,
+                'trim_slidingwindow_size' : build_pipeline_form.trim_slidingwindow_size.data,
+                'trim_slidingwindow_quality' : build_pipeline_form.trim_slidingwindow_quality.data,
+                'trim_illumina_adapters' : build_pipeline_form.trim_illumina_adapters.data,
+                'pandaseq' : build_pipeline_form.pandaseq.data,
+                'analysis_type' : build_pipeline_form.analysis_type.data,
+                'description' : build_pipeline_form.description.data,
+                'pandaseq_algorithm' : build_pipeline_form.pandaseq_algorithm.data,
+                'cluster' : build_pipeline_form.cluster.data
+            }
+
+            result = run_analysis_pipeline.apply_async( (), form_output_dict, queue=celery_queue)
+            return redirect(url_for("frontend.dashboard"))
+
+        ##### End Form Validation #####
+
+    else: # request.method == 'GET'
+        pass
+
+    return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes, first_error_item = first_error_item )
 
 
  

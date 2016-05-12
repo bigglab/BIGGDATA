@@ -14,7 +14,6 @@ import operator
 import datetime as dt
 import shlex
 
-# import urllib
 os.environ['http_proxy']=''
 import urllib2
 import itertools
@@ -73,6 +72,61 @@ Bootstrap(app)
 db.init_app(app)
 db.app = app 
 
+
+#####
+#
+# Information about the Flask-SQLAlchemy API here: http://flask-sqlalchemy.pocoo.org/2.1/api/
+#
+#####
+
+engine = db.engine
+Session = sessionmaker(bind=engine)
+
+# Session Scope
+# Allows automation of session creation and closure.
+# Usage:
+# with session_scope() as session:
+#     session.flush() # etc, etc...
+
+from contextlib import contextmanager
+@contextmanager
+def session_scope():
+    """Provide a transactional scope around a series of operations."""
+    session = Session()
+    try:
+        yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+def expunge_session_objects(session):
+    obj_list = []
+    for obj in session:
+        session.refresh(obj)
+        session.expunge(obj)
+        obj_list.append(obj)
+    return obj_list
+
+def add_session_objects(session, obj_list):
+    for obj in obj_list:
+        session.add(obj)
+
+def run_my_program():
+#    print 'Creating new file.'
+    with session_scope() as session:
+        new_file = File()
+        new_file.name = 'Test.'
+        session.add(new_file)
+    return
+
+#run_my_program()
+
+#####
+
+
 # Celery configured for local RabbitMQ 
 celery = Celery(app.name, broker='amqp://')
 import celery_config 
@@ -88,8 +142,10 @@ celery_logger = get_task_logger(__name__)
 
 # change celery_queue to anything celery -Q
 
-s3 = boto.connect_s3(app.config['AWSACCESSKEYID'], app.config['AWSSECRETKEY'])
-s3_bucket = s3.get_bucket(app.config['S3_BUCKET'])
+if not app.config['DAVES_MACHINE']:
+
+    s3 = boto.connect_s3(app.config['AWSACCESSKEYID'], app.config['AWSSECRETKEY'])
+    s3_bucket = s3.get_bucket(app.config['S3_BUCKET'])
 
 # Mongo DB for Legacy Sequence Data
 mongo_connection_uri = 'mongodb://reader:cdrom@geordbas01.ccbb.utexas.edu:27017/'
@@ -183,6 +239,17 @@ def initiate_celery_task_logger(logger_id, logfile):
 
     return logger
 
+# Base Class used for returning complex values
+class ReturnValue():
+    def __init__(self, return_string, **kwargs):
+        self.return_string = return_string
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    def __repr__(self):
+        return self.return_string
+
+
 # Base Class used to log celery tasks to the database
 class LogTask(Task):
     abstract = True
@@ -192,86 +259,127 @@ class LogTask(Task):
     logger = None
     request_id = None
 
+    parent_task = None
+    maintain_log = True
+
     def __call__(self, *args, **kw):
 
-        self.celery_task = CeleryTask()
-        logger_id = self.request.id
-        self.request_id = self.request.id
-
-        self.user_found = False
-
-        if 'user_id' in kw:
-            user_id = kw['user_id']
-            celery_logger.debug( 'User Id: {}'.format( user_id ) )
-            
-            try:
-                user = db.session.query(User).filter_by( id = user_id ).first()
-            except:
-                time.sleep(1)
-                user = db.session.query(User).filter_by( id = user_id ).first()
-
-            if user:
-                self.user_found = True
-                logfile = '{}/{}.log'.format( user.scratch_path.rstrip('/') , logger_id )
-                celery_logger.debug( 'Starting log file at {}'.format( logfile ) )
-            else:
-                user_found = False
-                celery_logger.warning( 'Warning({}): User ID ({}) not found. The decorator "log_celery_task" cannot log information without a user_id passed parametrically to the function decorated.'.format(f.func_name, kw['user_id']) )
-                logfile = '/data/logs/{}.log'.format( request_id )
+        # if a logger is passed in the kwargs, don't need to log this task separately
+        if 'parent_task' in kw:
+            self.maintain_log = False
+            self.parent_task = kw['parent_task']
+            self.logger = self.parent_task.logger
+            self.request_id = self.parent_task.request_id
+            celery_task = self.parent_task.celery_task
+            del kw['parent_task']
         else:
-            celery_logger.warning( 'Warning({}): The decorator "log_celery_task" cannot log information without a user_id passed parametrically to the function decorated.'.format(self.__class__.__name__) )
-            logfile = '/data/logs/{}.log'.format( self.request_id )
 
-        logger = initiate_celery_task_logger( logger_id = logger_id , logfile = logfile )
-        self.logger = logger
-
-        # Initiate Database Record
-        if self.user_found:
             self.celery_task = CeleryTask()
-            self.celery_task.user_id = user_id
-            self.celery_task.name = self.__name__
-            self.celery_task.async_task_id = self.request_id
-            result = celery.AsyncResult(self.request_id)
-            self.celery_task.status = 'STARTED'
+            logger_id = self.request.id
+            self.request_id = self.request.id
 
-            db.session.add(self.celery_task)
-            db.session.commit()
+            self.user_found = False
+            with session_scope() as session:
 
-        self.update_state(state='STARTED', meta={ 'status': 'Task Started' })
+                if 'user_id' in kw:
+                    user_id = kw['user_id']
+                    celery_logger.debug( 'User Id: {}'.format( user_id ) )
+                    
+                    try:
+                        user = session.query(User).filter_by( id = user_id ).first()
+                    except:
+                        time.sleep(1)
+                        user = session.query(User).filter_by( id = user_id ).first()
+
+                    if user:
+                        self.user_found = True
+                        logfile = '{}/{}.log'.format( user.scratch_path.rstrip('/') , logger_id )
+                        celery_logger.debug( 'Starting log file at {}'.format( logfile ) )
+                    else:
+                        user_found = False
+                        celery_logger.warning( 'Warning({}): User ID ({}) not found. The decorator "log_celery_task" cannot log information without a user_id passed parametrically to the function decorated.'.format(f.func_name, kw['user_id']) )
+
+                        if not os.path.isdir('/data/logs/'):
+                            os.makedirs(directory)
+
+                        logfile = '/data/logs/{}.log'.format( request_id )
+                else:
+                    celery_logger.warning( 'Warning({}): The decorator "log_celery_task" cannot log information without a user_id passed parametrically to the function decorated.'.format(self.__class__.__name__) )
+
+                    if not os.path.isdir('/data/logs/'):
+                        os.makedirs(directory)
+
+                    logfile = '/data/logs/{}.log'.format( self.request_id )
+
+                logger = initiate_celery_task_logger( logger_id = logger_id , logfile = logfile )
+                self.logger = logger
+
+                # Initiate Database Record
+                if self.user_found:
+                    self.celery_task = CeleryTask()
+                    self.celery_task.user_id = user_id
+                    self.celery_task.name = self.__name__
+                    self.celery_task.async_task_id = self.request_id
+                    result = celery.AsyncResult(self.request_id)
+                    self.celery_task.status = 'STARTED'
+
+                    session.add(self.celery_task)
+                    session.commit()
+
+                    # send the object to a persistent state
+                    session.expunge(self.celery_task)
+
+                self.update_state(state='STARTED', meta={ 'status': 'Task Started' })
 
         return self.run(*args, **kw)
 
     def on_failure(self, exc, task_id, args, kwargs, einfo): 
+        if self.maintain_log:
+            with session_scope() as session:
 
-        # Close Database Record
-        if self.user_found:
+                # Close Database Record
+                if self.user_found:
 
-            exception_type_name = einfo.type.__name__
+                    exception_type_name = einfo.type.__name__
+                    if exception_type_name == 'Exception':
+                        exception_type_name = 'Error'
 
-            if exception_type_name == 'Exception':
-                exception_type_name = 'Error'
+                    result = celery.AsyncResult(task_id)
 
-            result = celery.AsyncResult(task_id)
-            self.celery_task.status = 'FAILURE'
-            self.celery_task.result = '{}: {}'.format( exception_type_name , exc ) 
-            self.celery_task.is_complete = True                
-            self.celery_task.failed = True                
+                    # We are in a new session, so we have to re-add our persistent object
+                    session.add(self.celery_task)
 
-            db.session.commit()
+                    self.celery_task.status = 'FAILURE'
+                    self.celery_task.result = '{}: {}'.format( exception_type_name , exc ) 
+                    self.celery_task.is_complete = True                
+                    self.celery_task.failed = True                
+                    session.commit()
 
     def on_success(self, retval, task_id, args, kwargs):
-        # Close Database Record
-        if self.user_found:
-            result = celery.AsyncResult(task_id)
-            print 'On Success Result Status: {}'.format( result.status )
-            
-            self.celery_task.status = 'SUCCESS'
-            self.celery_task.result = str(retval)
-            self.celery_task.is_complete = True                
-            db.session.commit()
+        if self.maintain_log:
 
-    # def after_return(self, status, retval, task_id, args, kwargs, einfo):
-    #   pass
+            with session_scope() as session:
+
+                # Close Database Record
+                if self.user_found:
+                    result = celery.AsyncResult(task_id)
+                    print 'On Success Result Status: {}'.format( result.status )
+
+                    # We are in a new session, so we have to re-add our persistent object
+                    session.add(self.celery_task)
+
+                    session.merge(self.celery_task)                
+                    self.celery_task.status = 'SUCCESS'
+                    self.celery_task.result = str(retval)
+                    self.celery_task.is_complete = True                
+                    session.commit()
+
+    # override update_state so that it goes to the appropriate task
+    def update_state(self, *args, **kwargs):
+        if self.parent_task:
+            return self.parent_task.update_state(*args, **kwargs)
+        else:
+            return Task.update_state(self, *args, **kwargs)
 
 @celery.task(base= LogTask, bind = True)
 def output_celery_log(self, user_id = None):
@@ -281,7 +389,7 @@ def output_celery_log(self, user_id = None):
     # Can test exceptions with this line
     # raise Exception('Something went south!!!')
 
-    task_id = self.request.id
+    task_id = self.request_id
 
     self.logger.info("Beginning count...")
 
@@ -493,7 +601,7 @@ def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_
         db.session.add(new_dataset)
         db.session.flush()
         new_dataset.name = accession + '_' + str(new_dataset.id)
-        new_dataset.directory = "{}/{}".format(user.scratch_path.rstrip('/') , new_dataset.name)
+        new_dataset.directory = "{}/Dataset_{}".format(user.scratch_path.rstrip('/') , new_dataset.id)
         file_dataset = new_dataset
         logger.info( 'New file will be added to dataset "{}".'.format(new_dataset.name) )
         db.session.commit()
@@ -593,24 +701,56 @@ def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_
 
         dirs = os.listdir('{}/{}'.format(directory, accession))
         if dirs == ['1']:
-            file_paths = ['{}/{}/1/fastq.gz'.format(directory, accession)]
-            filename_array = ['{}.fastq.gz'.format(accession)]
+
+            # flatten and clean up the directory tree:
+            source = '{}/{}/1/fastq.gz'.format(directory, accession)
+            destination = '{}/{}_1_fastq.gz'.format(directory, accession)
+            os.rename( source, destination )
+
+            file_paths = [ destination ]
+            filename_array = ['{}_1_.fastq.gz'.format(accession)]
+
+            os.rmdir( '{}/{}/1/'.format(directory, accession) )
+            os.rmdir( '{}/{}/'.format(directory, accession) )
+
+
         if dirs == ['1','2'] or dirs == ['2','1']:
-            file_paths = ['{}/{}/1/fastq.gz'.format(directory, accession), '{}/{}/2/fastq.gz'.format(directory, accession)]
-            filename_array = ['{}.R1.fastq.gz'.format(accession), '{}.R2.fastq.gz'.format(accession)]
+
+            file_paths = []
+            filename_array = []
+
+            for directory_number in dirs:
+
+                # flatten and clean up the directory tree:
+                source = '{}/{}/{}/fastq.gz'.format(directory, accession, directory_number)
+                destination = '{}/{}_{}_fastq.gz'.format(directory, accession, directory_number)
+                os.rename( source, destination )
+
+                file_paths.append( destination )
+                filename_array.append( '{}_{}_.fastq.gz'.format(accession, directory_number) )
+
+                os.rmdir( '{}/{}/{}/'.format(directory, accession, directory_number) )
+
+            os.rmdir( '{}/{}/'.format(directory, accession) )
+
+
         else: 
             raise Exception( 'Number of files from SRA export not one or two...' )
         logger.info( 'Writing sra output files to {}'.format(directory) )
-        dataset = import_files_as_dataset(file_paths, filename_array=filename_array, user_id=user_id, name=name, chain=chain, dataset = file_dataset, logger = logger)
+        return_value = import_files_as_dataset(file_paths, filename_array=filename_array, user_id=user_id, name=name, chain=chain, dataset = file_dataset, parent_task = self)
         logger.info( 'SRA import complete.' )
 
-        return 'Dataset from SRA Accession {} created for user {}'.format(accession, user.username) 
+        file_ids = return_value.file_ids
+
+        return ReturnValue('Dataset from SRA Accession {} created for user {}'.format(accession, user.username), file_ids = file_ids )
     else: 
         raise Exception( 'fastq-dump command failed:'.format(error) )
 
-@celery.task( bind = True ) 
-def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, chain=None, name=None, dataset = None, logger = celery_logger):
-    
+@celery.task( base = LogTask, bind = True ) 
+def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, chain=None, name=None, dataset = None ):
+    logger = self.logger
+
+
     current_user = db.session.query(User).filter(User.id==user_id).first()
 
     if not current_user:
@@ -638,6 +778,7 @@ def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, 
     db.session.commit()
 
     files = []
+    file_ids = []
     file_str = ''
     file_count = 0
     for index, filepath in enumerate(filepath_array):
@@ -668,6 +809,9 @@ def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, 
         # analysis_id = db.Column(db.Integer, db.ForeignKey('analysis.id'))
         files.append(f)
         db.session.add(f)
+        db.session.commit()
+        db.session.refresh(f)
+        file_ids.append(f.id)
 
 #    for f in files: 
 #        db.session.add(f)
@@ -676,11 +820,12 @@ def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, 
     d.primary_data_files_ids = map(lambda f: f.id, files)
     db.session.commit()
     file_str.lstrip(', ')
-    return '{} files were added to Dataset {} (): {}'.format( file_count, d.id, d.directory, file_str ) 
+    return ReturnValue('{} files were added to Dataset {} (): {}'.format( file_count, d.id, d.directory, file_str ), file_ids = file_ids )
 
 @celery.task(base= LogTask, bind = True)
 def download_file(self, url, path, file_id, user_id = None):
     logger = self.logger
+
     logger.info ( 'Downloading file from: {}'.format(url) )
 
     # check if the directory for the file exists. If not, make the directory path with makedirs
@@ -755,17 +900,26 @@ def run_mixcr_with_dataset_id(self, dataset_id, analysis_name='', analysis_descr
     for chain, files in data_files_by_chain.items(): 
         if trim: 
             logger.info( 'Running Trim on Files in Analysis {} before executing MiXCR'.format(analysis.id) )
-            files = run_trim_analysis_with_files(analysis, files, logger)
+            return_value = run_trim_analysis_with_files(analysis.id, [file.id for file in files], logger)
+            file_ids = return_value.file_ids
+            files = [db.session.query(File).get(file_id) for file_id in file_ids]
         logger.info ( 'About to run MiXCR analysis {} on files from chain {}.'.format(repr(analysis), chain) )
-        run_mixcr_analysis_id_with_files(analysis.id, files, logger = logger, parent_task = self)
+        run_mixcr_analysis_id_with_files(analysis.id, files, parent_task = self)
         if cluster: 
             logger.info( 'Clustering output files.' )
             for file in files: 
                 result = run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9)
     return  'MiXCR analysis completed successfully.'
 
-@celery.task
-def run_mixcr_analysis_id_with_files(analysis_id, files, logger = celery_logger, parent_task = None):
+@celery.task(base = LogTask, bind = True)
+def run_mixcr_analysis_id_with_files(self, analysis_id, files):
+    
+    if self.parent_task:
+        task = self.parent_task
+    else:
+        task = self
+
+    logger = self.logger
 
     analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
     dataset = analysis.dataset
@@ -866,14 +1020,14 @@ def run_mixcr_analysis_id_with_files(analysis_id, files, logger = celery_logger,
                     else:
                         percent, eta = line.split('%', 1)
                         eta = ' ({})'.format( eta.strip() )
-                    parent_task.update_state(state='PROGRESS',
+                    self.update_state(state='PROGRESS',
                             meta={'status': '{}{}'.format( tracking_status , eta ) , 'current' : float(percent), 'total' : 100, 'units' : '%' })
 
                     print '{} ({}): {}/{}'.format( tracking_status , eta, percent, 100 )
                 else:
                     if tracking_percent:
                         tracking_percent = False
-                        parent_task.update_state(state='ANALYZING',
+                        self.update_state(state='ANALYZING',
                                 meta={'status': tracking_status, 'current' : 100, 'total' : 100, 'units' : '%' })
                         logger.info( '{} complete.'.format( tracking_status ) )
                     logger.info( line.strip() )
@@ -887,7 +1041,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files, logger = celery_logger,
 
         if tracking_percent:
             tracking_percent = False
-            parent_task.update_state(state='ANALYZING',
+            self.update_state(state='ANALYZING',
                     meta={'status': tracking_status, 'current' : 100, 'total' : 100, 'units' : '%' })
             logger.info( '{} complete.'.format( tracking_status ) )
 
@@ -913,8 +1067,10 @@ def run_mixcr_analysis_id_with_files(analysis_id, files, logger = celery_logger,
     # if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
     return 'MiXCR analysis completed successfully.' 
 
-@celery.task
-def parse_and_insert_mixcr_annotations_from_file_path(file_path, dataset_id=None, analysis_id=None, logger = celery_logger):
+@celery.task(base = LogTask, bind = True)
+def parse_and_insert_mixcr_annotations_from_file_path(self, file_path, dataset_id=None, analysis_id=None):
+    logger = self.logger
+
     print 'Building annotations from MiXCR output at {}, then inserting into postgres in batches'.format(file_path)
     if analysis_id: 
         analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
@@ -942,8 +1098,10 @@ def parse_and_insert_mixcr_annotations_from_file_path(file_path, dataset_id=None
     return len(annotations)
 
 
-@celery.task
-def parse_and_insert_mixcr_annotation_dataframe_from_file_path(file_path, dataset_id=None, analysis_id=None, logger = celery_logger):
+@celery.task(base = LogTask, bind = True)
+def parse_and_insert_mixcr_annotation_dataframe_from_file_path(self, file_path, dataset_id=None, analysis_id=None):
+    logger = self.logger
+
     print 'Building annotation dataframe from MiXCR output at {}, then inserting into postgres'.format(file_path)
     if analysis_id: 
         analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
@@ -1011,17 +1169,28 @@ def run_pandaseq_with_dataset_id(self, dataset_id, analysis_name='', analysis_de
     for chain, files in data_files_by_chain.items(): 
         if len(files) == 2: 
             logger.info( 'About to run PANDAseq concatenation on {} files from chain {}'.format(len(files), chain) )
-            run_pandaseq_analysis_with_files(analysis, files, algorithm=algorithm, logger = logger, parent_task = self)
+            run_pandaseq_analysis_with_files(analysis.id, [file.id for file in files], algorithm=algorithm, parent_task = self)
         else: 
             logger.error( 'Bad request for pandaseq alignment of only {} files'.format(len(files)) )
     return 'PANDAseq analysis complete.' 
 
-@celery.task( bind = True)
-def run_pandaseq_analysis_with_files(self, analysis, files, algorithm='pear', logger = celery_logger, parent_task = None):
+@celery.task( base = LogTask, bind = True)
+def run_pandaseq_analysis_with_files(self, analysis_id, file_ids, algorithm='pear'):
+    parent_task = self.parent_task
+    logger = self.logger
+
+    files = [db.session.query(File).get(file_id) for file_id in file_ids]
+    analysis = db.session.query(Analysis).get(analysis_id)
+
+    if len(file_ids) != 2:
+        raise Exception('PANDAseq can only be run on two files, not {} files.'.format( str( len(file_ids) ) ) )
+
+    print "File ids:"
+    print ', '.join( [ str(file.id) for file in files] )
 
     dataset = analysis.dataset
     files_to_execute = []
-    logger.info( 'Running PANDAseq on these files: {}'.format(files) )
+    logger.info( 'Running PANDAseq on these files: {}'.format( ', '.join( [file.name for file in files] ) ) )
     scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
     basename = files[0].path.split('/')[-1].split('.')[0]
     basepath = '{}/{}'.format(scratch_path, basename)
@@ -1072,11 +1241,11 @@ def run_pandaseq_analysis_with_files(self, analysis, files, algorithm='pear', lo
                             line_parts = line.split('READS', 1)
                             reads = line_parts[1].strip()
                             status = 'Time Elapsed: {} - Number of Reads: {}'.format(elapsed, reads)
-                            parent_task.update_state(state='STATUS', meta={'status': status })
+                            self.update_state(state='STATUS', meta={'status': status })
                     except:
                         pass
 
-            parent_task.update_state(state='SUCCESS',
+            self.update_state(state='SUCCESS',
                 meta={'status': 'PANDAseq complete.' })
 
             response, error = command_line_process.communicate()
@@ -1097,6 +1266,8 @@ def run_pandaseq_analysis_with_files(self, analysis, files, algorithm='pear', lo
             db.session.commit()
             logger.error(error)
 
+##### ***** Need to Check Output Files Here ***** #####
+
     logger.info( 'All commands in analysis {} have been executed.'.format(analysis) )
     if set(map(lambda f: f.available, files_to_execute)) == {True}:
         analysis.status = 'SUCCESS'
@@ -1107,41 +1278,57 @@ def run_pandaseq_analysis_with_files(self, analysis, files, algorithm='pear', lo
     db.session.commit()
 
     # Make PandaSeq Alignment Primary Dataset Data Files! Currently done in dataset.primary_data_files() 
-    return 'PANDAseq analysis complete.' 
+    return ReturnValue('PANDAseq analysis complete.', file_ids = [file.id for file in files_to_execute])
 
-def run_trim_analysis_with_files(analysis = None, files = None, logger = celery_logger):
+def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = celery_logger):
+    analysis = db.session.query(Analysis).get(analysis_id)
+    files = map(lambda x: db.session.query(File).filter(File.id==x).first(), file_ids)
+
+    if not analysis:
+        raise Exception( 'Analysis with ID {} not found.'.format(analysis_id) )
+
     dataset = analysis.dataset
     files_to_execute = []
-    print 'RUNNING TRIMMAMATIC ON THESE FILES: {}'.format(files)
+    logger.info( 'Running Trimmomatic on files {}.'.format( ', '.join( [str(file.id) for file in files] ) ) )
     scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
     basename = files[0].path.split('/')[-1].split('.')[0]
     basepath = analysis.directory   #'{}/{}'.format(scratch_path, basename)
-    print 'Writing output files to base name: {}'.format(basepath)
-    output_files = []
+    logger.info( 'Writing output files to base name: {}'.format(basepath) )
+    output_file_ids = []
+
+    if len(files) == 0 or len(files) > 2:
+        raise Exception('Can only run PANDAseq on 1 or 2 files, not on {} files.'.format( str(len(files) ) ) )
+
     # Instantiate Source Files
     if len(files) == 1: 
         output_file = File()
         output_file.user_id = dataset.user_id
         output_file.path = '{}.trimmed.fastq'.format(basepath)
         output_file.name = "{}.trimmed.fastq".format(basename)
-        output_file.command = '{} SE -phred33 -threads 4 {} {} ILLUMINACLIP:{}/TruSeq3-SE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMAMATIC'], files[0].path, output_file.path, app.config['TRIMMAMATIC_ADAPTERS'])
+        output_file.command = '{} SE -phred33 -threads 4 {} {} ILLUMINACLIP:{}/TruSeq3-SE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMOMATIC'], files[0].path, output_file.path, app.config['TRIMMOMATIC_ADAPTERS'])
         output_file.file_type = 'TRIMMED_FASTQ'
         files_to_execute.append(output_file)
+
+        paired = False
+
     if len(files) == 2: 
         r1_output_file = File()
         r1_output_file.user_id = dataset.user_id
         r1_output_file.path = '{}.R1.trimmed.fastq'.format(basepath)
-        r1_output_file.name = "{}.R2.trimmed.fastq".format(basename)
+        r1_output_file.name = "{}.R1.trimmed.fastq".format(basename)
         r1_output_file.file_type = 'TRIMMED_FASTQ'
         r2_output_file = File()
         r2_output_file.user_id = dataset.user_id
-        r2_output_file.path = '{}.R1.trimmed.fastq'.format(basepath)
+        r2_output_file.path = '{}.R2.trimmed.fastq'.format(basepath)
         r2_output_file.name = "{}.R2.trimmed.fastq".format(basename)
         r2_output_file.file_type = 'TRIMMED_FASTQ'
-        r1_output_file.command = '{} PE -phred33 -threads 4 {} {} {} {} {} {} ILLUMINACLIP:{}/TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMAMATIC'], files[0].path, files[1].path, r1_output_file.path, '/dev/null', r2_output_file.path, '/dev/null', app.config['TRIMMAMATIC_ADAPTERS'])
+        r1_output_file.command = '{} PE -phred33 -threads 4 {} {} {} {} {} {} ILLUMINACLIP:{}/TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMOMATIC'], files[0].path, files[1].path, r1_output_file.path, '/dev/null', r2_output_file.path, '/dev/null', app.config['TRIMMOMATIC_ADAPTERS'])
         r2_output_file.command = ''
         files_to_execute.append(r1_output_file)
         files_to_execute.append(r2_output_file)
+
+        paired = True
+
     analysis.status = 'EXECUTING TRIM'
     db.session.commit()
     for f in files_to_execute:
@@ -1149,28 +1336,58 @@ def run_trim_analysis_with_files(analysis = None, files = None, logger = celery_
         f.dataset_id = analysis.dataset_id 
         f.analysis_id = analysis.id 
         f.chain = files[0].chain
-        print 'Executing: {}'.format(f.command)
+        logger.info( 'Executing: {}'.format(f.command) )
         analysis.active_command = f.command
         f.in_use = True 
         db.session.add(f)
         db.session.commit()
-        # MAKE THE CALL 
-        response = os.system(f.command)
-        print 'Response: {}'.format(response)
-        if response == 0: 
-            f.available = True 
-            f.in_use = False
-            f.file_size = os.path.getsize(f.path)
-            db.session.commit()
-            output_files.append(f)
-        else:
-            f.available = False
-            f.in_use = False 
-            analysis.status = 'FAILED'
-            db.session.commit()
-    print 'Trim job for analysis {} has been executed.'.format(analysis)
-    return output_files 
+        
+        # MAKE THE CALL
+        if f.command != '': 
+            logger.info( f.command )
 
+            error = None
+            try:
+                command_line_process = subprocess.Popen( shlex.split( f.command ) , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+
+                for line in iter(command_line_process.stdout.readline, b''):
+                    logger.info(line.strip())
+
+                response, error = command_line_process.communicate()
+                command_line_process.stdout.close()
+                command_line_process.wait()
+            except subprocess.CalledProcessError as error:
+                error = error.output
+                logger.error(error)
+
+            response = command_line_process.returncode
+
+            if response == 0: 
+                f.available = True 
+                f.in_use = False
+                f.file_size = os.path.getsize(f.path)
+                db.session.commit()
+                db.session.refresh(f)
+
+            else:
+                f.available = False
+                f.in_use = False 
+                analysis.status = 'FAILED'
+                db.session.commit()
+                logger.error( 'Error trimming file {}: {}'.format(file.path, error) )
+
+    if paired:
+        db.session.refresh(r1_output_file)
+        output_file_ids.append(r1_output_file.id)
+        db.session.refresh(r2_output_file)
+        output_file_ids.append(r2_output_file.id)
+    else:
+        db.session.refresh(output_file)
+        output_file_ids.append(output_file.id)
+
+
+    logger.info( 'Trim job for analysis {} has been executed.'.format(analysis) )
+    return ReturnValue( 'Success', file_ids = output_file_ids)
 
 def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
     dataset = analysis.dataset
@@ -1234,114 +1451,141 @@ def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
 
 @celery.task(base = LogTask, bind = True)
 def run_analysis(self, dataset_id, file_ids, user_id, analysis_type='IGFFT', analysis_name='', analysis_description='', trim=False, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]): 
+
     logger = self.logger
-    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
-
-    if not dataset:
-        raise Exception( 'Dataset {} not found.'.format( dataset_id ) )
-
     logger.info( 'Running {} analysis on dataset {}.'.format(analysis_type, dataset_id ) )
 
-    #CONSTRUCT AND SAVE ANALYSIS OBJECT
-    analysis = Analysis()
-    analysis.name = analysis_name
-    analysis_description = analysis_description
-    # analysis.db_status = 'WAITING'
-    analysis.user_id = user_id
-    analysis.dataset_id = dataset.id
-    analysis.program = analysis_type
-    analysis.started = 'now'
-    analysis.files_to_analyze = map(lambda i: int(i), file_ids)
-    analysis.params = {}
-    analysis.status = 'QUEUED'
-    analysis.responses = []
-    analysis.available = False
-    analysis.inserted_into_db = False
-    db.session.add(analysis)
-    db.session.commit()
+##### Start a new db session: #####
 
-    if dataset.directory:
-        analysis.directory = dataset.directory.rstrip('/') + '/Analysis_' + str(analysis.id)
-    else: 
-        analysis.directory = analysis.dataset.user.scratch_path.rstrip('/') + '/Analysis_' + str(analysis.id)
-    if not os.path.exists(analysis.directory):
-        logger.info ( 'Making analysis directory {}'.format( analysis.directory ) )
-        os.makedirs(analysis.directory)
-    files = map(lambda x: db.session.query(File).filter(File.id==x).first(), file_ids)
+    with session_scope() as session:
+
+        dataset = session.query(Dataset).get(dataset_id)
+        if not dataset:
+            raise Exception( 'Dataset {} not found.'.format( dataset_id ) )
+
+        #CONSTRUCT AND SAVE ANALYSIS OBJECT
+        analysis = Analysis()
+        analysis.name = analysis_name
+        analysis_description = analysis_description
+        # analysis.db_status = 'WAITING'
+        analysis.user_id = user_id
+        analysis.dataset_id = dataset.id
+        analysis.program = analysis_type
+        analysis.started = 'now'
+        analysis.files_to_analyze = map(lambda i: int(i), file_ids)
+        analysis.params = {}
+        analysis.status = 'QUEUED'
+        analysis.responses = []
+        analysis.available = False
+        analysis.inserted_into_db = False
+        session.add(analysis)
+        session.commit()
+
+        if dataset.directory:
+            analysis.directory = dataset.directory.rstrip('/') + '/Analysis_' + str(analysis.id)
+        else: 
+            analysis.directory = analysis.dataset.user.scratch_path.rstrip('/') + '/Analysis_' + str(analysis.id)
+        if not os.path.exists(analysis.directory):
+            logger.info ( 'Making analysis directory {}'.format( analysis.directory ) )
+            os.makedirs(analysis.directory)
+        files = map(lambda x: session.query(File).filter(File.id==x).first(), file_ids)
     
-    logger.info( 'Analysis Output Set To {}'.format(analysis.directory) )
-    logger.info( 'Using these files: {}'.format(files) )
-    if trim:
-        logger.info( 'Running Trim on Files in Analysis {} before executing annotation'.format(analysis.id) )
-        analysis.status = 'TRIMMING FILES' 
-        db.session.commit() 
-        files = run_trim_analysis_with_files( analysis, files, logger )
-    # GENERATE OVERLAPS 
-    # if overlap: 
+        logger.info( 'Analysis Output Set To {}'.format(analysis.directory) )
+        logger.info( 'Using these files: {}'.format(files) )
+        
+        if trim:
+            logger.info( 'Running Trim on Files in Analysis {} before executing annotation'.format(analysis.id) )
+            analysis.status = 'TRIMMING FILES' 
+            session.commit() 
+            return_value = run_trim_analysis_with_files( analysis.id, file_ids, logger )
+            files = [session.query(File).get(file_id) for file_id in return_value.file_ids]
 
-    #Execute Analysis 
-    # if analysis_type == 'MIXCR': 
-    #     if overlap == True: 
-    #         print 'ABOUT TO RUN MIXCR ANALYSIS {} ON FILES'.format(repr(analysis))
-    #         run_mixcr_analysis_id_with_files(analysis.id, files)
+        # persist the analysis and files objs after the session closes:
+        file_ids = [file.id for file in files]
+        session.expunge(analysis)
 
-    if analysis_type == 'IGFFT':
-        files_for_analysis = [] 
+        # List of triples in the form (ID, DEST_FILE, COMMAND)
+        files_to_unzip = []
+        file_ids_for_analysis = []
 
-        logger.info('Unzipping files for analysis...')
-        for file in files: 
-            #IGFFT NEEDS UNCOMPRESSED FASTQs
-            if file.file_type == 'GZIPPED_FASTQ': 
-                new_file = File()
-                new_file.user_id = user_id
-                new_file.parent_id = file.id 
-                new_file.path = analysis.directory + '/' + file.name.replace('.gz','')
-                new_file.file_type = 'FASTQ'
-                new_file.available = False
-                new_file.name =  file.name.replace('.gz', '')
-                new_file.command = 'gunzip -c {} > {}'.format(file.path, new_file.path)
-                analysis.status = 'GUNZIPPING'
-                db.session.commit()
+        if analysis_type == 'IGFFT':
 
-                error = None
-                try:
-                    command_line_args = shlex.split(f.command)
-                    command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+            for file in files:
+                #IGFFT NEEDS UNCOMPRESSED FASTQs
+                if file.file_type == 'GZIPPED_FASTQ': 
 
-                    for line in iter(command_line_process.stdout.readline, b''):
-                        line = line.strip()
-                        logger.info(line)
-
-                    response, error = command_line_process.communicate()
-                    command_line_process.stdout.close()
-                    command_line_process.wait()
-                except subprocess.CalledProcessError as error:
-                    error = error.output
-                    logger.error(error)
-
-                if error == None: 
-                    new_file.available = True 
-                    db.session.add(new_file)
-                    db.session.commit()
-                    files_for_analysis.append(new_file)
+                    # This session exists before the command is run
+                    new_file = File()
+                    new_file.user_id = user_id
+                    new_file.parent_id = file.id 
+                    new_file.path = analysis.directory + '/' + file.name.replace('.gz','')
+                    new_file.file_type = 'FASTQ'
+                    new_file.available = False
+                    new_file.name =  file.name.replace('.gz', '')
+                    new_file.command = 'gunzip -c {} > {}'.format(file.path, new_file.path)
+                    analysis.status = 'GUNZIPPING'
+                    session.add(new_file)
+                    session.commit()
+                    session.refresh( new_file )
+                    files_to_unzip.append( new_file )
                 else: 
-                    logger.error( 'Error G-Unzipping file {}: {}'.format(file.path, error) )
+                    # file does not need to be unzipped, so add it to the list as-is
+                    file_ids_for_analysis.append(file.id)
+
+        session_objects = expunge_session_objects(session)
+##### End Session #####
+
+    if analysis_type == 'IGFFT' and files_to_unzip != []:
+
+        for file in files_to_unzip:
+
+            logger.info( 'Unzipping {}:{}'.format(file.id, file.command ) )
+
+            error = None
+            try:
+                command_line_process = subprocess.Popen( shlex.split( file.command ) , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+
+                # return code is command_line_process.returncode
+
+                #for line in iter(command_line_process.stdout.readline, b''):
+                #    logger.info(line.strip())
+
+                response, error = command_line_process.communicate()
+                command_line_process.stdout.close()
+                command_line_process.wait()
+            except subprocess.CalledProcessError as error:
+                error = error.output
+                logger.error(error)
+
+            if error == None: 
+                file.available = True 
+                file_ids_for_analysis.append(file.id)
+
             else: 
-                # file does not need to be unzipped, so add it to the list as-is
-                files_for_analysis.append(file)
+                logger.error( 'Error G-Unzipping file {}: {}'.format(file.path, error) )
+
+
+        if file_ids_for_analysis == []: file_ids_for_analysis = file_ids
+        dataset_id = dataset.id
+        user_id = dataset.user_id
 
         analysis.status = 'EXECUTING'
-        db.session.add(analysis)
-        db.session.commit()
-        if files_for_analysis == []: files_for_analysis = files 
-        annotated_files = run_igrep_annotation_on_dataset_files(dataset, files_for_analysis, user_id = dataset.user_id, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting, logger = logger, parent_task = self)
-        logger.info( 'Annotated files from igfft: {}'.format(annotated_files) )
-        return 'Analysis complete.'
-    # PAIR 
-    # CLUSTER
 
+##### Add all of the file changes to the database #####
+    with session_scope() as session:
+        add_session_objects(session, session_objects)
+        session.commit()
+##### End session #####
 
-def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01], logger = celery_logger, parent_task = None):
+    annotated_files = run_igrep_annotation_on_dataset_files(dataset_id, file_ids_for_analysis, user_id = user_id, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting, logger = logger, parent_task = self)
+    logger.info( 'Annotated files from igfft: {}'.format(annotated_files) )
+    return 'Analysis complete.'
+
+# PAIR 
+
+# CLUSTER
+
+def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01], logger = celery_logger, parent_task = None):
     # Want to run IGREP without putting out EVERY line of output (~100s)
     # So create a list of status outputs and dictionary of counts (repeated status)
     igrep_states = ['Calcuating number of sequences', 'Running IgFFT', 'Evaluating Parameters', 
@@ -1354,54 +1598,57 @@ def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False
         igrep_counts[state] = 0
 
 
-# Calcuating number of sequences
-# Running IgFFT
-# Evaluating Parameters
-# Parsing and summarizing alignment file
-# Germline Alignment
-# 30 Percent Complete: 0.609781 minutes
-# Performing isotyping on sequences 
-# Count
-# annotation complete, merging files...
-# files merged.
-# //data/magness/scratch/Dataset_8/SRR1525443/1/fastq.pandaseq_ea_util.igfft.annotation
+    # 30 Percent Complete: 0.609781 minutes
+    # Count
+    # //data/magness/scratch/Dataset_8/SRR1525443/1/fastq.pandaseq_ea_util.igfft.annotation
  
 
+##### Open database session #####
+    
+    # We want to execute the commands outside of the session scope, so store them in a list
+    commands = []
 
-    # dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
-    logger.info( 'Running IGREP IGFFT on Dataset {}.'.format( dataset.id ) )
-    igrep_script_path = app.config['IGREP_PIPELINES']
-    # LOAD IGREP SCRIPTS INTO PYTHON PATH
+    with session_scope() as session:
 
-    species = ''
+        # load database objects
+        dataset = session.query(Dataset).get(dataset_id)
+        files = session.query(File).filter(File.id.in_(file_ids)).all()
 
-    if dataset.species == 'Human': species = 'homosapiens' 
-    if dataset.species == 'Mouse': species = 'musmusculus' 
+        logger.info( 'Running IGREP IGFFT on Dataset {}.'.format( dataset.id ) )
+        igrep_script_path = app.config['IGREP_PIPELINES']
 
-    # Set default species here
-    if species == '': species = 'homosapiens' 
+        species = ''
 
-    annotated_files = []
-    for file in files: 
-        loci = ''
-        if file.chain == 'HEAVY': loci = 'igh'
-        if file.chain == 'LIGHT': loci = 'igk,igl'
-        if file.chain == 'HEAVY/LIGHT': loci = 'igh,igk,igl'
+        if dataset.species == 'Human': species = 'homosapiens' 
+        if dataset.species == 'Mouse': species = 'musmusculus' 
 
-        # Set default loci here
-        if loci == '': loci = 'igh,igk,igl'
+        # Set default species here
+        if species == '': species = 'homosapiens' 
 
-        # annotated_f = igfft.igfft_multiprocess(f.path, file_type='FASTQ', species=species, locus=loci, parsing_settings={'isotype': isotyping_barcodes, 'remove_insertions': remove_insertions}, num_processes=number_threads, delete_alignment_file=True)           
-        # annotated_files.append(annotated_f[0])
-        script_command = 'python {}/gglab_igfft_single.py -species {} -locus {} {}'.format(igrep_script_path, species, loci, file.path)
+        annotated_file_ids = []
+        for file in files: 
+            loci = ''
+            if file.chain == 'HEAVY': loci = 'igh'
+            if file.chain == 'LIGHT': loci = 'igk,igl'
+            if file.chain == 'HEAVY/LIGHT': loci = 'igh,igk,igl'
+
+            # Set default loci here
+            if loci == '': loci = 'igh,igk,igl'
+
+            # annotated_f = igfft.igfft_multiprocess(f.path, file_type='FASTQ', species=species, locus=loci, parsing_settings={'isotype': isotyping_barcodes, 'remove_insertions': remove_insertions}, num_processes=number_threads, delete_alignment_file=True)           
+            # annotated_files.append(annotated_f[0])
+            script_command = 'python {}/gglab_igfft_single.py -species {} -locus {} {}'.format(igrep_script_path, species, loci, file.path)
+            commands.append(script_command)
+
+##### End database session #####
+
+    for command in commands:
+
         logger.info( 'executing script: {}'.format(script_command) )
         
-#        response = os.system(script_command)
-
         error = None
         try:
-            command_line_args = shlex.split(script_command)
-            command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+            command_line_process = subprocess.Popen( shlex.split(command) , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
 
             # keep track of the last two states
             # that way we can tell the user what finished happening
@@ -1447,7 +1694,7 @@ def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False
                         #parent_task.update_state(state='STATUS', meta={'status': status })
 
                         status = 'Time Elapsed: {} - {}({})'.format(elapsed, line, current_status_number)
-                        parent_task.update_state(state='STATUS', meta={'status': status })
+                        self.update_state(state='STATUS', meta={'status': status })
 
                     elif ('% percent done' in line):
 
@@ -1471,11 +1718,11 @@ def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False
                         current = dt.datetime.now()
                         elapsed = (current - start).seconds
 
-                        parent_task.update_state(state='PROGRESS',
+                        self.update_state(state='PROGRESS',
                             meta={'status': '{} ({}Time Elapsed: {})'.format( last_state , pid_str, elapsed ) , 'current' : percent, 'total' : 100, 'units' : '%' })
 
             if counting:
-                parent_task.update_state(state='ANALYZING')
+                self.update_state(state='ANALYZING')
                 counting = False
 
             response, error = command_line_process.communicate()
@@ -1486,20 +1733,46 @@ def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False
             logger.error('Error executing command.')
             logger.error(error)
 
-        new_file = File()
-        new_file.user_id = user_id
-        new_file.parent_id = file.id 
-        new_file.dataset_id = dataset.id 
-        new_file.name = file.name.replace('fastq','igfft.annotation')
-        new_file.path = file.path.replace('fastq','igfft.annotation')
-        new_file.file_type = 'IGFFT_ANNOTATION'
-        new_file.created='now'
-        new_file.available=True 
-        db.session.add(new_file)
-        db.session.commit()
-        annotated_files.append(new_file)
+##### Open a new session #####
 
-    return annotated_files 
+    with session_scope() as session:
+
+        all_files_created = True
+        total_files = 0
+        number_files_created = 0
+        files_not_created = []
+
+        files = session.query(File).filter(File.id.in_(file_ids)).all()
+        for file in files: 
+            total_files += 1
+            new_file_path = file.name.replace('fastq','igfft.annotation')
+
+            if os.path.isfile( new_file_path ):
+                number_files_created += 1
+
+                new_file = File()
+                new_file.user_id = user_id
+                new_file.parent_id = file.id 
+                new_file.dataset_id = dataset.id 
+                new_file.name = file.name.replace('fastq','igfft.annotation')
+                new_file.path = file.path.replace('fastq','igfft.annotation')
+                new_file.file_type = 'IGFFT_ANNOTATION'
+                new_file.created='now'
+                new_file.available=True 
+                session.add(new_file)
+                session.commit()
+                session.refresh(new_file)
+                annotated_file_ids.append(new_file.id)
+            else:
+                all_files_created = False
+                files_not_created.append( new_file_path )
+
+    if not all_files_created:
+        raise Exception( 'IGREP/IGFFT failed to create all files ({}/{}). The following files were not created: {}'.format( number_files_created, total_files, ' '.join(files_not_created) ) )
+
+##### End of session #####
+
+    return annotated_file_ids 
 
 
 # should really break out tasks to celery_tasks.py or something 
@@ -1554,7 +1827,7 @@ def create_datasets_from_JSON_url(url, project):
 
 # @Dave - function to create datasets from a JSON file
 # If the project is give, the datasets are added to the project
-def create_datasets_from_JSON_string(json_string, project = None):
+def create_datasets_from_JSON_string(json_string, project_id = None, dataset_id = None):
 
     json_counter = 0    
     json_expected_fields = ["LAB_NOTEBOOK_SOURCE", "SEQUENCING_SUBMISSION_NUMBER", 
@@ -1626,7 +1899,6 @@ def create_datasets_from_JSON_string(json_string, project = None):
         new_dataset.description = json_dataset[ "DESCRIPTION" ]
         new_dataset.ig_type = ""
 
-
         # special treatment for arrays
         try:
             new_dataset.cell_types_sequenced = ast.literal_eval(str(json_dataset[ "CELL_TYPES_SEQUENCED" ]))
@@ -1689,6 +1961,188 @@ def create_datasets_from_JSON_string(json_string, project = None):
             db.session.refresh(current_user)
 
     return None
+
+@celery.task(base = LogTask, bind = True)
+def run_analysis_pipeline(self, *args,  **kwargs):
+    logger = self.logger
+
+    user_id = kwargs['user_id']
+    file_source = kwargs['file_source']
+    dataset = kwargs['dataset']
+    if dataset and dataset != []: dataset = dataset[0]
+    dataset_files = kwargs['dataset_files']
+
+    name = kwargs['name']
+    description = kwargs['description']
+    output_dataset = kwargs['output_dataset']
+    output_project = kwargs['output_project']
+    ncbi_accession = kwargs['ncbi_accession']
+    ncbi_chain = kwargs['ncbi_chain']
+    download_url = kwargs['download_url']
+    download_chain = kwargs['download_chain']
+    gsaf_url = kwargs['gsaf_url']
+    gsaf_chain = kwargs['gsaf_chain']
+    trim = kwargs['trim']
+    trim_slidingwindow = kwargs['trim_slidingwindow']
+    trim_slidingwindow_size = kwargs['trim_slidingwindow_size']
+    trim_slidingwindow_quality = kwargs['trim_slidingwindow_quality']
+    trim_illumina_adapters = kwargs['trim_illumina_adapters']
+    pandaseq = kwargs['pandaseq']
+    analysis_type = kwargs['analysis_type']
+    description = kwargs['description']
+    pandaseq_algorithm = kwargs['pandaseq_algorithm']
+    cluster = kwargs['cluster']
+
+    ##### Obtain Files for Analysis #####
+    files_ids_to_analyze = []
+    analysis_id = None
+
+    with session_scope() as session:
+
+        # get the current user
+        current_user = session.query(User).get(user_id)
+        if not current_user:
+            raise Exception('User with id {} not found.'.format(user_id))
+
+        # get the target dataset
+        if output_dataset and output_dataset.isdigit():
+            output_dataset = int(output_dataset)
+        else:
+            logger.info( str( type(output_dataset) ) )
+            logger.info( output_dataset )
+            raise Exception( 'Invalid format for output dataset: {}'.format(output_dataset) )
+
+        dataset = session.query(Dataset).get(output_dataset)
+        if not dataset:
+            raise Exception( 'Could not find dataset {}.'.format(output_dataset) )
+        # not going to check dataset permission, was checked in frontend after form submission
+
+        if file_source =='file_dataset':
+            if dataset_files and dataset_files != []:
+                for file_id in dataset_files:
+                    if type(file_id) == str and file_id.isdigit(): file_id = int(file_id)
+                    file = session.query(File).get(file_id)
+                    if not file:
+                        raise Exception( 'File with id {} not found.'.format(file_id) )
+                    else:
+                        files_ids_to_analyze.append(file_id)
+
+                    # add file to the output dataset if it's not in there already
+                    if file not in dataset.files:
+                        dataset.files.append(file)
+            else:
+                raise Exception('No files given for analysis.')
+
+        elif file_source =='file_gsaf':
+            raise Exception ('Upload from GSAF URL not currently supported.')
+            pass # call GSAF script here
+        elif file_source =='file_upload':
+
+            # first create a new db file to place the download in
+            new_file = File()
+            new_file.url = download_url.rstrip()
+            new_file.name = new_file.url.split('/')[-1].split('?')[0]
+            new_file.file_type = parse_file_ext(new_file.name)
+            new_file.description = description
+            new_file.chain = download_chain
+            new_file.dataset_id = output_dataset
+            new_file.path = '{}/{}'.format(current_user.scratch_path.rstrip('/'), new_file.name)
+            new_file.user_id = user_id
+            new_file.available = False 
+            new_file.s3_status = ''
+            new_file.status = ''
+
+            if 'gz' in new_file.file_type.lower():
+                new_file.file_type = 'GZIPPED_FASTQ'
+
+            session.add(new_file)
+            session.commit()
+            session.refresh( new_file )
+            files_ids_to_analyze.append( new_file )
+
+            # add the new file to the dataset
+            dataset.files.append(new_file)
+
+            download_file( url = new_file.url, path = new_file.path, file_id = new_file.id, user_id = user_id, parent_task = self)
+        else: # file_source =='file_ncbi':
+            return_value = import_from_sra(accession = ncbi_accession, name=ncbi_accession, user_id = user_id, chain = ncbi_chain, project_selection = str(output_project), dataset_selection = str(output_dataset), parent_task = self)
+            files_ids_to_analyze = return_value.file_ids
+
+        if files_ids_to_analyze == []:
+            raise Exception('Unable to load files for analysis.')
+        else:
+
+            #create a new analysis
+            analysis = Analysis()
+            analysis.db_status = 'RUNNING'
+            analysis.name = name
+            analysis.description = description
+            analysis.user_id = user_id
+            analysis.dataset_id = dataset.id
+            analysis.program = analysis_type
+            analysis.started = 'now'
+            analysis.params = {}
+            analysis.status = 'QUEUED'
+            analysis.responses = []
+            analysis.available = False
+            analysis.inserted_into_db = False
+            session.add(analysis)
+            session.commit()
+            session.refresh(analysis)
+            analysis_id = analysis.id
+
+            if dataset.directory:
+                analysis.directory = dataset.directory.rstrip('/') + '/Analysis_' + str(analysis.id)
+            else: 
+                analysis.directory = analysis.dataset.user.scratch_path.rstrip('/') + '/Analysis_' + str(analysis.id)
+
+
+
+    ##### Perform Pre-processing #####
+    if trim:
+        return_value = run_trim_analysis_with_files(analysis_id = analysis_id, file_ids = files_ids_to_analyze, logger = logger)
+        files_ids_to_analyze = return_value.file_ids
+
+    if pandaseq:
+        return_value = run_pandaseq_analysis_with_files(analysis_id = analysis_id, file_ids = files_ids_to_analyze, algorithm = pandaseq_algorithm, parent_task = self)
+        files_ids_to_analyze = return_value.file_ids
+
+    ##### Perform Analysis #####
+
+
+    ##### Perform Post-Processing #####
+
+
+    ##### Add files to Appropriate Dataset/Project #####
+
+
+    # for key in kwargs:
+    #     logger.info( '{}: {}'.format(key, kwargs[key]) )
+
+    # [Task 10 (run_analysis_pipeline) - SUCCESS] None
+    # [2016-05-11 11:35:12,715: INFO] trim: False 
+    # [2016-05-11 11:35:12,716: INFO] file_source: file_dataset 
+    # [2016-05-11 11:35:12,716: INFO] trim_slidingwindow: False 
+    # [2016-05-11 11:35:12,717: INFO] cluster: False 
+    # [2016-05-11 11:35:12,718: INFO] pandaseq_algorithm: ea_util 
+    # [2016-05-11 11:35:12,718: INFO] analysis_type: igrep 
+    # [2016-05-11 11:35:12,719: INFO] trim_illumina_adapters: False 
+    # [2016-05-11 11:35:12,720: INFO] pandaseq: True 
+    # [2016-05-11 11:35:12,720: INFO] gsaf_url: 
+    # [2016-05-11 11:35:12,720: INFO] trim_slidingwindow_quality: None 
+    # [2016-05-11 11:35:12,721: INFO] user_id: 1 
+    # [2016-05-11 11:35:12,721: INFO] download_url: 
+    # [2016-05-11 11:35:12,722: INFO] ncbi_accession: 
+    # [2016-05-11 11:35:12,722: INFO] description: 
+    # [2016-05-11 11:35:12,723: INFO] ncbi_chain: HEAVY 
+    # [2016-05-11 11:35:12,723: INFO] dataset_files: [u'2'] 
+    # [2016-05-11 11:35:12,724: INFO] trim_slidingwindow_size: None 
+    # [2016-05-11 11:35:12,724: INFO] download_chain: HEAVY 
+    # [2016-05-11 11:35:12,725: INFO] gsaf_chain: None 
+    # [2016-05-11 11:35:12,725: INFO] output_project: 1 
+    # [2016-05-11 11:35:12,726: INFO] output_dataset: 1 
+
+
 
 ######
 #

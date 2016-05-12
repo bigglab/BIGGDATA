@@ -17,8 +17,8 @@ QUOTAGUARD_URL = 'http://quotaguard4189:013877db0c3e@proxy.quotaguard.com:9292'
 # Local Development-specific vars, override below if in production
 HOME='/Users/red/Desktop/GeorgiouProjects/BIGGDATA'
 
-TRIMMAMATIC = 'java -jar /home/russ/software/Trimmomatic-0.35/trimmomatic-0.35.jar'
-TRIMMAMATIC_ADAPTERS = '/home/russ/software/Trimmomatic-0.35/adapters'
+TRIMMOMATIC = 'java -jar /home/russ/software/Trimmomatic-0.35/trimmomatic-0.35.jar'
+TRIMMOMATIC_ADAPTERS = '/home/russ/software/Trimmomatic-0.35/adapters'
 MIGMAP = 'java -Xmx2g -jar /home/russ/software/migmap-0.9.8/migmap-0.9.8.jar'
 
 # File System configurations - this is where all user data is stored! Need a more universal way.... 
@@ -39,13 +39,12 @@ if 'LESSOPEN' in os.environ.keys():  # HACK TO CHECK IF WE'RE ON AWS INSTANCE:
 	SQLALCHEMY_DATABASE_URI = "postgres://uf8vm9gg6isrbk:p6iot5ksr6i60ff173l8f4v1ig@ec2-107-20-136-206.compute-1.amazonaws.com:6712/d30h3s4gmpmcuo"
 	# Local instance stores, for speed 
 	HOME = '/home/ubuntu/BIGGDATA'
-	TRIMMAMATIC = 'java -jar /home/ubuntu/install/Trimmomatic-0.35/trimmomatic-0.35.jar'
-	TRIMMAMATIC_ADAPTERS = '/home/ubuntu/install/Trimmomatic-0.35/adapters'
+	TRIMMOMATIC = 'java -jar /home/ubuntu/install/Trimmomatic-0.35/trimmomatic-0.35.jar'
+	TRIMMOMATIC_ADAPTERS = '/home/ubuntu/install/Trimmomatic-0.35/adapters'
 
 
 S3_BUCKET = 'biggdata'
 
-# @Dave - temporary for local environment
 AWSACCESSKEYID = os.environ['AWSACCESSKEYID'] 
 AWSSECRETKEY = os.environ['AWSSECRETKEY']
 
@@ -69,23 +68,28 @@ IGREP_PIPELINES = '/home/russ/IGREP/pipelines'
 import subprocess
 import shlex
 
-daves_machine = False
+DAVES_MACHINE = False
 
 try:
 	command_line_args = shlex.split('scutil --get LocalHostName')
 	command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 	response, error = command_line_process.communicate()
 	if 'Davids-MacBook-Air' in response:
-		daves_machine = True
+		DAVES_MACHINE = True
 except subprocess.CalledProcessError as error:
     error = error.output
 
-if daves_machine:
+if DAVES_MACHINE:
 	IGREP_COMMON_TOOLS = '/Users/davidmagness/IGREP/common_tools'
 	IGREP_PIPELINES = '/Users/davidmagness/IGREP/pipelines'
 
+	SQLALCHEMY_DATABASE_URI = "postgresql://localhost:5432/biggdata"
+	#SQLALCHEMY_DATABASE_URI = "postgres://biggdata:jkl@127.0.0.1:6712/biggdata"
+	SQLALCHEMY_TRACK_MODIFICATIONS = True
+	SQLALCHEMY_POOL_TIMEOUT = None
 
-
+	TRIMMOMATIC = 'trimmomatic'
+	TRIMMOMATIC_ADAPTERS = '/usr/local/share/trimmomatic/adapters'
 
 # OPTIONS AVAILABLE ACCORDING TO app.config.__dict__  AFTER COMPILATION 
 
