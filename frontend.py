@@ -1331,7 +1331,8 @@ def delete_task(task_id):
     current_user.celery_tasks = tasks
     db.session.commit()
 
-    return redirect( url_for('frontend.dashboard') )
+    return json_celery_log()
+    #return redirect( url_for('frontend.dashboard') )
 
 @frontend.route('/json_celery_log', methods=['GET', 'POST'])
 @login_required
@@ -1480,7 +1481,10 @@ def json_celery_log():
                     <tr>
                         <td><font color="{}">[Task {} ({}) - {}] {}</font><br>
                         {}{}</td>
-                        <td align="right" valign="top">[<a href="{}">X</a>]</td>
+                        <td align="right" valign="top">
+                        <span class="pencil glyphicon glyphicon-remove" style="margin-right: 3px; color:black; cursor: pointer; cursor: hand;" onclick=delete_task('{}')></span>
+
+                        </td>
                     </tr>
                 </tbody>
             </table>

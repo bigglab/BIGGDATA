@@ -20,12 +20,9 @@
 				        	<tr>
 				        		<td><b>Task Console</b></td>
 				        		<td align="right">
-				        			<a onclick="refresh_console()" href="#">
-				        				<span class="pencil glyphicon glyphicon-refresh" style="margin-right: 3px; color:black"></span></a>
-				        			<a onclick="minimize_console()" href="#">
-					        			<span class="pencil glyphicon glyphicon-minus" style="margin-right: 3px; color:black"></span></a>
-				        			<a onclick="maximize_console()" href="#">
-					        			<span class="pencil glyphicon glyphicon-plus" style="color:black"></span></a>
+			        				<span class="pencil glyphicon glyphicon-refresh" style="margin-right: 3px; color:black; cursor: pointer; cursor: hand;" onclick="refresh_console()"></span>
+				        			<span class="pencil glyphicon glyphicon-minus" style="margin-right: 3px; color:black; cursor: pointer; cursor: hand;" onclick="minimize_console()"></span>
+				        			<span class="pencil glyphicon glyphicon-plus" style="color:black; cursor: pointer; cursor: hand;" onclick="maximize_console()"></span>
 			        			</td>
 	
 				        	</tr>
@@ -167,6 +164,76 @@
 
     }
 
+    function delete_task(delete_url) {
+
+
+		//$('#console-container').css({"bottom":"0", "height" : "100%" });
+
+
+       $.getJSON(delete_url, function(data) {
+
+		if ( data['interval'] ){
+
+			if (interval != data['interval']){
+				interval = data['interval']
+		
+				if (timeout){
+				    clearTimeout(timeout);
+				}
+
+				timeout = setTimeout( update_progress , interval); 
+			
+			}
+
+
+		}
+
+		if (set_new_interval){
+			interval = new_interval;
+
+			if (timeout){
+			    clearTimeout(timeout);
+			}
+
+			timeout = setTimeout( update_progress , interval); 
+
+			set_new_interval = false;
+		}
+
+			$('#interval').html( data['message'] );
+
+			$('#console').html( data['message'] );
+			$('#interval').html( interval/1000 );
+
+		}).error(function(jqXHR, textStatus, errorThrown) {
+	        
+            if (jqXHR.readyState == 0) {  
+		        $('#console').html('There was an error: Could not connect to BIGG Data Server.<br>\n' );
+		    } else {
+		        $('#console').html("There was an error - " + textStatus + ':<br>\n' + jqXHR.responseText);
+		    }
+
+        	// console.log( 'Ready state: ' + jqXHR.readyState)
+        	// console.log( 'Status: ' + jqXHR.status)
+
+         //    if (jqXHR.readyState === 4) {  
+		       //  if (jqXHR.status === 200) {  
+		       //    console.log(jqXHR.responseText)  
+		       //  } else {  
+		       //     console.log("Error", jqXHR.statusText);  
+		       //  }   
+
+	   	});		
+
+		timeout = setTimeout(function() {
+			update_progress();
+		}, interval); 
+
+	};
+
+	update_progress();
+
+
 
     function update_progress() {
 
@@ -204,7 +271,7 @@
 			set_new_interval = false;
 		}
 
-			$('#inteval').html( data['message'] );
+			$('#interval').html( data['message'] );
 
 			$('#console').html( data['message'] );
 			$('#interval').html( interval/1000 );
