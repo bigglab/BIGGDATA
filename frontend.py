@@ -1144,7 +1144,7 @@ def create_analysis(dataset_id, status=[]):
     if request.method == 'POST' and dataset:
         status.append('Analysis Launch Detected')
         result = run_analysis.apply_async(
-            (dataset_id, form.file_ids.data, ),  
+            (None, dataset_id, form.file_ids.data, ),  
                 {'analysis_type': 'IGFFT', 
                 'analysis_name': form.name.data, 
                 'analysis_description': form.description.data, 

@@ -49,7 +49,7 @@ from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Boo
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import JSON, JSONB, ARRAY, BIT, VARCHAR, INTEGER, FLOAT, NUMERIC, OID, REAL, TEXT, TIME, TIMESTAMP, TSRANGE, UUID, NUMRANGE, DATERANGE
 from sqlalchemy.sql import select
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import sessionmaker, scoped_session, validates
 from pymongo import MongoClient
 import pymongo
  
@@ -762,6 +762,13 @@ class CeleryTask(db.Model):
 
         user_alerted = Column(Boolean, default=False)
         user_dismissed = Column(Boolean, default=False)
+
+        @validates('result')
+        def validate_result(self, key, value):
+            max_len = getattr(self.__class__, key).prop.columns[0].type.length
+            if value and len(value) > max_len:
+                return value[:max_len]
+            return value
 
 
 ######### 
