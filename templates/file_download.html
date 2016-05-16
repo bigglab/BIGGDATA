@@ -74,7 +74,7 @@
             </thead>
             <tbody>
                 <tr>
-                    <td><input type="input" name="key" value="" class="form-control"/></td>
+                    <td><input id="key" type="input" name="key" value="" class="form-control"/></td>
                     <td>
                         <div class="input-group">
                             <span class="input-group-btn">
@@ -115,9 +115,10 @@
     $(document).ready( function() {
       
         $('.btn-file :file').on('fileselect', function(event, numFiles, label) {
-            var parent_input_group = $(this).closest('div')
-            var child_input = parent_input_group.children('input')
-            child_input.val(label)
+            var parent_input_group = $(this).closest('div');
+            var child_input = parent_input_group.children('input');
+            child_input.val(label);
+            $('#key').val(label);
 
         });
     });

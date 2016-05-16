@@ -125,7 +125,7 @@ nav.register_element('frontend_user', Navbar(
         ),
     Subgroup(
         'Run Analysis', 
-        View('Run On Dataset', 'frontend.datasets'),
+        View('Create Analysis Pipline', 'frontend.pipeline'),
         View('My Analyses', 'frontend.analyses'),
         View('VDJ VIZualizer', 'frontend.vdj_visualizer'),
         # View('Browse Sequences', 'frontend.browse_sequences'),
@@ -497,10 +497,13 @@ def file_download(status=[], bucket='', key=''):
             #flash_message = 'File downloading from {}. '.format(file.url)
             session['async_result_id'] = result.id
         time.sleep(1)
-        async_result = add.AsyncResult(session['async_result_id'])
+        
+        #async_result = add.AsyncResult(session['async_result_id'])
         # r = async_result.info
         r = result.__dict__
-        r['async_result.info'] = async_result.info 
+        #r['async_result.info'] = async_result.info 
+        r['async_result.info'] = result.info 
+
         db.session.commit()
         #flash_message = flash_message + 'File uploaded to {}. '.format(file.path)
         #flash(flash_message, 'success')

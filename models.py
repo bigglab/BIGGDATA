@@ -237,6 +237,8 @@ class File(db.Model):
         url = db.Column(db.String(256))
         command = db.Column(db.String(1024))
         created = db.Column(db.DateTime, default=db.func.now())
+
+        vhvl_paired = db.Boolean()
         paired_partner = db.Column(db.Integer, db.ForeignKey('file.id'))
         parent_id = db.Column(db.Integer, db.ForeignKey('file.id'))
         analysis_id = db.Column(db.Integer, db.ForeignKey('analysis.id'))

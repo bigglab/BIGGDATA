@@ -58,35 +58,44 @@ from forms import *
 from functions import * 
 from models import * 
 
-# Check for number of files submitted for analysis
-# Automatically check for R1/R2 etc
-# Require two files for PANDAseq
+# Questions for Russ:
+# Pairing in the database - always refers to forward/reverse read pairing? VH/VL
+# Switch all file uploads to direct uploads?
+# Pair uploads?
+# Abstar uses pandaseq - skip that and just use our PANDAseq?
+# USSEARCH - 
+# Output all formats in TSV
+# Add link to analysis from Console
 
-# Check new trim analysis (passing analysis, files by ID)
-# glyphicons-chevron-right
+# Build pandas dataframe
+# Take out CDR3 sequences - provided in header
+# Separate text file with CDR3 sequences CDR3.AA
+#   Now use clonotype - in IGREP binary
+# Not USSEARCH
 
-# /data/resources : all software
-# /data/resources/germlines : files reffed by system
 
-# Make sure that analyses can only be run on the correct files and cannot be run on empty filesets
 
-# Should only create
-# Walk through analyses
+# 1. Add Abstar function
+# 2. Add direct file upload
+# 3. Add pairing functionality throughout - pair children output as well
+# 4. Add trimming parameters
+# 5. # Hold off ---Add clustering algorithm
+# 6. Check for number of files submitted for analysis
+# 7. X Automatically check for R1/R2 etc
+# 8. Require two files for PANDAseq
+# 9. Check new trim analysis (passing analysis, files by ID)
+# 10. /data/resources : all software
+# 11. /data/resources/germlines : files reffed by system
+# 12. Make sure that analyses can only be run on the correct files and cannot be run on empty filesets
+# 13. Auto populate file name on upload page
+# 14. Add dataset table to project page
+# 15. Add Analysis Type and Cluster setting - min, max, and step
+# 16. Add Dataset Defaults:
+#      Human
+#      SP: Mi-Seq 2x300
+# 17. Check trimming filename failure
 
-# /dataset/analysis/files
-
-# Create analysis - work on the UI 
-# Add Analysis Type and Cluster setting - min, max, and step
-# Auto populate file name on upload page
-
-# Add dataset table to project page
-
-# Dataset Defaults:
-# Human
-# SP: Mi-Seq 2x300
-
-# Check trimming filename failure
-
+# OLDER:
 # 4. Don't allow users to run analyses on empty datasets
 # 5. TEST Prepopulate new datasets with default settings: d.populate_with_defaults(current_user)
 # 6. TEST When creating a project for a dataset, get the project species/etc from the dataset
@@ -162,6 +171,10 @@ from models import *
 # user can edit any dataset where they can edit the project
 # user can view any dataset where they are a reader of the project
 # 
+# Should only create
+# Walk through analyses
+# /dataset/analysis/files
+# Create analysis - work on the UI 
 
 # Prevent users from running analyses 
 

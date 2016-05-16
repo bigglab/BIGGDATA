@@ -870,11 +870,20 @@ def download_file(self, url, path, file_id, user_id = None):
 
     # This status will take down the progress bar and show that the download is complete.
     self.update_state(state='SUCCESS', meta={'status': 'Download complete.'} )
-    logger.info ('Download finished.')
 
     f = db.session.query(File).filter(File.id==file_id).first()
-    f.available = True
-    f.file_size = os.path.getsize(f.path)
+
+    if os.path.isfile(f.path):
+        f.available = True
+        f.file_size = os.path.getsize(f.path)
+        logger.info ('Download finished.')
+
+    else:
+        # Alternatively, delete file here
+        f.available = False
+        f.file_size = 0
+        logger.error('Failed to download file {}: file not found.'.format(f.path) )
+
     db.session.commit()
     return 'File download complete.'
 
@@ -932,6 +941,10 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids):
     files = [db.session.query(File).get(file_id) for file_id in file_ids]
     dataset = analysis.dataset
 
+    if not analysis:
+        raise Exception('MixCR Exception: Analysis with ID {} cannot be found.'.format(analysis_id))
+    analysis_name = 'Analysis_{}'.format(analysis_id)
+
     files_to_execute = []
     logger.debug( 'Running MiXCR on these files: {}'.format(files) )
     
@@ -939,10 +952,18 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids):
     scratch_path = scratch_path.replace('///','/')
     scratch_path = scratch_path.replace('//','/')
 
-    basename = files[0].path.split('/')[-1].split('.')[0]
-    basepath = '{}/{}'.format(scratch_path, basename)
+    #basename = files[0].path.split('/')[-1].split('.')[0]
+    basename = analysis_name
+    basepath = '{0}/{1}'.format(analysis.directory, analysis_name)
     logger.info( 'Writing output files to base name: {}'.format(basepath) )
     output_files = []
+
+    print 'Scratch Path: {}'.format(scratch_path)
+    print 'Base Path: {}'.format(basepath)
+    print 'Base Name: {}'.format(basename)
+
+
+
     # Instantiate Source Files
     alignment_file = File()
     alignment_file.user_id = dataset.user_id
@@ -1082,6 +1103,164 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids):
     # if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
     return ReturnValue('MiXCR analysis completed successfully.', file_ids = output_file_ids)
 
+
+# While Abstar has pairing ability (it uses PANDAseq), this function presumes that all files have already
+# been preprocessed (e.g., all pairing has already been performed by PANDAseq)
+@celery.task(base = LogTask, bind = True)
+def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, file_ids = []):
+    
+    logger = self.logger
+
+    with session_scope() as session:
+        analysis = session.query(Analysis).filter(Analysis.id==analysis_id).first()
+        files = [session.query(File).get(file_id) for file_id in file_ids]
+        dataset = analysis.dataset
+
+        if not analysis:
+            raise Exception('Abstar Exception: analysis with ID {} not found.'.format(analysis_id) )
+        analysis_name = 'Analysis_{}'.format(analysis_id)
+
+        files_to_execute = []
+        logger.debug( 'Running Abstar on these files: {}'.format(files) )
+        
+        scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
+        scratch_path = scratch_path.replace('///','/')
+        scratch_path = scratch_path.replace('//','/')
+
+        basename = analysis_name
+        basepath = '{}/{}'.format(analysis.directory, basename)
+        logger.debug( 'Writing output files to base name: {}'.format(basepath) )
+        files_to_execute = []
+
+        # abstar -i /path/to/mydata.fasta -t /path/to/temp/ -o /path/to/output/
+        # -s macaque -s human (default) -s mouse
+
+        for file in files:
+            if file.file_type == 'GZIPPED_FASTQ':
+                logger.warning('Cannot run Abstar analysis with zipped files, skipping file {}'.format(file.path) )
+            else:
+                new_file = File()
+                new_file.user_id = dataset.user_id
+
+                new_file.path = '{}.aln.vdjca'.format(os.path.splitext(file.path)[0]+".json")
+                new_file.name = "{}.aln.vdjca".format(os.path.splitext(file.name)[0]+".json")
+                new_file.command = 'abstar -i {0} -t {1} -o {1}'.format(file.path, analysis.directory)
+                new_file.file_type = 'ABSTAR_ALIGNMENTS'
+                new_file.dataset_id = analysis.dataset_id 
+                new_file.analysis_id = analysis.id 
+                new_file.chain = file.chain
+
+
+                session.add(new_file)
+                session.commit()
+                session.refresh(new_file)
+                files_to_execute.append(new_file)    
+
+        session_objects = expunge_session_objects(session)
+
+    output_file_ids = []
+
+
+    # Run the commands
+    for file in files_to_execute:
+        logger.info( 'Executing: {}'.format(file.command) )
+
+        # MAKE THE CALL *****
+        #response = os.system(f.command)
+        error = None
+        try:
+            command_line_args = shlex.split(file.command)
+            command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+
+            # while True: # Feeling fancy?  add a timeout condition here...
+            #     if pipe.poll():
+            #         sys.stdout.flush()
+            #         break
+            line = ''
+            vdj_started = False
+            while True:
+                #nextline = command_line_process.stdout.readline()
+                char = command_line_process.stdout.read(1)
+
+                if char == '\n':
+                    sys.stdout.write(line)
+                    if 'VDJ' in line:
+                        vdj_started = True
+
+                if command_line_process.poll() is not None:
+                    sys.stdout.flush()
+                sys.stdout.write(nextline)
+                    #sys.stdout.flush()
+            
+
+            # for line in iter(command_line_process.stdout.readline, b''):
+                # line = line.strip()
+                # logger.info( line.strip() )
+
+                # tracking_percent = False
+
+                # if '%' in line:
+                #     tracking_percent = True
+                #     tracking_status, line = line.split(':', 1)
+                #     if line.endswith('%'):
+                #         percent = line.replace('%', '')
+                #         eta = ''
+                #     else:
+                #         percent, eta = line.split('%', 1)
+                #         eta = ' ({})'.format( eta.strip() )
+                #     self.update_state(state='PROGRESS',
+                #             meta={'status': '{}{}'.format( tracking_status , eta ) , 'current' : float(percent), 'total' : 100, 'units' : '%' })
+
+                #     print '{} ({}): {}/{}'.format( tracking_status , eta, percent, 100 )
+                # else:
+                #     if tracking_percent:
+                #         tracking_percent = False
+                #         self.update_state(state='ANALYZING',
+                #                 meta={'status': tracking_status, 'current' : 100, 'total' : 100, 'units' : '%' })
+                #         logger.info( '{} complete.'.format( tracking_status ) )
+                    # logger.info( line.strip() )
+
+            response, error = command_line_process.communicate()
+            command_line_process.stdout.close()
+            command_line_process.wait()
+            return_code = command_line_process.returncode
+
+        except subprocess.CalledProcessError as error:
+            error = error.output
+            logger.error(error)
+
+        # if tracking_percent:
+        #     tracking_percent = False
+        #     self.update_state(state='ANALYZING',
+        #             meta={'status': tracking_status, 'current' : 100, 'total' : 100, 'units' : '%' })
+        #     logger.info( '{} complete.'.format( tracking_status ) )
+
+        if error == None and return_code == 0: 
+            file.available = True 
+            file.file_size = os.path.getsize(file.path)
+            output_file_ids.append(file.id)
+        else:
+            file.available = False
+            analysis.status = 'FAILED'
+    logger.info( 'All commands in analysis {} have been executed.'.format(analysis) )
+    if set(map(lambda file: file.available, files_to_execute)) == {True}:
+        analysis.status = 'SUCCESS'
+        analysis.available = True
+    if not analysis.status == 'FAILED': analysis.status = 'SUCCESS'
+    analysis.active_command = ''
+    analysis.finished = 'now'
+
+    # Save all the changes that were made
+    with session_scope() as session:
+        add_session_objects(session, session_objects)
+        session.commit()
+
+    # KICK OFF ASYNC DB INSERTS FROM OUTPUT FILES
+    # parseable_mixcr_alignments_file_path = alignment_output_file.path
+    # PARSE WITH parse_and_insert_mixcr_annotation_dataframe_from_file_path to speed up? 
+    # if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
+    return ReturnValue('MiXCR analysis completed successfully.', file_ids = output_file_ids)
+
 @celery.task(base = LogTask, bind = True)
 def parse_and_insert_mixcr_annotations_from_file_path(self, file_path, dataset_id=None, analysis_id=None):
     logger = self.logger
@@ -1199,17 +1378,16 @@ def run_pandaseq_analysis_with_files(self, analysis_id, file_ids, algorithm='pea
 
     if len(file_ids) != 2:
         raise Exception('PANDAseq can only be run on two files, not {} files.'.format( str( len(file_ids) ) ) )
-
-    print "File ids:"
-    print ', '.join( [ str(file.id) for file in files] )
+    analysis_name = 'Analysis_{}'.format(analysis.id)
 
     dataset = analysis.dataset
     files_to_execute = []
     logger.info( 'Running PANDAseq on these files: {}'.format( ', '.join( [file.name for file in files] ) ) )
     scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
     scratch_path = scratch_path.replace('//','/')
-    basename = files[0].path.split('/')[-1].split('.')[0]
-    basepath = '{}/{}'.format(scratch_path, basename)
+    #basename = files[0].path.split('/')[-1].split('.')[0]
+    basename = analysis_name
+    basepath = '{0}/{1}'.format(analysis.directory, basename)
     logger.info( 'Writing output files to base name: {}'.format(basepath) )
     output_files = []
 
@@ -1306,18 +1484,21 @@ def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = c
 
     if not analysis:
         raise Exception( 'Analysis with ID {} not found.'.format(analysis_id) )
+    analysis_name = 'Analysis_{}'.format(analysis.id)
 
     dataset = analysis.dataset
     files_to_execute = []
     logger.info( 'Running Trimmomatic on files {}.'.format( ', '.join( [str(file.id) for file in files] ) ) )
     scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
+    scratch_path = scratch_path.replace('//', '/')
+
     basename = files[0].path.split('/')[-1].split('.')[0]
-    basepath = analysis.directory   #'{}/{}'.format(scratch_path, basename)
+    basepath = '{0}/{1}'.format(analysis.directory, analysis_name)
     logger.info( 'Writing output files to base name: {}'.format(basepath) )
     output_file_ids = []
 
     if len(files) == 0 or len(files) > 2:
-        raise Exception('Can only run PANDAseq on 1 or 2 files, not on {} files.'.format( str(len(files) ) ) )
+        raise Exception('Can only run Trimmomatic on 1 or 2 files, not on {} files.'.format( str(len(files) ) ) )
 
     # Instantiate Source Files
     if len(files) == 1: 
@@ -2233,9 +2414,6 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         files_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
-#     analysis_type = RadioField('Select a File Source', choices=[ ('' , 'IGREP/IGFFT'), ('' , 'MixCR'), ('' , 'ABStar')])
-
-
     ##### Perform Analysis #####
     if analysis_type == 'igrep':
 
@@ -2253,7 +2431,17 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         files_ids_to_analyze = return_value.file_ids
 
     elif analysis_type == 'abstar':
-        pass
+    
+        # Abstar requires unzipped files
+        return_value = unzip_files( user_id = user_id, file_ids = files_ids_to_analyze, destination_directory = analysis_directory, logger = logger)
+        files_ids_to_analyze = return_value.file_ids
+        logger.info (return_value)
+
+        # Run Abstar function
+        return_value = run_abstar_analysis_id_with_files(user_id = user_id, analysis_id = analysis_id, file_ids = files_ids_to_analyze, parent_task = task)
+        files_ids_to_analyze = return_value.file_ids
+        logger.info (return_value)
+
     else:
         raise Exception( 'Analysis type "{}" cannot be performed.'.format(analysis_type) )
 
