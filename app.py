@@ -1154,6 +1154,10 @@ def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False
             species 
         except: 
             species = 'homosapiens'
+        try: 
+            loci 
+        except: 
+            loci = 'igh,igk,igl'
         script_command = 'python {}/gglab_igfft_single.py -species {} -locus {} {}'.format(igrep_script_path, species, loci, file.path)
         print 'executing script: {}'.format(script_command)
         response = os.system(script_command)
