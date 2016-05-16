@@ -1353,6 +1353,13 @@ def run_pandaseq_with_dataset_id(self, dataset_id, analysis_name='', analysis_de
     analysis.available = False
     analysis.inserted_into_db = False
     db.session.add(analysis)
+    db.session.commit()
+    db.session.refresh(analysis)
+
+    analysis.directory = '{}/Analysis_{}/'.format( dataset.directory.rstrip('/'), analysis.id )
+    if not os.path.isdir(analysis.directory):
+        os.mkdir(analysis.directory)
+
     data_files_by_chain = {}
     for key, values in itertools.groupby(dataset.primary_data_files(), lambda x: x.chain): 
         data_files_by_chain[key] = list(values)
@@ -1387,7 +1394,7 @@ def run_pandaseq_analysis_with_files(self, analysis_id, file_ids, algorithm='pea
     scratch_path = scratch_path.replace('//','/')
     #basename = files[0].path.split('/')[-1].split('.')[0]
     basename = analysis_name
-    basepath = '{0}/{1}'.format(analysis.directory, basename)
+    basepath = '{0}/{1}'.format(analysis.directory.rstrip('/'), basename)
     logger.info( 'Writing output files to base name: {}'.format(basepath) )
     output_files = []
 
@@ -1451,13 +1458,20 @@ def run_pandaseq_analysis_with_files(self, analysis_id, file_ids, algorithm='pea
             error = error.output
             logger.error(error)
 
-        if error == None: 
-            f.available = True 
-            f.file_size = os.path.getsize(f.path)
-            dataset.primary_data_files_ids = [f.id]
-            db.session.commit()
-            db.session.refresh(f)
-            output_file_ids.append(f.id)
+        if error == None:
+            if os.path.isfile(f.path): 
+                f.available = True 
+                f.file_size = os.path.getsize(f.path)
+                dataset.primary_data_files_ids = [f.id]
+                db.session.commit()
+                db.session.refresh(f)
+                output_file_ids.append(f.id)
+            else:
+                f.available = False
+                analysis.status = 'FAILED'
+                db.session.commit()
+                logger.error('PANDAseq Error: unable to create file {}'.format(f.path) )
+
         else:
             f.available = False
             analysis.status = 'FAILED'
