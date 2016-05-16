@@ -1,14 +1,14 @@
 #System Imports
 import ast
+import errno
 import json
 import logging
+import os
+import random
 import re
 import static
 import sys
-import os
-import errno
 import time
-import random
 from shutil import copyfile
 import operator
 import datetime as dt
@@ -1128,7 +1128,7 @@ def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, 
         scratch_path = scratch_path.replace('//','/')
 
         basename = analysis_name
-        basepath = '{}/{}'.format(analysis.directory, basename)
+        basepath = analysis.directory
         logger.debug( 'Writing output files to base name: {}'.format(basepath) )
         files_to_execute = []
 
@@ -1142,14 +1142,13 @@ def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, 
                 new_file = File()
                 new_file.user_id = dataset.user_id
 
-                new_file.path = '{}.aln.vdjca'.format(os.path.splitext(file.path)[0]+".json")
-                new_file.name = "{}.aln.vdjca".format(os.path.splitext(file.name)[0]+".json")
+                new_file.path = '{}/{}'.format(basepath.rstrip('/'), os.path.splitext(file.name)[0]+".json")
+                new_file.name = "{}".format(os.path.splitext(file.name)[0]+".json")
                 new_file.command = 'abstar -i {0} -t {1} -o {1}'.format(file.path, analysis.directory)
                 new_file.file_type = 'ABSTAR_ALIGNMENTS'
                 new_file.dataset_id = analysis.dataset_id 
                 new_file.analysis_id = analysis.id 
                 new_file.chain = file.chain
-
 
                 session.add(new_file)
                 session.commit()
@@ -1178,48 +1177,58 @@ def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, 
             #         break
             line = ''
             vdj_started = False
-            while True:
+            vdj_finished = False
+
+            vdj_progress_pattern = re.compile('\(([0-9]*)/([0-9]*)\)([^0-9]+)([0-9]+%)')
+
+            process_executing = True
+
+            while process_executing:
+
                 #nextline = command_line_process.stdout.readline()
                 char = command_line_process.stdout.read(1)
+                line = line + char
 
-                if char == '\n':
-                    sys.stdout.write(line)
-                    if 'VDJ' in line:
-                        vdj_started = True
+                if not vdj_started:
+                    if char == '\n':
+
+                        if 'Running VDJ' in line:
+                            vdj_started = True
+
+                        logger.info(line.rstrip())
+                        line = ''
+
+                elif vdj_finished:
+                    if char == '\n':
+                        logger.info(line.rstrip())
+                        line = ''
+                else:
+                    if char == '\n':
+                        vdj_finished = True
+                        self.update_state(state='ANALYZING')
+                        logger.info(line.rstrip())
+                        line = ''
+
+                    elif char == '%':
+                        line = line.strip()
+                        progress_match =  vdj_progress_pattern.match(line)
+                        
+                        if progress_match:
+                            current_job = progress_match.group(1)
+                            total_jobs = progress_match.group(2)
+                            current_percent = progress_match.group(4).rstrip('%')
+
+                            self.update_state(state='PROGRESS',
+                                meta={'status': '{}/{} jobs '.format( current_job , total_jobs ) , 'current' : int(current_percent), 'total' : 100, 'units' : '%' })
+
+                        sys.stdout.flush()
+                        line = ''
 
                 if command_line_process.poll() is not None:
+                    process_executing = False
+                    break
                     sys.stdout.flush()
-                sys.stdout.write(nextline)
-                    #sys.stdout.flush()
-            
-
-            # for line in iter(command_line_process.stdout.readline, b''):
-                # line = line.strip()
-                # logger.info( line.strip() )
-
-                # tracking_percent = False
-
-                # if '%' in line:
-                #     tracking_percent = True
-                #     tracking_status, line = line.split(':', 1)
-                #     if line.endswith('%'):
-                #         percent = line.replace('%', '')
-                #         eta = ''
-                #     else:
-                #         percent, eta = line.split('%', 1)
-                #         eta = ' ({})'.format( eta.strip() )
-                #     self.update_state(state='PROGRESS',
-                #             meta={'status': '{}{}'.format( tracking_status , eta ) , 'current' : float(percent), 'total' : 100, 'units' : '%' })
-
-                #     print '{} ({}): {}/{}'.format( tracking_status , eta, percent, 100 )
-                # else:
-                #     if tracking_percent:
-                #         tracking_percent = False
-                #         self.update_state(state='ANALYZING',
-                #                 meta={'status': tracking_status, 'current' : 100, 'total' : 100, 'units' : '%' })
-                #         logger.info( '{} complete.'.format( tracking_status ) )
-                    # logger.info( line.strip() )
-
+                   
             response, error = command_line_process.communicate()
             command_line_process.stdout.close()
             command_line_process.wait()
@@ -1229,16 +1238,16 @@ def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, 
             error = error.output
             logger.error(error)
 
-        # if tracking_percent:
-        #     tracking_percent = False
-        #     self.update_state(state='ANALYZING',
-        #             meta={'status': tracking_status, 'current' : 100, 'total' : 100, 'units' : '%' })
-        #     logger.info( '{} complete.'.format( tracking_status ) )
-
         if error == None and return_code == 0: 
-            file.available = True 
-            file.file_size = os.path.getsize(file.path)
-            output_file_ids.append(file.id)
+            if os.path.isfile(file.path):
+                file.available = True 
+                file.file_size = os.path.getsize(file.path)
+                output_file_ids.append(file.id)
+            else:
+                file.available = False
+                analysis.status = 'FAILED'
+                logger.error('Abstar Error: failed to create output file {}'.format(file.path) )
+
         else:
             file.available = False
             analysis.status = 'FAILED'
@@ -1259,7 +1268,7 @@ def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, 
     # parseable_mixcr_alignments_file_path = alignment_output_file.path
     # PARSE WITH parse_and_insert_mixcr_annotation_dataframe_from_file_path to speed up? 
     # if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
-    return ReturnValue('MiXCR analysis completed successfully.', file_ids = output_file_ids)
+    return ReturnValue('Abstar analysis completed successfully.', file_ids = output_file_ids)
 
 @celery.task(base = LogTask, bind = True)
 def parse_and_insert_mixcr_annotations_from_file_path(self, file_path, dataset_id=None, analysis_id=None):
@@ -2018,6 +2027,8 @@ def unzip_files( user_id = None, file_ids = [], destination_directory = '~', log
     output_file_ids = []
     number_files_to_unzip = 0
 
+    print 'File IDs: {}'.format(file_ids)
+
     ##### Begin Session #####
     with session_scope() as session:
 
@@ -2047,6 +2058,8 @@ def unzip_files( user_id = None, file_ids = [], destination_directory = '~', log
             else: 
                 # file does not need to be unzipped, so add it to the list as-is
                 output_file_ids.append(file.id)
+
+        print 'Here'
 
         session_objects = expunge_session_objects(session)
     ##### End Session #####
@@ -2079,6 +2092,7 @@ def unzip_files( user_id = None, file_ids = [], destination_directory = '~', log
                 number_files_unzipped += 1
 
     # Save all of the changes
+    logger.info('Saving changes.')
     with session_scope() as session:
         add_session_objects(session, session_objects)
         session.commit()
@@ -2371,7 +2385,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
             session.add(new_file)
             session.commit()
             session.refresh( new_file )
-            files_ids_to_analyze.append( new_file )
+            files_ids_to_analyze.append( new_file.id )
 
             # add the new file to the dataset
             dataset.files.append(new_file)
