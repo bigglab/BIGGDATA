@@ -50,6 +50,11 @@
 	<row>
 		<p><strong>File path:</strong> {{file.path}}</p>
 	</row>
+	{% if file.command %}
+	<row>
+			<p><strong>Command:</strong> {{file.command}}</p>
+	</row>
+	{% endif %}
 </div>
 
 <!-- File Edit form !-->

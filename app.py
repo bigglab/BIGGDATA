@@ -678,7 +678,7 @@ def run_mixcr_analysis_id_with_files(analysis_id, files):
     alignment_file.path = '{}.aln.vdjca'.format(basepath)
     alignment_file.name = "{}.aln.vdjca".format(basename)
     # MIGHT NEED TO ADD THIS ARGUMENT to align   -OjParameters.parameters.mapperMaxSeedsDistance=5
-    alignment_file.command = 'mixcr align -OvParameters.geneFeatureToAlign=VGene --save-description -f {} {}'.format(' '.join([f.path for f in files]), alignment_file.path)
+    alignment_file.command = 'mixcr align --save-description -f {} {}'.format(' '.join([f.path for f in files]), alignment_file.path)
     alignment_file.file_type = 'MIXCR_ALIGNMENTS'
     files_to_execute.append(alignment_file)    
     clone_index_file = File()
