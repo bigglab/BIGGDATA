@@ -1150,6 +1150,10 @@ def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False
 
         # annotated_f = igfft.igfft_multiprocess(f.path, file_type='FASTQ', species=species, locus=loci, parsing_settings={'isotype': isotyping_barcodes, 'remove_insertions': remove_insertions}, num_processes=number_threads, delete_alignment_file=True)           
         # annotated_files.append(annotated_f[0])
+        try species: 
+            pass
+        except: 
+            species = 'homosapiens'
         script_command = 'python {}/gglab_igfft_single.py -species {} -locus {} {}'.format(igrep_script_path, species, loci, file.path)
         print 'executing script: {}'.format(script_command)
         response = os.system(script_command)
