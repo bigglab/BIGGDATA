@@ -1,0 +1,15 @@
+Dave Programming Notes
+
+1. Add carousel form
+2. Build backend WTForm handler
+3. Build backend Pipeline
+4. Check file outputs -> /scratch/dataset/analysis
+5. Add command line options for each type of analysis
+6. Add console to analysis page
+7. Go through and check trimming
+8. Add Analysis Type and Cluster setting - min, max, and step
+9.  Auto populate file name on upload page
+10. Add dataset table to project page
+11. Autopopulate data
+
+

@@ -71,9 +71,9 @@
                             <td>Dataset:</td>
                             <td style="padding-left:8px">Owner Name:</td>
                         </tr>
-                        {% for dataset, name in dataset_list %}
+                        {% for dataset, name, dataset_id in dataset_list %}
                         <tr>
-                            <td>{{dataset}}</td>
+                            <td><a href="{{ url_for( 'frontend.dataset', id = dataset_id ) }}">{{dataset}}</a></td>
                             <td style="padding-left:8px">{{name}}</td>
                         </tr>
                         {% endfor %}

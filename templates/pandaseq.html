@@ -4,31 +4,37 @@
 
 
 <div class="container">
-<h3>Building PANDASEQ Analysis Run For Dataset {{dataset.id}}: </h3>
+<h3>Create PANDAseq Analysis Run For Dataset {{dataset.id}}: </h3>
 </div>
-
-
 <br>
 
 
 
 <div class="container">
-<table class="table table-striped" >
-<thead>
-<h4>PandaSeq Analysis Configuration:</h4>
-</thead>
-<tbody>
+	<h4>PANDAseq Analysis Configuration:</h4>
+
 	<form method="POST" action="/analysis/pandaseq/{{dataset.id}}">
     {{ form.csrf_token }}
-    <tr>
-	    <th>{{ form.name.label }} {{ form.name(size=20) }}</th>
-	    <th>{{ form.description.label }} {{ form.description(size=40) }}</th>
-	    <th>{{ form.algorithm.label }}: {{ form.algorithm }}</th>
-	    <th><input type="submit" value="RUN PANDASEQ"></th>
-    </tr>
+
+		<table class="table table-striped" >
+			<thead>
+				<tr>
+					<th>{{ form.name.label }}</th>
+					<th>{{ form.description.label }}</th>
+					<th>{{ form.algorithm.label }}</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+			    <tr>
+				    <td>{{ form.name(size=20, class='form-control') }}</td>
+				    <td>{{ form.description(size=40, class='form-control') }}</td>
+				    <td>{{ form.algorithm(class='form-control') }}</td>
+				    <td><input class="btn btn-default" type="submit" value="RUN PANDASEQ"></td>
+			    </tr>
+			</tbody>
+		</table>
   </form>
-</tbody>
-</table>
 </div>
 
 <br>
@@ -56,22 +62,22 @@
 	<table class="table table-striped">
 		<thead>
 			<tr>
-				<th>Dataset Name</th>
-				<th>Description</th>
-				<th>IG Type</th>
-				<th>VDJ+VJ Paired</th>
-				<th></th>
+				<td>Dataset Name</td>
+				<td>Description</td>
+				<td>IG Type</td>
+				<td>VDJ+VJ Paired</td>
+				<td></td>
 			</tr>
 		</thead>
 		<tbody>
 				<tr>
-					<th><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></th>
-					<th>{{dataset.description}}</th>
-					<th>{{dataset.ig_type}}</th>
+					<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
+					<td>{{dataset.description}}</td>
+					<td>{{dataset.ig_type}}</td>
 					{% if dataset.paired %}
-						<th>YES</th>
+						<td>YES</td>
 					{% else %}
-						<th>NO</th>
+						<td>NO</td>
 					{% endif %}
 				</tr>
 				<tr>

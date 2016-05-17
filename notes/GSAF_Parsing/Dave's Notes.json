@@ -1,3 +1,16 @@
+Pre-Processing:
+    Trimmomatic
+    Pair/Collapse Overlaps - PANDAseq
+
+    PANDAseq first is better
+
+Annotations:
+    IGREP/IGFFT
+    MixCR
+    ABStar
+    
+Run all three annotations, find common outputs, insert into one common file
+
 Instantiate Datasets
 Instantiate Project --> New Project
 

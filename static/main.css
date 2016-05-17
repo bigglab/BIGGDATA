@@ -236,3 +236,21 @@ tr.shown td.details-control {
 .nav-tabs {
     margin-bottom: 0;
 }
+
+/*
+*   Carousel Styles
+*/
+
+.carousel-control.left, .carousel-control.right {
+    background-image: none; 
+    width: 10%; 
+}
+
+.carousel-indicators li {
+  background-color: black;
+  background-color: rgba(70,70,70,.25);
+}
+
+.carousel-indicators .active {
+  background-color: #444;
+}

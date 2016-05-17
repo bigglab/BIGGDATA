@@ -6,6 +6,13 @@ import os
 import time
 import random
 from shutil import copyfile
+import shlex
+import validators
+
+from celery import uuid
+from celery.result import AsyncResult
+from celery.utils.log import get_task_logger
+
 import operator
 import ast
 from sets import Set
@@ -118,7 +125,7 @@ nav.register_element('frontend_user', Navbar(
         ),
     Subgroup(
         'Run Analysis', 
-        View('Run On Dataset', 'frontend.datasets'),
+        View('Create Analysis Pipline', 'frontend.pipeline'),
         View('My Analyses', 'frontend.analyses'),
         View('VDJ VIZualizer', 'frontend.vdj_visualizer'),
         # View('Browse Sequences', 'frontend.browse_sequences'),
@@ -482,20 +489,26 @@ def file_download(status=[], bucket='', key=''):
         # status.append('Saving File To {}'.format(file.path))
         # status.append('This file will be visible in "My Files", and available for use after the download completes.')
         print status 
+        
         # result_id NOT WORKING - STILL REDUNDANT IF THEY CLICK TWICE!!
         flash_message = ''
         if not 'async_result_id' in session.__dict__:
-            result = download_file.apply_async((file.url, file.path, file.id), queue=celery_queue)
+            result = download_file.apply_async((file.url, file.path, file.id), {'user_id': current_user.id}, queue=celery_queue)
             #flash_message = 'File downloading from {}. '.format(file.url)
             session['async_result_id'] = result.id
         time.sleep(1)
-        async_result = add.AsyncResult(session['async_result_id'])
+        
+        #async_result = add.AsyncResult(session['async_result_id'])
         # r = async_result.info
         r = result.__dict__
-        r['async_result.info'] = async_result.info 
+        #r['async_result.info'] = async_result.info 
+        r['async_result.info'] = result.info 
+
         db.session.commit()
         #flash_message = flash_message + 'File uploaded to {}. '.format(file.path)
         #flash(flash_message, 'success')
+        return redirect( url_for('frontend.dashboard') )
+
     else:
         r=''
     return render_template("file_download.html", download_form=form, status=status, r=r, current_user=current_user)
@@ -510,7 +523,6 @@ def transfer_to_s3(file_id):
         db.session.commit()
         result = transfer_file_to_s3.apply_async((f.id,), queue=celery_queue)
         return redirect(url_for('.files'))
-
 
 @frontend.route('/files', methods=['GET', 'POST'])
 @login_required
@@ -830,7 +842,6 @@ def edit_dataset(id):
             db.session.commit()
             db.session.refresh(dataset)
 
-
             if edit_dataset_form.use_as_default.data == True:
                 current_user.change_dataset_defaults(dataset)
 
@@ -1056,12 +1067,17 @@ def mixcr(dataset_id, status=[]):
         flash('Error: that dataset cannot be analyzed','warning')
         return redirect( url_for('frontend.dashboard') )
 
-
     form = CreateMixcrAnalysisForm()
     status = []
     if request.method == 'POST' and dataset:
         status.append('MIXCR Launch Detected')
-        result = run_mixcr_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'trim': form.trim.data, 'cluster': form.cluster.data}, queue=celery_queue)
+        result = run_mixcr_with_dataset_id.apply_async( ( ),  
+            { 'dataset_id': dataset_id,
+            'analysis_name': form.name.data, 
+            'analysis_description': form.description.data, 
+            'user_id': current_user.id, 
+            'trim': form.trim.data, 
+            'cluster': form.cluster.data}, queue=celery_queue)
         status.append(result.__repr__())
         status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
         time.sleep(1)
@@ -1069,8 +1085,10 @@ def mixcr(dataset_id, status=[]):
         analyses = current_user.analyses.all()
         analysis_file_dict = OrderedDict()
         for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
-            analysis_file_dict[analysis] = analysis.files.all() 
-        return redirect(url_for('.analyses', status=status))
+            analysis_file_dict[analysis] = analysis.files.all()
+
+        return redirect(url_for('frontend.dashboard')) 
+        #return redirect(url_for('.analyses', status=status))
         # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
     else: 
         return render_template("mixcr.html", dataset=dataset, form=form, status=status, current_user=current_user) 
@@ -1096,6 +1114,7 @@ def pandaseq(dataset_id, status=[]):
         status.append(result.__repr__())
         status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
         time.sleep(1)
+
         # return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
         analyses = current_user.analyses.all()
         analysis_file_dict = OrderedDict()
@@ -1120,14 +1139,23 @@ def create_analysis(dataset_id, status=[]):
         flash('Error: that dataset cannot be analyzed','warning')
         return redirect( url_for('frontend.dashboard') )
 
-
     form = CreateAnalysisForm()
     file_options = map(lambda f: [f.id, f.name], [f for f in dataset.files if 'FASTQ' in f.file_type])
     form.file_ids.choices = file_options
     status = []
     if request.method == 'POST' and dataset:
         status.append('Analysis Launch Detected')
-        result = run_analysis.apply_async((dataset_id, form.file_ids.data, current_user.id),  {'analysis_type': 'IGFFT', 'analysis_name': form.name.data, 'analysis_description': form.description.data, 'trim': form.trim.data, 'cluster': form.cluster.data, 'overlap': form.overlap.data, 'paired': form.paired.data}, queue=celery_queue)
+        result = run_analysis.apply_async(
+            (None, dataset_id, form.file_ids.data, ),  
+                {'analysis_type': 'IGFFT', 
+                'analysis_name': form.name.data, 
+                'analysis_description': form.description.data, 
+                'trim': form.trim.data, 
+                'cluster': form.cluster.data, 
+                'overlap': form.overlap.data, 
+                'paired': form.paired.data,
+                'user_id': current_user.id }, 
+            queue=celery_queue)
         status.append(result.__repr__())
         status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
         time.sleep(1)
@@ -1224,34 +1252,6 @@ def longtask():
                                                   task_id=task.id)}
 
 
-@frontend.route('/status/<task_id>')
-def taskstatus(task_id):
-    task = long_task.AsyncResult(task_id)
-    if task.state == 'PENDING':
-        response = {
-            'state': task.state,
-            'current': 0,
-            'total': 1,
-            'status': 'Pending...'
-        }
-    elif task.state != 'FAILURE':
-        response = {
-            'state': task.state,
-            'current': task.info.get('current', 0),
-            'total': task.info.get('total', 1),
-            'status': task.info.get('status', '')
-        }
-        if 'result' in task.info:
-            response['result'] = task.info['result']
-    else:
-        # something went wrong in the background job
-        response = {
-            'state': task.state,
-            'current': 1,
-            'total': 1,
-            'status': str(task.info),  # this is the exception raised
-        }
-    return jsonify(response)
 
 @frontend.route('/files/import_sra', methods=['GET', 'POST'])
 @login_required
@@ -1274,6 +1274,9 @@ def import_sra():
             #dataset_tuples.append(('new', 'New Dataset'))
             dataset_tuples.insert(0,('new', 'New Dataset'))
             form.dataset.choices = dataset_tuples
+    else:
+        form.dataset.choices = [ ('new', 'New Dataset') ]
+
 
     # get a list of user projects for the form
     projects = Set(current_user.projects)
@@ -1288,6 +1291,8 @@ def import_sra():
         if len(project_tuples) > 0:
             project_tuples.insert(0, ('new', 'New Project'))
             form.project.choices = project_tuples
+    else:
+        form.project.choices = [('new', 'New Project')]
 
     result = None
     status = []
@@ -1296,10 +1301,651 @@ def import_sra():
             status.append('Import SRA Started for Accession {}'.format(form.accession.data))
             status.append('Once complete, a dataset named {} will automatically be created containing these single or paired-end read files'.format(form.accession.data))
             result = import_from_sra.apply_async((form.accession.data,), {'name': form.accession.data, 'user_id': current_user.id, 'chain':form.chain.data, 'project_selection':form.project.data , 'dataset_selection':form.dataset.data}, queue=celery_queue)
-            # status.append(result.__dict__)
+            return redirect( url_for('frontend.dashboard') )
         else: 
             status.append('Accession does not start with SRR or ERR?')
+            return render_template('sra_import.html', status=status, form=form, result=result, current_user=current_user)
+
     return render_template('sra_import.html', status=status, form=form, result=result, current_user=current_user)
 
+@frontend.route('/delete_task/<task_id>', methods=['GET', 'POST'])
+@login_required
+def delete_task(task_id):
+    tasks = Set(current_user.celery_tasks)
+    tasks.discard(None)
+    tasks = Set( sorted(tasks, key=lambda x: x.id, reverse=True) )
 
+    discard_task = ''
+
+    for task in tasks:
+        if str(task.id) == task_id:
+
+            logfile = '{}/{}.log'.format( current_user.scratch_path.rstrip('/') , task.async_task_id )
+
+            print "Deleting {}...".format( logfile )
+            try:
+                os.remove( logfile )
+            except:
+                pass
+            discard_task = task
+
+    tasks.discard( discard_task )
+    current_user.celery_tasks = tasks
+    db.session.commit()
+
+    return json_celery_log()
+    #return redirect( url_for('frontend.dashboard') )
+
+@frontend.route('/json_celery_log', methods=['GET', 'POST'])
+@login_required
+def json_celery_log():
+
+
+    interval = 60000
+    tasks = Set(current_user.celery_tasks)
+    tasks.discard(None)
+    tasks = sorted(tasks, key=lambda x: x.id, reverse=True)
+
+    tasks_pending = False
+
+    message = ''
+
+    if len(tasks) > 0:
+
+        for task in tasks:
+            entry = ''
+
+            async_task_result = celery.AsyncResult(task.async_task_id)
+
+            if task.result:
+                task_message = task.result
+            else:
+                task_message = ""
+
+            if task.status == 'STARTED':
+                task_heading_color = 'green'
+                tasks_pending = True
+            elif task.status == 'SUCCESS': 
+                task_heading_color = 'green'
+            elif task.status == 'FAILURE':
+                task_heading_color = 'red'
+            else:
+                task_heading_color = 'green'
+
+            log_entries = ''
+
+            logfile = '{}/{}.log'.format( current_user.scratch_path.rstrip('/') , task.async_task_id )
+
+            async_task_progress = ''
+
+            try:
+                with open(logfile) as file:
+                    for line in file:
+                        color = 'black'
+                        if 'WARNING' in line:
+                            color = 'orange'
+                        elif 'ERROR' in line:
+                            color = 'red'
+
+                        # Progress can be passed in the logfile as a 'progress' line    
+                        if 'PROGRESS' in line:
+                            line_parts = tuple(line.strip().split(']'))
+                            progress_info = tuple(line_parts[1].strip().split(','))
+
+                            try:
+                                async_task_state = 'PROGRESS'
+                                async_task_status = progress_info[1]
+                                async_task_current = progress_info[2]
+                                async_task_total = progress_info[3]
+                                async_task_units = progress_info[4]
+                            except Exception, message:
+                                print "Error: {}".format(message)
+                            else:
+                                if async_task_units == '%':
+                                    progress_message = '{} {} %'.format(async_task_status, async_task_current)
+                                else:
+                                    progress_message = '{} {}/{} {}'.format(async_task_status, async_task_current, async_task_total, async_task_units)
+
+                                try:
+                                    percent = int( float( int(async_task_current) ) / float( int(async_task_total) ) * 100 )
+                                except:
+                                    percent = 0
+
+                                if percent == 100:
+                                    async_task_state = ''
+                                    async_task_current = 0
+                                    async_task_total = 0
+                                    async_task_status = ''
+                                    async_task_units = ''
+                                    async_task_progress = ''
+                                else:
+                                    async_task_progress = """
+                                        <div class="progress" style="position: relative;">
+                                            <div class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="{0}" aria-valuemin="0" aria-valuemax="{1}" style="width:{2}%;"></div>
+                                           <span class = "progress-value" style="position:absolute; right:0; left:0; width:100%; text-align:center; z-index:2; color:black;">{3}</span>
+                                        </div>
+                                    """.format(  async_task_current, async_task_total, percent, progress_message)
+
+                        else:
+                            log_entries = log_entries + '<font color="{}">{}</font><br>\n'.format( color , line )
+            except:
+                pass
+
+            if log_entries == '':
+                log_entries = '<br>\n'
+
+            # Check for any ongoing progress from a task via the AMPQ server
+            # If there is progress, add a progress bar! If there is a status, post a status message
+
+            if async_task_progress == '' and task.status != 'DOWNLOADING' and task.status != 'SUCCESS' and task.status != 'FAILURE' and async_task_result.state == 'PROGRESS':
+                try:
+                    async_task_state = async_task_result.state
+                    async_task_current = async_task_result.info.get('current')
+                    async_task_total = async_task_result.info.get('total')
+                    async_task_status = async_task_result.info.get('status')
+                    async_task_units = async_task_result.info.get('units')
+
+                except Exception, exception: 
+                    print 'There was an error in getting the task progress: {}'.format(exception)
+                else:
+                    #async_task_progress = """[{}] {}: {}/{} {}<br>\n""".format( async_task_state, async_task_status, async_task_current, async_task_total, async_task_units)
+                    if async_task_units == '%':
+                        progress_message = '{} {} %'.format(async_task_status, async_task_current)
+                    else:
+                        progress_message = '{} {}/{} {}'.format(async_task_status, async_task_current, async_task_total, async_task_units)
+
+                    try:
+                        percent = int( float( int(async_task_current) ) / float( int(async_task_total) ) * 100 )
+                    except:
+                        percent = 0
+
+                    async_task_progress = """
+                        <div class="progress" style="position: relative;">
+                            <div class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="{0}" aria-valuemin="0" aria-valuemax="{1}" style="width:{2}%;"></div>
+                           <span class = "progress-value" style="position:absolute; right:0; left:0; width:100%; text-align:center; z-index:2; color:black;">{3}</span>
+                        </div>
+                    """.format(  async_task_current, async_task_total, percent, progress_message)
+
+            if async_task_progress == '' and task.status != 'DOWNLOADING' and task.status != 'SUCCESS' and task.status != 'FAILURE' and async_task_result.state == 'STATUS':
+                try:
+                    async_task_state = async_task_result.state
+                    async_task_status = async_task_result.info.get('status')
+                except Exception, exception: 
+                    print 'There was an error in getting the task progress: {}'.format(exception)
+                else:
+                    async_task_progress = """
+                    {}<br>
+                    """.format(  async_task_status )
+
+            entry = """
+            <table width="100%">
+                <tbody>
+                    <tr>
+                        <td><font color="{}">[Task {} ({}) - {}] {}</font><br>
+                        {}{}</td>
+                        <td align="right" valign="top">
+                        <span class="pencil glyphicon glyphicon-remove" style="margin-right: 3px; color:black; cursor: pointer; cursor: hand;" onclick=delete_task('{}')></span>
+
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <br>""".format( task_heading_color , task.id, task.name , task.status, task_message , log_entries, async_task_progress , url_for( 'frontend.delete_task', task_id = task.id )  )
+
+            message = message + entry
+
+    else:
+        message = """
+            <table width="100%">
+                <tbody>
+                    <tr>
+                        <td>There are no tasks running at this time. (Checking again in <span id="interval">60</span> s...)</td>
+                        
+                    </tr>
+                </tbody>
+            </table>
+            <br>"""
+
+        ""
+        interval = 60000
+
+    if tasks_pending:
+        interval = 2500
+
+    response = {
+        'message': message,
+        'interval': interval,
+        'current': 1,
+        'total': 1
+     }  # this is the exception raised
+
+
+
+    return jsonify( response )
+
+from flask import Markup
+@frontend.route('/test_celery_log', methods=['GET', 'POST'])
+@login_required
+def test_celery_log():
+
+    result = output_celery_log.apply_async( (), { 'user_id': current_user.id, }, queue=celery_queue )
+
+    message = Markup('<a href="{}">Test Again</a>.'.format( url_for('frontend.test_celery_log') ) )
+    flash(message , 'success' )
+
+    time.sleep(3)    
+    return redirect( url_for('frontend.dashboard') )
+
+    # Here in task:
+    self.update_state(state='PROGRESS',
+                        meta={ 'current': i, 'total': total, 'status': message} )
+
+
+@frontend.route('/pipeline', methods=['GET', 'POST'])
+@login_required
+def pipeline():
+
+    build_pipeline_form = BuildPipelineForm(request.form)
+
+    # set the dataset options
+    datasets = Set(current_user.datasets)
+    datasets.discard(None)
+    datasets.discard(current_user.default_dataset)
+
+    datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
+    dataset_tuples = []
+    new_tuples = []
+
+    dataset_file_dict = {}
+    dataset_project_dict = {}
+
+    # get a list of user projects for the form
+    projects = Set(current_user.projects)
+    projects.discard(None)
+    projects = sorted(projects, key=lambda x: x.id, reverse=True)
+    project_tuples = []
+
+    # Create form choices for datasets and files
+    if len(datasets) > 0:
+        for dataset in datasets:
+            dataset_tuples.append( (str(dataset.id), dataset.name))
+            new_tuples.append( (str(dataset.id), dataset.name))
+
+            # build a dictionary indicating a project to which each dataset belongs
+            if len(dataset.projects) > 0 and dataset.projects[0] != None:
+                dataset_project_dict[str(dataset.id)] = str(dataset.projects[0].id)
+            else:
+                dataset_project_dict[str(dataset.id)] = 'new'
+
+            # build a dictionary entry indicating the files in each dataset ('dataset_id':{'file_id':'file_name'})
+            file_id_dict = {}
+            for file in dataset.files:
+                file_id_dict[ str(file.id) ] = file.name 
+
+            dataset_file_dict[ str(dataset.id) ] = file_id_dict
+
+        # This form does not need a new dataset option
+        build_pipeline_form.dataset.choices = dataset_tuples
+
+        # Other forms have the option to insert a new dataset
+        if len(dataset_tuples) > 0:
+            #dataset_tuples.append(('new', 'New Dataset'))
+            #new_tuples = dataset_tuples
+            new_tuples.insert(0,('new', 'New Dataset'))
+            build_pipeline_form.output_dataset.choices = new_tuples
+    else:
+        build_pipeline_form.output_dataset.choices = [ ('new', 'New Dataset') ]
+
+    # Create form choices for projects
+    if len(projects) > 0:
+        for project in projects:
+            if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
+                project_tuples.append( (str(project.id), project.project_name))
+        if len(project_tuples) > 0:
+            project_tuples.insert(0, ('new', 'New Project'))
+            build_pipeline_form.output_project.choices = project_tuples
+    else:
+        build_pipeline_form.output_project.choices = [ ('new', 'New Dataset') ]
+
+    # list of tuples to set arbitrary HTML tag attributes
+    # passed to JQUERY to set attributes
+    # ('selector' , 'attribute' , 'attribute value')
+    runtime_attributes = []
+    form_warning_style = 'border: 2px solid #d66; border-radius: 7px; box-shadow: 0 0 10px #d66;'
+
+    # used to scroll carousel to first error on form
+    first_error_item = None
+
+
+    if request.method == 'POST':
+
+        ##### Validate the Form #####
+        form_valid = True
+
+        if build_pipeline_form.file_source.data == 'file_dataset': 
+
+            if build_pipeline_form.dataset_files.data == []:
+                flash('Error: you must select one or more files to analyze.','warning')
+                runtime_attributes.append(('select[id=dataset_files]', 'style', form_warning_style))                                   
+                form_valid = False
+                first_error_item = 0
+            else:
+                file_ids = build_pipeline_form.dataset_files.data
+
+                for file_id in file_ids:
+                    print file_id
+                    file = db.session.query(File).get(file_id)
+                    if not file:
+                        flash('Error: file {} not found.'.format(file.id),'warning')
+                        runtime_attributes.append(('select[id=dataset_files]', 'style', form_warning_style))                                           
+                        form_valid = False
+                        first_error_item = 0
+
+                    elif file.user_id != current_user.id:
+                        flash('Error: you do not have permission to analyze this file: {}'.format(file.name),'warning')
+                        runtime_attributes.append(('select[id=dataset_files]', 'style', form_warning_style))                   
+                        form_valid = False
+                        first_error_item = 0
+
+        elif build_pipeline_form.file_source.data == 'file_gsaf':
+ 
+            if build_pipeline_form.gsaf_url.data == '':
+                flash('Error: you must provide a valid GSAF URL to upload a file, or choose another file source.','warning')
+                runtime_attributes.append(('input[id=gsaf_url]', 'style', form_warning_style))                   
+                form_valid = False
+                first_error_item = 0
+            elif not validators.url(build_pipeline_form.gsaf_url.data):
+                flash('Error: you must provide a valid GSAF URL to upload a file, or choose another file source.','warning')
+                runtime_attributes.append(('input[id=gsaf_url]', 'style', form_warning_style))                   
+                first_error_item = 0
+                form_valid = False
+
+        elif build_pipeline_form.file_source.data == 'file_url':
+
+            if build_pipeline_form.download_url.data == '':
+                flash('Error: you must provide a URL to upload a file, or choose another file source.','warning')
+                runtime_attributes.append(('input[id=download_url]', 'style', form_warning_style))   
+                first_error_item = 0
+                form_valid = False
+            elif not validators.url(build_pipeline_form.download_url.data):
+                flash('Error: you must provide a valid URL to upload a file, or choose another file source.','warning')
+                runtime_attributes.append(('input[id=download_url]', 'style', form_warning_style))   
+                first_error_item = 0
+                form_valid = False
+
+        elif build_pipeline_form.file_source.data == 'file_upload':
+
+            new_file_ids = []
+
+            if build_pipeline_form.file_pairing.data == 'none':
+                try:
+                    request_file_1 = request.files['file_1']
+                except:
+                    flash('Error: unable to upload file.','warning')
+                    runtime_attributes.append(('input[id=file_1]', 'style', form_warning_style))   
+                    first_error_item = 0
+                    form_valid = False
+                else:
+                    file_1 = File()
+                    if build_pipeline_form.file_1_name.data == '':
+                        file_1.name = request_file_1.filename
+                    else:
+                        file_1.name = build_pipeline_form.file_1_name.data
+
+                    file_1.file_type = parse_file_ext(file_1.name)
+                    file_1.description = build_pipeline_form.description.data
+                    file_1.dataset_id = build_pipeline_form.dataset_id.data
+                    file_1.path = '{}/{}'.format(current_user.scratch_path, file_1.name)
+                    file_1.path.replace('//', '') 
+                    # NOT SET file.chain = build_pipeline_form.chain.data
+                    # NOT SET file.paired_partner = build_pipeline_form.paired_partner.data 
+             
+                    file_1.user_id = current_user.id
+                    print 'Saving uploaded file to {}'.format(file_1.path)
+                    request_file_1.save(file_1.path)
+                    file_1.available = True 
+                    db.session.add(file_1)
+                    db.session.commit()
+                    db.session.refresh(file_1)
+                    new_file_ids.append(file_1.id)
+                    flash('File uploaded to {}'.format(file_1.path))
+
+            else:
+                try:
+                    request_file_1 = request.files['file_1']
+                    request_file_2 = request.files['file_2']
+                except:
+                    flash('Error: unable to upload files.','warning')
+                    runtime_attributes.append(('input[id=file_1_name]', 'style', form_warning_style))   
+                    runtime_attributes.append(('input[id=file_2_name]', 'style', form_warning_style))   
+                    first_error_item = 0
+                    form_valid = False
+                else:
+                    # First Download File
+                    file_1 = File()
+                    if build_pipeline_form.file_1_name.data == '':
+                        file_1.name = request_file_1.filename
+                    else:
+                        file_1.name = build_pipeline_form.file_1_name.data
+
+                    file_1.file_type = parse_file_ext(file_1.name)
+                    file_1.description = build_pipeline_form.description.data
+                    file_1.dataset_id = build_pipeline_form.dataset_id.data
+                    file_1.path = '{}/{}'.format(current_user.scratch_path, file_1.name)
+                    file_1.path.replace('//', '') 
+                    # NOT SET file.chain = build_pipeline_form.chain.data
+                    # NOT SET file.paired_partner = build_pipeline_form.paired_partner.data 
+             
+                    file_1.user_id = current_user.id
+                    print 'Saving uploaded file to {}'.format(file_1.path)
+                    request_file_1.save(file_1.path)
+                    file_1.available = True
+
+                    # Second Download File
+                    file_2 = File()
+                    if build_pipeline_form.file_2_name.data == '':
+                        file_2.name = request_file_2.filename
+                    else:
+                        file_2.name = build_pipeline_form.file_2_name.data
+
+                    file_2.file_type = parse_file_ext(file_2.name)
+                    file_2.description = build_pipeline_form.description.data
+                    file_2.dataset_id = build_pipeline_form.dataset_id.data
+                    file_2.path = '{}/{}'.format(current_user.scratch_path, file_2.name)
+                    file_2.path.replace('//', '') 
+                    # NOT SET file.chain = build_pipeline_form.chain.data
+                    # NOT SET file.paired_partner = build_pipeline_form.paired_partner.data 
+             
+                    file_2.user_id = current_user.id
+                    print 'Saving uploaded file to {}'.format(file_2.path)
+                    request_file_2.save(file_2.path)
+                    file_2.available = True 
+                    db.session.add(file_1)
+                    db.session.add(file_2)
+                    db.session.commit()
+                    db.session.refresh(file_1)
+                    db.session.refresh(file_2)
+                    new_file_ids.append(file_1.id)
+                    new_file_ids.append(file_2.id)
+
+                    # Flash this only if the rest of the form submission is unsuccessful 
+                    flash('Files uploaded to {} {}'.format(file_1.path, file_1.path), 'success')
+
+
+        elif build_pipeline_form.file_source.data == 'file_ncbi': 
+
+            if build_pipeline_form.ncbi_accession.data == '':
+                flash('Error: you must choose an NCBI accession, or choose another file source.','warning')
+                runtime_attributes.append(('input[id=ncbi_accession]', 'style', form_warning_style))   
+                first_error_item = 0
+                form_valid = False
+
+        else: # file_source.data == 'None':
+            flash('Error: you must select a file source.','warning')
+            runtime_attributes.append(('div[name=file_source]', 'style', form_warning_style))   
+            first_error_item = 0
+            form_valid = False
+
+        if build_pipeline_form.trim.data:
+
+            if build_pipeline_form.trim_slidingwindow.data:
+            
+                if build_pipeline_form.trim_slidingwindow_size.data and not int(build_pipeline_form.trim_slidingwindow_size.data) > 0: # must be positive integer
+                    flash('Error: if trimming is selected, you must choose a valid sliding window size.','warning')
+                    runtime_attributes.append(('input[id=trim_slidingwindow_size]', 'style', form_warning_style))                                   
+                    if first_error_item == None: first_error_item = 1
+                    form_valid = False
+
+                if build_pipeline_form.trim_slidingwindow_quality.data and not int(build_pipeline_form.trim_slidingwindow_quality.data) > 0: # must be positive integer
+                    flash('Error: if trimming is selected, you must choose a valid sliding window quality.','warning')
+                    runtime_attributes.append(('input[id=trim_slidingwindow_quality]', 'style', form_warning_style))                                   
+                    if first_error_item == None: first_error_item = 1
+                    form_valid = False
+
+        if build_pipeline_form.analysis_type.data == 'None': # cannot be none
+            flash('Error: you must select an analysis method.','warning')
+            runtime_attributes.append(('div[name=analysis_type]', 'style', form_warning_style))   
+            if first_error_item == None: first_error_item = 2
+            form_valid = False
+
+
+        ##### Check output dataset and project #####
+        if form_valid:
+
+            # check if the user has selected the default project (i.e., the user has no projects)
+            output_file_dataset = None
+            if build_pipeline_form.output_dataset.data == 'new':
+                # create a new dataset here with the name default, add the user and dataset to the new project
+                new_dataset = Dataset()
+                new_dataset.user_id = current_user.id
+                new_dataset.populate_with_defaults(current_user)
+                new_dataset.name = 'Dataset'
+                db.session.add(new_dataset)
+                db.session.flush()
+                new_dataset.name = 'Dataset ' + str(new_dataset.id)
+                #####new_dataset.files = [file]
+                db.session.commit()
+                output_file_dataset = new_dataset
+                flash('New files will be added to dataset "{}".'.format(new_dataset.name), 'success')
+
+                # used to pass the dataset selection to the celery task
+                build_pipeline_form.output_dataset.data = str(output_file_dataset.id)
+            else: # check if the user has selected a project which they have access to
+                user_has_permission = False
+                for dataset in current_user.datasets:
+                    if str(dataset.id) == build_pipeline_form.output_dataset.data:
+                        #####dataset.files.append(file)
+                        file_dataset = dataset
+                        user_has_permission = True
+
+                        # if current_user.default_dataset == None:
+                        #     d.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                        #     d.species = project.species
+                if not user_has_permission:
+                    flash('Error: you do not have permission to add a file to that dataset.','warning')
+                    if first_error_item == None : first_error_item = 3
+                    form_valid = False
+
+            db.session.commit()
+
+        if form_valid:
+
+            # now do the same with projects, with the qualification that we add the dataset to the project if it's not there already
+            # check if the user has selected the default project (i.e., the user has no projects)
+            if output_file_dataset:
+
+                if build_pipeline_form.output_project.data == 'new':
+                    # create a new project here with the name default, add the user and dataset to the new project
+                    new_project = Project()
+                    new_project.user_id = current_user.id
+                    new_project.project_name = 'Project'
+                    db.session.add(new_project)
+                    db.session.flush()
+                    new_project.project_name = 'Project ' + str(new_project.id)
+                    new_project.users = [current_user]
+                    new_project.datasets = [output_file_dataset]
+                    new_project.cell_types_sequenced = [str(output_file_dataset.cell_types_sequenced)]
+                    new_project.species = output_file_dataset.species
+
+                    db.session.commit()
+                else: # check if the user has selected a project which they have access to
+                    user_has_permission = False
+                    for project in projects:
+                        if str(project.id) == form.output_project.data:
+                            if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
+                                # if the dataset is not in the project, add it
+                                if output_file_dataset not in project.datasets:
+                                    project.datasets.append(output_file_dataset)
+                                user_has_permission = True
+
+                                if current_user.default_dataset == None:
+                                    output_file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                                    output_file_dataset.species = project.species
+
+                                db.session.commit()
+                    if not user_has_permission:
+                        flash('Error: you do not have permission to add a dataset to that project.','warning')
+                    db.session.commit()        
+
+        ##### End check of output dataset and project #####
+
+
+        if not form_valid:
+
+            # set attributes to render the form correctly
+            if build_pipeline_form.file_source.data != 'None':
+                runtime_attributes.append(('input[value={}]'.format(build_pipeline_form.file_source.data), 'checked', 'checked'))
+            if build_pipeline_form.analysis_type.data != 'None':
+                runtime_attributes.append(('input[value={}]'.format(build_pipeline_form.analysis_type.data), 'checked', 'checked'))
+
+            build_pipeline_form.dataset_files.default = build_pipeline_form.dataset_files.data
+
+            return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes, first_error_item = first_error_item )
+
+        else:
+
+            # put the form contents into a format that can be serialized and sent to a celery task
+            form_output_dict = {
+                'user_id' : current_user.id,    
+                'file_source' : build_pipeline_form.file_source.data,
+                'dataset' : build_pipeline_form.dataset.data,
+                'dataset_files' : build_pipeline_form.dataset_files.data,
+                'description' : build_pipeline_form.description.data,
+                'name' : build_pipeline_form.name.data,
+                'output_dataset' : build_pipeline_form.output_dataset.data,
+                'output_project' : build_pipeline_form.output_project.data,
+                'ncbi_accession' : build_pipeline_form.ncbi_accession.data,
+                'ncbi_chain' : build_pipeline_form.ncbi_chain.data,
+                'download_url' : build_pipeline_form.download_url.data,
+                'download_chain' : build_pipeline_form.download_chain.data,
+                'gsaf_url' : build_pipeline_form.gsaf_url.data,
+                'gsaf_chain' : build_pipeline_form.gsaf_chain.data,
+                'trim' : build_pipeline_form.trim.data,
+                'trim_slidingwindow' : build_pipeline_form.trim_slidingwindow.data,
+                'trim_slidingwindow_size' : build_pipeline_form.trim_slidingwindow_size.data,
+                'trim_slidingwindow_quality' : build_pipeline_form.trim_slidingwindow_quality.data,
+                'trim_illumina_adapters' : build_pipeline_form.trim_illumina_adapters.data,
+                'pandaseq' : build_pipeline_form.pandaseq.data,
+                'analysis_type' : build_pipeline_form.analysis_type.data,
+                'description' : build_pipeline_form.description.data,
+                'pandaseq_algorithm' : build_pipeline_form.pandaseq_algorithm.data,
+                'cluster' : build_pipeline_form.cluster.data
+            }
+
+            result = run_analysis_pipeline.apply_async( (), form_output_dict, queue=celery_queue)
+            return redirect(url_for("frontend.dashboard"))
+
+        ##### End Form Validation #####
+
+    else: # request.method == 'GET'
+        build_pipeline_form.trim_slidingwindow.data = True
+        build_pipeline_form.trim_illumina_adapters.data = True
+        build_pipeline_form.trim_slidingwindow_size.data = 4
+        build_pipeline_form.trim_slidingwindow_quality.data = 15
+        
+
+    return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes, first_error_item = first_error_item )
+
+
+ 
 

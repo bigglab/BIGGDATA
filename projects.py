@@ -58,44 +58,59 @@ from forms import *
 from functions import * 
 from models import * 
 
-# 1. DONE Prevent users from adding a dataset named __default__
-# 2. DONE Prevent users from seeing the default when adding projects
-# 3. DONE Prevent users from viewing the default (or redirect them)
+# Add all analysis files to analysis view/db
+# clustering is in MSDB call
+# Add Mass spec for Igrep, then Abstar, then Mixcr
+
+# Questions for Russ:
+# Pairing in the database - always refers to forward/reverse read pairing? VH/VL
+# Switch all file uploads to direct uploads?
+# Pair uploads?
+# Abstar uses pandaseq - skip that and just use our PANDAseq?
+# USSEARCH - 
+# Output all formats in TSV
+# Add link to analysis from Console
+
+# Build pandas dataframe
+# Take out CDR3 sequences - provided in header
+# Separate text file with CDR3 sequences CDR3.AA
+#   Now use clonotype - in IGREP binary
+# Not USSEARCH
+
+# 2. Add direct file upload
+# 3. Add pairing functionality throughout - pair children output as well
+# 5. # Hold off --- Add clustering algorithm
+# 6. Check for number of files submitted for analysis
+# 7. X Automatically check for R1/R2 etc
+# 8. Require two files for PANDAseq
+# 9. Check new trim analysis (passing analysis, files by ID)
+# 10. /data/resources : all software
+# 11. /data/resources/germlines : files reffed by system
+# 12. Make sure that analyses can only be run on the correct files and cannot be run on empty filesets
+# 13. Auto populate file name on upload page
+# 14. Add dataset table to project page
+# 15. Add Analysis Type and Cluster setting - min, max, and step
+# 16. Add Dataset Defaults:
+#      Human
+#      SP: Mi-Seq 2x300
+# 17. Check trimming filename failure
+
+# OLDER:
 # 4. Don't allow users to run analyses on empty datasets
 # 5. TEST Prepopulate new datasets with default settings: d.populate_with_defaults(current_user)
 # 6. TEST When creating a project for a dataset, get the project species/etc from the dataset
 # 7. TEST vice versa vis a vis #6
 # 8. TEST Update arrays on import from JSON
-# 9. DONE for url uploads. Instantiate files with new default dataset : what are the default dataset defaults?
-# 10. DONE Prevent datatable drop down when link clicked
-# 11. DONE Disable datatable drop down if there are no files
-# 12. DONE Add option for user to save dataset values as defaults
 # 13. TEST No analysis on defaults
-# 14. DONE Replace Pandaseq/MixCr/Annotate with "Add Files"
-# 15. DONE Auto clear form for editing dataset
-# 16. DONE Auto populate form for editing dataset
 # 17. Start using new directory structure with dataset_#
 #       File from URL: DONE
 # 18. STARTED Add dashboard page
-# 19. DONE. Clean up NavBar
-# 20. DONE. Clean up add/upload Files
-#       Upload files: DONE
-#       Add files: DONE (can't test)
 # 21. Clean up files listing
-# 22. Add Celery Task Monitor to Dashboard page
-#       Standardize Celery logging
 # 23. Add single page for running an analysis on a file/dataset
 # 24. Add one-time welcome notice to dashboard page. 
 # 25. Add page describing project/dataset/file concept
-# 26. TEST Clean up import from NCBI Page
-# 27. Add links to datasets on view project page
 
 # Issues:
-# DONE. Download new file not placing the file in the dataset directory.
-# DONE. Download new file placing // in file path.
-# DONE. Remove some of the extra messages on file download response.  
-
-# How to check results from Celery???
 # Check for duplicate directories and files in datastore
 # Add default dataset for each user
 # Automatically link files into a dataset and a project for user 
@@ -156,6 +171,10 @@ from models import *
 # user can edit any dataset where they can edit the project
 # user can view any dataset where they are a reader of the project
 # 
+# Should only create
+# Walk through analyses
+# /dataset/analysis/files
+# Create analysis - work on the UI 
 
 # Prevent users from running analyses 
 
@@ -525,7 +544,7 @@ def view_project(project_id):
     datasets.discard(None)
     datasets = sorted(datasets, key=lambda x: x.id, reverse=False)
 
-    dataset_list = [(dataset.name + ' (' + str(dataset.id) + ')',dataset.owner.name) for dataset in datasets]
+    dataset_list = [(dataset.name + ' (' + str(dataset.id) + ')', dataset.owner.name, dataset.id) for dataset in datasets]
 
     return render_template("view_project.html", 
         view_project_form = view_project_form, 

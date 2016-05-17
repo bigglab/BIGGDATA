@@ -49,7 +49,7 @@ from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Boo
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import JSON, JSONB, ARRAY, BIT, VARCHAR, INTEGER, FLOAT, NUMERIC, OID, REAL, TEXT, TIME, TIMESTAMP, TSRANGE, UUID, NUMRANGE, DATERANGE
 from sqlalchemy.sql import select
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import sessionmaker, scoped_session, validates
 from pymongo import MongoClient
 import pymongo
  
@@ -89,7 +89,10 @@ class User(db.Model):
         datasets = db.relationship('Dataset', backref='user', lazy='dynamic')
         analyses = db.relationship('Analysis', backref='user', lazy='dynamic')
 
+        celery_tasks = db.relationship('CeleryTask', backref='user', lazy='dynamic', cascade="all, delete-orphan")
+
         projects = association_proxy('user_projects', 'project')
+
 
         @hybrid_property
         def name(self):
@@ -234,6 +237,8 @@ class File(db.Model):
         url = db.Column(db.String(256))
         command = db.Column(db.String(1024))
         created = db.Column(db.DateTime, default=db.func.now())
+
+        vhvl_paired = db.Boolean()
         paired_partner = db.Column(db.Integer, db.ForeignKey('file.id'))
         parent_id = db.Column(db.Integer, db.ForeignKey('file.id'))
         analysis_id = db.Column(db.Integer, db.ForeignKey('analysis.id'))
@@ -736,6 +741,37 @@ class Experiment(db.Model):
 
         def __repr__(self): 
             return "<  Experiment {}:  {}   :   {}   :   {} >".format(self.id, self.project_name, self.experiment_name, self.seq_count)
+
+class CeleryTask(db.Model):  
+        __tablename__ = 'celery_task'
+
+        id = Column(Integer(), primary_key=True)
+        user_id = Column(Integer(), ForeignKey('user.id'))
+        async_task_id = Column(String(128))
+
+        # Name of the function called
+        name = Column(String(128))
+
+        # The final result returned from a Celery Task
+        result = Column(String(512))
+
+        # Possible values for status include PENDING, STARTED, RETRY, FAILURE, SUCCESS
+        status = Column(String(16))
+        
+        # Might just turn these into hybrid attributes
+        is_complete = Column(Boolean, default=False)
+        failed = Column(Boolean, default=False)
+
+        user_alerted = Column(Boolean, default=False)
+        user_dismissed = Column(Boolean, default=False)
+
+        @validates('result')
+        def validate_result(self, key, value):
+            max_len = getattr(self.__class__, key).prop.columns[0].type.length
+            if value and len(value) > max_len:
+                return value[:max_len]
+            return value
+
 
 ######### 
 

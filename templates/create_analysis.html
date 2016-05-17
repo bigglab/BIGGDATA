@@ -11,29 +11,72 @@
 <br>
 
 <div class="container">
-<table class="table table-striped" >
-<thead>
-<h4> Analysis Configuration:</h4>
-</thead>
-<tbody>
 	<form method="POST" action="/analysis/create/{{dataset.id}}">
     {{ form.csrf_token }}
-    <tr>
-    <td>{{ form.name.label }} {{ form.name(size=20) }}</td>
-    <td>{{ form.description.label }} {{ form.description(size=40) }}</td>
-    <td>{{ form.insert_into_db.label }}: {{ form.insert_into_db }}</td>
-    <td>{{ form.file_ids.label }}: {{ form.file_ids }}</td>
-    </tr>
-    <tr>
-    <td>Pair Overlaps If Possible: {{ form.overlap }} </td>
-    <td>Pair Interchain If Possible: {{ form.paired }} </td>
-    <td>Trim Illumina Adapters: {{ form.trim }} </td>
-    <td>Cluster: {{ form.cluster }} </td>
-    <td><input type="submit" value="EXECUTE PIPELINE"></td>
-    </tr>
-  </form>
-</tbody>
-</table>
+		<h4> Analysis Configuration:</h4>
+		<table class="table table-striped">
+			<thead>
+				<tr>
+					<th>{{ form.name.label }}</th>
+					<th>{{ form.description.label }}</th>
+					<th>{{ form.file_ids.label }}</th>
+					<th></th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+			    <tr>
+				    <td>{{ form.name(size=20, class='form-control') }}</td>
+				    <td>{{ form.description(size=40, class='form-control') }}</td>
+				    <td>{{ form.file_ids(class='form-control') }}</td>
+				    <td>
+                        <div class="checkbox" class="pull-right">
+                            <label>
+                                {{ form.insert_into_db }} 
+                                {{ form.insert_into_db.label.text }}
+                            </label>
+                        </div>
+				    </td>
+				    <td><input class="btn btn-default" type="submit" value="Analyze"></td>
+			    </tr>
+			    <tr>
+				    <td>
+                        <div class="checkbox" class="pull-right">
+                            <label>
+                                {{ form.overlap }} 
+                                Pair Overlaps If Possible
+                            </label>
+                        </div>
+                    </td>
+				    <td>
+                        <div class="checkbox" class="pull-right">
+                            <label>
+                                {{ form.paired }} 
+                                Pair Interchain If Possible
+                            </label>
+                        </div>
+                    </td>
+				    <td>
+                        <div class="checkbox" class="pull-right">
+                            <label>
+                                {{ form.trim }} 
+                                Trim Illumina Adapters
+                            </label>
+                        </div>
+                    </td>
+				    <td>
+                        <div class="checkbox" class="pull-right">
+                            <label>
+                                {{ form.cluster }} 
+                                Cluster
+                            </label>
+                        </div>
+                    </td>
+				    <td></td>
+			    </tr>
+			</tbody>
+		</table>
+	</form>
 </div>
 
 <br>
