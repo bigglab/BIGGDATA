@@ -63,7 +63,7 @@ IGREP_PIPELINES = '/data/resources/software/IGREP/pipelines'
 # import subprocess
 # import shlex
 
-# DAVES_MACHINE = False
+DAVES_MACHINE = False
 
 # try:
 # 	command_line_args = shlex.split('scutil --get LocalHostName')
