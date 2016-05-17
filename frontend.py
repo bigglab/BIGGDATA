@@ -842,7 +842,6 @@ def edit_dataset(id):
             db.session.commit()
             db.session.refresh(dataset)
 
-
             if edit_dataset_form.use_as_default.data == True:
                 current_user.change_dataset_defaults(dataset)
 
@@ -1661,7 +1660,7 @@ def pipeline():
                 first_error_item = 0
                 form_valid = False
 
-        elif build_pipeline_form.file_source.data == 'file_upload':
+        elif build_pipeline_form.file_source.data == 'file_url':
 
             if build_pipeline_form.download_url.data == '':
                 flash('Error: you must provide a URL to upload a file, or choose another file source.','warning')
@@ -1673,6 +1672,105 @@ def pipeline():
                 runtime_attributes.append(('input[id=download_url]', 'style', form_warning_style))   
                 first_error_item = 0
                 form_valid = False
+
+        elif build_pipeline_form.file_source.data == 'file_upload':
+
+            new_file_ids = []
+
+            if build_pipeline_form.file_pairing.data == 'none':
+                try:
+                    request_file_1 = request.files['file_1']
+                except:
+                    flash('Error: unable to upload file.','warning')
+                    runtime_attributes.append(('input[id=file_1]', 'style', form_warning_style))   
+                    first_error_item = 0
+                    form_valid = False
+                else:
+                    file_1 = File()
+                    if build_pipeline_form.file_1_name.data == '':
+                        file_1.name = request_file_1.filename
+                    else:
+                        file_1.name = build_pipeline_form.file_1_name.data
+
+                    file_1.file_type = parse_file_ext(file_1.name)
+                    file_1.description = build_pipeline_form.description.data
+                    file_1.dataset_id = build_pipeline_form.dataset_id.data
+                    file_1.path = '{}/{}'.format(current_user.scratch_path, file_1.name)
+                    file_1.path.replace('//', '') 
+                    # NOT SET file.chain = build_pipeline_form.chain.data
+                    # NOT SET file.paired_partner = build_pipeline_form.paired_partner.data 
+             
+                    file_1.user_id = current_user.id
+                    print 'Saving uploaded file to {}'.format(file_1.path)
+                    request_file_1.save(file_1.path)
+                    file_1.available = True 
+                    db.session.add(file_1)
+                    db.session.commit()
+                    db.session.refresh(file_1)
+                    new_file_ids.append(file_1.id)
+                    flash('File uploaded to {}'.format(file_1.path))
+
+            else:
+                try:
+                    request_file_1 = request.files['file_1']
+                    request_file_2 = request.files['file_2']
+                except:
+                    flash('Error: unable to upload files.','warning')
+                    runtime_attributes.append(('input[id=file_1_name]', 'style', form_warning_style))   
+                    runtime_attributes.append(('input[id=file_2_name]', 'style', form_warning_style))   
+                    first_error_item = 0
+                    form_valid = False
+                else:
+                    # First Download File
+                    file_1 = File()
+                    if build_pipeline_form.file_1_name.data == '':
+                        file_1.name = request_file_1.filename
+                    else:
+                        file_1.name = build_pipeline_form.file_1_name.data
+
+                    file_1.file_type = parse_file_ext(file_1.name)
+                    file_1.description = build_pipeline_form.description.data
+                    file_1.dataset_id = build_pipeline_form.dataset_id.data
+                    file_1.path = '{}/{}'.format(current_user.scratch_path, file_1.name)
+                    file_1.path.replace('//', '') 
+                    # NOT SET file.chain = build_pipeline_form.chain.data
+                    # NOT SET file.paired_partner = build_pipeline_form.paired_partner.data 
+             
+                    file_1.user_id = current_user.id
+                    print 'Saving uploaded file to {}'.format(file_1.path)
+                    request_file_1.save(file_1.path)
+                    file_1.available = True
+
+                    # Second Download File
+                    file_2 = File()
+                    if build_pipeline_form.file_2_name.data == '':
+                        file_2.name = request_file_2.filename
+                    else:
+                        file_2.name = build_pipeline_form.file_2_name.data
+
+                    file_2.file_type = parse_file_ext(file_2.name)
+                    file_2.description = build_pipeline_form.description.data
+                    file_2.dataset_id = build_pipeline_form.dataset_id.data
+                    file_2.path = '{}/{}'.format(current_user.scratch_path, file_2.name)
+                    file_2.path.replace('//', '') 
+                    # NOT SET file.chain = build_pipeline_form.chain.data
+                    # NOT SET file.paired_partner = build_pipeline_form.paired_partner.data 
+             
+                    file_2.user_id = current_user.id
+                    print 'Saving uploaded file to {}'.format(file_2.path)
+                    request_file_2.save(file_2.path)
+                    file_2.available = True 
+                    db.session.add(file_1)
+                    db.session.add(file_2)
+                    db.session.commit()
+                    db.session.refresh(file_1)
+                    db.session.refresh(file_2)
+                    new_file_ids.append(file_1.id)
+                    new_file_ids.append(file_2.id)
+
+                    # Flash this only if the rest of the form submission is unsuccessful 
+                    flash('Files uploaded to {} {}'.format(file_1.path, file_1.path), 'success')
+
 
         elif build_pipeline_form.file_source.data == 'file_ncbi': 
 
@@ -1692,13 +1790,13 @@ def pipeline():
 
             if build_pipeline_form.trim_slidingwindow.data:
             
-                if build_pipeline_form.trim_slidingwindow_size.data and not build_pipeline_form.trim_slidingwindow_size.data > 0: # must be positive integer
+                if build_pipeline_form.trim_slidingwindow_size.data and not int(build_pipeline_form.trim_slidingwindow_size.data) > 0: # must be positive integer
                     flash('Error: if trimming is selected, you must choose a valid sliding window size.','warning')
                     runtime_attributes.append(('input[id=trim_slidingwindow_size]', 'style', form_warning_style))                                   
                     if first_error_item == None: first_error_item = 1
                     form_valid = False
 
-                if build_pipeline_form.trim_slidingwindow_quality.data and not build_pipeline_form.trim_slidingwindow_quality.data > 0: # must be positive integer
+                if build_pipeline_form.trim_slidingwindow_quality.data and not int(build_pipeline_form.trim_slidingwindow_quality.data) > 0: # must be positive integer
                     flash('Error: if trimming is selected, you must choose a valid sliding window quality.','warning')
                     runtime_attributes.append(('input[id=trim_slidingwindow_quality]', 'style', form_warning_style))                                   
                     if first_error_item == None: first_error_item = 1
@@ -1840,7 +1938,11 @@ def pipeline():
         ##### End Form Validation #####
 
     else: # request.method == 'GET'
-        pass
+        build_pipeline_form.trim_slidingwindow.data = True
+        build_pipeline_form.trim_illumina_adapters.data = True
+        build_pipeline_form.trim_slidingwindow_size.data = 4
+        build_pipeline_form.trim_slidingwindow_quality.data = 15
+        
 
     return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes, first_error_item = first_error_item )
 

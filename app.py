@@ -1171,10 +1171,6 @@ def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, 
             command_line_args = shlex.split(file.command)
             command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
 
-            # while True: # Feeling fancy?  add a timeout condition here...
-            #     if pipe.poll():
-            #         sys.stdout.flush()
-            #         break
             line = ''
             vdj_started = False
             vdj_finished = False
@@ -1501,7 +1497,7 @@ def run_pandaseq_analysis_with_files(self, analysis_id, file_ids, algorithm='pea
     # Make PandaSeq Alignment Primary Dataset Data Files! Currently done in dataset.primary_data_files() 
     return ReturnValue('PANDAseq analysis complete.', file_ids = output_file_ids)
 
-def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = celery_logger):
+def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = celery_logger, trim_illumina_adapters = True, trim_slidingwindow = True, trim_slidingwindow_size = 4, trim_slidingwindow_quality = 15):
     analysis = db.session.query(Analysis).get(analysis_id)
     files = map(lambda x: db.session.query(File).filter(File.id==x).first(), file_ids)
 
@@ -1523,13 +1519,24 @@ def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = c
     if len(files) == 0 or len(files) > 2:
         raise Exception('Can only run Trimmomatic on 1 or 2 files, not on {} files.'.format( str(len(files) ) ) )
 
+    illumina_command = ''
+    if trim_illumina_adapters:
+        illumina_command = 'ILLUMINACLIP:{}/TruSeq3-SE.fa:2:30:10 '.format( app.config['TRIMMOMATIC_ADAPTERS'] )
+
+    sliding_window_command = ''
+    if trim_slidingwindow:
+        sliding_window_command = 'SLIDINGWINDOW:{}:{} '.format(trim_slidingwindow_size, trim_slidingwindow_quality)
+
+
     # Instantiate Source Files
     if len(files) == 1: 
         output_file = File()
         output_file.user_id = dataset.user_id
         output_file.path = '{}.trimmed.fastq'.format(basepath)
         output_file.name = "{}.trimmed.fastq".format(basename)
-        output_file.command = '{} SE -phred33 -threads 4 {} {} ILLUMINACLIP:{}/TruSeq3-SE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMOMATIC'], files[0].path, output_file.path, app.config['TRIMMOMATIC_ADAPTERS'])
+
+        # #3 is the illumina clip command
+        output_file.command = '{0} SE -phred33 -threads 4 {1} {2} {3}LEADING:3 TRAILING:3 {4}MINLEN:50'.format(app.config['TRIMMOMATIC'], files[0].path, output_file.path, illumina_command, sliding_window_command)
         output_file.file_type = 'TRIMMED_FASTQ'
         files_to_execute.append(output_file)
 
@@ -1546,7 +1553,7 @@ def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = c
         r2_output_file.path = '{}.R2.trimmed.fastq'.format(basepath)
         r2_output_file.name = "{}.R2.trimmed.fastq".format(basename)
         r2_output_file.file_type = 'TRIMMED_FASTQ'
-        r1_output_file.command = '{} PE -phred33 -threads 4 {} {} {} {} {} {} ILLUMINACLIP:{}/TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50'.format(app.config['TRIMMOMATIC'], files[0].path, files[1].path, r1_output_file.path, '/dev/null', r2_output_file.path, '/dev/null', app.config['TRIMMOMATIC_ADAPTERS'])
+        r1_output_file.command = '{0} PE -phred33 -threads 4 {1} {2} {3} {4} {5} {6} {7}LEADING:3 TRAILING:3 {8}MINLEN:50'.format(app.config['TRIMMOMATIC'], files[0].path, files[1].path, r1_output_file.path, '/dev/null', r2_output_file.path, '/dev/null', illumina_command, sliding_window_command)
         r2_output_file.command = ''
         files_to_execute.append(r1_output_file)
         files_to_execute.append(r2_output_file)
@@ -1726,7 +1733,9 @@ def run_analysis(self, analysis_id = None, dataset_id = None, file_ids = [], use
             logger.info( 'Running Trim on Files in Analysis {} before executing annotation'.format(analysis.id) )
             analysis.status = 'TRIMMING FILES' 
             session.commit() 
-            return_value = run_trim_analysis_with_files( analysis.id, file_ids, logger )
+            return_value = run_trim_analysis_with_files( analysis.id, file_ids, logger)
+
+
             files = [session.query(File).get(file_id) for file_id in return_value.file_ids]
 
         # persist the analysis and files objs after the session closes:
@@ -1820,7 +1829,7 @@ def run_analysis(self, analysis_id = None, dataset_id = None, file_ids = [], use
 # CLUSTER
 
 
-def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01], logger = celery_logger, parent_task = None):
+def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysis_id = None, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01], logger = celery_logger, parent_task = None):
     task = parent_task
     # Want to run IGREP without putting out EVERY line of output (~100s)
     # So create a list of status outputs and dictionary of counts (repeated status)
@@ -1993,7 +2002,11 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, overlap
                 new_file = File()
                 new_file.user_id = user_id
                 new_file.parent_id = file.id 
-                new_file.dataset_id = dataset.id 
+                new_file.dataset_id = dataset.id
+
+                if analysis_id:
+                    new_file.analysis_id = analysis_id
+
                 new_file.name = file.name.replace('fastq','igfft.annotation')
                 new_file.path = file.path.replace('fastq','igfft.annotation')
                 new_file.file_type = 'IGFFT_ANNOTATION'
@@ -2003,6 +2016,7 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, overlap
                 session.commit()
                 session.refresh(new_file)
                 annotated_file_ids.append(new_file.id)
+
             else:
                 all_files_created = False
                 files_not_created.append( new_file_path )
@@ -2363,7 +2377,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         elif file_source =='file_gsaf':
             raise Exception ('Upload from GSAF URL not currently supported.')
             pass # call GSAF script here
-        elif file_source =='file_upload':
+        elif file_source =='file_url':
 
             # first create a new db file to place the download in
             new_file = File()
@@ -2433,7 +2447,11 @@ def run_analysis_pipeline(self, *args,  **kwargs):
 
     ##### Perform Pre-processing #####
     if trim:
-        return_value = run_trim_analysis_with_files(analysis_id = analysis_id, file_ids = files_ids_to_analyze, logger = logger)
+
+        if trim_slidingwindow_size == '': trim_slidingwindow_size = 4
+        if trim_slidingwindow_quality == '': trim_slidingwindow_quality = 15
+
+        return_value = run_trim_analysis_with_files(analysis_id = analysis_id, file_ids = files_ids_to_analyze, logger = logger, trim_illumina_adapters = trim_illumina_adapters, trim_slidingwindow = trim_slidingwindow, trim_slidingwindow_size = trim_slidingwindow_size, trim_slidingwindow_quality = trim_slidingwindow_quality)
         files_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
@@ -2449,7 +2467,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         files_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
-        return_value = run_igrep_annotation_on_dataset_files(dataset_id = dataset_id, file_ids = files_ids_to_analyze, user_id = user_id, logger = logger, parent_task = task)
+        return_value = run_igrep_annotation_on_dataset_files(dataset_id = dataset_id, file_ids = files_ids_to_analyze, user_id = user_id, analysis_id = analysis_id, logger = logger, parent_task = task)
         files_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 

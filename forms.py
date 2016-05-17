@@ -197,7 +197,15 @@ class CreateProjectForm(Form):
     species = SelectField( 'Species', choices=[('', ''), ('H. sapiens', 'H. sapiens'), ('M. musculus', 'M. musculus')] )
 
 class BuildPipelineForm(Form):
-    file_source = RadioField('Select a File Source', choices=[ ('file_dataset' , 'Files from Dataset'), ('file_gsaf' , 'Files from GSAF URL'), ('file_upload' , 'Upload Files'), ('file_ncbi' , 'Files from NCBI') ])
+    file_source = RadioField('Select a File Source', choices=[ ('file_dataset' , 'Files from Dataset'), ('file_gsaf' , 'Files from GSAF URL'), ('file_upload' , 'Upload Files'), ('file_url' , 'File from URL'), ('file_ncbi' , 'Files from NCBI') ])
+
+    file_1 = FileField(u'File Path')
+    file_1_name = FileField(u'File Name')
+    file_2 = FileField(u'File Path')
+    file_2_name = FileField(u'File Name')
+    file_pairing = SelectField(u'File Pairing (2 files required)', choices = [ ('none','None'), ('vhvl','Heavy/Light Chain Pairing'), ('forev','Forward/Reverse Pairing') ] )
+
+
     dataset = SelectMultipleField(u'Select Dataset', choices = [ ('','') ] )
     dataset_files = SelectMultipleField(u'Select Files', choices = [ ('','') ])
 
@@ -240,18 +248,6 @@ class BuildPipelineForm(Form):
     
     cluster = BooleanField(u'Cluster Sequences')
 
-    def validate(self):
-        if not Form.validate(self):
-            return False
-        result = True
-        seen = set()
-        for field in [self.select1, self.select2, self.select3]:
-            if field.data in seen:
-                field.errors.append('Please select three distinct choices.')
-                result = False
-            else:
-                seen.add(field.data)
-        return result
 
 
 

@@ -58,6 +58,10 @@ from forms import *
 from functions import * 
 from models import * 
 
+# Add all analysis files to analysis view/db
+# clustering is in MSDB call
+# Add Mass spec for Igrep, then Abstar, then Mixcr
+
 # Questions for Russ:
 # Pairing in the database - always refers to forward/reverse read pairing? VH/VL
 # Switch all file uploads to direct uploads?
@@ -73,13 +77,9 @@ from models import *
 #   Now use clonotype - in IGREP binary
 # Not USSEARCH
 
-
-
-# 1. Add Abstar function
 # 2. Add direct file upload
 # 3. Add pairing functionality throughout - pair children output as well
-# 4. Add trimming parameters
-# 5. # Hold off ---Add clustering algorithm
+# 5. # Hold off --- Add clustering algorithm
 # 6. Check for number of files submitted for analysis
 # 7. X Automatically check for R1/R2 etc
 # 8. Require two files for PANDAseq

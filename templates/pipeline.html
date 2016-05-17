@@ -47,7 +47,7 @@
                   <td width="12%"> &nbsp; </td>
                   <td height="100%" valign="top">
                     <!-- Wrapper for slides -->
-                    <form role="form" method="POST" action="{{url_for('frontend.pipeline')}}">
+                    <form role="form" method="POST" action="{{url_for('frontend.pipeline')}}" enctype="multipart/form-data">
                       {{ build_pipeline_form.csrf_token }}
                       <div class="carousel-inner" role="listbox">
                         
@@ -120,14 +120,96 @@
 
                                   </td>
                                 </tr>
+
+                                <tr>
+                                  <td width="15px"></td>
+                                  <td>                              
+                                    <label class="radio">
+                                      <input id="file_source-2" name="file_source" type="radio" value="file_upload" class="file_upload">File Upload from Desktop
+                                    </label>
+                                    <div id="collapse" class="collapse file_upload radio" style="margin-right: 5px; ">
+
+                                      <table class='table'> 
+                                        <thead>
+                                            <tr>
+                                                <th width=35%><label>Enter A Unique File Name:</label></th>
+                                                <th width=35%><label>Choose the file:</label></th>
+                                                <th width=30%>{{build_pipeline_form.file_pairing.label}} </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr >
+                                                <td><input id="file_1_name" type="input" name="file_1_name" value="" class="form-control"/></td>
+                                                <td>
+                                                    <div class="input-group">
+                                                        <span class="input-group-btn">
+                                                            <span class="btn btn-default btn-file">
+                                                                Browse...<input id="file_1" name="file_1" type="file"> 
+                                                            </span>
+                                                        </span>
+                                                        <input type="text" class="form-control" readonly>
+                                                    </div>
+                                                    <!-- <input type="file" name="file" value="" class="form-control"/> -->
+                                                </td>
+                                                <td >
+                                                  {{ build_pipeline_form.file_pairing(class="form-control file_pairing") }}
+                                                </td>
+                                            </tr>
+
+                                            <tr id="collapse" class="collapse file_pairing">
+                                                  <td width=35%><input id="file_2_name" type="input" name="file_2_name" value="" class="form-control"/></td>
+                                                  <td width=35%>
+                                                      <div class="input-group">
+                                                          <span class="input-group-btn">
+                                                              <span class="btn btn-default btn-file">
+                                                                  Browse...<input id="file_2" name="file_2" type="file"> 
+                                                              </span>
+                                                          </span>
+                                                          <input type="text" class="form-control" readonly>
+                                                      </div>
+                                                      <!-- <input type="file" name="file" value="" class="form-control"/> -->
+                                                  </td>
+                                                  <td width=30%></td>
+                                              </tr>
+
+                                        </tbody>
+                                      </table> <!-- /file_1 upload -->
+                                      <!-- <div id="collapse" class="collapse paired_file in">
+                                        <table class='table'> 
+                                          <tbody>
+                                              <tr id="collapse" class="collapse paired_file in">
+                                                  <td width=35%><input id="file_2_name" type="input" name="file_2_name" value="" class="form-control"/></td>
+                                                  <td width=35%>
+                                                      <div class="input-group">
+                                                          <span class="input-group-btn">
+                                                              <span class="btn btn-default btn-file">
+                                                                  Browse...<input id="file_2" name="file_2" type="file"> 
+                                                              </span>
+                                                          </span>
+                                                          <input type="text" class="form-control" readonly>
+                                                      </div>
+                                                      <input type="file" name="file" value="" class="form-control"/>
+                                                  </td>
+                                                  <td width=30%></td>
+                                              </tr>
+                                          </tbody>
+                                        </table> /file_2 upload                                      
+
+                                      </div> -->
+
+
+                                    </div>
+
+                                  </td>
+                                </tr>
                               
                                 <tr>
                                   <td width="15px"></td>
                                   <td>                              
                                     <label class="radio">
-                                      <input id="file_source-2" name="file_source" type="radio" value="file_upload" class="file_upload">File from URL
+                                      <input id="file_source-2" name="file_source" type="radio" value="file_url" class="file_url">File from URL
                                     </label>
-                                    <div id="collapse" class="collapse file_upload radio">
+                                    <div id="collapse" class="collapse file_url radio">
 
                                       <table class='table table-striped'> 
                                           <thead>
@@ -206,7 +288,7 @@
                                       <div class="checkbox" class="pull-right" style="padding-left: 4px">
                                         <label>
                                             {{ build_pipeline_form.trim_slidingwindow(class='trim_slidingwindow') }}
-                                            <b>Use Sliding Window:</b> Perform a sliding window trimming, cutting once the average quality within the window falls below a threshold. Default is 80% of reads over Q30.
+                                            <b>Use Sliding Window:</b> Perform a sliding window trimming, cutting once the average quality within the window falls below a threshold. Default is a window of size 4 which trims reads under Q15.
                                         </label>
                                       </div>
 
@@ -229,7 +311,7 @@
 
                                       <div class="checkbox" class="pull-right" style="padding-left: 4px">
                                         <label>
-                                          <input id="trim_illumina_adapters" class="trim_illumina_adapters" name="trim_illumina_adapters" type="checkbox" value="n" >
+                                          {{ build_pipeline_form.trim_illumina_adapters(class='trim_illumina_adapters') }}
                                             <b>Trim Illumina Adapters</b>
                                         </label>
                                       </div>                                      
@@ -529,6 +611,27 @@ runtime_attributes = [
 runtime_attributes = [];
 {% endif %}
 
+// Controls for file inputes
+$(document).on('change', '.btn-file :file', function() {
+    var input = $(this),
+        numFiles = input.get(0).files ? input.get(0).files.length : 1,
+        label = input.val().replace(/\\/g, '/').replace(/.*\//, '');
+        //label = input.val();
+    input.trigger('fileselect', [numFiles, label]);
+});
+
+$(document).ready( function() {
+  
+    $('.btn-file :file').on('fileselect', function(event, numFiles, label) {
+        var parent_input_group = $(this).closest('div');
+        var child_input = parent_input_group.children('input');
+        child_input.val(label);
+
+        $( '#' + $(this).attr('id') + '_name' ).val(label);
+
+    });
+});
+
 // Mutliple select box with single select ability
 $(function(){
     $('#dataset').removeAttr("multiple");
@@ -561,6 +664,10 @@ $(document).ready(function(){
     $(this).triggerHandler('change'); 
   });
 
+  $('select[name=file_pairing]').each( function( index ) {
+    $(this).triggerHandler('change'); 
+  });
+
   {% if first_error_item != None -%}
     $('#myCarousel').carousel({{first_error_item}});
   {%- endif %}
@@ -575,8 +682,6 @@ $(document).ready(function(){
 $("#dataset option").click(function() {
 
     checked_file_source = $('input[type=radio][name="file_source"]:checked').attr('class');
-
-    console.log(checked_file_source);
 
     if (checked_file_source != undefined && checked_file_source != 'file_dataset'){
       return
@@ -607,6 +712,7 @@ $("#dataset option").click(function() {
 
 });
 
+// Expand/collapse accordians based on file source
 $('input[type=radio][name="file_source"]').on('change', function () {
     if (!this.checked) return
     $('.radio.collapse').not($('div.' + $(this).attr('class'))).slideUp();
@@ -644,6 +750,13 @@ $('input[type=checkbox]').on('change', function () {
     }
 });
 
+$('select[name=file_pairing]').on('change', function () {
+    if ($(this).val() == 'none'){
+      $('.collapse.file_pairing').slideUp();  
+    }else{
+      $('.collapse.file_pairing').slideDown();
+    }
+});
 
 $('.mightOverflow').bind('mouseenter', function(){
   var $this = $(this);
