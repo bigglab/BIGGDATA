@@ -205,12 +205,13 @@ class BuildPipelineForm(Form):
     file_2_name = FileField(u'File Name')
     file_pairing = SelectField(u'File Pairing (2 files required)', choices = [ ('none','None'), ('vhvl','Heavy/Light Chain Pairing'), ('forev','Forward/Reverse Pairing') ] )
 
-
     dataset = SelectMultipleField(u'Select Dataset', choices = [ ('','') ] )
     dataset_files = SelectMultipleField(u'Select Files', choices = [ ('','') ])
 
     name = TextField()
     description = TextField()
+    species = SelectField( 'Species', choices=[('H. sapiens', 'H. sapiens'), ('M. musculus', 'M. musculus')] )
+
     output_dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
     output_project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
 

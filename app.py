@@ -928,18 +928,28 @@ def run_mixcr_with_dataset_id(self, dataset_id, analysis_name='', analysis_descr
     return  'MiXCR analysis completed successfully.'
 
 @celery.task(base = LogTask, bind = True)
-def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids):
+def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None):
     
-    # if self.parent_task:
-    #     task = self.parent_task
-    # else:
-    #     task = self
+    # --species hsa mmu
 
     logger = self.logger
 
     analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
     files = [db.session.query(File).get(file_id) for file_id in file_ids]
     dataset = analysis.dataset
+
+    if species == None:
+        if dataset.species == 'Human': species = 'hsa' 
+        elif dataset.species == 'Mouse': species = 'mmu' 
+        else: species = 'hsa'
+    elif species == 'M. musculus':
+        species = 'mmu'
+    elif species == 'H. sapiens':
+        species = 'hsa'
+    else:
+        species = 'hsa'
+
+
 
     if not analysis:
         raise Exception('MixCR Exception: Analysis with ID {} cannot be found.'.format(analysis_id))
@@ -970,7 +980,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids):
     alignment_file.path = '{}.aln.vdjca'.format(basepath)
     alignment_file.name = "{}.aln.vdjca".format(basename)
     # MIGHT NEED TO ADD THIS ARGUMENT to align   -OjParameters.parameters.mapperMaxSeedsDistance=5
-    alignment_file.command = 'mixcr align --save-description -f {} {}'.format(' '.join([f.path for f in files]), alignment_file.path)
+    alignment_file.command = 'mixcr align --species {} --save-description -f {} {}'.format(species, ' '.join([f.path for f in files]), alignment_file.path)
 
     alignment_file.file_type = 'MIXCR_ALIGNMENTS'
     files_to_execute.append(alignment_file)    
@@ -1020,6 +1030,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids):
     db.session.commit()
 
     output_file_ids = []
+    execution_error = False
 
     for f in files_to_execute:
         f.command = f.command.encode('ascii')
@@ -1044,7 +1055,13 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids):
 
                 tracking_percent = False
 
-                if '%' in line:
+                if 'Exception' in line:
+                    logger.error( line )
+                    execution_error = True
+                elif 'Error' in line:
+                    logger.error( line )
+                    execution_error = True
+                elif '%' in line:
                     tracking_percent = True
                     tracking_status, line = line.split(':', 1)
                     if line.endswith('%'):
@@ -1063,7 +1080,8 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids):
                         self.update_state(state='ANALYZING',
                                 meta={'status': tracking_status, 'current' : 100, 'total' : 100, 'units' : '%' })
                         logger.info( '{} complete.'.format( tracking_status ) )
-                    logger.info( line.strip() )
+
+                    logger.info( line )
 
             response, error = command_line_process.communicate()
             command_line_process.stdout.close()
@@ -1078,13 +1096,17 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids):
                     meta={'status': tracking_status, 'current' : 100, 'total' : 100, 'units' : '%' })
             logger.info( '{} complete.'.format( tracking_status ) )
 
-        if error == None: 
+        if error == None and os.path.isfile(f.path): 
             f.available = True 
             f.file_size = os.path.getsize(f.path)
             db.session.commit()
             db.session.refresh(f)
             output_file_ids.append(f.id)
         else:
+            if error != None:
+                logger.error( error )
+            elif os.path.isfile(f.path):
+                logger.error( 'Error: Unable to find output file {}'.format(f.path) )
             f.available = False
             analysis.status = 'FAILED'
             db.session.commit()
@@ -1101,13 +1123,17 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids):
     # parseable_mixcr_alignments_file_path = alignment_output_file.path
     # PARSE WITH parse_and_insert_mixcr_annotation_dataframe_from_file_path to speed up? 
     # if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
-    return ReturnValue('MiXCR analysis completed successfully.', file_ids = output_file_ids)
+    if execution_error:
+        logger.warning('There were one or more errors executing MiXCR. See task output for details')
+        return ReturnValue('MiXCR encountered errors while processing.', file_ids = output_file_ids)
+    else:
+        return ReturnValue('MiXCR analysis completed successfully.', file_ids = output_file_ids)
 
 
 # While Abstar has pairing ability (it uses PANDAseq), this function presumes that all files have already
 # been preprocessed (e.g., all pairing has already been performed by PANDAseq)
 @celery.task(base = LogTask, bind = True)
-def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, file_ids = []):
+def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, file_ids = [], species = None):
     
     logger = self.logger
 
@@ -1115,6 +1141,17 @@ def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, 
         analysis = session.query(Analysis).filter(Analysis.id==analysis_id).first()
         files = [session.query(File).get(file_id) for file_id in file_ids]
         dataset = analysis.dataset
+
+        if species == None:
+            if dataset.species == 'Human': species = 'human' 
+            elif dataset.species == 'Mouse': species = 'mouse' 
+            else: species = 'human'
+        elif species == 'M. musculus':
+            species = 'mouse'
+        elif species == 'H. sapiens':
+            species = 'human'
+        else:
+            species = 'human'
 
         if not analysis:
             raise Exception('Abstar Exception: analysis with ID {} not found.'.format(analysis_id) )
@@ -1144,7 +1181,7 @@ def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, 
 
                 new_file.path = '{}/{}'.format(basepath.rstrip('/'), os.path.splitext(file.name)[0]+".json")
                 new_file.name = "{}".format(os.path.splitext(file.name)[0]+".json")
-                new_file.command = 'abstar -i {0} -t {1} -o {1}'.format(file.path, analysis.directory)
+                new_file.command = 'abstar -i {0} -t {1} -o {1} -s {2}'.format(file.path, analysis.directory, species)
                 new_file.file_type = 'ABSTAR_ALIGNMENTS'
                 new_file.dataset_id = analysis.dataset_id 
                 new_file.analysis_id = analysis.id 
@@ -1740,35 +1777,6 @@ def run_analysis(self, analysis_id = None, dataset_id = None, file_ids = [], use
 
         # persist the analysis and files objs after the session closes:
         file_ids = [file.id for file in files]
-        session.expunge(analysis)
-
-        # List of triples in the form (ID, DEST_FILE, COMMAND)
-        # file_ids_to_unzip = []
-        # file_ids_for_analysis = []
-
-        # if analysis_type == 'IGFFT':
-
-        #     for file in files:
-        #         #IGFFT NEEDS UNCOMPRESSED FASTQs
-        #         if file.file_type == 'GZIPPED_FASTQ': 
-        #             file_ids_to_unzip.append(file.id)
-        #             # This session exists before the command is run
-        #             new_file = File()
-        #             new_file.user_id = user_id
-        #             new_file.parent_id = file.id 
-        #             new_file.path = analysis.directory + '/' + file.name.replace('.gz','')
-        #             new_file.file_type = 'FASTQ'
-        #             new_file.available = False
-        #             new_file.name =  file.name.replace('.gz', '')
-        #             new_file.command = 'gunzip -c {} > {}'.format(file.path, new_file.path)
-        #             analysis.status = 'GUNZIPPING'
-        #             session.add(new_file)
-        #             session.commit()
-        #             session.refresh( new_file )
-        #             files_to_unzip.append( new_file )
-        #         else: 
-        #             # file does not need to be unzipped, so add it to the list as-is
-        #             file_ids_for_analysis.append(file.id)
 
         session_objects = expunge_session_objects(session)
 
@@ -1778,45 +1786,17 @@ def run_analysis(self, analysis_id = None, dataset_id = None, file_ids = [], use
         return_value = unzip_files( user_id = user_id, file_ids = file_ids, destination_directory = analysis.directory, logger = logger)
         file_ids_for_analysis.append( return_value.file_ids )
 
-    #     for file in files_to_unzip:
-
-    #         logger.info( 'Unzipping {}:{}'.format(file.id, file.command ) )
-
-    #         error = None
-    #         try:
-    #             command_line_process = subprocess.Popen( shlex.split( file.command ) , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
-
-    #             # return code is command_line_process.returncode
-
-    #             #for line in iter(command_line_process.stdout.readline, b''):
-    #             #    logger.info(line.strip())
-
-    #             response, error = command_line_process.communicate()
-    #             command_line_process.stdout.close()
-    #             command_line_process.wait()
-    #         except subprocess.CalledProcessError as error:
-    #             error = error.output
-    #             logger.error(error)
-
-    #         if error == None: 
-    #             file.available = True 
-    #             file_ids_for_analysis.append(file.id)
-
-    #         else: 
-    #             logger.error( 'Error G-Unzipping file {}: {}'.format(file.path, error) )
-
-
         if file_ids_for_analysis == []: file_ids_for_analysis = file_ids
         dataset_id = dataset.id
         user_id = dataset.user_id
 
         analysis.status = 'EXECUTING'
 
-##### Add all of the file changes to the database #####
+    ##### Add all of the file changes to the database #####
     with session_scope() as session:
         add_session_objects(session, session_objects)
         session.commit()
-##### End session #####
+    ##### End session #####
 
     return_value = run_igrep_annotation_on_dataset_files(dataset_id, file_ids_for_analysis, user_id = user_id, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting, logger = logger, parent_task = self)
     annotated_file_ids = return_value.file_ids
@@ -1829,7 +1809,7 @@ def run_analysis(self, analysis_id = None, dataset_id = None, file_ids = [], use
 # CLUSTER
 
 
-def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysis_id = None, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01], logger = celery_logger, parent_task = None):
+def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysis_id = None, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01], species = None, logger = celery_logger, parent_task = None):
     task = parent_task
     # Want to run IGREP without putting out EVERY line of output (~100s)
     # So create a list of status outputs and dictionary of counts (repeated status)
@@ -1862,13 +1842,16 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysi
         logger.info( 'Running IGREP IGFFT on Dataset {}.'.format( dataset.id ) )
         igrep_script_path = app.config['IGREP_PIPELINES']
 
-        species = ''
-
-        if dataset.species == 'Human': species = 'homosapiens' 
-        if dataset.species == 'Mouse': species = 'musmusculus' 
-
-        # Set default species here
-        if species == '': species = 'homosapiens' 
+        if species == None:
+            if dataset.species == 'Human': species = 'homosapiens' 
+            elif dataset.species == 'Mouse': species = 'musmusculus' 
+            else: species = 'homosapiens'
+        elif species == 'M. musculus':
+            species = 'musmusculus'
+        elif species == 'H. sapiens':
+            species = 'homosapiens'
+        else:
+            species = 'homosapiens'
 
         annotated_file_ids = []
         for file in files: 
@@ -2333,6 +2316,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     description = kwargs['description']
     pandaseq_algorithm = kwargs['pandaseq_algorithm']
     cluster = kwargs['cluster']
+    species = kwargs['species']
 
     ##### Obtain Files for Analysis #####
     files_ids_to_analyze = []
@@ -2434,7 +2418,6 @@ def run_analysis_pipeline(self, *args,  **kwargs):
             dataset_id = dataset.id
             analysis_name = analysis.name
 
-
             if dataset.directory:
                 analysis.directory = dataset.directory.rstrip('/') + '/Analysis_' + str(analysis.id)
             else: 
@@ -2467,13 +2450,12 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         files_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
-        return_value = run_igrep_annotation_on_dataset_files(dataset_id = dataset_id, file_ids = files_ids_to_analyze, user_id = user_id, analysis_id = analysis_id, logger = logger, parent_task = task)
+        return_value = run_igrep_annotation_on_dataset_files(dataset_id = dataset_id, file_ids = files_ids_to_analyze, user_id = user_id, analysis_id = analysis_id, species = species, logger = logger, parent_task = task)
         files_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
-
     elif analysis_type == 'mixcr':
-        return_value = run_mixcr_analysis_id_with_files(analysis_id = analysis_id, file_ids = files_ids_to_analyze, parent_task = task)
+        return_value = run_mixcr_analysis_id_with_files(analysis_id = analysis_id, file_ids = files_ids_to_analyze, species = species, parent_task = task)
         files_ids_to_analyze = return_value.file_ids
 
     elif analysis_type == 'abstar':
@@ -2484,7 +2466,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         logger.info (return_value)
 
         # Run Abstar function
-        return_value = run_abstar_analysis_id_with_files(user_id = user_id, analysis_id = analysis_id, file_ids = files_ids_to_analyze, parent_task = task)
+        return_value = run_abstar_analysis_id_with_files(user_id = user_id, analysis_id = analysis_id, file_ids = files_ids_to_analyze, species = species, parent_task = task)
         files_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 

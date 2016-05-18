@@ -13,6 +13,11 @@ from shutil import copyfile
 import operator
 from sets import Set
 
+try:
+    from shlex import quote as cmd_quote
+except ImportError:
+    from pipes import quote as cmd_quote
+
 # import urllib
 os.environ['http_proxy']=''
 import urllib2
@@ -238,7 +243,7 @@ class File(db.Model):
         command = db.Column(db.String(1024))
         created = db.Column(db.DateTime, default=db.func.now())
 
-        vhvl_paired = db.Boolean()
+        vhvl_paired = db.Boolean() # If paired_partner is not null, then vhvl = False implies forward/reverse read pairing
         paired_partner = db.Column(db.Integer, db.ForeignKey('file.id'))
         parent_id = db.Column(db.Integer, db.ForeignKey('file.id'))
         analysis_id = db.Column(db.Integer, db.ForeignKey('analysis.id'))
@@ -252,14 +257,89 @@ class File(db.Model):
                 p = ''
             return "<File {}: _{}_  {}  {}>".format(self.id, self.file_type, self.name, p)
 
-        def __init_(self): 
+        # Important! If you initialize this function with a directory/filename
+        # If directory does not exist, this function will create the directory
+        # If directory/filename exists --> This will rename the file, so you have to check self.name to make sure it hasn't changed
+        def __init__(self, name = None, directory = None, path = None): 
             self.s3_status = ''
             self.status = '' 
             self.available = False 
             self.created = 'now'
 
-        def pair(self, f): 
-            if self.file_type == f.file_type: 
+            print '__init__: name = {}, directory = {}, path = {}'.format(name, directory, path)
+
+            # Clean up file names here:
+            if name is not None:
+                name = name.replace(' ', '_')
+
+            # If given only a path, but no name or directory, use the path
+            if name == None and directory == None and path != None:
+                directory = os.path.dirname(path)
+                name = os.path.basename(path)
+                if name == '': name = None
+
+            # If no path is given, but a name and directory are given, make the path
+            if path == None and name != None and directory != None:
+                path = '{}/{}'.format(directory, name)
+
+            # If a person confused the file path with the directory:
+            if path != None and directory == None:
+                if os.path.isdir(path):
+                    directory = path
+                else:
+                    directory = os.path.dirname(path)
+
+            print '__init__ 2: name = {}, directory = {}, path = {}'.format(name, directory, path)
+
+
+            if name == None or path == None or directory == None:
+                self.path = path
+                self.name = name
+                self.directory = directory
+                return
+
+            # Check directory here
+            if directory != None:
+                directory = directory.rstrip('/')
+
+                if not os.path.isdir(directory):
+                    print 'Making directory: {}'.format(directory)
+                    os.path.mkdirs(directory)
+
+            # Make sure this is not a duplicate file name
+            split_result = name.split(os.extsep, 1)
+            if len(split_result) == 2:
+                file_name = split_result[0]
+                file_extension = split_result[1]
+            else:
+                file_name = name
+                file_extension = ''
+
+            print '__init__ 3: name = {}, directory = {}, path = {}'.format(name, directory, path)
+
+            # Check filenames until we find one that works
+            copy_number = 0
+            while os.path.isfile(path):
+                copy_number += 1
+                name = '{}_{}.{}'.format(file_name, str(copy_number), file_extension)
+                path = '{}/{}'.format(directory, name)
+
+            print '__init__ 4: name = {}, directory = {}, path = {}'.format(name, directory, path)
+
+            self.path = path
+            self.name = name
+            self.directory = directory
+
+            return
+
+        # Pair files
+        # If vhvl_paired is False, this implies the files are paired as forward/reverse reads
+        def pair(self, f, vhvl_paired = False): 
+            if self.file_type == f.file_type:
+
+                self.vhvl_paired = vhvl_paired
+                f.vhvl_paired = vhvl_paired
+
                 self.paired_partner = f.id 
                 f.paired_partner = self.id 
                 if self.dataset_id: 
@@ -268,6 +348,126 @@ class File(db.Model):
                 return True 
             else: 
                 return False
+
+        # This returns True if the move is successful and false if the move is not successful
+        # If the destination directory does not exist, this creates the destination directory
+        # If the destination file exists, this renames the file being moved to filename_int where int is not taken
+        def move(self, destination_directory = None, destination_path = None, destination_name = None):
+            name = destination_name
+            path = destination_path
+            directory = destination_directory
+
+            if path == None and directory == None:
+                return False # Nothing to move?
+
+            if not self.exists():
+                return False # Nothing to move
+
+            # locally, use name, directory, and path to describe the destination
+            # do not overwrite db values until the move is successful!
+
+
+            # Clean up file names here:
+            if name is not None:
+                name = name.replace(' ', '_')
+                name = name
+            else:
+                if path and not os.path.isdir(path) and os.path.basename(path) != '':
+                    name = os.path.basename(path)
+                else:
+                    name = self.name
+            
+            if path == None:
+                path = '{}/{}'.format(directory.rstrip('/'), name)
+
+            if directory == None:
+                directory = os.path.dirname(path) 
+
+            # If given only a path, but no name or directory, use the path
+            if name == None and directory == None and path != None:
+                directory = os.path.dirname(path)
+                name = os.path.basename(path)
+                if name == '': name = None
+
+            # If no path is given, but a name and directory are given, make the path
+            if path == None and name != None and directory != None:
+                path = '{}/{}'.format(directory, name)
+
+            # If a person confused the file path with the directory:
+            if path != None and directory == None:
+                if os.path.isdir(path):
+                    directory = path
+                else:
+                    directory = os.path.dirname(path)
+
+            if name == None or path == None or directory == None:
+                print 'Unable to move file ({}) to directory ({})'.format(name, directory)
+                return False
+
+            # Check directory here
+            if directory != None:
+                directory = directory.rstrip('/')
+
+                if not os.path.isdir(directory):
+                    print 'Making directory: {}'.format(directory)
+                    os.path.mkdirs(directory)
+
+            # Make sure this is not a duplicate file name
+            split_result = name.split(os.extsep, 1)
+            if len(split_result) == 2:
+                file_name = split_result[0]
+                file_extension = split_result[1]
+            else:
+                file_name = name
+                file_extension = ''
+
+            # Check filenames until we find one that works
+            copy_number = 0
+            while os.path.isfile(path):
+                copy_number += 1
+                name = '{}_{}.{}'.format(file_name, str(copy_number), file_extension)
+                path = '{}/{}'.format(directory, name)
+
+            # Move it!
+            try:
+                os.rename( self.path, path )
+            except OSError, error:
+                print 'Error moving/renaming file id {} from {} to {}: {}'.format(self.id, self.path, path, error)
+
+            self.path = path
+            self.name = name
+            self.directory = directory
+
+            return True
+
+        # Determine if the file described in the database actually exists
+        # If the file does not exist, change database setting appropriate
+        def validate(self):
+            if os.path.isfile(self.path):
+                if not self.available: 
+                    self.available = True
+                    db.session.commit()
+                return True
+            else:
+                if self.available: 
+                    self.available = False
+                    db.session.commit()
+                return False
+
+        # Returns True/False depending on whether the underlyng file is found
+        def exists(self):
+            return os.path.isfile(self.path)
+
+        # Calls __init__ with self variables
+        def change_name_to_available(self):
+            return self.__init__(name = self.name, path = self.path)
+
+        # Calls __init__ with self variables
+        def change_name_if_taken(self):
+            if self.exists():
+                return self.__init__(name = self.name, path = self.path)
+            else:
+               return self
 
 class Dataset(db.Model):
         __tablename__ = 'dataset'

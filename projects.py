@@ -58,6 +58,14 @@ from forms import *
 from functions import * 
 from models import * 
 
+# Add species to analysis form -- then use in Abstar
+# Autopopulate species in UI dataset_selection, then dataset_default, then human
+# Hide L/R button in carousel at ends
+# CHeck that user directories are made if server is down
+
+# Check file names and escape any undesired characters
+# Check file names and prevent overwriting of other files
+
 # Add all analysis files to analysis view/db
 # clustering is in MSDB call
 # Add Mass spec for Igrep, then Abstar, then Mixcr

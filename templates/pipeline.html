@@ -466,6 +466,7 @@
                                 <th>Analysis Name</th>
                                 <th>Analysis Description</th>
                                 <th>Choose Output Dataset/Project</th>
+                                <th>Choose Species</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -476,6 +477,7 @@
                                   {{ build_pipeline_form.output_dataset(class="form-control") }}<br>
                                   {{ build_pipeline_form.output_project(class="form-control") }}
                                   </td>
+                                <td>{{ build_pipeline_form.species(class="form-control") }}</td>
                               </tr>
                             </tbody>
                           </table>
@@ -708,6 +710,11 @@ $("#dataset option").click(function() {
           .text(value)); 
       });
 
+    }else{
+      $('#dataset_files')
+        .find('option')
+        .remove()
+        .end();      
     }
 
 });
