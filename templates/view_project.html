@@ -109,7 +109,54 @@
     
 </div>
 
+<div class="container">
+    <row>
+        <h4><a data-toggle="collapse" data-target="#datasets" href='#'>Click here to access datasets</a></h4>
+    </row>
+    <div class="collapse table-responsive" id="datasets" aria-expanded="false">
+        {% include "partials/DatasetsDT.html" with context %}
+    </div>
+</div>
+<script>
+var table = $('#dataset').DataTable({
+        columnDefs: [
+        { targets: 'no-sort', orderable: false }
+        ],
+        order: [[ 1, 'asc' ]]
+    });
+ 
+    var table_data = [
+    {%- for dataset in datasets -%}
+        {%- if dataset.files.all() == [] -%}
+            `<a href="{{url_for('frontend.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
+        {%- else -%}
+            {%- set files = dataset.files -%}
+            `{%- include "partials/files.html" with context %}`,
+        {%- endif -%}
+    {%- endfor -%}
+        ''
+    ];
 
+    table.rows().every( function () {
+        this.child( table_data[this.index()] );
+    } );
+
+    $('#dataset tbody').on( 'click', 'td.details-control', function () {
+        var child = table.row( this ).child;
+        var tr = $(this).closest('tr');
+        
+        if ( child.isShown() ) {
+            child.hide();
+            tr.removeClass('shown');
+        }
+        else {
+            child.show();
+            tr.addClass('shown')
+
+        }
+    } );
+
+</script>
 
 {%endblock content %}
 

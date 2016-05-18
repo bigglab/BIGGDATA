@@ -7,60 +7,135 @@
 	<h4>Files Associated Directly With Your User:  <button class="btn" data-toggle="collapse" data-target="#directfiles"><span class="glyphicon glyphicon-list"></span></button>
 	</h4>
 	<br>
-	<div id="directfiles" class="collapse">
-		<table id="allfiles" class="table table-striped table-bordered" width="100%" cellspacing="0">
-			<thead>
-				<tr>
-					<th>File ID</th>
-					<th>Name</th>
-					<th>Chain</th>
-					<th>File Type</th>
-					<th>Available</th>
-					<th>File Size</th>
-					<th>Downloadable</th>
-				</tr>
-			</thead>
-			<tbody>
-				{% for file in files %}
+	<div id="directfiles" class="collapse in" aria-expanded="true">
+		<!-- tabs !-->
+		<ul class="nav nav-tabs" role="tablist">
+			<li class="active all-tab">
+				<a data-toggle="tab" role="tab" data-target="#allfilesdiv">All Files</a>
+			</li>
+			<li class="orphan-tab">
+				<a data-toggle="tab" role="tab" data-target="#orphanfilesdiv">Orphan Files</a>
+			</li>
+		</ul>
+		<div class="tab-content">
+		<!-- Table 1 !-->
+		<div id="allfilesdiv" class="tab-pane fade in active table-responsive" role="tab-panel">
+			<table id="allfiles" class="table table-striped table-bordered dt-reponsive" width="100%" cellspacing="0">
+				<thead>
 					<tr>
-						<th><a href="{{url_for('.file', id=file.id)}}">{{file.id}}</a></th>
-						<th>{{file.name}}</th>
-						<th>{{file.chain}}</th>
-						<th>{{file.file_type}}</th>
-					{%- if file.available -%}
-						<th>YES</th>
-					{%- else -%}
-						<th>NO</th>
-					{%- endif -%}
-					{%- if file.file_size -%}
-						<th>{{file.file_size|filesizeformat}}</th>
-					{%- else -%}
-						<th></th>
-					{%- endif -%}
-					{%- if file.s3_status == 'AVAILABLE' -%}
-						<th><a href="https://s3.amazonaws.com/biggdata{{file.s3_path.replace('//','/',10)}}">Downloadable</a></th>
-					{%- else -%}
-						{%- if file.s3_status == 'Staging On S3' -%}
-							<th>Staging On S3</th>
+						<th>File ID</th>
+						<th>Name</th>
+						<th>Chain</th>
+						<th>File Type</th>
+						<th>Available</th>
+						<th>File Size</th>
+						<th>File Created</th>
+						<th>Downloadable</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for file in files %}
+						<tr>
+							<th><a href="{{url_for('.file', id=file.id)}}">{{file.id}}</a></th>
+							<th>{{file.name}}</th>
+							<th>{{file.chain}}</th>
+							<th>{{file.file_type}}</th>
+						{%- if file.available -%}
+							<th>YES</th>
 						{%- else -%}
-							{%- if file.s3_status != 'AVAILABLE' and file.available -%}
-								<th><a href="{{url_for('.transfer_to_s3', file_id=file.id)}}">Stage For Transfer</a></th>
+							<th>NO</th>
+						{%- endif -%}
+						{%- if file.file_size -%}
+							<th>{{file.file_size|filesizeformat}}</th>
+						{%- else -%}
+							<th></th>
+						{%- endif -%}
+							<th>{{file.created}}</th>
+						{%- if file.s3_status == 'AVAILABLE' -%}
+							<th><a href="https://s3.amazonaws.com/biggdata{{file.s3_path.replace('//','/',10)}}">Downloadable</a></th>
+						{%- else -%}
+							{%- if file.s3_status == 'Staging On S3' -%}
+								<th>Staging On S3</th>
 							{%- else -%}
-								<th>{{ file.s3_status }}</th>
+								{%- if file.s3_status != 'AVAILABLE' and file.available -%}
+									<th><a href="{{url_for('.transfer_to_s3', file_id=file.id)}}">Stage For Transfer</a></th>
+								{%- else -%}
+									<th>{{ file.s3_status }}</th>
+								{%- endif -%}
 							{%- endif -%}
 						{%- endif -%}
-					{%- endif -%}
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+		<!-- Table 2 !-->
+		<div id="orphanfilesdiv" class="tab-pane fade" role="tab-panel">
+			<table id="orphanfiles" class="table table-striped table-bordered dt-responsive" width="100%" cellspacing="0">
+				<thead>
+					<tr>
+						<th>File ID</th>
+						<th>Name</th>
+						<th>Chain</th>
+						<th>File Type</th>
+						<th>Available</th>
+						<th>File Size</th>
+						<th>File Created</th>
+						<th>Downloadable</th>
 					</tr>
-				{% endfor %}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{% for file in files if file.dataset_id == [] %}
+						<tr>
+							<th><a href="{{url_for('.file', id=file.id)}}">{{file.id}}</a></th>
+							<th>{{file.name}}</th>
+							<th>{{file.chain}}</th>
+							<th>{{file.file_type}}</th>
+						{%- if file.available -%}
+							<th>YES</th>
+						{%- else -%}
+							<th>NO</th>
+						{%- endif -%}
+						{%- if file.file_size -%}
+							<th>{{file.file_size|filesizeformat}}</th>
+						{%- else -%}
+							<th></th>
+						{%- endif -%}
+							<th>{{file.created}}</th>
+						{%- if file.s3_status == 'AVAILABLE' -%}
+							<th><a href="https://s3.amazonaws.com/biggdata{{file.s3_path.replace('//','/',10)}}">Downloadable</a></th>
+						{%- else -%}
+							{%- if file.s3_status == 'Staging On S3' -%}
+								<th>Staging On S3</th>
+							{%- else -%}
+								{%- if file.s3_status != 'AVAILABLE' and file.available -%}
+									<th><a href="{{url_for('.transfer_to_s3', file_id=file.id)}}">Stage For Transfer</a></th>
+								{%- else -%}
+									<th>{{ file.s3_status }}</th>
+								{%- endif -%}
+							{%- endif -%}
+						{%- endif -%}
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+		</div>
 	</div>
 </div>
 <!-- Datatable Script for all files !-->
 <script>
 $(document).ready(function() {
+	$('a[data-toggle="tab"]').on( 'shown.bs.tab', function (e) {
+        $.fn.dataTable.tables( {visible: true, api: true} ).columns.adjust();
+
+        var $newtab=$(e.target);
+    } );
     $('#allfiles').DataTable();
+    $('#orphanfiles').DataTable();
 } );
+
+
 </script>
 <!-- Datatable script end !-->
 <!-- Datatable for allfiles end !-->
@@ -135,76 +210,48 @@ $(document).ready(function() {
 <!-- Datatables for Projects !-->
 	{% for project in current_user.projects %}
 		{% if project.datasets != [] %}
-		<div id="{{project.id}}" class="collapse">
-			<table id="{{project.id}}dataset" class="table table-striped table-bordered" cellspacing="0" width="100%">
-				<thead>
-					<tr>
-						<th class='no-sort'> </th>
-						<th>Dataset</th>
-						<th>Name</th>
-						<th>Description</th>
-						<th>IG Type</th>
-						<th>VDJ+VJ Paired</th>
-						<th class='no-sort'>Run Analysis</th>
-					</tr>
-				</thead>
-				<tbody>
-					{% for dataset in project.datasets %}
-						<tr>
-							<td class="details-control"></td>
-							<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.id}}</a></td>
-							<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
-							<td>{{dataset.description}}</td>
-							<td>{{dataset.ig_type}}</td>
-							{% if dataset.paired %}
-								<td>YES</td>
-							{% else %}
-								<td></td>
-							{% endif %}
-							<td><a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">MIXCR</a> <a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a></td>
-						</tr>
-					{% endfor %}
-				</tbody>
-			</table>
+		<div id="{{project.id}}" class="collapse table-responsive">
+			{% set datasets = project.datasets %}
+			{% include "partials/DatasetsDT.html" with context %}
 			<script>
-	var table{{project.id}}= $('#{{project.id}}dataset').DataTable({
-		columnDefs: [
-  		{ targets: 'no-sort', orderable: false }
-  		],
-  		order: [[ 1, 'asc' ]]
-	});
- 
-	var table_data{{project.id}} = [
-	{%- for dataset in project.datasets -%}
-		{%- if dataset.files.all() == [] -%}
-			`<a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
-		{%- else -%}
-			{%- set files = dataset.files -%}
-			`{%- include "partials/files.html" with context %}`,
-		{% endif %}
-	{%- endfor -%}
-		''
-	]
+				var table{{project.id}}= $('#{{project.id}}dataset').DataTable({
+					columnDefs: [
+			  		{ targets: 'no-sort', orderable: false }
+			  		],
+			  		order: [[ 1, 'asc' ]]
+				});
+			 
+				var table_data{{project.id}} = [
+				{%- for dataset in project.datasets -%}
+					{%- if dataset.files.all() == [] -%}
+						`<a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
+					{%- else -%}
+						{%- set files = dataset.files -%}
+						`{%- include "partials/files.html" with context %}`,
+					{%- endif -%}
+				{%- endfor -%}
+					''
+				];
 
-	table{{project.id}}.rows().every( function () {
-	    this.child( table_data{{project.id}}[this.index()] );
-	} );
+				table{{project.id}}.rows().every( function () {
+				    this.child( table_data{{project.id}}[this.index()] );
+				} );
 
-	$('#{{project.id}}dataset tbody').on( 'click', 'td.details-control', function () {
-		var tr = $(this).closest('tr');
-		var child = table{{project.id}}.row( tr ).child;
-	    
-	    if ( child.isShown() ) {
-	        child.hide();
-	        tr.removeClass('shown');
-	    }
-	    else {
-	        child.show();
-	        tr.addClass('shown')
+				$('#{{project.id}}dataset tbody').on( 'click', 'td.details-control', function () {
+					var child = table{{project.id}}.row( this ).child;
+					var tr = $(this).closest('tr');
+				    
+				    if ( child.isShown() ) {
+				        child.hide();
+				        tr.removeClass('shown');
+				    }
+				    else {
+				        child.show();
+				        tr.addClass('shown')
 
-	    }
-	} );
-</script>
+				    }
+				} );
+			</script>
 		</div>
 		{% endif %}
 	{% endfor %}

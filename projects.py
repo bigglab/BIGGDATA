@@ -563,6 +563,8 @@ def view_project(project_id):
         read_only_list = read_only_list,
         write_user_list = write_user_list,
         dataset_list = dataset_list, 
-        current_user=current_user)
+        current_user=current_user,
+        datasets = datasets,
+        project = project)
 
 

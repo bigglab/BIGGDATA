@@ -545,7 +545,6 @@ def instantiate_user_with_directories(new_user_id):
 @celery.task(base= LogTask, bind = True)
 def transfer_file_to_s3(self, file_id, user_id = None):
     logger = self.logger
-
     f = db.session.query(File).filter(File.id==file_id).first()
     if not f: 
         raise Exception( "File with ID ({}) not found.".format(file_id) )
@@ -698,14 +697,12 @@ def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_
     for line in iter(command_line_process.stdout.readline, b''):
         line = line.strip()
         logger.info( line.strip() )
-
     response, error = command_line_process.communicate()
     command_line_process.stdout.close()
     command_line_process.wait()
 
     if error == None: 
         file_paths = []
-
         dirs = os.listdir('{}/{}'.format(directory, accession))
         if dirs == ['1']:
 
@@ -995,7 +992,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     clone_file.file_type = 'MIXCR_CLONES'
     clone_file.path = '{}.aln.clns'.format(basepath)
     clone_file.name = '{}.aln.clns'.format(basename)
-    clone_file.command = 'mixcr assemble --index {} -f {} {}'.format(clone_index_file.path, alignment_file.path, clone_file.path)
+    clone_file.command = 'mixcr assemble  -OassemblingFeatures=VDJRegion --index {} -f {} {}'.format(clone_index_file.path, alignment_file.path, clone_file.path)
     files_to_execute.append(clone_file)
     files_to_execute.append(clone_index_file)
     db.session.add(alignment_file)
@@ -1008,7 +1005,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     clone_output_file.path = '{}.txt'.format(clone_file.path)
     clone_output_file.file_type = 'MIXCR_CLONES_TEXT'
     clone_output_file.name = '{}.txt'.format(clone_file.name)
-    clone_output_file.command = 'mixcr exportClones -f {} {}'.format(clone_file.path, clone_output_file.path)
+    clone_output_file.command = 'mixcr exportClones -sequence -quality -s -f {} {}'.format(clone_file.path, clone_output_file.path)
     files_to_execute.append(clone_output_file)
     alignment_output_file = File()
     alignment_output_file.user_id = dataset.user_id    
@@ -1016,7 +1013,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     alignment_output_file.path = '{}.txt'.format(alignment_file.path)
     alignment_output_file.file_type = 'MIXCR_ALIGNMENT_TEXT'
     alignment_output_file.name = '{}.txt'.format(alignment_file.name)
-    alignment_output_file.command = 'mixcr exportAlignments -cloneId {}  -f -readId -descrR1 --preset full  {} {}'.format(clone_index_file.path, alignment_file.path, alignment_output_file.path)
+    alignment_output_file.command = 'mixcr exportAlignments -cloneId {}  -s -f -readId -descrR1 -descrR2 --preset full  {} {}'.format(clone_index_file.path, alignment_file.path, alignment_output_file.path)
     files_to_execute.append(alignment_output_file)
     pretty_alignment_file = File()
     pretty_alignment_file.user_id = dataset.user_id    
@@ -2047,14 +2044,74 @@ def unzip_files( user_id = None, file_ids = [], destination_directory = '~', log
                 new_file.name =  file.name.replace('.gz', '')
                 new_file.command = 'gunzip -c {} > {}'.format(file.path, new_file.path)
                 analysis.status = 'GUNZIPPING'
-                session.add(new_file)
-                session.commit()
-                session.refresh( new_file )
-                files_to_unzip.append( new_file )
-
+                db.session.commit()
+                response = os.system(new_file.command)
+                if response == 0: 
+                    new_file.available = True 
+                    db.session.add(new_file)
+                    db.session.commit()
+                    files_for_analysis.append(new_file)
+                else: 
+                    print 'ERROR GUNZIPPING FILE {}: '.format(file.path, new_file.command)
             else: 
-                # file does not need to be unzipped, so add it to the list as-is
-                output_file_ids.append(file.id)
+                files_for_analysis.append(new_file)
+        analysis.status = 'EXECUTING'
+        db.session.add(analysis)
+        db.session.commit()
+        if files_for_analysis == []: files_for_analysis = files 
+        annotated_files = run_igrep_annotation_on_dataset_files(dataset, files_for_analysis, user_id = dataset.user_id, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting)
+        print 'annotated files from igfft: {}'.format(annotated_files)
+    # PAIR 
+    # CLUSTER
+
+
+def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]):
+    # dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+    print 'RUNNING IGREP IGFFT ON DATASET ID# {}: {}'.format(dataset.id, repr(dataset.__dict__))
+    igrep_script_path = app.config['IGREP_PIPELINES']
+    # LOAD IGREP SCRIPTS INTO PYTHON PATH
+
+    if dataset.species == 'Human': species = 'homosapiens' 
+    if dataset.species == 'Mouse': species = 'musmusculus' 
+    annotated_files = []
+    for file in files: 
+        if file.chain == 'HEAVY': loci = 'igh'
+        if file.chain == 'LIGHT': loci = 'igk,igl'
+        if file.chain == 'HEAVY/LIGHT': loci = 'igh,igk,igl'
+
+        # annotated_f = igfft.igfft_multiprocess(f.path, file_type='FASTQ', species=species, locus=loci, parsing_settings={'isotype': isotyping_barcodes, 'remove_insertions': remove_insertions}, num_processes=number_threads, delete_alignment_file=True)           
+        # annotated_files.append(annotated_f[0])
+        try: 
+            species 
+        except: 
+            species = 'homosapiens'
+        try: 
+            loci 
+        except: 
+            loci = 'igh,igk,igl'
+        script_command = 'python {}/gglab_igfft_single.py -species {} -locus {} {}'.format(igrep_script_path, species, loci, file.path)
+        print 'executing script: {}'.format(script_command)
+        response = os.system(script_command)
+        new_file = File()
+        new_file.user_id = user_id
+        new_file.parent_id = file.id 
+        new_file.dataset_id = dataset.id 
+        new_file.name = file.name.replace('fastq','igfft.annotation')
+        new_file.path = file.path.replace('fastq','igfft.annotation')
+        new_file.file_type = 'IGFFT_ANNOTATION'
+        new_file.created='now'
+        new_file.available=True 
+        db.session.add(new_file)
+        db.session.commit()
+        annotated_files.append(new_file)
+        session.add(new_file)
+        session.commit()
+        session.refresh( new_file )
+        files_to_unzip.append( new_file )
+
+    else: 
+        # file does not need to be unzipped, so add it to the list as-is
+        output_file_ids.append(file.id)
 
         print 'Here'
 
