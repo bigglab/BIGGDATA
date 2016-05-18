@@ -212,7 +212,7 @@ $(document).ready(function() {
 		{% if project.datasets != [] %}
 		<div id="{{project.id}}" class="collapse table-responsive">
 			{% set datasets = project.datasets %}
-			{% include "partials/DatasetsDT.html" with context %}
+			{#% include "partials/DatasetsDT.html" with context %#}
 			<script>
 				var table{{project.id}}= $('#{{project.id}}dataset').DataTable({
 					columnDefs: [
