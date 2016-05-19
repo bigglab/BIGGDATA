@@ -61,6 +61,14 @@ from forms import *
 from functions import * 
 from models import * 
 
+#####
+#
+# Add IGREP binaries to system path
+#
+#####
+sys.path.append('/data/resources/software/IGREP/common_tools/')
+import immunogrep_msdb
+
 # Initialize Application
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_pyfile('config.py')
@@ -2044,74 +2052,14 @@ def unzip_files( user_id = None, file_ids = [], destination_directory = '~', log
                 new_file.name =  file.name.replace('.gz', '')
                 new_file.command = 'gunzip -c {} > {}'.format(file.path, new_file.path)
                 analysis.status = 'GUNZIPPING'
-                db.session.commit()
-                response = os.system(new_file.command)
-                if response == 0: 
-                    new_file.available = True 
-                    db.session.add(new_file)
-                    db.session.commit()
-                    files_for_analysis.append(new_file)
-                else: 
-                    print 'ERROR GUNZIPPING FILE {}: '.format(file.path, new_file.command)
+                session.add(new_file)
+                session.commit()
+                session.refresh( new_file )
+                files_to_unzip.append( new_file )
+
             else: 
-                files_for_analysis.append(new_file)
-        analysis.status = 'EXECUTING'
-        db.session.add(analysis)
-        db.session.commit()
-        if files_for_analysis == []: files_for_analysis = files 
-        annotated_files = run_igrep_annotation_on_dataset_files(dataset, files_for_analysis, user_id = dataset.user_id, overlap=overlap, paired=paired, cluster=cluster, cluster_setting=cluster_setting)
-        print 'annotated files from igfft: {}'.format(annotated_files)
-    # PAIR 
-    # CLUSTER
-
-
-def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]):
-    # dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
-    print 'RUNNING IGREP IGFFT ON DATASET ID# {}: {}'.format(dataset.id, repr(dataset.__dict__))
-    igrep_script_path = app.config['IGREP_PIPELINES']
-    # LOAD IGREP SCRIPTS INTO PYTHON PATH
-
-    if dataset.species == 'Human': species = 'homosapiens' 
-    if dataset.species == 'Mouse': species = 'musmusculus' 
-    annotated_files = []
-    for file in files: 
-        if file.chain == 'HEAVY': loci = 'igh'
-        if file.chain == 'LIGHT': loci = 'igk,igl'
-        if file.chain == 'HEAVY/LIGHT': loci = 'igh,igk,igl'
-
-        # annotated_f = igfft.igfft_multiprocess(f.path, file_type='FASTQ', species=species, locus=loci, parsing_settings={'isotype': isotyping_barcodes, 'remove_insertions': remove_insertions}, num_processes=number_threads, delete_alignment_file=True)           
-        # annotated_files.append(annotated_f[0])
-        try: 
-            species 
-        except: 
-            species = 'homosapiens'
-        try: 
-            loci 
-        except: 
-            loci = 'igh,igk,igl'
-        script_command = 'python {}/gglab_igfft_single.py -species {} -locus {} {}'.format(igrep_script_path, species, loci, file.path)
-        print 'executing script: {}'.format(script_command)
-        response = os.system(script_command)
-        new_file = File()
-        new_file.user_id = user_id
-        new_file.parent_id = file.id 
-        new_file.dataset_id = dataset.id 
-        new_file.name = file.name.replace('fastq','igfft.annotation')
-        new_file.path = file.path.replace('fastq','igfft.annotation')
-        new_file.file_type = 'IGFFT_ANNOTATION'
-        new_file.created='now'
-        new_file.available=True 
-        db.session.add(new_file)
-        db.session.commit()
-        annotated_files.append(new_file)
-        session.add(new_file)
-        session.commit()
-        session.refresh( new_file )
-        files_to_unzip.append( new_file )
-
-    else: 
-        # file does not need to be unzipped, so add it to the list as-is
-        output_file_ids.append(file.id)
+                # file does not need to be unzipped, so add it to the list as-is
+                output_file_ids.append(file.id)
 
         print 'Here'
 
@@ -2155,6 +2103,205 @@ def run_igrep_annotation_on_dataset_files(dataset, files, user_id, overlap=False
         return ReturnValue('No file to unzip.'.format( str( number_files_unzipped ) ), file_ids = output_file_ids )
     else:
         return ReturnValue('{} files unzipped.'.format( str( number_files_unzipped ) ), file_ids = output_file_ids )
+
+def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysis_id = None, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01], species = None, logger = celery_logger, parent_task = None):
+    task = parent_task
+    # Want to run IGREP without putting out EVERY line of output (~100s)
+    # So create a list of status outputs and dictionary of counts (repeated status)
+    igrep_states = ['Calcuating number of sequences', 'Running IgFFT', 'Evaluating Parameters', 
+                    'Parsing and summarizing alignment file', 'Germline Alignment', 
+                    'Performing isotyping on sequences', 
+                    'annotation complete, merging files...', 'files merged.', 'Performing isotyping', 
+                    'Processing raw fastq files', 'IgFFT run started']
+    igrep_counts = {}
+    for state in igrep_states:
+        igrep_counts[state] = 0
+
+
+    ##### Open database session #####
+    
+    # We want to execute the commands outside of the session scope, so store them in a list
+    commands = []
+
+    with session_scope() as session:
+
+        # load database objects
+        dataset = session.query(Dataset).get(dataset_id)
+        files = session.query(File).filter(File.id.in_(file_ids)).all()
+
+        logger.info( 'Running IGREP IGFFT on Dataset {}.'.format( dataset.id ) )
+        igrep_script_path = app.config['IGREP_PIPELINES']
+
+        if species == None:
+            if dataset.species == 'Human': species = 'homosapiens' 
+            elif dataset.species == 'Mouse': species = 'musmusculus' 
+            else: species = 'homosapiens'
+        elif species == 'M. musculus':
+            species = 'musmusculus'
+        elif species == 'H. sapiens':
+            species = 'homosapiens'
+        else:
+            species = 'homosapiens'
+
+        annotated_file_ids = []
+        for file in files: 
+            loci = ''
+            if file.chain == 'HEAVY': loci = 'igh'
+            if file.chain == 'LIGHT': loci = 'igk,igl'
+            if file.chain == 'HEAVY/LIGHT': loci = 'igh,igk,igl'
+
+            # Set default loci here
+            if loci == '': loci = 'igh,igk,igl'
+
+            # annotated_f = igfft.igfft_multiprocess(f.path, file_type='FASTQ', species=species, locus=loci, parsing_settings={'isotype': isotyping_barcodes, 'remove_insertions': remove_insertions}, num_processes=number_threads, delete_alignment_file=True)           
+            # annotated_files.append(annotated_f[0])
+            script_command = 'python {}/gglab_igfft_single.py -species {} -locus {} {}'.format(igrep_script_path, species, loci, file.path)
+            commands.append(script_command)
+
+        session_objects = expunge_session_objects(session)
+
+    ##### End database session #####
+
+    for command in commands:
+
+        logger.info( 'executing script: {}'.format(script_command) )
+        
+        error = None
+        try:
+            command_line_process = subprocess.Popen( shlex.split(command) , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+
+            # keep track of the last two states
+            # that way we can tell the user what finished happening
+            last_state = ''
+            counting = False
+            start = dt.datetime.now()
+
+            pid_pattern = re.compile('\((.*?)\)')
+
+            for line in iter(command_line_process.stdout.readline, b''):
+                line = line.strip()
+                print line
+                if 'Error'  in line or 'error' in line or 'ERROR' in line:
+                    logger.error(line)
+
+                pid = None
+
+                pid_match =  pid_pattern.match(line)
+                if pid_match:
+                    pid = pid_match.group(1)
+                    line = line.replace( pid_match.group(0), '' )
+                    line = line.strip()
+
+                for state in igrep_states:
+                    if state in line:
+                        # if we were counting, let the user know it's done
+                        # sys.stdout = open(str(os.getpid()) + ".out", "w")
+                        igrep_counts[state] += 1
+
+                        if pid:
+                            current_status_number = pid
+                        else:
+                            current_status_number = igrep_counts[state]
+
+                        if counting:
+                            logger.info('{}({}) complete.'.format( last_state, current_status_number ) )
+                            counting = False
+                        last_state = state
+                        current = dt.datetime.now()
+                        elapsed = (current - start).seconds
+
+                        #status = 'Time Elapsed: {} - Number of Reads: {}'.format(elapsed, reads)
+                        #parent_task.update_state(state='STATUS', meta={'status': status })
+
+                        status = 'Time Elapsed: {} - {}({})'.format(elapsed, line, current_status_number)
+                        task.update_state(state='STATUS', meta={'status': status })
+
+                    elif ('% percent done' in line):
+
+                        if pid:
+                            current_status_number = pid
+                            pid_str = 'PID: {} '.format(pid)
+                        else:
+                            current_status_number = ''
+                            pid_str = ''
+
+
+                        counting = True
+                        try:
+                            line_parts = line.split( '%', 1)
+                            percent = line_parts[0].strip()
+                            percent = float(percent)
+                        except:
+                            logger.debug( 'Couldn\'t convert {} to float'.format(percent) )
+                            percent = 0
+
+                        current = dt.datetime.now()
+                        elapsed = (current - start).seconds
+
+                        task.update_state(state='PROGRESS',
+                            meta={'status': '{} ({}Time Elapsed: {})'.format( last_state , pid_str, elapsed ) , 'current' : percent, 'total' : 100, 'units' : '%' })
+
+            if counting:
+                task.update_state(state='ANALYZING')
+                counting = False
+
+            response, error = command_line_process.communicate()
+            command_line_process.stdout.close()
+            command_line_process.wait()
+        except subprocess.CalledProcessError as error:
+            error = error.output
+            logger.error('Error executing command.')
+            logger.error(error)
+
+##### Open a new session #####
+
+    with session_scope() as session:
+
+        add_session_objects(session, session_objects)
+
+        all_files_created = True
+        total_files = 0
+        number_files_created = 0
+        files_not_created = []
+
+        files = session.query(File).filter(File.id.in_(file_ids)).all()
+        for file in files: 
+            total_files += 1
+            new_file_path = file.path.replace('fastq','igfft.annotation')
+
+            if os.path.isfile( new_file_path ):
+                number_files_created += 1
+
+                new_file = File()
+                new_file.user_id = user_id
+                new_file.parent_id = file.id 
+                new_file.dataset_id = dataset.id
+
+                if analysis_id:
+                    new_file.analysis_id = analysis_id
+
+                new_file.name = file.name.replace('fastq','igfft.annotation')
+                new_file.path = file.path.replace('fastq','igfft.annotation')
+                new_file.file_type = 'IGFFT_ANNOTATION'
+                new_file.created='now'
+                new_file.available=True 
+                session.add(new_file)
+                session.commit()
+                session.refresh(new_file)
+                annotated_file_ids.append(new_file.id)
+
+            else:
+                all_files_created = False
+                files_not_created.append( new_file_path )
+                logger.error ('IGREP failed to create new file: {}'.format( new_file_path ) )
+
+    if not all_files_created:
+        raise Exception( 'IGREP/IGFFT failed to create all files ({}/{}). The following files were not created: {}'.format( number_files_created, total_files, ' '.join(files_not_created) ) )
+
+##### End of session #####
+
+    return ReturnValue( 'IGREP analysis complete.', file_ids = annotated_file_ids )
+
 
 @celery.task
 def send_async_email(msg):
@@ -2374,6 +2521,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     pandaseq_algorithm = kwargs['pandaseq_algorithm']
     cluster = kwargs['cluster']
     species = kwargs['species']
+    generate_msdb = kwargs['generate_msdb']
 
     ##### Obtain Files for Analysis #####
     files_ids_to_analyze = []
@@ -2529,6 +2677,90 @@ def run_analysis_pipeline(self, *args,  **kwargs):
 
     else:
         raise Exception( 'Analysis type "{}" cannot be performed.'.format(analysis_type) )
+
+    if generate_msdb:
+        if analysis_type == 'igrep':
+
+            igfft_msdb_fields = {
+                'ABSEQ.AA': "Full_Length_Sequence.AA",
+                'CDR3.AA': 'CDR3_Sequence.AA',
+                'VREGION.VGENES': 'Top_V-Gene_Hits',
+                'JREGION.JGENES': 'Top_J-Gene_Hits',
+                'ISOTYPE.GENES': "Isotype",
+                'DREGION.DGENES': '',
+                'RECOMBINATIONTYPE': 'Recombination_Type', # this is not necessary as the program will guess it if not provided
+                'VREGION.CDR1.AA': "CDR1_Sequence.AA",
+                'VREGION.CDR2.AA': "CDR2_Sequence.AA",
+                'VREGION.SHM.NT_PER': "VRegion.SHM.Per_nt",
+                'JREGION.SHM.NT_PER': "JRegion.SHM.Per_nt", 
+            }
+
+            file_paths_to_analyze = []
+            with session_scope() as session:
+                files = session.query(File).filter(File.id.in_(files_ids_to_analyze)).all()
+                for file in files:
+                    if file.file_type == 'IGFFT_ANNOTATION':
+                        file_paths_to_analyze.append(file.path)
+
+            if file_paths_to_analyze == []:
+                logger.warning('No output files from IGREP analysis were found. Skipping mass spec analysis.')
+            else:
+                for file_path in file_paths_to_analyze:
+                    immunogrep_msdb.generate_msdb_file(file_path, 'TAB', translate_fields=igfft_msdb_fields, output_folder_path= analysis_directory, must_be_present=['CDR3'])
+        else:
+            logger.warning('Cannot generate mass spec database file using analysis type {}.'.format(analysis_type) )
+
+
+# immunogrep_msdb.generate_msdb_file('SRR1525444.R1.igfft.annotation', 'TAB', translate_fields=igfft_msdb_fields, output_folder_path='/data/russ/scratch/SRR1525444_14/Analysis_99', must_be_present=['CDR3'])
+
+        # Main function for generating a FASTA mass spec db file using annotation. User passes in a list of input files generated from an annotation program,
+        # and this function will output a FASTA file that can be used as a reference db for identifying peptides from mass spec. It will also generate a summary file
+        # describing which filters were passed.
+
+        # Parameters
+        # ----------
+        # input_files : list of strings
+        #     corresponding to filepaths for each annotated file.
+        #     .. note::IMGT filepath format
+        #         If the input files come from IMGT analyses, then input_files can either be a list of lists (i.e. 11 files per experiment) or a single list of all experiment filenames
+        #         (i.e. program will split files into proper experiments)
+        # filetype : string, default None
+        #     Describes the filetype of the input files. file type can be either TAB, CSV, FASTA, FASTQ, IMGT
+        # output_folder_path : string
+        #     Filepath for returning results. If not defined, will make a new folder
+        # dbidentifier : string, default None
+        #     A string identifier to label the mass spec database file
+        # dataset_tags : list of strings; default None
+        #     If defined, then this will be used as the identifier for each file/dataset. If Not defined (dataset_tags is None) then the experiment identifier will be equal to the filepath
+        #     names defined by input_files.
+        #     .. important::
+        #         If defined, the length of the string must be equal to the length of the input files/each unique dataset provided
+        #     .. note::
+        #         The following characters are replaced from the tags: '_', ' ',':', '|' and ',' are replaced by '-'
+        # translate_fields : dict, default {}
+        #     This defines which fields in the file corresponds to fields we need for the analysis.
+        #     key = field we use in the program, value = field name in the provided file(s)
+        #     If empty, then this variable will assume the field names are the exact same as the fields we use in this program (see default_fields)
+        # cluster_id : float, default 0.9
+        #     The percent identity required for clonotyping
+        # must_be_present : list of strings, default ['CDR1','CDR2','CDR3']
+        #     This will define which CDR fields MUST be present in the sequence to be considered for analysis.
+        #     .. note::Fields
+        #         Only CDR1, CDR2, and CDR3 can be defined in this list
+        #     .. note::CDR3
+        #         CDR3 will ALWAYS be required for this analysis
+        # use_vl_sequences : boolean, default False
+        #     If True, then any VL sequences detected in the provided experiments will be appended to the database file.
+        #     If False, then the program will append a default VL sequence list generated by Sebastian and stored in the database
+        # low_read_count : int, default 1     
+        #     filter for >= read count
+
+        # Outputs
+        # -------
+        # Path of the FASTA db file created
+
+# def generate_msdb_file(input_files, filetype=None, output_folder_path=None, dbidentifier=None, dataset_tags=None, translate_fields={}, cluster_id=0.9, must_be_present=['CDR1', 'CDR2', 'CDR3'], use_vl_sequences=False, pc_file_location=None, vl_file_location=None, low_read_count=1):
+
 
     return ReturnValue( 'All analyses and processing completed.', file_ids = files_ids_to_analyze)
 

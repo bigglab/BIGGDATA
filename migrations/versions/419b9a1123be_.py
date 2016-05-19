@@ -1,13 +1,13 @@
 """empty message
 
-Revision ID: 4419f9e11708
+Revision ID: 419b9a1123be
 Revises: None
-Create Date: 2016-05-18 12:35:36.499661
+Create Date: 2016-05-18 15:11:42.439967
 
 """
 
 # revision identifiers, used by Alembic.
-revision = '4419f9e11708'
+revision = '419b9a1123be'
 down_revision = None
 
 from alembic import op
@@ -30,6 +30,20 @@ def upgrade():
     sa.Column('failed', sa.Boolean(), nullable=True),
     sa.Column('user_alerted', sa.Boolean(), nullable=True),
     sa.Column('user_dismissed', sa.Boolean(), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('project',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('project_name', sa.String(length=128), nullable=True),
+    sa.Column('description', sa.String(length=256), nullable=True),
+    sa.Column('_id', postgresql.JSON(), nullable=True),
+    sa.Column('cell_types_sequenced', sa.String(length=256), nullable=True),
+    sa.Column('publications', sa.String(length=256), nullable=True),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('creation_date', sa.DateTime(), nullable=True),
+    sa.Column('species', sa.String(length=128), nullable=True),
+    sa.Column('lab', sa.String(length=128), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -74,20 +88,6 @@ def upgrade():
     sa.Column('cell_markers_used', postgresql.ARRAY(String(length=100)), nullable=True),
     sa.Column('list_of_polymerases_used', postgresql.ARRAY(String(length=100)), nullable=True),
     sa.Column('primer_set_name', postgresql.ARRAY(String(length=100)), nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_table('project',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('project_name', sa.String(length=128), nullable=True),
-    sa.Column('description', sa.String(length=256), nullable=True),
-    sa.Column('_id', postgresql.JSON(), nullable=True),
-    sa.Column('cell_types_sequenced', sa.String(length=256), nullable=True),
-    sa.Column('publications', sa.String(length=256), nullable=True),
-    sa.Column('user_id', sa.Integer(), nullable=True),
-    sa.Column('creation_date', sa.DateTime(), nullable=True),
-    sa.Column('species', sa.String(length=128), nullable=True),
-    sa.Column('lab', sa.String(length=128), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -142,13 +142,6 @@ def upgrade():
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('user_id', 'project_id')
     )
-    op.create_table('project_dataset',
-    sa.Column('project_id', sa.Integer(), nullable=False),
-    sa.Column('dataset_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['dataset_id'], ['dataset.id'], ),
-    sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
-    sa.PrimaryKeyConstraint('project_id', 'dataset_id')
-    )
     op.create_table('analysis',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
@@ -179,6 +172,13 @@ def upgrade():
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('project_dataset',
+    sa.Column('project_id', sa.Integer(), nullable=False),
+    sa.Column('dataset_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['dataset_id'], ['dataset.id'], ),
+    sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
+    sa.PrimaryKeyConstraint('project_id', 'dataset_id')
+    )
     op.create_table('file',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
@@ -190,7 +190,7 @@ def upgrade():
     sa.Column('in_use', sa.Boolean(), nullable=True),
     sa.Column('status', sa.String(length=50), nullable=True),
     sa.Column('path', sa.String(length=256), nullable=True),
-    sa.Column('file_size', sa.Integer(), nullable=True),
+    sa.Column('file_size', sa.BigInteger(), nullable=True),
     sa.Column('s3_available', sa.Boolean(), nullable=True),
     sa.Column('s3_status', sa.String(length=50), nullable=True),
     sa.Column('s3_path', sa.String(length=256), nullable=True),
@@ -297,11 +297,11 @@ def downgrade():
     op.drop_table('annotation')
     op.drop_table('sequence')
     op.drop_table('file')
-    op.drop_table('analysis')
     op.drop_table('project_dataset')
+    op.drop_table('analysis')
     op.drop_table('user_project')
     op.drop_table('dataset')
-    op.drop_table('project')
     op.drop_table('experiment')
+    op.drop_table('project')
     op.drop_table('celery_task')
     ### end Alembic commands ###

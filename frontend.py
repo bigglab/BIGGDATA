@@ -1981,7 +1981,9 @@ def pipeline():
                 'description' : build_pipeline_form.description.data,
                 'pandaseq_algorithm' : build_pipeline_form.pandaseq_algorithm.data,
                 'cluster' : build_pipeline_form.cluster.data,
-                'species' : build_pipeline_form.species.data
+                'species' : build_pipeline_form.species.data,
+                'generate_msdb' : build_pipeline_form.generate_msdb.data
+                
             }
 
             result = run_analysis_pipeline.apply_async( (), form_output_dict, queue=celery_queue)

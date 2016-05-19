@@ -248,7 +248,7 @@ class BuildPipelineForm(Form):
     description = TextField(u'Description')
     
     cluster = BooleanField(u'Cluster Sequences')
-
+    generate_msdb = BooleanField(u'Generate Mass Spec Database')
 
 
 
