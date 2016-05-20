@@ -1,0 +1,139 @@
+{% extends '_base.html' %}
+
+{% block content %}
+
+
+<div class="container">
+<h3>Create PANDAseq Analysis Run For Dataset {{dataset.id}}: </h3>
+</div>
+<br>
+
+
+
+<div class="container">
+	<h4>PANDAseq Analysis Configuration:</h4>
+
+	<form method="POST" action="/analysis/pandaseq/{{dataset.id}}">
+    {{ form.csrf_token }}
+
+		<table class="table table-striped" >
+			<thead>
+				<tr>
+					<th>{{ form.name.label }}</th>
+					<th>{{ form.description.label }}</th>
+					<th>{{ form.algorithm.label }}</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+			    <tr>
+				    <td>{{ form.name(size=20, class='form-control') }}</td>
+				    <td>{{ form.description(size=40, class='form-control') }}</td>
+				    <td>{{ form.algorithm(class='form-control') }}</td>
+				    <td><input class="btn btn-default" type="submit" value="RUN PANDASEQ"></td>
+			    </tr>
+			</tbody>
+		</table>
+  </form>
+</div>
+
+<br>
+<br>
+
+
+<div class='container'>
+{% if status != [] %}
+{% for ln in status %}
+    <h4>{{ln}}</h4>
+{% endfor %}
+{% endif %}
+<br>
+{% if async_task_id %}
+<p>Async Task ID: {{async_task_id}}</p>
+{% endif %}
+</div>
+
+
+<br>
+<br>
+
+
+<div class="container">
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<td>Dataset Name</td>
+				<td>Description</td>
+				<td>IG Type</td>
+				<td>VDJ+VJ Paired</td>
+				<td></td>
+			</tr>
+		</thead>
+		<tbody>
+				<tr>
+					<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
+					<td>{{dataset.description}}</td>
+					<td>{{dataset.ig_type}}</td>
+					{% if dataset.paired %}
+						<td>YES</td>
+					{% else %}
+						<td>NO</td>
+					{% endif %}
+				</tr>
+				<tr>
+				{% set files = dataset.files %}
+				{% include "partials/files.html" with context %}
+				</tr>
+		</tbody>
+	</table>
+</div>
+
+
+
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+
+
+
+
+{%endblock content %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

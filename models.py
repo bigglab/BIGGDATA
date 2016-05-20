@@ -887,6 +887,14 @@ class Analysis(db.Model):
         def __init__(self):
             self.available = False
 
+        @validates('commands', 'active_command')
+        def validate_result(self, key, value):
+            max_len = getattr(self.__class__, key).prop.columns[0].type.length
+            if value and len(value) > max_len:
+                return value[:max_len]
+            return value
+
+
 class Experiment(db.Model):
         __tablename__ = 'experiment'
         id = db.Column(db.Integer, primary_key=True)

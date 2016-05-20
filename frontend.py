@@ -1131,6 +1131,83 @@ def pandaseq(dataset_id, status=[]):
     else: 
         return render_template("pandaseq.html", dataset=dataset, form=form, status=status, current_user=current_user) 
 
+from flask import Markup
+@frontend.route('/analysis/test/<int:analysis_id>', methods=['GET', 'POST'])
+@login_required
+def test(analysis_id, status=[]):
+
+    result = test_function.apply_async( (), { 'analysis_id' : analysis_id,  'user_id': current_user.id, }, queue=celery_queue )
+
+    message = Markup('<a href="{}">Test Again</a>.'.format( url_for('frontend.test', analysis_id = analysis_id) ) )
+    flash(message , 'success' )
+
+    return redirect( url_for('frontend.dashboard') )
+
+
+
+@frontend.route('/analysis/msdb/<int:dataset_id>', methods=['GET', 'POST'])
+@login_required
+def msdb(dataset_id, status=[]):
+    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+
+    try:
+        if dataset and dataset.name == "__default__":
+            flash('Error: that dataset cannot be analyzed','warning')
+            return redirect( url_for('frontend.dashboard') )
+    except:
+        flash('Error: that dataset cannot be analyzed','warning')
+        return redirect( url_for('frontend.dashboard') )
+
+    form = CreateMSDBAnalysisForm()
+    status = []
+    if request.method == 'POST' and dataset:
+        result = run_msdb_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'algorithm': form.algorithm.data}, queue=celery_queue)
+        status.append(result.__repr__())
+        status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
+        time.sleep(1)
+
+        # return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
+        analyses = current_user.analyses.all()
+        analysis_file_dict = OrderedDict()
+        for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
+            analysis_file_dict[analysis] = analysis.files.all() 
+        return redirect(url_for('frontend.analyses', status=status))
+        # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
+    else: 
+        return render_template("msdb.html", dataset=dataset, form=form, status=status, current_user=current_user) 
+
+@frontend.route('/analysis/pair_vhvl/<int:dataset_id>', methods=['GET', 'POST'])
+@login_required
+def pair_vhvl(dataset_id, status=[]):
+    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+
+    try:
+        if dataset and dataset.name == "__default__":
+            flash('Error: that dataset cannot be analyzed','warning')
+            return redirect( url_for('frontend.dashboard') )
+    except:
+        flash('Error: that dataset cannot be analyzed','warning')
+        return redirect( url_for('frontend.dashboard') )
+
+    form = CreatePandaseqAnalysisForm()
+    status = []
+    if request.method == 'POST' and dataset:
+        status.append('PANDASEQ Launch Detected')
+        result = run_pandaseq_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'algorithm': form.algorithm.data}, queue=celery_queue)
+        status.append(result.__repr__())
+        status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
+        time.sleep(1)
+
+        # return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
+        analyses = current_user.analyses.all()
+        analysis_file_dict = OrderedDict()
+        for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
+            analysis_file_dict[analysis] = analysis.files.all() 
+        return redirect(url_for('.analyses', status=status))
+        # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
+    else: 
+        return render_template("pair_vhvl.html", dataset=dataset, form=form, status=status, current_user=current_user) 
+
 
 @frontend.route('/analysis/create/<int:dataset_id>', methods=['GET', 'POST'])
 @login_required
@@ -1528,24 +1605,6 @@ def json_celery_log():
 
 
     return jsonify( response )
-
-from flask import Markup
-@frontend.route('/test_celery_log', methods=['GET', 'POST'])
-@login_required
-def test_celery_log():
-
-    result = output_celery_log.apply_async( (), { 'user_id': current_user.id, }, queue=celery_queue )
-
-    message = Markup('<a href="{}">Test Again</a>.'.format( url_for('frontend.test_celery_log') ) )
-    flash(message , 'success' )
-
-    time.sleep(3)    
-    return redirect( url_for('frontend.dashboard') )
-
-    # Here in task:
-    self.update_state(state='PROGRESS',
-                        meta={ 'current': i, 'total': total, 'status': message} )
-
 
 @frontend.route('/pipeline', methods=['GET', 'POST'])
 @login_required
