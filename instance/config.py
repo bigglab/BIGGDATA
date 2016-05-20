@@ -16,8 +16,8 @@ QUOTAGUARD_URL = 'http://quotaguard4189:013877db0c3e@proxy.quotaguard.com:9292'
 
 
 HOME='/data/resources/software/BIGGDATA'
-TRIMMAMATIC = 'java -jar /data/resources/software/Trimmomatic-0.35/trimmomatic-0.35.jar'
-TRIMMAMATIC_ADAPTERS = '/data/resources/software/Trimmomatic-0.35/adapters'
+TRIMMOMATIC = 'java -jar /data/resources/software/Trimmomatic-0.35/trimmomatic-0.35.jar'
+TRIMMOMATIC_ADAPTERS = '/data/resources/software/Trimmomatic-0.35/adapters'
 MIGMAP = 'java -Xmx2g -jar /data/resources/software/migmap-0.9.8/migmap-0.9.8.jar'
 
 #SCRATCH_ROOT='/data/<username>/scratch'
