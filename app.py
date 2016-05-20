@@ -2500,7 +2500,7 @@ def test_function(self, analysis_id = None, user_id = None):
 
 # Adds all files in a directory (not already in database) to database
 # Returns a list of file ids
-def add_directory_files_to_database(directory = None, description = None, dataset_id = None, analysis_id = None, user_id = user_id, logger = celery_logger):
+def add_directory_files_to_database(directory = None, description = None, dataset_id = None, analysis_id = None, user_id = None, logger = celery_logger):
 
     file_type_dict = {
         'gz' : 'GZIPPED_FASTQ' ,
