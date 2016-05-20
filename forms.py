@@ -55,6 +55,15 @@ class CreatePandaseqAnalysisForm(Form):
     description = TextField(u'Description')
     algorithm = SelectField(u'Algorithm', choices=(['ea_util', 'ea_util'], ['flash', 'flash'], ['pear', 'pear'], ['rdp_mle', 'rdp_mle'],  ['simple_bayesian', 'simple_bayesian'], ['stitch', 'stitch'], ['uparse', 'uparse']), validators=[validators.input_required()])
 
+class CreateMSDBAnalysisForm(Form): 
+    dataset_id = IntegerField()
+    name = TextField(u'Name', )
+    description = TextField(u'Description')
+    cluster_percent = DecimalField(places=2, rounding=None)
+    cluster_on_cdr1 = BooleanField()
+    cluster_on_cdr2 = BooleanField()
+    cluster_on_cdr3 = BooleanField()
+
 
 
 class FileDownloadForm(Form):

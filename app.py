@@ -95,7 +95,6 @@ Session = sessionmaker(bind=engine)
 # Usage:
 # with session_scope() as session:
 #     session.flush() # etc, etc...
-
 from contextlib import contextmanager
 @contextmanager
 def session_scope():
@@ -395,41 +394,6 @@ class LogTask(Task):
             return self.parent_task.update_state(*args, **kwargs)
         else:
             return Task.update_state(self, *args, **kwargs)
-
-@celery.task(base= LogTask, bind = True)
-def output_celery_log(self, user_id = None):
-
-    print "The Celery Logger is beginning..."
-
-    # Can test exceptions with this line
-    # raise Exception('Something went south!!!')
-
-    task_id = self.request_id
-
-    self.logger.info("Beginning count...")
-
-
-    for i in range(1,15):
-        time.sleep(2)
-        print "Running: {}".format(i)
-        #self.logger.info("Running: {}".format(i))
-
-        self.update_state(state='PROGRESS', 
-                meta={'status': 'Counting', 'current' : str(i), 'total' : str( 15 ), 'units' : '' })
-
-        # self.update_state(state='PROGRESS',
-        #                    meta={'status': 'Running: {}'.format(i) })
-
-    self.logger.info("Count finished.")
-
-    self.logger.warning("This is about to end.")
-    self.logger.error("This is over.")
-
-    print "The Celery Logger has ended."
-
-    self.update_state(state='SUCCESS', meta={'status': 'Final status' })
-
-    return "This task is finished."
 
 def get_filepaths(directory_path):
     file_paths = []
@@ -1662,6 +1626,38 @@ def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = c
     logger.info( 'Trim job for analysis {} has been executed.'.format(analysis) )
     return ReturnValue( 'Success', file_ids = output_file_ids)
 
+@celery.task(base = LogTask, bind = True)
+def run_msdb_with_dataset_id(self, dataset_id, analysis_name='', analysis_description='', user_id=6, algorithm='pear'):
+    igfft_msdb_fields = {
+        'ABSEQ.AA': "Full_Length_Sequence.AA",
+        'CDR3.AA': 'CDR3_Sequence.AA',
+        'VREGION.VGENES': 'Top_V-Gene_Hits',
+        'JREGION.JGENES': 'Top_J-Gene_Hits',
+        'ISOTYPE.GENES': "Isotype",
+        'DREGION.DGENES': '',
+        'RECOMBINATIONTYPE': 'Recombination_Type', # this is not necessary as the program will guess it if not provided
+        'VREGION.CDR1.AA': "CDR1_Sequence.AA",
+        'VREGION.CDR2.AA': "CDR2_Sequence.AA",
+        'VREGION.SHM.NT_PER': "VRegion.SHM.Per_nt",
+        'JREGION.SHM.NT_PER': "JRegion.SHM.Per_nt", 
+    }
+
+    file_paths_to_analyze = []
+    with session_scope() as session:
+        files = session.query(File).filter(File.id.in_(files_ids_to_analyze)).all()
+        for file in files:
+            if file.file_type == 'IGFFT_ANNOTATION':
+                file_paths_to_analyze.append(file.path)
+
+    if file_paths_to_analyze == []:
+        logger.warning('No output files from IGREP analysis were found. Skipping mass spec analysis.')
+    else:
+        for file_path in file_paths_to_analyze:
+            immunogrep_msdb.generate_msdb_file(file_path, 'TAB', translate_fields=igfft_msdb_fields, output_folder_path= analysis_directory, must_be_present=['CDR3'])
+    
+
+    # lots of cool stuff happens here
+
 def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
     dataset = analysis.dataset
     files_to_execute = []
@@ -2484,6 +2480,87 @@ def create_datasets_from_JSON_string(json_string, project_id = None, dataset_id 
 
     return None
 
+@celery.task(base= LogTask, bind = True)
+def test_function(self, analysis_id = None, user_id = None):
+
+    logger = self.logger
+
+    logger.info('Beginning test of ')
+
+    with session_scope() as session:
+        analysis  = session.query(Analysis).get(analysis_id)
+        if not analysis:
+            logger.error( 'Error: analysis with ID {} not found.'.format(analysis_id) )
+        else:
+            return_value = add_directory_files_to_database(directory = analysis.directory, logger = logger)
+
+    logger.info('Ending test.')
+
+    return ReturnValue('Test completed successfully.')
+
+# Adds all files in a directory (not already in database) to database
+# Returns a list of file ids
+def add_directory_files_to_database(directory = None, description = None, dataset_id = None, analysis_id = None, user_id = user_id, logger = celery_logger):
+
+    file_type_dict = [
+        'gz' : 'GZIPPED_FASTQ' ,
+        'cdr3_clonotype' : 'CDR3_CLONOTYPE' ,
+        'cdr3list' : 'CDR3_LIST' ,
+        'Gucken' : 'MAL_GUCKEN' ,
+        'msDB' : 'MSDB' ,
+        'parsed_summary' : 'MSDB_SUMMARY' 
+    ]
+
+    file_names = next(os.walk(directory))[2]
+
+    number_added_files = 0
+    added_file_ids = []
+
+    with session_scope() as session:
+
+        # Get destination dataset and analysis, if provided
+        if dataset_id: dataset = session.query(Dataset).get(dataset_id)
+        if analysis_id: analysis = session.query(Analysis).get(analysis_id)
+
+        for file_name in file_names:
+            path = '{}/{}'.format(directory.rstrip('/'), file_name)
+
+            if session.query(File).filter_by(path=path).count() > 0:
+                logger.info( 'File already in database: {}'.format(path) )
+            else:
+                logger.info( 'File not in database: {}'.format(path) )
+
+                new_file = File()
+                new_file.name = file_name
+                new_file.description = description
+                new_file.dataset_id = dataset_id
+                new_file.user_id = user_id
+                new_file.analysis_id = analysis_id
+                new_file.path = path
+                new_file.available = True 
+                new_file.s3_status = ''
+                new_file.status = ''
+
+                # Use the default extension, unless we know better
+                new_file.file_type = parse_file_ext(new_file.name)
+                for search_str, file_type in file_type_dict:
+                    if search_str in file_name:
+                        new_file.file_type = file_type
+
+                session.add(new_file)
+                session.commit()
+                session.refresh( new_file )
+                added_file_ids.append( new_file.id )
+                number_added_files += 1
+
+
+
+
+
+
+
+    return ReturnValue('{} files added to database.'.format(number_added_files), file_ids = added_file_ids )
+
 @celery.task(base = LogTask, bind = True)
 def run_analysis_pipeline(self, *args,  **kwargs):
 
@@ -2741,7 +2818,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         #     This defines which fields in the file corresponds to fields we need for the analysis.
         #     key = field we use in the program, value = field name in the provided file(s)
         #     If empty, then this variable will assume the field names are the exact same as the fields we use in this program (see default_fields)
-        # cluster_id : float, default 0.9
+        # cluster_id : float, default 0.9 - INPUT default 0.9
         #     The percent identity required for clonotyping
         # must_be_present : list of strings, default ['CDR1','CDR2','CDR3']
         #     This will define which CDR fields MUST be present in the sequence to be considered for analysis.

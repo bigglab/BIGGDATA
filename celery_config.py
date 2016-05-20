@@ -72,21 +72,4 @@ BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 CELERY_RESULT_BACKEND = BROKER_URL
 
 
-# Set config based on computer name
-# Development only
-# import subprocess
-# import shlex
-
-# daves_machine = False
-
-# try:
-# 	command_line_args = shlex.split('scutil --get LocalHostName')
-# 	command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-# 	response, error = command_line_process.communicate()
-# 	if 'Davids-MacBook-Air' in response:
-# 		daves_machine = True
-# except subprocess.CalledProcessError as error:
-#     error = error.output
-
-# if daves_machine:
-	# BROKER_URL = 'amqp://guest:guest@localhost:5672//'
+daves_machine = False
