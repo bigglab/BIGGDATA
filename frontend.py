@@ -72,32 +72,10 @@ from models import *
 # blueprint
 frontend = Blueprint('frontend', __name__)
 
+#Nav for Unauthenticated public 
 nav.register_element('frontend_top', Navbar(
     View('BIGG DATA', 'frontend.index'),
-    View('Dashboard', 'frontend.analyses'),
-        
-    Subgroup(
-        'Import Data', 
-        View('My Files', 'frontend.files'), 
-        View('Import File', 'frontend.file_download'),
-        View('Import From NCBI', 'frontend.import_sra'), 
-        ),
-    Subgroup(
-        'Manage Data',
-        View('Add a Project', 'projects.create_project'),
-        View('My Projects', 'projects.manage_projects'),
-        View('My Datasets', 'frontend.datasets'),
-        # Link('Other Tasks', 'under_construction'), 
-        ),
-    Subgroup(
-        'Run Analysis', 
-        View('Run On Dataset', 'frontend.datasets'),
-        View('My Analyses', 'frontend.analyses'),
-        View('VDJ VIZualizer', 'frontend.vdj_visualizer'),
-        # View('Browse Sequences', 'frontend.browse_sequences'),
-        # Link('Download Lots of Data', 'under_construction'),
-        # Link('Download For Mass Spec', 'under_construction')
-        ),
+    View('Login', 'frontend.login'),
     Subgroup(
         'Documentation', 
         View('BIGG DATA Overview', 'frontend.overview'), 
@@ -109,7 +87,6 @@ nav.register_element('frontend_top', Navbar(
         Link('Flask-AppConfig', 'https://github.com/mbr/flask-appconfig'),
         Link('Flask-Debug', 'https://github.com/mbr/flask-debug'),
     ),
-    View('Login', 'frontend.login'),
     ))
 
 nav.register_element('frontend_user', Navbar(
@@ -124,19 +101,15 @@ nav.register_element('frontend_user', Navbar(
         ),
     Subgroup(
         'Manage Data',
-        View('New Project', 'projects.create_project'),
         View('My Projects', 'projects.manage_projects'),
         View('My Datasets', 'frontend.datasets'),
-        # Link('Other Tasks', 'under_construction'), 
+        View('New Project', 'projects.create_project'),
         ),
     Subgroup(
         'Run Analysis', 
         View('Create Analysis Pipline', 'frontend.pipeline'),
         View('My Analyses', 'frontend.analyses'),
         View('VDJ VIZualizer', 'frontend.vdj_visualizer'),
-        # View('Browse Sequences', 'frontend.browse_sequences'),
-        # Link('Download Lots of Data', 'under_construction'),
-        # Link('Download For Mass Spec', 'under_construction')
         ),
     Subgroup(
         'Documentation', 
