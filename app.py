@@ -141,7 +141,7 @@ import celery_config
 celery.config_from_object('celery_config')
 
 # CELERY QUEUE TO SEND JOBS TO - USE FOR DEVELOPMENT 
-celery_queue = 'dev'
+celery_queue = 'default'
 
 # Add a celery logger.
 # Usage:
