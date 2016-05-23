@@ -307,14 +307,14 @@ class LogTask(Task):
                         celery_logger.warning( 'Warning({}): User ID ({}) not found. The decorator "log_celery_task" cannot log information without a user_id passed parametrically to the function decorated.'.format(f.func_name, kw['user_id']) )
 
                         if not os.path.isdir('/data/logs/'):
-                            os.makedirs(directory)
+                            os.makedirs('/data/logs/')
 
                         logfile = '/data/logs/{}.log'.format( request_id )
                 else:
                     celery_logger.warning( 'Warning({}): The decorator "log_celery_task" cannot log information without a user_id passed parametrically to the function decorated.'.format(self.__class__.__name__) )
 
                     if not os.path.isdir('/data/logs/'):
-                        os.makedirs(directory)
+                        os.makedirs('/data/logs/')
 
                     logfile = '/data/logs/{}.log'.format( self.request_id )
 
@@ -789,8 +789,6 @@ def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, 
         db.session.refresh(f)
         file_ids.append(f.id)
 
-#    for f in files: 
-#        db.session.add(f)
 
     db.session.commit()
     d.primary_data_files_ids = map(lambda f: f.id, files)
@@ -1734,7 +1732,9 @@ def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id =
             if file.file_type == 'IGFFT_ANNOTATION':
                 file_paths_to_analyze.append(file.path)
 
-        files_in_directory = Set(next(os.walk(analysis.directory))[2])
+        analysis_directory = analysis.directory
+
+        files_in_directory = Set(next(os.walk(analysis_directory))[2])
 
     if file_paths_to_analyze == []:
         logger.warning('No output files from IGREP analysis were found. Skipping mass spec analysis.')
@@ -1743,12 +1743,12 @@ def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id =
         for file_path in file_paths_to_analyze:
             immunogrep_msdb.generate_msdb_file(file_path, 'TAB', translate_fields=igfft_msdb_fields, output_folder_path= analysis_directory, cluster_id = cluster_percent, must_be_present=['CDR3'])
 
-        new_files_in_directory = files_in_directory - Set(next(os.walk(analysis.directory))[2])
+        new_files_in_directory = files_in_directory - Set(next(os.walk(analysis_directory))[2])
 
-        return_value = add_directory_files_to_database(directory = analysis.directory, description = 'MSDB analysis result.', dataset_id = dataset_id, analysis_id = analysis_id, user_id = user_id, file_names = new_files_in_directory, logger = logger)
+        return_value = add_directory_files_to_database(directory = analysis_directory, description = 'MSDB analysis result.', dataset_id = dataset_id, analysis_id = analysis_id, user_id = user_id, file_names = new_files_in_directory, logger = logger)
         file_ids = return_value.file_ids
 
-        return ReturnValue('MSDB analysis complete. {} files were produced.'.format(len(files_ids)), file_ids = [] )
+        return ReturnValue('MSDB analysis complete. {} files were produced.'.format(len(file_ids)), file_ids = [] )
 
         # immunogrep_msdb.generate_msdb_file('SRR1525444.R1.igfft.annotation', 'TAB', translate_fields=igfft_msdb_fields, output_folder_path='/data/russ/scratch/SRR1525444_14/Analysis_99', must_be_present=['CDR3'])
 
@@ -1797,6 +1797,32 @@ def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id =
         # Outputs
         # -------
         # Path of the FASTA db file created    
+
+# Standalone celery task to run MSDB analysis on a dataset. 
+# This adds a new analysis if analysis = 'new' is passed or analysis_id == None
+# Calls run_msdb_with_analysis_id
+@celery.task(base = LogTask, bind = True)
+def run_pair_vhvl_with_dataset_id(self, user_id=6, dataset_id = None, analysis_id = None, file_ids = [], analysis_name='', analysis_description='', cluster_percent = 0.9):
+    pass
+
+# Returns a ReturnValue with field file_ids which reflects only the new files added during the analysis
+@celery.task(base = LogTask, bind = True)
+def run_pair_vhvl_with_analysis_id(self, analysis_id = None, file_ids = [], user_id = None, cluster_percent = 0.9):
+
+    import immunogrep_gglab_pairing as pairing
+    import immunogrep_ngs_pair_tools as processing
+    #Run VHVL Pairing on output IGFFT Annotation Files 
+    #import sys
+    #sys.path.append('/data/resources/software/IGREP/common_tools/')
+    # Pairing settings
+    # How are CDRH3 sequences clustered (min cluster, max cluster, step size)
+    cluster_setting = [vhvl_min, vhvl_max, vhvl_step]
+    annotated_files = []
+    output_dir = '/data/russ/test/pairing_test' #should be analysis directory 
+
+    pairing.RunPairing(annotated_files, annotated_file_formats='TAB', analysis_method='GEORGIOU_INHOUSE', output_folder_path=output_dir, prefix_output_files='group_name', cluster_cutoff=cluster_setting, annotation_cluster_setting= 0.9)
+    #glob output files and add File objects to db linked to analysis 
+
 
 def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
     dataset = analysis.dataset
@@ -2744,7 +2770,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     vhvl_step = float( kwargs['vhvl_step'] )
 
     ##### Obtain Files for Analysis #####
-    files_ids_to_analyze = []
+    file_ids_to_analyze = []
     analysis_id = None
 
     with session_scope() as session:
@@ -2775,7 +2801,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
                     if not file:
                         raise Exception( 'File with id {} not found.'.format(file_id) )
                     else:
-                        files_ids_to_analyze.append(file_id)
+                        file_ids_to_analyze.append(file_id)
 
                     # add file to the output dataset if it's not in there already
                     if file not in dataset.files:
@@ -2808,7 +2834,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
             session.add(new_file)
             session.commit()
             session.refresh( new_file )
-            files_ids_to_analyze.append( new_file.id )
+            file_ids_to_analyze.append( new_file.id )
 
             # add the new file to the dataset
             dataset.files.append(new_file)
@@ -2816,9 +2842,9 @@ def run_analysis_pipeline(self, *args,  **kwargs):
             download_file( url = new_file.url, path = new_file.path, file_id = new_file.id, user_id = user_id, parent_task = task)
         else: # file_source =='file_ncbi':
             return_value = import_from_sra(accession = ncbi_accession, name=ncbi_accession, user_id = user_id, chain = ncbi_chain, project_selection = str(output_project), dataset_selection = str(output_dataset), parent_task = task)
-            files_ids_to_analyze = return_value.file_ids
+            file_ids_to_analyze = return_value.file_ids
 
-        if files_ids_to_analyze == []:
+        if file_ids_to_analyze == []:
             raise Exception('Unable to load files for analysis.')
         else:
 
@@ -2859,40 +2885,40 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         if trim_slidingwindow_size == '': trim_slidingwindow_size = 4
         if trim_slidingwindow_quality == '': trim_slidingwindow_quality = 15
 
-        return_value = run_trim_analysis_with_files(analysis_id = analysis_id, file_ids = files_ids_to_analyze, logger = logger, trim_illumina_adapters = trim_illumina_adapters, trim_slidingwindow = trim_slidingwindow, trim_slidingwindow_size = trim_slidingwindow_size, trim_slidingwindow_quality = trim_slidingwindow_quality)
-        files_ids_to_analyze = return_value.file_ids
+        return_value = run_trim_analysis_with_files(analysis_id = analysis_id, file_ids = file_ids_to_analyze, logger = logger, trim_illumina_adapters = trim_illumina_adapters, trim_slidingwindow = trim_slidingwindow, trim_slidingwindow_size = trim_slidingwindow_size, trim_slidingwindow_quality = trim_slidingwindow_quality)
+        file_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
     if pandaseq:
-        return_value = run_pandaseq_analysis_with_files(analysis_id = analysis_id, file_ids = files_ids_to_analyze, algorithm = pandaseq_algorithm, parent_task = task)
-        files_ids_to_analyze = return_value.file_ids
+        return_value = run_pandaseq_analysis_with_files(analysis_id = analysis_id, file_ids = file_ids_to_analyze, algorithm = pandaseq_algorithm, parent_task = task)
+        file_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
     ##### Perform Analysis #####
     if analysis_type == 'igrep':
 
-        return_value = unzip_files( user_id = user_id, file_ids = files_ids_to_analyze, destination_directory = analysis_directory, logger = logger)
-        files_ids_to_analyze = return_value.file_ids
+        return_value = unzip_files( user_id = user_id, file_ids = file_ids_to_analyze, destination_directory = analysis_directory, logger = logger)
+        file_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
-        return_value = run_igrep_annotation_on_dataset_files(dataset_id = dataset_id, file_ids = files_ids_to_analyze, user_id = user_id, analysis_id = analysis_id, species = species, logger = logger, parent_task = task)
-        files_ids_to_analyze = return_value.file_ids
+        return_value = run_igrep_annotation_on_dataset_files(dataset_id = dataset_id, file_ids = file_ids_to_analyze, user_id = user_id, analysis_id = analysis_id, species = species, logger = logger, parent_task = task)
+        file_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
     elif analysis_type == 'mixcr':
-        return_value = run_mixcr_analysis_id_with_files(analysis_id = analysis_id, file_ids = files_ids_to_analyze, species = species, parent_task = task)
-        files_ids_to_analyze = return_value.file_ids
+        return_value = run_mixcr_analysis_id_with_files(analysis_id = analysis_id, file_ids = file_ids_to_analyze, species = species, parent_task = task)
+        file_ids_to_analyze = return_value.file_ids
 
     elif analysis_type == 'abstar':
     
         # Abstar requires unzipped files
-        return_value = unzip_files( user_id = user_id, file_ids = files_ids_to_analyze, destination_directory = analysis_directory, logger = logger)
-        files_ids_to_analyze = return_value.file_ids
+        return_value = unzip_files( user_id = user_id, file_ids = file_ids_to_analyze, destination_directory = analysis_directory, logger = logger)
+        file_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
         # Run Abstar function
-        return_value = run_abstar_analysis_id_with_files(user_id = user_id, analysis_id = analysis_id, file_ids = files_ids_to_analyze, species = species, parent_task = task)
-        files_ids_to_analyze = return_value.file_ids
+        return_value = run_abstar_analysis_id_with_files(user_id = user_id, analysis_id = analysis_id, file_ids = file_ids_to_analyze, species = species, parent_task = task)
+        file_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
     else:
@@ -2901,30 +2927,15 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     ##### Perform Post-Processing #####
     if analysis_type == 'igrep':
         if generate_msdb:
-            return_value = run_msdb_with_analysis_id( analysis_id = analysis_id, file_ids = files_ids_to_analyze, user_id = user_id, cluster_percent = msdb_cluster_percent, parent_task = self)
+            return_value = run_msdb_with_analysis_id( analysis_id = analysis_id, file_ids = file_ids_to_analyze, user_id = user_id, cluster_percent = msdb_cluster_percent, parent_task = self)
 
         if pair_vhvl:
-            return_value = run_pair_vhvl_with_analysis_id( analysis_id = analysis_id, file_ids = files_ids_to_analyze, user_id = user_id, parent_task = self)
-
-        import immunogrep_gglab_pairing as pairing
-        import immunogrep_ngs_pair_tools as processing
-        #Run VHVL Pairing on output IGFFT Annotation Files 
-        #import sys
-        #sys.path.append('/data/resources/software/IGREP/common_tools/')
-        # Pairing settings
-        # How are CDRH3 sequences clustered (min cluster, max cluster, step size)
-        cluster_setting = [vhvl_min, vhvl_max, vhvl_step]
-        annotated_files = []
-        output_dir = '/data/russ/test/pairing_test' #should be analysis directory 
-
-        pairing.RunPairing(annotated_files, annotated_file_formats='TAB', analysis_method='GEORGIOU_INHOUSE', output_folder_path=output_dir, prefix_output_files='group_name', cluster_cutoff=cluster_setting, annotation_cluster_setting= 0.9)
-        #glob output files and add File objects to db linked to analysis 
-
+            return_value = run_pair_vhvl_with_analysis_id( analysis_id = analysis_id, file_ids = file_ids_to_analyze, user_id = user_id, parent_task = self)
 
     ##### Add files to Appropriate Dataset/Project #####
 
 
-    return ReturnValue( 'All analyses and processing completed.', file_ids = files_ids_to_analyze)
+    return ReturnValue( 'All analyses and processing completed.', file_ids = file_ids_to_analyze)
 
 
 

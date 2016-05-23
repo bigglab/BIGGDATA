@@ -61,6 +61,8 @@ from models import *
 # Hide L/R button in carousel at ends
 # Check that user directories are made if server is down
 
+# If there is an Exception in IGREP, print it in RED
+
 # Add all analysis files to analysis view/db
 # clustering is in MSDB call
 # LESS Add Mass spec for Igrep, then Abstar, then Mixcr
