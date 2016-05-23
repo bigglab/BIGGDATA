@@ -16,8 +16,8 @@ QUOTAGUARD_URL = 'http://quotaguard4189:013877db0c3e@proxy.quotaguard.com:9292'
 
 
 HOME='/data/resources/software/BIGGDATA'
-TRIMMAMATIC = 'java -jar /data/resources/software/Trimmomatic-0.35/trimmomatic-0.35.jar'
-TRIMMAMATIC_ADAPTERS = '/data/resources/software/Trimmomatic-0.35/adapters'
+TRIMMOMATIC = 'java -jar /data/resources/software/Trimmomatic-0.35/trimmomatic-0.35.jar'
+TRIMMOMATIC_ADAPTERS = '/data/resources/software/Trimmomatic-0.35/adapters'
 MIGMAP = 'java -Xmx2g -jar /data/resources/software/migmap-0.9.8/migmap-0.9.8.jar'
 
 #SCRATCH_ROOT='/data/<username>/scratch'
@@ -60,31 +60,10 @@ IGREP_PIPELINES = '/data/resources/software/IGREP/pipelines'
 
 # Set config based on computer name
 # Development only
-import subprocess
-import shlex
+# import subprocess
+# import shlex
 
 DAVES_MACHINE = False
-
-try:
-	command_line_args = shlex.split('scutil --get LocalHostName')
-	command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-	response, error = command_line_process.communicate()
-	if 'Davids-MacBook-Air' in response:
-		DAVES_MACHINE = True
-except subprocess.CalledProcessError as error:
-    error = error.output
-
-if DAVES_MACHINE:
-	IGREP_COMMON_TOOLS = '/Users/davidmagness/IGREP/common_tools'
-	IGREP_PIPELINES = '/Users/davidmagness/IGREP/pipelines'
-
-	SQLALCHEMY_DATABASE_URI = "postgresql://localhost:5432/biggdata"
-	#SQLALCHEMY_DATABASE_URI = "postgres://biggdata:jkl@127.0.0.1:6712/biggdata"
-	SQLALCHEMY_TRACK_MODIFICATIONS = True
-	SQLALCHEMY_POOL_TIMEOUT = None
-
-	TRIMMOMATIC = 'trimmomatic'
-	TRIMMOMATIC_ADAPTERS = '/usr/local/share/trimmomatic/adapters'
 
 # OPTIONS AVAILABLE ACCORDING TO app.config.__dict__  AFTER COMPILATION 
 
@@ -121,10 +100,6 @@ if DAVES_MACHINE:
  # 'S3_BUCKET': 's3://BIGGDATA',
  #  'SESSION_COOKIE_SECURE': False, 
  #  'TRAP_HTTP_EXCEPTIONS': False
-
-
-
-
 
 
 

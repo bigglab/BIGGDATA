@@ -493,23 +493,23 @@ def edit_project(project_id):
                 db.session.commit()
 
                 # determine if a JSON was submitted to be added to the project
-                try:
-                    if request.files['file'].filename != '':
+                # try:
+                #     if request.files['file'].filename != '':
 
-                        request_file = request.files['file']
-                        json_string = request_file.read()
+                #         request_file = request.files['file']
+                #         json_string = request_file.read()
 
-                        # if this function returns a string, it describes the error
-                        error = create_datasets_from_JSON_string(json_string, project)
-                        if error:
-                            flash(error, 'warning')    
-                        else:
-                            # now, we need to update the list of datasets in the project
-                            db.session.commit()
-                            flash('Success!!! Your new project has been updated.', 'success')
-                            return redirect( url_for('projects.edit_project', project_id = project.id) )
-                except:
-                    flash('There was an error in uploading your JSON file.','warning')
+                #         # if this function returns a string, it describes the error
+                #         error = create_datasets_from_JSON_string(json_string, project)
+                #         if error:
+                #             flash(error, 'warning')    
+                #         else:
+                #             # now, we need to update the list of datasets in the project
+                #             db.session.commit()
+                #             flash('Success!!! Your new project has been updated.', 'success')
+                #             return redirect( url_for('projects.edit_project', project_id = project.id) )
+                # except:
+                #     flash('There was an error in uploading your JSON file.','warning')
                 
                 flash('Success!!! Your new project has been updated.', 'success')
 

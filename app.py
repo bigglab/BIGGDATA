@@ -140,7 +140,7 @@ import celery_config
 celery.config_from_object('celery_config')
 
 # CELERY QUEUE TO SEND JOBS TO - USE FOR DEVELOPMENT 
-celery_queue = 'dev'
+celery_queue = 'default'
 
 # Add a celery logger.
 # Usage:
@@ -876,6 +876,7 @@ def run_mixcr_with_dataset_id(self, dataset_id, analysis_name='', analysis_descr
     analysis.responses = []
     analysis.available = False
     analysis.inserted_into_db = False
+    analysis.directory = '{}/Analysis_{}/'.format( dataset.directory.rstrip('/'), analysis.id ) 
     db.session.add(analysis)
     db.session.commit()
     data_files_by_chain = {}
@@ -919,13 +920,12 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
         species = 'hsa'
 
 
-
     if not analysis:
         raise Exception('MixCR Exception: Analysis with ID {} cannot be found.'.format(analysis_id))
     analysis_name = 'Analysis_{}'.format(analysis_id)
 
     files_to_execute = []
-    logger.debug( 'Running MiXCR on these files: {}'.format(files) )
+    logger.info( 'Running MiXCR on these files: {}'.format(files) )
     
     path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
     path = path.replace('///','/')
@@ -940,8 +940,6 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     print 'Path: {}'.format(path)
     print 'Base Path: {}'.format(basepath)
     print 'Base Name: {}'.format(basename)
-
-
 
     # Instantiate Source Files
     alignment_file = File()

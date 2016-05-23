@@ -408,11 +408,14 @@ _js_escapes.update(('%c' % z, '\\u%04X' % z) for z in xrange(32))
 
 def jinja2_escapejs_filter(value):
         retval = []
-        for letter in value:
-                if _js_escapes.has_key(letter):
-                        retval.append(_js_escapes[letter])
-                else:
-                        retval.append(letter)
+        if value == None: 
+            retval = []
+        else: 
+            for letter in value:
+                    if _js_escapes.has_key(letter):
+                            retval.append(_js_escapes[letter])
+                    else:
+                            retval.append(letter)
 
         return jinja2.Markup("".join(retval))
 
