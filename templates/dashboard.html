@@ -135,10 +135,19 @@
 
 <script>
 
-	var interval = 2500;
+	var interval = 5000;
 	var status_url ="{{ url_for( 'frontend.json_celery_log' ) }}"
-	var new_interval = 2500;
+	var new_interval = 5000;
 	var set_new_interval = false;	
+
+	function clear_timeouts() {
+		var id = window.setTimeout(function() {}, 0);
+
+		while (id--) {
+		    window.clearTimeout(id); // will do nothing if no timeout with id is present
+		}
+
+	}
 
     function maximize_console() {
     	div = $('#console')
@@ -154,21 +163,15 @@
     	div = $('#console')
     	space = window.innerHeight - div.offset().top - 40
 		div.css({ "height" : "20ex" });
-
     }
 
     function refresh_console() {
 		set_new_interval = true;
     	new_interval = 5000;
 		update_progress();
-
     }
 
     function delete_task(delete_url) {
-
-
-		//$('#console-container').css({"bottom":"0", "height" : "100%" });
-
 
        $.getJSON(delete_url, function(data) {
 
@@ -176,7 +179,9 @@
 
 			if (interval != data['interval']){
 				interval = data['interval']
-		
+
+				clear_timeouts();
+
 				if (timeout){
 				    clearTimeout(timeout);
 				}
@@ -190,6 +195,8 @@
 
 		if (set_new_interval){
 			interval = new_interval;
+
+			clear_timeouts();
 
 			if (timeout){
 			    clearTimeout(timeout);
@@ -224,6 +231,8 @@
 		       //  }   
 
 	   	});		
+
+		clear_timeouts();
 
 		timeout = setTimeout(function() {
 			update_progress();
@@ -248,6 +257,8 @@
 			if (interval != data['interval']){
 				interval = data['interval']
 		
+				clear_timeouts();
+
 				if (timeout){
 				    clearTimeout(timeout);
 				}
@@ -261,6 +272,8 @@
 
 		if (set_new_interval){
 			interval = new_interval;
+
+			clear_timeouts();
 
 			if (timeout){
 			    clearTimeout(timeout);
@@ -295,6 +308,8 @@
 		       //  }   
 
 	   	});		
+
+		clear_timeouts();
 
 		timeout = setTimeout(function() {
 			update_progress();

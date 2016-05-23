@@ -222,8 +222,6 @@ def create_user():
     new_user.authenticated = True 
     new_user.root_path = app.config['USER_ROOT'].replace('<username>', new_user.username)
 
-    #new_user.dropbox_path = '{}/{}{}'.format(app.config['DROPBOX_ROOT'], form.first_name.data, form.last_name.data)
-    #new_user.scratch_path = '{}/{}{}'.format(app.config['SCRATCH_ROOT'], form.first_name.data, form.last_name.data)
     db.session.add(new_user)
     db.session.commit()
     login_user(new_user, remember=True)
@@ -331,7 +329,7 @@ def file_upload():
         file.chain = form.chain.data
         file.paired_partner = form.paired_partner.data 
         file.dataset_id = form.dataset_id.data
-        file.path = '{}/{}'.format(current_user.scratch_path, file.name)
+        file.path = '{}/{}'.format(current_user.path, file.name)
         file.path.replace('//', '') 
  
         file.user_id = current_user.id
@@ -399,7 +397,7 @@ def file_download(status=[], bucket='', key=''):
         file.chain = form.chain.data
         file.paired_partner = form.paired_partner.data 
         file.dataset_id = form.dataset_id.data
-        file.path = '{}/{}'.format(current_user.scratch_path.rstrip('/'), file.name)
+        file.path = '{}/{}'.format(current_user.path.rstrip('/'), file.name)
         file.user_id = current_user.id
         file.available = False 
         file.s3_status = ''
@@ -479,7 +477,7 @@ def file_download(status=[], bucket='', key=''):
         # modify the path with the new style, the new hotness if you will
         if file_dataset:
             file.path = '{}/{}/{}'.format(
-                current_user.scratch_path.rstrip('/'),
+                current_user.path.rstrip('/'),
                 'Dataset_' + str(file_dataset.id), 
                 file.name)
 
@@ -518,6 +516,22 @@ def file_download(status=[], bucket='', key=''):
     else:
         r=''
     return render_template("file_download.html", download_form=form, status=status, r=r, current_user=current_user)
+
+
+
+
+
+
+##### Download the file here #####
+@app.route('/download/<int:file_id>', methods=['GET', 'POST'])
+def download(file_id):
+    uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
+    return send_from_directory(directory=uploads, filename=filename)
+
+
+
+
+
 
 @frontend.route('/files/transfer_to_s3/<int:file_id>', methods=['GET'])
 @login_required
@@ -723,7 +737,7 @@ def datasets():
                 flash('Error: you do not have permission to add a dataset to that project.','warning')
                 return redirect(url_for('.datasets'))
             db.session.commit()
-            d.directory = current_user.scratch_path + '/dataset_' + d.id 
+            d.directory = current_user.path.rstrip('/') + '/dataset_' + d.id 
             db.session.commit()
         return redirect(url_for('.datasets')) # render_template("datasets.html", datadict=datadict, form=Form())
     else: 
@@ -1189,7 +1203,7 @@ def pair_vhvl(dataset_id, status=[]):
         flash('Error: that dataset cannot be analyzed','warning')
         return redirect( url_for('frontend.dashboard') )
 
-    form = CreatePandaseqAnalysisForm()
+    form = CreatePairVHVLAnalysisForm()
     status = []
     if request.method == 'POST' and dataset:
         status.append('PANDASEQ Launch Detected')
@@ -1304,7 +1318,6 @@ def add_page(num):
     # return '<h4>Hi</h4>'
 
 
-
 @frontend.route('/example', methods=['GET', 'POST'])
 def example_index():
     if request.method == 'GET':
@@ -1334,8 +1347,6 @@ def longtask():
     return jsonify({}), 202, {'Location': url_for('taskstatus',
                                                   task_id=task.id)}
 
-
-
 @frontend.route('/files/import_sra', methods=['GET', 'POST'])
 @login_required
 def import_sra():
@@ -1359,7 +1370,6 @@ def import_sra():
             form.dataset.choices = dataset_tuples
     else:
         form.dataset.choices = [ ('new', 'New Dataset') ]
-
 
     # get a list of user projects for the form
     projects = Set(current_user.projects)
@@ -1403,7 +1413,7 @@ def delete_task(task_id):
     for task in tasks:
         if str(task.id) == task_id:
 
-            logfile = '{}/{}.log'.format( current_user.scratch_path.rstrip('/') , task.async_task_id )
+            logfile = '{}/{}.log'.format( current_user.path.rstrip('/') , task.async_task_id )
 
             print "Deleting {}...".format( logfile )
             try:
@@ -1422,7 +1432,6 @@ def delete_task(task_id):
 @frontend.route('/json_celery_log', methods=['GET', 'POST'])
 @login_required
 def json_celery_log():
-
 
     interval = 60000
     tasks = Set(current_user.celery_tasks)
@@ -1457,7 +1466,7 @@ def json_celery_log():
 
             log_entries = ''
 
-            logfile = '{}/{}.log'.format( current_user.scratch_path.rstrip('/') , task.async_task_id )
+            logfile = '{}/{}.log'.format( current_user.path.rstrip('/') , task.async_task_id )
 
             async_task_progress = ''
 
@@ -1593,7 +1602,7 @@ def json_celery_log():
         interval = 60000
 
     if tasks_pending:
-        interval = 2500
+        interval = 5000
 
     response = {
         'message': message,
@@ -1760,7 +1769,7 @@ def pipeline():
                     file_1.file_type = parse_file_ext(file_1.name)
                     file_1.description = build_pipeline_form.description.data
                     #file_1.dataset_id = int(build_pipeline_form.dataset.data) set later
-                    file_1.path = '{}/{}'.format(current_user.scratch_path.rstrip('/'), file_1.name)
+                    file_1.path = '{}/{}'.format(current_user.path.rstrip('/'), file_1.name)
                     file_1.path = file_1.path.replace('//', '') 
                     file_1.user_id = current_user.id
 
@@ -1796,7 +1805,7 @@ def pipeline():
 
                     file_1.file_type = parse_file_ext(file_1.name)
                     file_1.description = build_pipeline_form.description.data
-                    file_1.path = '{}/{}'.format(current_user.scratch_path.rstrip('/'), file_1.name)
+                    file_1.path = '{}/{}'.format(current_user.path.rstrip('/'), file_1.name)
                     file_1.path = file_1.path.replace('//', '') 
                     file_1.user_id = current_user.id
                     #file_1.dataset_id = int(build_pipeline_form.dataset.data)
@@ -1820,7 +1829,7 @@ def pipeline():
                     file_2.user_id = current_user.id
                     file_2.file_type = parse_file_ext(file_2.name)
                     file_2.description = build_pipeline_form.description.data
-                    file_2.path = '{}/{}'.format(current_user.scratch_path.rstrip('/'), file_2.name)
+                    file_2.path = '{}/{}'.format(current_user.path.rstrip('/'), file_2.name)
                     file_2.path = file_2.path.replace('//', '') 
                     #file_2.dataset_id = int(build_pipeline_form.dataset.data)
                     # NOT SET file.chain = build_pipeline_form.chain.data
@@ -1895,7 +1904,7 @@ def pipeline():
                 db.session.add(new_dataset)
                 db.session.flush()
                 new_dataset.name = 'Dataset ' + str(new_dataset.id)
-                new_dataset.directory = "{}/Dataset_{}".format(current_user.scratch_path.rstrip('/') , new_dataset.id)
+                new_dataset.directory = "{}/Dataset_{}".format(current_user.path.rstrip('/') , new_dataset.id)
                 dataset_file_dict[ str(new_dataset.id) ] = []
 
                 build_pipeline_form.dataset.choices.append( ( str(new_dataset.id), new_dataset.name ) )
@@ -2041,8 +2050,15 @@ def pipeline():
                 'pandaseq_algorithm' : build_pipeline_form.pandaseq_algorithm.data,
                 'cluster' : build_pipeline_form.cluster.data,
                 'species' : build_pipeline_form.species.data,
-                'generate_msdb' : build_pipeline_form.generate_msdb.data
-                
+                'generate_msdb' : build_pipeline_form.generate_msdb.data,
+                'pair_vhvl' : build_pipeline_form.pair_vhvl.data,
+                'msdb_cluster_percent' : str(build_pipeline_form.msdb_cluster_percent.data),
+                'require_cdr1' : build_pipeline_form.require_cdr1.data,
+                'require_cdr2' : build_pipeline_form.require_cdr2.data,
+                'require_cdr3' : build_pipeline_form.require_cdr3.data,
+                'vhvl_min' : str(build_pipeline_form.vhvl_min.data),
+                'vhvl_max' : str(build_pipeline_form.vhvl_max.data),
+                'vhvl_step' : str(build_pipeline_form.vhvl_step.data)
             }
 
             result = run_analysis_pipeline.apply_async( (), form_output_dict, queue=celery_queue)

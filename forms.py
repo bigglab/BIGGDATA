@@ -59,12 +59,21 @@ class CreateMSDBAnalysisForm(Form):
     dataset_id = IntegerField()
     name = TextField(u'Name', )
     description = TextField(u'Description')
-    cluster_percent = DecimalField(places=2, rounding=None)
-    cluster_on_cdr1 = BooleanField()
-    cluster_on_cdr2 = BooleanField()
-    cluster_on_cdr3 = BooleanField()
+    msdb_cluster_percent = DecimalField(places=2, rounding=None)
+    require_cdr1 = BooleanField()
+    require_cdr2 = BooleanField()
+    require_cdr3 = BooleanField()
 
-
+class CreateVHVLPairingAnalysisForm(Form): 
+    dataset_id = IntegerField()
+    name = TextField(u'Name', )
+    description = TextField(u'Description')
+    require_cdr1 = BooleanField()
+    require_cdr2 = BooleanField()
+    require_cdr3 = BooleanField()
+    vhvl_min = DecimalField('VH/VL Min', places=2, rounding=None, default = 0.96)
+    vhvl_max = DecimalField('VH/VL Max', places=2, rounding=None, default = 0.96)
+    vhvl_step = DecimalField('VH/VL Step', places=2, rounding=None, default = 0.0   )
 
 class FileDownloadForm(Form):
     url     = TextField(u'File URL', validators=[validators.input_required()], widget=TextInput())
@@ -258,6 +267,15 @@ class BuildPipelineForm(Form):
     
     cluster = BooleanField(u'Cluster Sequences')
     generate_msdb = BooleanField(u'Generate Mass Spec Database')
+    pair_vhvl = BooleanField(u'Run VHVL Pairing on IGFFT Annotation Files')
 
+    msdb_cluster_percent = DecimalField('Cluster Percent (MSDB)', places=2, rounding=None, default = 0.9)
+    require_cdr1 = BooleanField()
+    require_cdr2 = BooleanField()
+    require_cdr3 = BooleanField()
+
+    vhvl_min = DecimalField('VH/VL Min', places=2, rounding=None, default = 0.96)
+    vhvl_max = DecimalField('VH/VL Max', places=2, rounding=None, default = 0.96)
+    vhvl_step = DecimalField('VH/VL Step', places=2, rounding=None, default = 0.0   )
 
 

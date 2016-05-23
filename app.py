@@ -300,7 +300,7 @@ class LogTask(Task):
 
                     if user:
                         self.user_found = True
-                        logfile = '{}/{}.log'.format( user.scratch_path.rstrip('/') , logger_id )
+                        logfile = '{}/{}.log'.format( user.path.rstrip('/') , logger_id )
                         celery_logger.debug( 'Starting log file at {}'.format( logfile ) )
                     else:
                         user_found = False
@@ -507,8 +507,8 @@ def instantiate_user_with_directories(new_user_id):
             return 'Warning: share root path "{}"" not found'.format(share_root)
         print 'copying these files to new users dropbox: {}'.format(','.join(files))
         for f in files: 
-            fullfilepath = '{}/{}'.format(new_user.dropbox_path, f)
-            copyfile('{}/{}'.format(share_root, f), '{}/{}'.format(new_user.dropbox_path, f))
+            fullfilepath = '{}/{}'.format(new_user.path, f)
+            copyfile('{}/{}'.format(share_root, f), '{}/{}'.format(new_user.path, f))
             link_file_to_user(fullfilepath, new_user.id, f)
         return False 
     except ValueError, error:
@@ -579,7 +579,7 @@ def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_
         db.session.add(new_dataset)
         db.session.flush()
         new_dataset.name = accession + '_' + str(new_dataset.id)
-        new_dataset.directory = "{}/Dataset_{}".format(user.scratch_path.rstrip('/') , new_dataset.id)
+        new_dataset.directory = "{}/Dataset_{}".format(user.path.rstrip('/') , new_dataset.id)
         file_dataset = new_dataset
         logger.info( 'New file will be added to dataset "{}".'.format(new_dataset.name) )
         db.session.commit()
@@ -641,12 +641,12 @@ def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_
     # modify the path with the new style, the new hotness if you will
     if file_dataset:
         path = '{}/{}/{}'.format(
-            user.scratch_path.rstrip('/'),
+            user.path.rstrip('/'),
             'Dataset_' + str(file_dataset.id), 
             accession)
     else:
         path = '{}/{}'.format(
-            user.scratch_path.rstrip('/'), 
+            user.path.rstrip('/'), 
             accession)
 
     # check if the file path we settled on is available.
@@ -740,12 +740,12 @@ def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, 
         d.chain_types_sequenced = [chain]
         db.session.add(d)
         db.session.commit()
-        d.directory = current_user.scratch_path.rstrip('/') + '/Dataset_' + str(d.id)
+        d.directory = current_user.path.rstrip('/') + '/Dataset_' + str(d.id)
     else:
         d = dataset
 
     if not d.directory:
-        d.directory = current_user.scratch_path.rstrip('/') + '/Dataset_' + str(d.id)
+        d.directory = current_user.path.rstrip('/') + '/Dataset_' + str(d.id)
         db.session.commit()
 
     if not os.path.exists(d.directory):
@@ -927,9 +927,9 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     files_to_execute = []
     logger.debug( 'Running MiXCR on these files: {}'.format(files) )
     
-    scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
-    scratch_path = scratch_path.replace('///','/')
-    scratch_path = scratch_path.replace('//','/')
+    path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
+    path = path.replace('///','/')
+    path = path.replace('//','/')
 
     #basename = files[0].path.split('/')[-1].split('.')[0]
     basename = analysis_name
@@ -937,7 +937,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     logger.info( 'Writing output files to base name: {}'.format(basepath) )
     output_files = []
 
-    print 'Scratch Path: {}'.format(scratch_path)
+    print 'Path: {}'.format(path)
     print 'Base Path: {}'.format(basepath)
     print 'Base Name: {}'.format(basename)
 
@@ -1129,9 +1129,9 @@ def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, 
         files_to_execute = []
         logger.debug( 'Running Abstar on these files: {}'.format(files) )
         
-        scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
-        scratch_path = scratch_path.replace('///','/')
-        scratch_path = scratch_path.replace('//','/')
+        path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
+        path = path.replace('///','/')
+        path = path.replace('//','/')
 
         basename = analysis_name
         basepath = analysis.directory
@@ -1401,8 +1401,8 @@ def run_pandaseq_analysis_with_files(self, analysis_id, file_ids, algorithm='pea
     dataset = analysis.dataset
     files_to_execute = []
     logger.info( 'Running PANDAseq on these files: {}'.format( ', '.join( [file.name for file in files] ) ) )
-    scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
-    scratch_path = scratch_path.replace('//','/')
+    path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
+    path = path.replace('//','/')
     #basename = files[0].path.split('/')[-1].split('.')[0]
     basename = analysis_name
     basepath = '{0}/{1}'.format(analysis.directory.rstrip('/'), basename)
@@ -1514,8 +1514,8 @@ def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = c
     dataset = analysis.dataset
     files_to_execute = []
     logger.info( 'Running Trimmomatic on files {}.'.format( ', '.join( [str(file.id) for file in files] ) ) )
-    scratch_path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
-    scratch_path = scratch_path.replace('//', '/')
+    path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
+    path = path.replace('//', '/')
 
     basename = files[0].path.split('/')[-1].split('.')[0]
     basepath = '{0}/{1}'.format(analysis.directory, analysis_name)
@@ -1626,8 +1626,75 @@ def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = c
     logger.info( 'Trim job for analysis {} has been executed.'.format(analysis) )
     return ReturnValue( 'Success', file_ids = output_file_ids)
 
+# Standalone celery task to run MSDB analysis on a dataset. 
+# This adds a new analysis if analysis = 'new' is passed or analysis_id == None
+# Calls run_msdb_with_analysis_id
 @celery.task(base = LogTask, bind = True)
-def run_msdb_with_dataset_id(self, dataset_id, analysis_name='', analysis_description='', user_id=6, algorithm='pear'):
+def run_msdb_with_dataset_id(self, user_id=6, dataset_id = None, analysis_id = None, file_ids = [], analysis_name='', analysis_description='', cluster_percent = 0.9):
+
+    logger = self.logger
+    
+    file_paths_to_analyze = []
+    with session_scope() as session:
+
+        dataset = session.query(Dataset).get(dataset_id)
+        user = session.query(User).get(user_id)
+
+        if file_ids:
+            files = map(lambda x: session.query(File).filter(File.id==x).first(), file_ids)
+        else:
+            files = dataset.files
+            file_ids = [file.id for file in files]
+
+        if analysis_id == None or analysis_id == 'new':
+
+            analysis = Analysis()
+
+            #CONSTRUCT AND SAVE ANALYSIS OBJECT
+            analysis_description = analysis_description
+            analysis.user_id = user_id
+            analysis.dataset_id = dataset_id
+            #analysis.program = analysis_type
+            # analysis.db_status = 'WAITING'
+            analysis.started = 'now'
+            analysis.files_to_analyze = map(lambda i: int(i), file_ids)
+            analysis.params = {}
+            analysis.status = 'QUEUED'
+            analysis.responses = []
+            analysis.available = False
+            analysis.inserted_into_db = False
+            session.add(analysis)
+            session.commit()
+            session.refresh(analysis)
+
+            if analysis_name == '':
+                analysis.name = 'Analysis {}'.format(analysis.id)
+            else:
+                analysis.name = analysis_name
+
+            if dataset.directory:
+                analysis.directory = dataset.directory.rstrip('/') + '/Analysis_' + str(analysis.id)
+            else: 
+                analysis.directory = analysis.dataset.user.path.rstrip('/') + '/Analysis_' + str(analysis.id)
+            if not os.path.exists(analysis.directory):
+                logger.info ( 'Making analysis directory {}'.format( analysis.directory ) )
+                os.makedirs(analysis.directory)
+        else:
+            analysis = session.query(Analysis).get(analysis_id)
+
+    return_value = run_msdb_with_analysis_id(analysis_id = analysis_id, file_ids = file_ids, analysis_name='', analysis_description='', user_id=6, cluster_percent = cluster_percent, parent_task = self)
+    file_ids = return_value.file_ids
+
+    # Clean up the analysis results here
+
+# Returns a ReturnValue with field file_ids which reflects only the new files added during the analysis
+@celery.task(base = LogTask, bind = True)
+def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id = None, cluster_percent = 0.9):
+
+    logger = self.logger
+
+    logger.info('Running MSDB analysis. ')
+
     igfft_msdb_fields = {
         'ABSEQ.AA': "Full_Length_Sequence.AA",
         'CDR3.AA': 'CDR3_Sequence.AA',
@@ -1643,28 +1710,103 @@ def run_msdb_with_dataset_id(self, dataset_id, analysis_name='', analysis_descri
     }
 
     file_paths_to_analyze = []
+    files_in_directory = []
+
+    analysis_directory = None
+
     with session_scope() as session:
-        files = session.query(File).filter(File.id.in_(files_ids_to_analyze)).all()
+        analysis = session.query(Analysis).get(analysis_id)
+        user = session.query(User).get(user_id)
+
+        if analysis: 
+            dataset_id = analysis.dataset.id
+            dataset = analysis.dataset
+            analysis_directory = analysis.directory
+        else:
+            analysis_directory = user.path
+
+        if file_ids == []:
+            files = dataset.files
+        else:
+            files = session.query(File).filter(File.id.in_(file_ids)).all()
+        
+        user = session.query(User).get(user_id)
+
         for file in files:
             if file.file_type == 'IGFFT_ANNOTATION':
                 file_paths_to_analyze.append(file.path)
 
+        files_in_directory = Set(next(os.walk(analysis.directory))[2])
+
     if file_paths_to_analyze == []:
         logger.warning('No output files from IGREP analysis were found. Skipping mass spec analysis.')
+        return ReturnValue('No MSDB analysis was performed.', file_ids = [])
     else:
         for file_path in file_paths_to_analyze:
-            immunogrep_msdb.generate_msdb_file(file_path, 'TAB', translate_fields=igfft_msdb_fields, output_folder_path= analysis_directory, must_be_present=['CDR3'])
-    
+            immunogrep_msdb.generate_msdb_file(file_path, 'TAB', translate_fields=igfft_msdb_fields, output_folder_path= analysis_directory, cluster_id = cluster_percent, must_be_present=['CDR3'])
 
-    # lots of cool stuff happens here
+        new_files_in_directory = files_in_directory - Set(next(os.walk(analysis.directory))[2])
+
+        return_value = add_directory_files_to_database(directory = analysis.directory, description = 'MSDB analysis result.', dataset_id = dataset_id, analysis_id = analysis_id, user_id = user_id, file_names = new_files_in_directory, logger = logger)
+        file_ids = return_value.file_ids
+
+        return ReturnValue('MSDB analysis complete. {} files were produced.'.format(len(files_ids)), file_ids = [] )
+
+        # immunogrep_msdb.generate_msdb_file('SRR1525444.R1.igfft.annotation', 'TAB', translate_fields=igfft_msdb_fields, output_folder_path='/data/russ/scratch/SRR1525444_14/Analysis_99', must_be_present=['CDR3'])
+
+        # Main function for generating a FASTA mass spec db file using annotation. User passes in a list of input files generated from an annotation program,
+        # and this function will output a FASTA file that can be used as a reference db for identifying peptides from mass spec. It will also generate a summary file
+        # describing which filters were passed.
+
+        # Parameters
+        # ----------
+        # input_files : list of strings
+        #     corresponding to filepaths for each annotated file.
+        #     .. note::IMGT filepath format
+        #         If the input files come from IMGT analyses, then input_files can either be a list of lists (i.e. 11 files per experiment) or a single list of all experiment filenames
+        #         (i.e. program will split files into proper experiments)
+        # filetype : string, default None
+        #     Describes the filetype of the input files. file type can be either TAB, CSV, FASTA, FASTQ, IMGT
+        # output_folder_path : string
+        #     Filepath for returning results. If not defined, will make a new folder
+        # dbidentifier : string, default None
+        #     A string identifier to label the mass spec database file
+        # dataset_tags : list of strings; default None
+        #     If defined, then this will be used as the identifier for each file/dataset. If Not defined (dataset_tags is None) then the experiment identifier will be equal to the filepath
+        #     names defined by input_files.
+        #     .. important::
+        #         If defined, the length of the string must be equal to the length of the input files/each unique dataset provided
+        #     .. note::
+        #         The following characters are replaced from the tags: '_', ' ',':', '|' and ',' are replaced by '-'
+        # translate_fields : dict, default {}
+        #     This defines which fields in the file corresponds to fields we need for the analysis.
+        #     key = field we use in the program, value = field name in the provided file(s)
+        #     If empty, then this variable will assume the field names are the exact same as the fields we use in this program (see default_fields)
+        # cluster_id : float, default 0.9 - INPUT default 0.9
+        #     The percent identity required for clonotyping
+        # must_be_present : list of strings, default ['CDR1','CDR2','CDR3']
+        #     This will define which CDR fields MUST be present in the sequence to be considered for analysis.
+        #     .. note::Fields
+        #         Only CDR1, CDR2, and CDR3 can be defined in this list
+        #     .. note::CDR3
+        #         CDR3 will ALWAYS be required for this analysis
+        # use_vl_sequences : boolean, default False
+        #     If True, then any VL sequences detected in the provided experiments will be appended to the database file.
+        #     If False, then the program will append a default VL sequence list generated by Sebastian and stored in the database
+        # low_read_count : int, default 1     
+        #     filter for >= read count
+
+        # Outputs
+        # -------
+        # Path of the FASTA db file created    
 
 def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
     dataset = analysis.dataset
     files_to_execute = []
     print 'RUNNING USEARCH CLUSTERING ON THIS FILE: {}'.format(file)
-    scratch_path = '/{}'.format('/'.join(file.path.split('/')[:-1]))
+    path = '/{}'.format('/'.join(file.path.split('/')[:-1]))
     basename = file.path.split('/')[-1].split('.')[0]
-    basepath = '{}/{}'.format(scratch_path, basename)
+    basepath = '{}/{}'.format(path, basename)
     print 'Writing output files to base name: {}'.format(basepath)
     output_files = []
     # Instantiate Source Files
@@ -1717,7 +1859,6 @@ def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
     print 'Uclust job for analysis {} has been executed.'.format(analysis)
     return files_to_execute
 
-
 @celery.task(base = LogTask, bind = True)
 def run_analysis(self, analysis_id = None, dataset_id = None, file_ids = [], user_id = None, analysis_type='IGFFT', analysis_name='', analysis_description='', trim=False, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01]): 
 
@@ -1758,7 +1899,7 @@ def run_analysis(self, analysis_id = None, dataset_id = None, file_ids = [], use
         if dataset.directory:
             analysis.directory = dataset.directory.rstrip('/') + '/Analysis_' + str(analysis.id)
         else: 
-            analysis.directory = analysis.dataset.user.scratch_path.rstrip('/') + '/Analysis_' + str(analysis.id)
+            analysis.directory = analysis.dataset.user.path.rstrip('/') + '/Analysis_' + str(analysis.id)
         if not os.path.exists(analysis.directory):
             logger.info ( 'Making analysis directory {}'.format( analysis.directory ) )
             os.makedirs(analysis.directory)
@@ -1804,10 +1945,10 @@ def run_analysis(self, analysis_id = None, dataset_id = None, file_ids = [], use
     #logger.info( 'Annotated file ids from igfft: {}'.format(', '.join(annotated_files) ), file_ids = annotated_file_ids )
     return ReturnValue( 'Annotated file ids from igfft: {}'.format(', '.join(annotated_files) ), file_ids = annotated_file_ids )
 
-# PAIR 
+    # PAIR 
 
 
-# CLUSTER
+    # CLUSTER
 
 
 def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysis_id = None, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01], species = None, logger = celery_logger, parent_task = None):
@@ -1870,7 +2011,6 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysi
             commands.append(script_command)
 
         session_objects = expunge_session_objects(session)
-
     ##### End database session #####
 
     for command in commands:
@@ -1964,8 +2104,7 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysi
             logger.error('Error executing command.')
             logger.error(error)
 
-##### Open a new session #####
-
+    ##### Open a new session #####
     with session_scope() as session:
 
         add_session_objects(session, session_objects)
@@ -2008,8 +2147,7 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysi
 
     if not all_files_created:
         raise Exception( 'IGREP/IGFFT failed to create all files ({}/{}). The following files were not created: {}'.format( number_files_created, total_files, ' '.join(files_not_created) ) )
-
-##### End of session #####
+    ##### End of session #####
 
     return ReturnValue( 'IGREP analysis complete.', file_ids = annotated_file_ids )
 
@@ -2249,7 +2387,7 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysi
             logger.error('Error executing command.')
             logger.error(error)
 
-##### Open a new session #####
+    ##### Open a new session #####
 
     with session_scope() as session:
 
@@ -2294,7 +2432,7 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysi
     if not all_files_created:
         raise Exception( 'IGREP/IGFFT failed to create all files ({}/{}). The following files were not created: {}'.format( number_files_created, total_files, ' '.join(files_not_created) ) )
 
-##### End of session #####
+    ##### End of session #####
 
     return ReturnValue( 'IGREP analysis complete.', file_ids = annotated_file_ids )
 
@@ -2492,26 +2630,31 @@ def test_function(self, analysis_id = None, user_id = None):
         if not analysis:
             logger.error( 'Error: analysis with ID {} not found.'.format(analysis_id) )
         else:
-            return_value = add_directory_files_to_database(directory = analysis.directory, logger = logger)
+            return_value = add_directory_files_to_database(directory = analysis.directory, dataset_id = analysis.dataset_id, analysis_id = analysis.id, user_id = user_id, logger = logger)
 
     logger.info('Ending test.')
 
     return ReturnValue('Test completed successfully.')
 
+def test_print():
+    print "This is just a test."
+
+
 # Adds all files in a directory (not already in database) to database
 # Returns a list of file ids
-def add_directory_files_to_database(directory = None, description = None, dataset_id = None, analysis_id = None, user_id = user_id, logger = celery_logger):
+def add_directory_files_to_database(directory = None, description = None, dataset_id = None, analysis_id = None, user_id = None, file_names = None, logger = celery_logger):
 
-    file_type_dict = [
+    file_type_dict = {
         'gz' : 'GZIPPED_FASTQ' ,
         'cdr3_clonotype' : 'CDR3_CLONOTYPE' ,
         'cdr3list' : 'CDR3_LIST' ,
         'Gucken' : 'MAL_GUCKEN' ,
         'msDB' : 'MSDB' ,
         'parsed_summary' : 'MSDB_SUMMARY' 
-    ]
+    }
 
-    file_names = next(os.walk(directory))[2]
+    if file_names == None:
+        file_names = next(os.walk(directory))[2]
 
     number_added_files = 0
     added_file_ids = []
@@ -2543,7 +2686,7 @@ def add_directory_files_to_database(directory = None, description = None, datase
 
                 # Use the default extension, unless we know better
                 new_file.file_type = parse_file_ext(new_file.name)
-                for search_str, file_type in file_type_dict:
+                for search_str, file_type in file_type_dict.iteritems():
                     if search_str in file_name:
                         new_file.file_type = file_type
 
@@ -2552,12 +2695,6 @@ def add_directory_files_to_database(directory = None, description = None, datase
                 session.refresh( new_file )
                 added_file_ids.append( new_file.id )
                 number_added_files += 1
-
-
-
-
-
-
 
     return ReturnValue('{} files added to database.'.format(number_added_files), file_ids = added_file_ids )
 
@@ -2599,6 +2736,14 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     cluster = kwargs['cluster']
     species = kwargs['species']
     generate_msdb = kwargs['generate_msdb']
+    pair_vhvl = kwargs['pair_vhvl']
+    msdb_cluster_percent = float( kwargs['msdb_cluster_percent'] )
+    require_cdr1 = kwargs['require_cdr1']
+    require_cdr2 = kwargs['require_cdr2']
+    require_cdr3 = kwargs['require_cdr3']
+    vhvl_min = float( kwargs['vhvl_min'] )
+    vhvl_max = float( kwargs['vhvl_max'] )
+    vhvl_step = float( kwargs['vhvl_step'] )
 
     ##### Obtain Files for Analysis #####
     files_ids_to_analyze = []
@@ -2653,7 +2798,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
             new_file.description = description
             new_file.chain = download_chain
             new_file.dataset_id = output_dataset
-            new_file.path = '{}/{}'.format(current_user.scratch_path.rstrip('/'), new_file.name)
+            new_file.path = '{}/{}'.format(current_user.path.rstrip('/'), new_file.name)
             new_file.user_id = user_id
             new_file.available = False 
             new_file.s3_status = ''
@@ -2703,7 +2848,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
             if dataset.directory:
                 analysis.directory = dataset.directory.rstrip('/') + '/Analysis_' + str(analysis.id)
             else: 
-                analysis.directory = analysis.dataset.user.scratch_path.rstrip('/') + '/Analysis_' + str(analysis.id)
+                analysis.directory = analysis.dataset.user.path.rstrip('/') + '/Analysis_' + str(analysis.id)
             analysis_directory = analysis.directory
 
             if not os.path.isdir( analysis_directory ):
@@ -2755,123 +2900,34 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     else:
         raise Exception( 'Analysis type "{}" cannot be performed.'.format(analysis_type) )
 
-    if generate_msdb:
-        if analysis_type == 'igrep':
-
-            igfft_msdb_fields = {
-                'ABSEQ.AA': "Full_Length_Sequence.AA",
-                'CDR3.AA': 'CDR3_Sequence.AA',
-                'VREGION.VGENES': 'Top_V-Gene_Hits',
-                'JREGION.JGENES': 'Top_J-Gene_Hits',
-                'ISOTYPE.GENES': "Isotype",
-                'DREGION.DGENES': '',
-                'RECOMBINATIONTYPE': 'Recombination_Type', # this is not necessary as the program will guess it if not provided
-                'VREGION.CDR1.AA': "CDR1_Sequence.AA",
-                'VREGION.CDR2.AA': "CDR2_Sequence.AA",
-                'VREGION.SHM.NT_PER': "VRegion.SHM.Per_nt",
-                'JREGION.SHM.NT_PER': "JRegion.SHM.Per_nt", 
-            }
-
-            file_paths_to_analyze = []
-            with session_scope() as session:
-                files = session.query(File).filter(File.id.in_(files_ids_to_analyze)).all()
-                for file in files:
-                    if file.file_type == 'IGFFT_ANNOTATION':
-                        file_paths_to_analyze.append(file.path)
-
-            if file_paths_to_analyze == []:
-                logger.warning('No output files from IGREP analysis were found. Skipping mass spec analysis.')
-            else:
-                for file_path in file_paths_to_analyze:
-                    immunogrep_msdb.generate_msdb_file(file_path, 'TAB', translate_fields=igfft_msdb_fields, output_folder_path= analysis_directory, must_be_present=['CDR3'])
-        else:
-            logger.warning('Cannot generate mass spec database file using analysis type {}.'.format(analysis_type) )
-
-
-# immunogrep_msdb.generate_msdb_file('SRR1525444.R1.igfft.annotation', 'TAB', translate_fields=igfft_msdb_fields, output_folder_path='/data/russ/scratch/SRR1525444_14/Analysis_99', must_be_present=['CDR3'])
-
-        # Main function for generating a FASTA mass spec db file using annotation. User passes in a list of input files generated from an annotation program,
-        # and this function will output a FASTA file that can be used as a reference db for identifying peptides from mass spec. It will also generate a summary file
-        # describing which filters were passed.
-
-        # Parameters
-        # ----------
-        # input_files : list of strings
-        #     corresponding to filepaths for each annotated file.
-        #     .. note::IMGT filepath format
-        #         If the input files come from IMGT analyses, then input_files can either be a list of lists (i.e. 11 files per experiment) or a single list of all experiment filenames
-        #         (i.e. program will split files into proper experiments)
-        # filetype : string, default None
-        #     Describes the filetype of the input files. file type can be either TAB, CSV, FASTA, FASTQ, IMGT
-        # output_folder_path : string
-        #     Filepath for returning results. If not defined, will make a new folder
-        # dbidentifier : string, default None
-        #     A string identifier to label the mass spec database file
-        # dataset_tags : list of strings; default None
-        #     If defined, then this will be used as the identifier for each file/dataset. If Not defined (dataset_tags is None) then the experiment identifier will be equal to the filepath
-        #     names defined by input_files.
-        #     .. important::
-        #         If defined, the length of the string must be equal to the length of the input files/each unique dataset provided
-        #     .. note::
-        #         The following characters are replaced from the tags: '_', ' ',':', '|' and ',' are replaced by '-'
-        # translate_fields : dict, default {}
-        #     This defines which fields in the file corresponds to fields we need for the analysis.
-        #     key = field we use in the program, value = field name in the provided file(s)
-        #     If empty, then this variable will assume the field names are the exact same as the fields we use in this program (see default_fields)
-        # cluster_id : float, default 0.9 - INPUT default 0.9
-        #     The percent identity required for clonotyping
-        # must_be_present : list of strings, default ['CDR1','CDR2','CDR3']
-        #     This will define which CDR fields MUST be present in the sequence to be considered for analysis.
-        #     .. note::Fields
-        #         Only CDR1, CDR2, and CDR3 can be defined in this list
-        #     .. note::CDR3
-        #         CDR3 will ALWAYS be required for this analysis
-        # use_vl_sequences : boolean, default False
-        #     If True, then any VL sequences detected in the provided experiments will be appended to the database file.
-        #     If False, then the program will append a default VL sequence list generated by Sebastian and stored in the database
-        # low_read_count : int, default 1     
-        #     filter for >= read count
-
-        # Outputs
-        # -------
-        # Path of the FASTA db file created
-
-# def generate_msdb_file(input_files, filetype=None, output_folder_path=None, dbidentifier=None, dataset_tags=None, translate_fields={}, cluster_id=0.9, must_be_present=['CDR1', 'CDR2', 'CDR3'], use_vl_sequences=False, pc_file_location=None, vl_file_location=None, low_read_count=1):
-
-
-    return ReturnValue( 'All analyses and processing completed.', file_ids = files_ids_to_analyze)
-
     ##### Perform Post-Processing #####
+    if analysis_type == 'igrep':
+        if generate_msdb:
+            return_value = run_msdb_with_analysis_id( analysis_id = analysis_id, file_ids = files_ids_to_analyze, user_id = user_id, cluster_percent = msdb_cluster_percent, parent_task = self)
+
+        if pair_vhvl:
+            return_value = run_pair_vhvl_with_analysis_id( analysis_id = analysis_id, file_ids = files_ids_to_analyze, user_id = user_id, parent_task = self)
+
+        import immunogrep_gglab_pairing as pairing
+        import immunogrep_ngs_pair_tools as processing
+        #Run VHVL Pairing on output IGFFT Annotation Files 
+        #import sys
+        #sys.path.append('/data/resources/software/IGREP/common_tools/')
+        # Pairing settings
+        # How are CDRH3 sequences clustered (min cluster, max cluster, step size)
+        cluster_setting = [vhvl_min, vhvl_max, vhvl_step]
+        annotated_files = []
+        output_dir = '/data/russ/test/pairing_test' #should be analysis directory 
+
+        pairing.RunPairing(annotated_files, annotated_file_formats='TAB', analysis_method='GEORGIOU_INHOUSE', output_folder_path=output_dir, prefix_output_files='group_name', cluster_cutoff=cluster_setting, annotation_cluster_setting= 0.9)
+        #glob output files and add File objects to db linked to analysis 
 
 
     ##### Add files to Appropriate Dataset/Project #####
 
 
-    # for key in kwargs:
-    #     logger.info( '{}: {}'.format(key, kwargs[key]) )
+    return ReturnValue( 'All analyses and processing completed.', file_ids = files_ids_to_analyze)
 
-    # [Task 10 (run_analysis_pipeline) - SUCCESS] None
-    # [2016-05-11 11:35:12,715: INFO] trim: False 
-    # [2016-05-11 11:35:12,716: INFO] file_source: file_dataset 
-    # [2016-05-11 11:35:12,716: INFO] trim_slidingwindow: False 
-    # [2016-05-11 11:35:12,717: INFO] cluster: False 
-    # [2016-05-11 11:35:12,718: INFO] pandaseq_algorithm: ea_util 
-    # [2016-05-11 11:35:12,718: INFO] analysis_type: igrep 
-    # [2016-05-11 11:35:12,719: INFO] trim_illumina_adapters: False 
-    # [2016-05-11 11:35:12,720: INFO] pandaseq: True 
-    # [2016-05-11 11:35:12,720: INFO] gsaf_url: 
-    # [2016-05-11 11:35:12,720: INFO] trim_slidingwindow_quality: None 
-    # [2016-05-11 11:35:12,721: INFO] user_id: 1 
-    # [2016-05-11 11:35:12,721: INFO] download_url: 
-    # [2016-05-11 11:35:12,722: INFO] ncbi_accession: 
-    # [2016-05-11 11:35:12,722: INFO] description: 
-    # [2016-05-11 11:35:12,723: INFO] ncbi_chain: HEAVY 
-    # [2016-05-11 11:35:12,723: INFO] dataset_files: [u'2'] 
-    # [2016-05-11 11:35:12,724: INFO] trim_slidingwindow_size: None 
-    # [2016-05-11 11:35:12,724: INFO] download_chain: HEAVY 
-    # [2016-05-11 11:35:12,725: INFO] gsaf_chain: None 
-    # [2016-05-11 11:35:12,725: INFO] output_project: 1 
-    # [2016-05-11 11:35:12,726: INFO] output_dataset: 1 
 
 
 

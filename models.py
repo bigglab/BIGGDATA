@@ -126,33 +126,19 @@ class User(db.Model):
             self.user_type = 'researcher'
 
         @hybrid_property
-        def raw_path(self):
-            return self.root_path + 'raw/'
-
-        @hybrid_property
-        def dropbox_path(self):
-            return self.root_path + 'dropbox/'
-
-        @hybrid_property
         def scratch_path(self):
-            return self.root_path + 'scratch/'
+            return self.root_path
 
         @hybrid_property
-        def filtered_path(self):
-            return self.root_path + 'filtered/'
+        def path(self):
+            return self.root_path
 
         # returns all user paths, beginning with the user root path
         # intended for use in instantiating user directories
         @hybrid_property
         def all_paths(self):
-            paths = [self.root_path, self.raw_path, self.scratch_path, self.filtered_path, self.dropbox_path]
+            paths = [ self.root_path ]
             return paths
-
-        # @hybrid_property
-        # def is_migrated(self):
-        #     if self.old_dropbox_path != '' or self.old_scratch_path != '':
-        #         return False
-        #     return True
 
         @hybrid_property
         def default_dataset(self):
