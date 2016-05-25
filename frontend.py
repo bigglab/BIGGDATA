@@ -53,7 +53,7 @@ import wtforms
 from flask_wtf import Form
 import random
 import jinja2 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Boolean
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import JSON, JSONB, ARRAY, BIT, VARCHAR, INTEGER, FLOAT, NUMERIC, OID, REAL, TEXT, TIME, TIMESTAMP, TSRANGE, UUID, NUMRANGE, DATERANGE
@@ -106,8 +106,10 @@ nav.register_element('frontend_user', Navbar(
         ),
     Subgroup(
         'Run Analysis', 
-        View('Create Analysis Pipline', 'frontend.pipeline'),
         View('My Analyses', 'frontend.analyses'),
+        View('Create Analysis Pipline', 'frontend.pipeline'),
+        View('Create MSDB from Annotations', 'frontend.msdb'),
+        View('Pair VH/VL Annotations', 'frontend.pair_vhvl'),
         View('VDJ VIZualizer', 'frontend.vdj_visualizer'),
         ),
     Subgroup(
@@ -197,7 +199,6 @@ def create_user():
     result = instantiate_user_with_directories.apply_async((new_user.id, ), queue=celery_queue)
     return redirect(url_for("frontend.dashboard"))
 
-
 @frontend.route("/logout", methods=["GET"])
 def logout():
     """Logout the current user."""
@@ -228,7 +229,6 @@ def dashboard(status=[]):
     for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
         analysis_file_dict[analysis] = analysis.files.all() 
     return render_template("dashboard.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status, current_user=current_user)
-
 
 @frontend.route('/file_upload', methods=['GET', 'POST'])
 @login_required
@@ -304,37 +304,13 @@ def file_download(status=[], bucket='', key=''):
         form = FileDownloadForm(data={'url':'https://s3.amazonaws.com/{}/{}'.format(bucket, key)})
     else: 
         form = FileDownloadForm()
+        form.dataset.choices = get_dataset_choices(current_user, new = True)
+        form.project.choices = get_project_choices(current_user, new = True)
 
-        # set the dataset options
-        datasets = Set(current_user.datasets)
-        datasets.discard(None)
-        datasets.discard(current_user.default_dataset)
-
-        datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
-        dataset_tuples = []
-
-        if len(datasets) > 0:
-            for dataset in datasets:
-                dataset_tuples.append( (str(dataset.id), dataset.name))
-
-            if len(dataset_tuples) > 0:
-                #dataset_tuples.append(('new', 'New Dataset'))
-                dataset_tuples.insert(0,('new', 'New Dataset'))
-                form.dataset.choices = dataset_tuples
-
-        # get a list of user projects for the form
+        # get a list of user projects for user later
         projects = Set(current_user.projects)
         projects.discard(None)
         projects = sorted(projects, key=lambda x: x.id, reverse=True)
-        project_tuples = []
-
-        if len(projects) > 0:
-            for project in projects:
-                if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
-                    project_tuples.append( (str(project.id), project.project_name))
-            if len(project_tuples) > 0:
-                project_tuples.insert(0, ('new', 'New Project'))
-                form.project.choices = project_tuples
 
     if request.method == 'POST':
         file = File()
@@ -354,21 +330,12 @@ def file_download(status=[], bucket='', key=''):
         db.session.add(file)
         db.session.commit()
 
-#######
+        #######
         # check if the user has selected the default project (i.e., the user has no projects)
         file_dataset = None
         if form.dataset.data == 'new':
             # create a new dataset here with the name default, add the user and dataset to the new project
-            new_dataset = Dataset()
-            new_dataset.user_id = current_user.id
-            new_dataset.populate_with_defaults(current_user)
-            new_dataset.name = 'Dataset'
-            db.session.add(new_dataset)
-            db.session.flush()
-            new_dataset.name = 'Dataset ' + str(new_dataset.id)
-            new_dataset.files = [file]
-            db.session.commit()
-            file_dataset = new_dataset
+            file_dataset = generate_new_dataset(current_user)
             flash('New file will be added to dataset "{}".'.format(new_dataset.name), 'success')
         else: # check if the user has selected a project which they have access to
             user_has_permission = False
@@ -378,9 +345,6 @@ def file_download(status=[], bucket='', key=''):
                     file_dataset = dataset
                     user_has_permission = True
 
-                    # if current_user.default_dataset == None:
-                    #     d.cell_types_sequenced = [str(project.cell_types_sequenced)]
-                    #     d.species = project.species
             if not user_has_permission:
                 flash('Error: you do not have permission to add a file to that dataset.','warning')
         db.session.commit()
@@ -390,19 +354,7 @@ def file_download(status=[], bucket='', key=''):
         # check if the user has selected the default project (i.e., the user has no projects)
         if file_dataset:
             if form.project.data == 'new':
-                # create a new project here with the name default, add the user and dataset to the new project
-                new_project = Project()
-                new_project.user_id = current_user.id
-                new_project.project_name = 'Project'
-                db.session.add(new_project)
-                db.session.flush()
-                new_project.project_name = 'Project ' + str(new_project.id)
-                new_project.users = [current_user]
-                new_project.datasets = [file_dataset]
-                new_project.cell_types_sequenced = [str(file_dataset.cell_types_sequenced)]
-                new_project.species = file_dataset.species
-
-                db.session.commit()
+                new_project = generate_new_project(user = current_user, dataset = file_dataset)
             else: # check if the user has selected a project which they have access to
                 user_has_permission = False
                 for project in projects:
@@ -432,7 +384,7 @@ def file_download(status=[], bucket='', key=''):
         # check if the file path we settled on is available.
         if os.path.isfile(file.path):
             file.path = os.path.splitext(file.path)[0] + '_1' + os.path.splitext(file.path)[1]
-#######
+        #######
 
         # Making the status message a single line. 
         status_message = 'Started background task to download file from {}. Saving File To {}. This file will be visible in "My Files", and available for use after the download completes.'.format(file.url, file.path)
@@ -466,31 +418,11 @@ def file_download(status=[], bucket='', key=''):
     return render_template("file_download.html", download_form=form, status=status, r=r, current_user=current_user)
 
 
-
-
-
-
 ##### Download the file here #####
 @app.route('/download/<int:file_id>', methods=['GET', 'POST'])
 def download(file_id):
     uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
     return send_from_directory(directory=uploads, filename=filename)
-
-
-
-
-
-
-@frontend.route('/files/transfer_to_s3/<int:file_id>', methods=['GET'])
-@login_required
-def transfer_to_s3(file_id): 
-    f = db.session.query(File).filter(File.id==file_id).first()
-    if f: 
-        f.s3_status = 'Staging On S3'
-        db.session.add(f)
-        db.session.commit()
-        result = transfer_file_to_s3.apply_async((f.id,), queue=celery_queue)
-        return redirect(url_for('.files'))
 
 @frontend.route('/files', methods=['GET', 'POST'])
 @login_required
@@ -498,7 +430,7 @@ def files(status=[], bucket=None, key=None):
     # print request
     db.session.expire_all()
     files = sorted(current_user.files.all(), key=lambda x: x.id, reverse=True)
-    dropbox_file_paths = get_dropbox_files(current_user)
+    paths = get_files(current_user)
     form = Form()
 
     #creates list of datasets
@@ -516,15 +448,15 @@ def files(status=[], bucket=None, key=None):
             print 'linking new file "{}"  to  {}'.format(file_name, file_path)
             if link_file_to_user(file_path, current_user, file_name):
                 flash('linked new file to your user: {}'.format(file_path), 'success')
-                dropbox_file_paths = dropbox_file_paths.remove(file_path)
+                paths = paths.remove(file_path)
                 files = sorted(current_user.files, key=lambda x: x.id, reverse=True)
         else: 
             flash('file metadata already created to your user')
-            dropbox_file_paths = get_dropbox_files(current_user)
-        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status, projectnames=map(json.dumps, projectnames))
+            paths = get_files(current_user)
+        return render_template("files.html", files=files, dropbox_files=paths, form=form, current_user=current_user, status=status, projectnames=map(json.dumps, projectnames))
     else: 
-        dropbox_file_paths = get_dropbox_files(current_user)
-        return render_template("files.html", files=files, dropbox_files=dropbox_file_paths, form=form, current_user=current_user, status=status, projectnames=map(json.dumps, projectnames))
+        paths = get_files(current_user)
+        return render_template("files.html", files=files, dropbox_files=paths, form=form, current_user=current_user, status=status, projectnames=map(json.dumps, projectnames))
 
 @frontend.route('/files/<int:id>', methods=['GET','POST'])
 @login_required
@@ -610,27 +542,20 @@ def send_file_from_id(id):
 @frontend.route('/datasets', methods=['GET', 'POST'])
 @login_required
 def datasets():
-    # print request.__dict__
     files = current_user.files.all()
     datasets = current_user.datasets.all()
     datasets = [dataset for dataset in datasets if dataset.name != '__default__']
-    #datasets = datasets.filter(Dataset.name != '__default__')
     
     datadict = get_user_dataset_dict(current_user)
+
     form = CreateDatasetForm()
+    form.project.choices = get_project_choices(current_user, new = True)
 
     projects = Set(current_user.projects)
     projects.discard(None)
     projects = sorted(projects, key=lambda x: x.id, reverse=True)
     project_tuples = []
 
-    if len(projects) > 0:
-        for project in projects:
-            if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
-                project_tuples.append( (str(project.id), project.project_name))
-        if len(project_tuples) > 0:
-            project_tuples.append(('new', 'New Project'))
-            form.project.choices = project_tuples
 
     if request.method == 'POST':
         if form.name.data: 
@@ -695,7 +620,6 @@ def datasets():
 @login_required
 def dataset(id):
 
-    # print request.__dict__
     print 'finding dataset with {}'.format(id)
     dataset = db.session.query(Dataset).filter(Dataset.id==id).first()
 
@@ -731,7 +655,7 @@ def dataset(id):
 @frontend.route('/edit_dataset/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_dataset(id):
-    # print request.__dict__
+
     print 'finding dataset with {}'.format(id)
     dataset = db.session.query(Dataset).filter(Dataset.id==id).first()
 
@@ -1056,7 +980,7 @@ def mixcr(dataset_id, status=[]):
             analysis_file_dict[analysis] = analysis.files.all()
 
         return redirect(url_for('frontend.dashboard')) 
-        #return redirect(url_for('.analyses', status=status))
+        # return redirect(url_for('.analyses', status=status))
         # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
     else: 
         return render_template("mixcr.html", dataset=dataset, form=form, status=status, current_user=current_user) 
@@ -1094,82 +1018,228 @@ def pandaseq(dataset_id, status=[]):
         return render_template("pandaseq.html", dataset=dataset, form=form, status=status, current_user=current_user) 
 
 from flask import Markup
-@frontend.route('/analysis/test/<int:analysis_id>', methods=['GET', 'POST'])
+@frontend.route('/test/', methods=['GET', 'POST'])
 @login_required
-def test(analysis_id, status=[]):
+def test():
 
-    result = test_function.apply_async( (), { 'analysis_id' : analysis_id,  'user_id': current_user.id, }, queue=celery_queue )
+    print db.session.query(func.max(File.id)).first()[0]
 
-    message = Markup('<a href="{}">Test Again</a>.'.format( url_for('frontend.test', analysis_id = analysis_id) ) )
+
+    message = Markup('<a href="{}">Test Again</a>.'.format( url_for('frontend.test') ) )
     flash(message , 'success' )
 
     return redirect( url_for('frontend.dashboard') )
 
+# @frontend.route('/analysis/msdb/<int:dataset_id>', methods=['GET', 'POST'])
+# @login_required
+# def msdb(dataset_id, status=[]):
+#     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
 
+#     try:
+#         if dataset and dataset.name == "__default__":
+#             flash('Error: that dataset cannot be analyzed','warning')
+#             return redirect( url_for('frontend.dashboard') )
+#     except:
+#         flash('Error: that dataset cannot be analyzed','warning')
+#         return redirect( url_for('frontend.dashboard') )
 
-@frontend.route('/analysis/msdb/<int:dataset_id>', methods=['GET', 'POST'])
+#     form = CreateMSDBAnalysisForm()
+#     status = []
+#     if request.method == 'POST' and dataset:
+#         result = run_msdb_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'algorithm': form.algorithm.data}, queue=celery_queue)
+#         status.append(result.__repr__())
+#         status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
+#         time.sleep(1)
+
+#         # return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
+#         analyses = current_user.analyses.all()
+#         analysis_file_dict = OrderedDict()
+#         for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
+#             analysis_file_dict[analysis] = analysis.files.all() 
+#         return redirect(url_for('frontend.analyses', status=status))
+#         # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
+#     else: 
+#         return render_template("msdb.html", dataset=dataset, form=form, status=status, current_user=current_user) 
+
+@frontend.route('/analysis/pair_vhvl/', methods=['GET', 'POST'])
 @login_required
-def msdb(dataset_id, status=[]):
-    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+def pair_vhvl(status=[]):
 
-    try:
-        if dataset and dataset.name == "__default__":
-            flash('Error: that dataset cannot be analyzed','warning')
-            return redirect( url_for('frontend.dashboard') )
-    except:
-        flash('Error: that dataset cannot be analyzed','warning')
-        return redirect( url_for('frontend.dashboard') )
+    pair_vhvl_form = CreateVHVLPairingAnalysisForm()
 
-    form = CreateMSDBAnalysisForm()
+    # get a list of datasets and projects
+    datasets = current_user.get_ordered_datasets()
+    projects = current_user.get_ordered_projects()
+    project_tuples = []
+
     status = []
-    if request.method == 'POST' and dataset:
-        result = run_msdb_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'algorithm': form.algorithm.data}, queue=celery_queue)
-        status.append(result.__repr__())
-        status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
-        time.sleep(1)
+    if request.method == 'POST':
 
-        # return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
-        analyses = current_user.analyses.all()
-        analysis_file_dict = OrderedDict()
-        for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
-            analysis_file_dict[analysis] = analysis.files.all() 
-        return redirect(url_for('frontend.analyses', status=status))
-        # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
-    else: 
-        return render_template("msdb.html", dataset=dataset, form=form, status=status, current_user=current_user) 
+        # Check the submitted name, use default if possible
+        next_analysis_id = int(db.session.query(func.max(File.id)).first()[0]) + 1
+        if pair_vhvl_form.name.data == 'Pairing Analysis {}'.format( str(next_analysis_id) ):
+            pair_vhvl_form.name.data = ''
 
-@frontend.route('/analysis/pair_vhvl/<int:dataset_id>', methods=['GET', 'POST'])
+        file_ids_to_pair = []
+
+        if len(pair_vhvl_form.dataset_ids.data) == 1:
+            output_dataset_id = int(pair_vhvl_form.dataset_ids.data[0])
+        else: # This mvoes the output director up to /user.path/Pairing_Analysis_#
+            output_dataset_id = None
+
+        for dataset in current_user.datasets:
+            if str(dataset.id) in pair_vhvl_form.dataset_ids.data:
+                for file in dataset.files:
+                    if str(file.id) in pair_vhvl_form.file_ids.data:
+                        file_ids_to_pair.append(file.id)
+
+        if file_ids_to_pair != []:
+
+            result = run_pair_vhvl_with_dataset_id.apply_async( ( ), 
+                    { 
+                        'user_id' : current_user.id, 
+                        'dataset_id' : output_dataset_id, 
+                        'analysis_id' : None,
+                        'analysis_name' : pair_vhvl_form.name.data,
+                        'analysis_description' : pair_vhvl_form.description.data,
+                        'file_ids' : file_ids_to_pair, 
+                        'vhvl_min' : float( pair_vhvl_form.vhvl_min.data ), 
+                        'vhvl_max' : float( pair_vhvl_form.vhvl_max.data ), 
+                        'vhvl_step' : float( pair_vhvl_form.vhvl_step.data ) }, 
+                    queue=celery_queue )
+
+            return redirect( url_for('frontend.dashboard') )
+        else:
+            flash('No files selected for analysis.', 'warning')
+
+    else: # request.method == 'GET'
+        next_analysis_id = int(db.session.query(func.max(File.id)).first()[0]) + 1
+        pair_vhvl_form.name.data = 'Pairing Analysis {}'.format( str(next_analysis_id) )
+
+
+    # Fall through to this point if the method if 'GET'
+    dataset_choices = []
+    file_choices = []
+    dataset_file_dict = {}
+
+    # build choices for the file_ids and dataset_ids
+    # only include files which are annotation files
+    for dataset in current_user.datasets:
+
+        dataset_added = False
+
+        for file in dataset.files:
+
+            if file.file_type == 'IGFFT_ANNOTATION':
+
+                if dataset_added == False:
+                    # Add the dataset as an option
+                    dataset_added = True
+                    dataset_choices.append( (str(dataset.id), dataset.name) )
+                    dataset_file_dict[str(dataset.id)] = []
+
+                # Add the file to the list of options
+                file_choices.append( (str(file.id), file.name) )
+                dataset_file_dict[str(dataset.id)].append( str(file.id) )
+
+                # Use description to associate datasets/files
+
+
+    pair_vhvl_form.dataset_ids.choices = dataset_choices
+    pair_vhvl_form.file_ids.choices = file_choices
+
+    return render_template("pair_vhvl.html", dataset=dataset, pair_vhvl_form=pair_vhvl_form, status=status, current_user=current_user, dataset_file_dict = dataset_file_dict) 
+
+@frontend.route('/analysis/msdb/', methods=['GET', 'POST'])
 @login_required
-def pair_vhvl(dataset_id, status=[]):
-    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+def msdb(status=[]):
 
-    try:
-        if dataset and dataset.name == "__default__":
-            flash('Error: that dataset cannot be analyzed','warning')
-            return redirect( url_for('frontend.dashboard') )
-    except:
-        flash('Error: that dataset cannot be analyzed','warning')
-        return redirect( url_for('frontend.dashboard') )
+    msdb_form = CreateMSDBAnalysisForm()
 
-    form = CreatePairVHVLAnalysisForm()
+    # get a list of datasets and projects
+    datasets = current_user.get_ordered_datasets()
+    projects = current_user.get_ordered_projects()
+    project_tuples = []
+
     status = []
-    if request.method == 'POST' and dataset:
-        status.append('PANDASEQ Launch Detected')
-        result = run_pandaseq_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'algorithm': form.algorithm.data}, queue=celery_queue)
-        status.append(result.__repr__())
-        status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
-        time.sleep(1)
+    if request.method == 'POST':
 
-        # return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
-        analyses = current_user.analyses.all()
-        analysis_file_dict = OrderedDict()
-        for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
-            analysis_file_dict[analysis] = analysis.files.all() 
-        return redirect(url_for('.analyses', status=status))
-        # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
-    else: 
-        return render_template("pair_vhvl.html", dataset=dataset, form=form, status=status, current_user=current_user) 
+        must_be_present=['CDR3']
+        if msdb_form.require_cdr1.data: must_be_present.append('CDR1')
+        if msdb_form.require_cdr2.data: must_be_present.append('CDR2')
 
+        file_ids_to_pair = []
+
+        # Check the submitted name, use default if possible
+        next_analysis_id = int(db.session.query(func.max(File.id)).first()[0]) + 1
+        if msdb_form.name.data == 'MSDB Analysis {}'.format( str(next_analysis_id) ):
+            msdb_form.name.data = ''
+
+
+        if len(msdb_form.dataset_ids.data) == 1:
+            output_dataset_id = int(msdb_form.dataset_ids.data[0])
+        else: # This mvoes the output director up to /user.path/Pairing_Analysis_#
+            output_dataset_id = None
+
+        for dataset in current_user.datasets:
+            if str(dataset.id) in msdb_form.dataset_ids.data:
+                for file in dataset.files:
+                    if str(file.id) in msdb_form.file_ids.data:
+                        file_ids_to_pair.append(file.id)
+
+        if file_ids_to_pair != []:
+
+            result = run_msdb_with_dataset_id.apply_async( ( ), 
+                    { 
+                        'user_id' : current_user.id, 
+                        'dataset_id' : output_dataset_id, 
+                        'analysis_id' : None, 
+                        'analysis_name' : msdb_form.name.data,
+                        'analysis_description' : msdb_form.description.data,
+                        'file_ids' : file_ids_to_pair, 
+                        'cluster_percent' : float(msdb_form.msdb_cluster_percent.data), 
+                        'must_be_present' : must_be_present
+                     }, queue=celery_queue )
+
+            return redirect( url_for('frontend.dashboard') )
+        else:
+            flash('No files selected for analysis.', 'warning')
+
+    else: # request.method == 'GET'
+        next_analysis_id = int(db.session.query(func.max(File.id)).first()[0]) + 1
+        msdb_form.name.data = 'MSDB Analysis {}'.format( str(next_analysis_id) )
+
+    # Fall through to this point if the method if 'GET'
+    dataset_choices = []
+    file_choices = []
+    dataset_file_dict = {}
+
+    # build choices for the file_ids and dataset_ids
+    # only include files which are annotation files
+    for dataset in current_user.datasets:
+
+        dataset_added = False
+
+        for file in dataset.files:
+
+            if file.file_type == 'IGFFT_ANNOTATION':
+
+                if dataset_added == False:
+                    # Add the dataset as an option
+                    dataset_added = True
+                    dataset_choices.append( (str(dataset.id), dataset.name) )
+                    dataset_file_dict[str(dataset.id)] = []
+
+                # Add the file to the list of options
+                file_choices.append( (str(file.id), file.name) )
+                dataset_file_dict[str(dataset.id)].append( str(file.id) )
+
+                # Use description to associate datasets/files
+
+    msdb_form.dataset_ids.choices = dataset_choices
+    msdb_form.file_ids.choices = file_choices
+
+    return render_template("msdb.html", dataset=dataset, msdb_form=msdb_form, status=status, current_user=current_user, dataset_file_dict = dataset_file_dict) 
 
 @frontend.route('/analysis/create/<int:dataset_id>', methods=['GET', 'POST'])
 @login_required
@@ -1299,41 +1369,8 @@ def longtask():
 @login_required
 def import_sra():
     form = ImportSraAsDatasetForm()
-
-    # set the dataset options
-    datasets = Set(current_user.datasets)
-    datasets.discard(None)
-    datasets.discard(current_user.default_dataset)
-
-    datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
-    dataset_tuples = []
-
-    if len(datasets) > 0:
-        for dataset in datasets:
-            dataset_tuples.append( (str(dataset.id), dataset.name))
-
-        if len(dataset_tuples) > 0:
-            #dataset_tuples.append(('new', 'New Dataset'))
-            dataset_tuples.insert(0,('new', 'New Dataset'))
-            form.dataset.choices = dataset_tuples
-    else:
-        form.dataset.choices = [ ('new', 'New Dataset') ]
-
-    # get a list of user projects for the form
-    projects = Set(current_user.projects)
-    projects.discard(None)
-    projects = sorted(projects, key=lambda x: x.id, reverse=True)
-    project_tuples = []
-
-    if len(projects) > 0:
-        for project in projects:
-            if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
-                project_tuples.append( (str(project.id), project.project_name))
-        if len(project_tuples) > 0:
-            project_tuples.insert(0, ('new', 'New Project'))
-            form.project.choices = project_tuples
-    else:
-        form.project.choices = [('new', 'New Project')]
+    form.dataset.choices = get_dataset_choices(current_user, new = True)
+    form.project.choices = get_project_choices(current_user, new = True)
 
     result = None
     status = []
@@ -1731,7 +1768,6 @@ def pipeline():
                     db.session.commit()
                     db.session.refresh(file_1)
                     new_files.append(file_1)
-                    #flash('File uploaded to {}'.format(file_1.path))
 
             else:
                 try:

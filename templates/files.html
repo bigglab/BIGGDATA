@@ -58,7 +58,7 @@
 								<th>Staging On S3</th>
 							{%- else -%}
 								{%- if file.s3_status != 'AVAILABLE' and file.available -%}
-									<th><a href="{{url_for('.transfer_to_s3', file_id=file.id)}}">Stage For Transfer</a></th>
+									<th><a href="{#{url_for('.transfer_to_s3', file_id=file.id)}#}">Stage For Transfer</a></th>
 								{%- else -%}
 									<th>{{ file.s3_status }}</th>
 								{%- endif -%}
@@ -109,7 +109,7 @@
 								<th>Staging On S3</th>
 							{%- else -%}
 								{%- if file.s3_status != 'AVAILABLE' and file.available -%}
-									<th><a href="{{url_for('.transfer_to_s3', file_id=file.id)}}">Stage For Transfer</a></th>
+									<th><a href="{#{url_for('.transfer_to_s3', file_id=file.id)}#}">Stage For Transfer</a></th>
 								{%- else -%}
 									<th>{{ file.s3_status }}</th>
 								{%- endif -%}

@@ -2,109 +2,101 @@
 
 {% block content %}
 
-
 <div class="container">
-<h3>Create PANDAseq Analysis Run For Dataset {{dataset.id}}: </h3>
+<h3>Generate Mass Spec Files using IGREP</h3>
 </div>
 <br>
 
-
-
 <div class="container">
-	<h4>PANDAseq Analysis Configuration:</h4>
+	<h4>Clustering Configuration:</h4>
 
-	<form method="POST" action="/analysis/pandaseq/{{dataset.id}}">
-    {{ form.csrf_token }}
+	<form method="POST" action="{{ url_for( 'frontend.msdb' ) }}">
+    {{ msdb_form.csrf_token }}
 
-		<table class="table table-striped" >
-			<thead>
-				<tr>
-					<th>{{ form.name.label }}</th>
-					<th>{{ form.description.label }}</th>
-					<th>{{ form.algorithm.label }}</th>
-					<th></th>
-				</tr>
-			</thead>
-			<tbody>
-			    <tr>
-				    <td>{{ form.name(size=20, class='form-control') }}</td>
-				    <td>{{ form.description(size=40, class='form-control') }}</td>
-				    <td>{{ form.algorithm(class='form-control') }}</td>
-				    <td><input class="btn btn-default" type="submit" value="RUN PANDASEQ"></td>
-			    </tr>
-			</tbody>
-		</table>
+  	<div style="margin-left: 25px; margin-right: 5px;" >
+      <table class='table table-striped' width=100%> 
+        <thead>
+            <tr>
+                <th width=25%>MSDB Analysis Name</th>
+                <th width=25%>MSDB Analysis Description</th>
+                <th width=12%>Required Fields</th>
+                <th width=12%>Cluster %</th>
+                <!-- <th width=18%><label>Add to Dataset/Project:</label></th> -->
+                <th width=10%></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+              <td>{{ msdb_form.name(class = 'form-control') }}</td>
+              <td>{{ msdb_form.description(class = 'form-control') }}</td>
+              <td>
+                <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                  <label >
+                      {{ msdb_form.require_cdr1 }}
+                      <b>Require CDR1</b> 
+                  </label>
+                </div> 
+                <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                  <label >
+                      {{ msdb_form.require_cdr2 }}
+                      <b>Require CDR2</b> 
+                  </label>
+                </div> 
+                <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                  <label >
+                      {{ msdb_form.require_cdr3( checked="checked", disabled=True )}}
+                      <b>Require CDR3</b> 
+                  </label>
+                </div> 
+              </td>
+              <td>{{ msdb_form.msdb_cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
+              <td><input type='submit' class="btn btn-default form-control" value="Generate MSDB"></td>
+            </tr>
+        </tbody>
+      </table>
+    </div>
+    <br>
+    <h4>Select Files to add to MSDB:</h4>
+
+    {% for dataset_id in msdb_form.dataset_ids %}
+
+      <div class="checkbox" class="pull-right" style="padding-left: 4px">
+        <label>
+            {{ dataset_id( class=dataset_id.data ) }}
+            <b>{{dataset_id.label}}</b>
+        </label>
+      </div>
+      <div id="collapse" class="collapse {{dataset_id.data}}" style="margin-left: 40px;">
+        {% for file_id in msdb_form.file_ids %}
+          {% if file_id.data in dataset_file_dict[dataset_id.data] %}
+            <div class="checkbox" class="pull-right" style="padding-left: 4px">
+              <label >
+                  {{ file_id }}
+                  <b>{{file_id.label}}</b>
+              </label>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+    {% endfor %}
+
   </form>
+
 </div>
 
-<br>
-<br>
+<script>
 
+$('input[type=checkbox]').on('change', function () {
+    
+    if (!this.checked){
+      $('.collapse.' + $(this).attr('class')).slideUp();
+    }else{
+      $('.collapse.' + $(this).attr('class')).slideDown();
+    }
+});
 
-<div class='container'>
-{% if status != [] %}
-{% for ln in status %}
-    <h4>{{ln}}</h4>
-{% endfor %}
-{% endif %}
-<br>
-{% if async_task_id %}
-<p>Async Task ID: {{async_task_id}}</p>
-{% endif %}
-</div>
-
-
-<br>
-<br>
-
-
-<div class="container">
-	<table class="table table-striped">
-		<thead>
-			<tr>
-				<td>Dataset Name</td>
-				<td>Description</td>
-				<td>IG Type</td>
-				<td>VDJ+VJ Paired</td>
-				<td></td>
-			</tr>
-		</thead>
-		<tbody>
-				<tr>
-					<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
-					<td>{{dataset.description}}</td>
-					<td>{{dataset.ig_type}}</td>
-					{% if dataset.paired %}
-						<td>YES</td>
-					{% else %}
-						<td>NO</td>
-					{% endif %}
-				</tr>
-				<tr>
-				{% set files = dataset.files %}
-				{% include "partials/files.html" with context %}
-				</tr>
-		</tbody>
-	</table>
-</div>
-
-
-
-
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-
-
-
-
+</script>
 
 {%endblock content %}
 

@@ -60,12 +60,14 @@ from models import *
 
 # Hide L/R button in carousel at ends
 # Check that user directories are made if server is down
-
+# Switch browse/filename order everywhere
+# Remove all S3 references
 # If there is an Exception in IGREP, print it in RED
+
+# add cdr3 list as a file type
 
 # Add all analysis files to analysis view/db
 # clustering is in MSDB call
-# LESS Add Mass spec for Igrep, then Abstar, then Mixcr
 
 # MORE Add analysis result page
 # Preview file

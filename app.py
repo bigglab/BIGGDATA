@@ -68,6 +68,8 @@ from models import *
 #####
 sys.path.append('/data/resources/software/IGREP/common_tools/')
 import immunogrep_msdb
+import immunogrep_gglab_pairing as pairing
+import immunogrep_ngs_pair_tools as processing
 
 # Initialize Application
 app = Flask(__name__, instance_relative_config=True)
@@ -229,7 +231,7 @@ def initiate_celery_task_logger(logger_id, logfile):
     logger.setLevel(logging.DEBUG)
     logger.propagate = False
 
-    logger.handers = []
+    logger.handlers = []
     handler = logging.FileHandler( logfile )
     handler.setLevel( logging.INFO )
 
@@ -256,6 +258,50 @@ class ReturnValue():
     def __repr__(self):
         return self.return_string
 
+# Used to redirect stdout to the logger
+class LoggerWriter:
+    def __init__(self, logger, level = logging.INFO):
+        self.logger = logger
+        self.level = level
+
+    def write(self, message):
+        if message != '\n':
+            self.logger.log(self.level, message)
+
+# Used to redirect stdout to the logger
+class VHVLPairingLoggerWriter(LoggerWriter):
+    def __init__(self, logger, level = logging.INFO, task = None):
+        self.logger = logger
+        self.level = level
+        self.task = task
+        self.tracking_status = False
+
+    def write(self, message):
+
+        if self.task:
+            # progress_pattern = re.compile('Processed (\d+) sequences')
+            # pattern_match =  progress_pattern.match(message)
+            # if pattern_match:
+
+            #     progress = pattern_match.group(1)
+
+            #     self.logger.info( "Pattern matched: {}".format(message) )
+
+            #     if not self.tracking_status:
+            #         self.tracking_status = True
+            #     self.task.update_state(state='STATUS', meta={'status': message.strip() })
+
+
+            # else:
+            #     if self.tracking_status:
+            #         self.tracking_status = False
+            #         self.task.update_state(state='ANALYZING')
+            LoggerWriter.write(self, message)
+
+        else:
+            LoggerWriter.write(self, message)
+
+
 
 # Base Class used to log celery tasks to the database
 class LogTask(Task):
@@ -269,6 +315,9 @@ class LogTask(Task):
     parent_task = None
     maintain_log = True
 
+    # points to the actual top-level task, either self or parent_task
+    task = None
+
     def __call__(self, *args, **kw):
 
         # if a logger is passed in the kwargs, don't need to log this task separately
@@ -279,7 +328,9 @@ class LogTask(Task):
             self.request_id = self.parent_task.request_id
             celery_task = self.parent_task.celery_task
             del kw['parent_task']
+            self.task = self.parent_task
         else:
+            self.task = self
 
             self.celery_task = CeleryTask()
             logger_id = self.request.id
@@ -403,11 +454,11 @@ def get_filepaths(directory_path):
             file_paths.append(filepath)
     return file_paths 
 
-def get_dropbox_files(user):
-    dropbox_path = user.dropbox_path
-    dropbox_file_paths = get_filepaths(dropbox_path)
-    dropbox_file_paths = [file_path for file_path in dropbox_file_paths if file_path not in [file.path for file in user.files]]
-    return dropbox_file_paths
+def get_files(user):
+    path = user.path
+    paths = get_filepaths(path)
+    paths = [file_path for file_path in paths if file_path not in [file.path for file in user.files]]
+    return paths
 
 def tree(): return defaultdict(tree)
 
@@ -1626,66 +1677,128 @@ def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = c
 # This adds a new analysis if analysis = 'new' is passed or analysis_id == None
 # Calls run_msdb_with_analysis_id
 @celery.task(base = LogTask, bind = True)
-def run_msdb_with_dataset_id(self, user_id=6, dataset_id = None, analysis_id = None, file_ids = [], analysis_name='', analysis_description='', cluster_percent = 0.9):
+def run_msdb_with_dataset_id(self, user_id=6, dataset_id = None, analysis_id = None, file_ids = [], analysis_name='', analysis_description='', cluster_percent = 0.9, must_be_present = ['CDR3']):
 
     logger = self.logger
-    
+    logger.info('Preparing for IGREP MSDB algorithm...')
+
+    annotated_files = []
+    annotated_file_formats = []
     file_paths_to_analyze = []
+
     with session_scope() as session:
 
-        dataset = session.query(Dataset).get(dataset_id)
+        # Get the DB objects
         user = session.query(User).get(user_id)
+        if dataset_id != None: dataset = session.query(Dataset).get(dataset_id)
+        else: dataset = None
+
+        # Determine if a new analysis is needed
+        if analysis_id and analysis_id != 'new':
+            analysis = session.query(Analysis).get(analysis_id)
+            output_directory = analysis.directory
+        else: # no analysis provided, so we have to create a new analysis
+
+            # determine the analysis directory
+            if dataset_id != None and dataset:
+                directory = dataset.directory
+            else: #create a new directory
+                directory = user.path
+
+
+            analysis = generate_new_analysis(user = user, dataset = dataset, directory = directory, directory_prefix = 'MSDB_Analysis_', session = session)
+
+            # Set analysis database values
+            if analysis_description != '': analysis.description = analysis_description
+            else: analysis.description = 'MSDB Analysis Results'
+            if analysis_name != '': analysis.name = analysis_name
+            else: analysis.name = 'Pairing Analysis {}'.format( str(analysis.id) )
+
+            analysis.program = 'IGREP MSDB'
+
+        # Set local values
+        analysis_id = analysis.id
+        output_directory = analysis.directory
+
+        # Set analysis database values
+        analysis.started = 'now'
+        analysis.files_to_analyze = map(lambda i: int(i), file_ids)
+        analysis.params = {}
+        analysis.status = 'QUEUED'
+        analysis.responses = []
+        analysis.available = False
+        analysis.inserted_into_db = False
+        session.add(analysis)
+        session.commit()
+
+        prefix_output_files = analysis.name.replace(' ', '_')
 
         if file_ids:
             files = map(lambda x: session.query(File).filter(File.id==x).first(), file_ids)
-        else:
+        elif dataset_id != None and dataset:
             files = dataset.files
             file_ids = [file.id for file in files]
 
-        if analysis_id == None or analysis_id == 'new':
-
-            analysis = Analysis()
-
-            #CONSTRUCT AND SAVE ANALYSIS OBJECT
-            analysis_description = analysis_description
-            analysis.user_id = user_id
-            analysis.dataset_id = dataset_id
-            #analysis.program = analysis_type
-            # analysis.db_status = 'WAITING'
-            analysis.started = 'now'
-            analysis.files_to_analyze = map(lambda i: int(i), file_ids)
-            analysis.params = {}
-            analysis.status = 'QUEUED'
-            analysis.responses = []
-            analysis.available = False
-            analysis.inserted_into_db = False
-            session.add(analysis)
-            session.commit()
-            session.refresh(analysis)
-
-            if analysis_name == '':
-                analysis.name = 'Analysis {}'.format(analysis.id)
-            else:
-                analysis.name = analysis_name
-
-            if dataset.directory:
-                analysis.directory = dataset.directory.rstrip('/') + '/Analysis_' + str(analysis.id)
-            else: 
-                analysis.directory = analysis.dataset.user.path.rstrip('/') + '/Analysis_' + str(analysis.id)
-            if not os.path.exists(analysis.directory):
-                logger.info ( 'Making analysis directory {}'.format( analysis.directory ) )
-                os.makedirs(analysis.directory)
-        else:
-            analysis = session.query(Analysis).get(analysis_id)
-
-    return_value = run_msdb_with_analysis_id(analysis_id = analysis_id, file_ids = file_ids, analysis_name='', analysis_description='', user_id=6, cluster_percent = cluster_percent, parent_task = self)
+    return_value = run_msdb_with_analysis_id(analysis_id = analysis_id, file_ids = file_ids, user_id= user_id, cluster_percent = cluster_percent, must_be_present = must_be_present, parent_task = self.task)
     file_ids = return_value.file_ids
+
+
+    # logger = self.logger
+    
+    # file_paths_to_analyze = []
+    # with session_scope() as session:
+
+    #     dataset = session.query(Dataset).get(dataset_id)
+    #     user = session.query(User).get(user_id)
+
+    #     if file_ids:
+    #         files = map(lambda x: session.query(File).filter(File.id==x).first(), file_ids)
+    #     else:
+    #         files = dataset.files
+    #         file_ids = [file.id for file in files]
+
+    #     if analysis_id == None or analysis_id == 'new':
+
+    #         analysis = Analysis()
+
+    #         #CONSTRUCT AND SAVE ANALYSIS OBJECT
+    #         analysis.description = analysis_description
+    #         analysis.user_id = user_id
+    #         analysis.dataset_id = dataset_id
+    #         #analysis.program = analysis_type
+    #         # analysis.db_status = 'WAITING'
+    #         analysis.started = 'now'
+    #         analysis.files_to_analyze = map(lambda i: int(i), file_ids)
+    #         analysis.params = {}
+    #         analysis.status = 'QUEUED'
+    #         analysis.responses = []
+    #         analysis.available = False
+    #         analysis.inserted_into_db = False
+    #         session.add(analysis)
+    #         session.commit()
+    #         session.refresh(analysis)
+
+    #         if analysis_name == '':
+    #             analysis.name = 'Analysis {}'.format(analysis.id)
+    #         else:
+    #             analysis.name = analysis_name
+
+    #         if dataset.directory:
+    #             analysis.directory = dataset.directory.rstrip('/') + '/Analysis_' + str(analysis.id)
+    #         else: 
+    #             analysis.directory = analysis.dataset.user.path.rstrip('/') + '/Analysis_' + str(analysis.id)
+    #         if not os.path.exists(analysis.directory):
+    #             logger.info ( 'Making analysis directory {}'.format( analysis.directory ) )
+    #             os.makedirs(analysis.directory)
+    #     else:
+    #         analysis = session.query(Analysis).get(analysis_id)
+
 
     # Clean up the analysis results here
 
 # Returns a ReturnValue with field file_ids which reflects only the new files added during the analysis
 @celery.task(base = LogTask, bind = True)
-def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id = None, cluster_percent = 0.9):
+def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id = None, cluster_percent = 0.9, must_be_present = ['CDR3']):
 
     logger = self.logger
 
@@ -1732,23 +1845,33 @@ def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id =
             if file.file_type == 'IGFFT_ANNOTATION':
                 file_paths_to_analyze.append(file.path)
 
-        analysis_directory = analysis.directory
-
-        files_in_directory = Set(next(os.walk(analysis_directory))[2])
 
     if file_paths_to_analyze == []:
         logger.warning('No output files from IGREP analysis were found. Skipping mass spec analysis.')
         return ReturnValue('No MSDB analysis was performed.', file_ids = [])
     else:
-        for file_path in file_paths_to_analyze:
-            immunogrep_msdb.generate_msdb_file(file_path, 'TAB', translate_fields=igfft_msdb_fields, output_folder_path= analysis_directory, cluster_id = cluster_percent, must_be_present=['CDR3'])
+        # for file_path in file_paths_to_analyze:
+            # immunogrep_msdb.generate_msdb_file(file_path, 'TAB', translate_fields=igfft_msdb_fields, output_folder_path= analysis_directory, cluster_id = cluster_percent, must_be_present=['CDR3'])
+    
+        files_in_directory = Set(next(os.walk(analysis_directory))[2])
 
-        new_files_in_directory = files_in_directory - Set(next(os.walk(analysis_directory))[2])
+
+        # Briefly pass all STDOUT to the logger
+        saved_stdout = sys.stdout
+        sys.stdout = VHVLPairingLoggerWriter( logger, task = self )
+
+        immunogrep_msdb.generate_msdb_file(input_files = file_paths_to_analyze, filetype = 'TAB', translate_fields=igfft_msdb_fields, output_folder_path= analysis_directory, cluster_id = cluster_percent, must_be_present=['CDR3'])
+
+        # Restore STDOUT to the console
+        sys.stdout = saved_stdout
+
+        new_files_in_directory = Set(next(os.walk(analysis_directory))[2]) - files_in_directory
 
         return_value = add_directory_files_to_database(directory = analysis_directory, description = 'MSDB analysis result.', dataset_id = dataset_id, analysis_id = analysis_id, user_id = user_id, file_names = new_files_in_directory, logger = logger)
         file_ids = return_value.file_ids
 
         return ReturnValue('MSDB analysis complete. {} files were produced.'.format(len(file_ids)), file_ids = [] )
+
 
         # immunogrep_msdb.generate_msdb_file('SRR1525444.R1.igfft.annotation', 'TAB', translate_fields=igfft_msdb_fields, output_folder_path='/data/russ/scratch/SRR1525444_14/Analysis_99', must_be_present=['CDR3'])
 
@@ -1798,30 +1921,158 @@ def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id =
         # -------
         # Path of the FASTA db file created    
 
-# Standalone celery task to run MSDB analysis on a dataset. 
+# Celery task to run VH/VL pairing analysis on a dataset or multiple datasets.
+# If dataset_id == None, add files to user.path/Pairing_Analysis_#
 # This adds a new analysis if analysis = 'new' is passed or analysis_id == None
 # Calls run_msdb_with_analysis_id
 @celery.task(base = LogTask, bind = True)
-def run_pair_vhvl_with_dataset_id(self, user_id=6, dataset_id = None, analysis_id = None, file_ids = [], analysis_name='', analysis_description='', cluster_percent = 0.9):
-    pass
+def run_pair_vhvl_with_dataset_id(self, user_id=6, dataset_id = None, analysis_id = None, file_ids = [], analysis_name='', analysis_description='', vhvl_min = 0.96, vhvl_max = 0.96, vhvl_step = 0.0):
+
+    logger = self.logger
+    logger.info('Running IGREP VH/VL pairing algorithm...')
+
+    annotated_files = []
+    annotated_file_formats = []
+    file_paths_to_analyze = []
+
+    with session_scope() as session:
+
+        # Get the DB objects
+        user = session.query(User).get(user_id)
+        if dataset_id != None: dataset = session.query(Dataset).get(dataset_id)
+        else: dataset = None
+
+        # Determine if a new analysis is needed
+        if analysis_id and analysis_id != 'new':
+            analysis = session.query(Analysis).get(analysis_id)
+            output_directory = analysis.directory
+        else: # no analysis provided, so we have to create a new analysis
+
+            # determine the analysis directory
+            if dataset_id != None and dataset:
+                directory = dataset.directory
+            else: #create a new directory
+                directory = user.path
+
+            analysis = generate_new_analysis(user = user, dataset = dataset, directory = directory, directory_prefix = 'Pairing_Analysis_', session = session)
+
+            # Set analysis database values
+            if analysis_description != '': analysis.description = analysis_description
+            else: analysis.description = 'IGREP VH/VL Pairing Analysis Results'
+            if analysis_name != '': analysis.name = analysis_name
+            else: analysis.name = 'Pairing Analysis {}'.format( str(analysis.id) )
+
+            analysis.program = 'IGREP VH/VL Pairing'
+
+
+        # Set local values
+        analysis_id = analysis.id
+        output_directory = analysis.directory
+
+        # Set analysis database values
+        analysis.started = 'now'
+        analysis.files_to_analyze = map(lambda i: int(i), file_ids)
+        analysis.params = {}
+        analysis.status = 'QUEUED'
+        analysis.responses = []
+        analysis.available = False
+        analysis.inserted_into_db = False
+        session.add(analysis)
+        session.commit()
+
+        prefix_output_files = analysis.name.replace(' ', '_')
+
+        if file_ids:
+            files = map(lambda x: session.query(File).filter(File.id==x).first(), file_ids)
+        elif dataset_id != None and dataset:
+            files = dataset.files
+            file_ids = [file.id for file in files]
+
+        for file in files:
+            if file.file_type == 'IGFFT_ANNOTATION':
+                annotated_files.append(file.path)
+                annotated_file_formats.append('TAB')
+
+    if annotated_files != []:
+        
+        files_in_directory = Set(next(os.walk(output_directory))[2])
+
+        # Briefly pass all STDOUT to the logger
+        saved_stdout = sys.stdout
+        sys.stdout = VHVLPairingLoggerWriter( logger, task = self )
+
+        cluster_setting = [vhvl_min, vhvl_max, vhvl_step]
+        pairing.RunPairing(annotated_files, annotated_file_formats= annotated_file_formats, analysis_method='GEORGIOU_INHOUSE', output_folder_path=output_directory, prefix_output_files= prefix_output_files, cluster_cutoff=cluster_setting, annotation_cluster_setting= 0.9)
+
+        # Restore STDOUT to the console
+        sys.stdout = saved_stdout
+
+        new_files_in_directory = Set(next(os.walk(output_directory))[2]) - files_in_directory
+
+        return_value = add_directory_files_to_database(directory = output_directory, description = 'IGREP pairing result.', dataset_id = dataset_id, analysis_id = analysis_id, user_id = user_id, file_names = new_files_in_directory, logger = logger)
+        file_ids = return_value.file_ids
+
+        logger.info('IGREP VH/VL pairing algorithm complete.')
+        return ReturnValue('IGREP VH/VL pairing analysis complete. {} files were produced.'.format(len(file_ids)), file_ids = file_ids )
+
+    else:
+        logger.warning('No annotated files were found to analyze.')
+
+
+    return ReturnValue('IGREP VH/VL pairing analysis complete. {} files were produced.'.format(len(file_ids)), file_ids = [] )
 
 # Returns a ReturnValue with field file_ids which reflects only the new files added during the analysis
 @celery.task(base = LogTask, bind = True)
-def run_pair_vhvl_with_analysis_id(self, analysis_id = None, file_ids = [], user_id = None, cluster_percent = 0.9):
+def run_pair_vhvl_with_analysis_id(self, analysis_id = None, file_ids = [], user_id = None, vhvl_min = 0.96, vhvl_max = 0.96, vhvl_step = 0.0):
 
-    import immunogrep_gglab_pairing as pairing
-    import immunogrep_ngs_pair_tools as processing
-    #Run VHVL Pairing on output IGFFT Annotation Files 
-    #import sys
-    #sys.path.append('/data/resources/software/IGREP/common_tools/')
-    # Pairing settings
-    # How are CDRH3 sequences clustered (min cluster, max cluster, step size)
-    cluster_setting = [vhvl_min, vhvl_max, vhvl_step]
-    annotated_files = []
-    output_dir = '/data/russ/test/pairing_test' #should be analysis directory 
+    logger = self.logger
 
-    pairing.RunPairing(annotated_files, annotated_file_formats='TAB', analysis_method='GEORGIOU_INHOUSE', output_folder_path=output_dir, prefix_output_files='group_name', cluster_cutoff=cluster_setting, annotation_cluster_setting= 0.9)
-    #glob output files and add File objects to db linked to analysis 
+    with session_scope() as session:
+        output_directory = analysis.directory
+        analysis = session.query(Analysis).get(analysis_id)
+
+        output_directory = analysis.directory 
+
+        annotated_files = []
+        annotated_file_formats = []
+
+        if file_ids != []:
+            files = map(lambda x: session.query(File).filter(File.id==x).first(), file_ids)
+
+            for file in files:
+                if file.file_type == 'IGFFT_ANNOTATION':
+                    annotated_files.append(file.path)
+                    annotated_file_formats.append('TAB')
+
+        prefix_output_files = analysis.name.replace(' ', '_')
+
+    if annotated_files != []:
+            
+        files_in_directory = Set(next(os.walk(output_directory))[2])
+
+        # Briefly pass all STDOUT to the logger
+        saved_stdout = sys.stdout
+        sys.stdout = VHVLPairingLoggerWriter( logger, task = self )
+
+        cluster_setting = [vhvl_min, vhvl_max, vhvl_step]
+        pairing.RunPairing(annotated_files, annotated_file_formats= annotated_file_formats, analysis_method='GEORGIOU_INHOUSE', output_folder_path=output_directory, prefix_output_files= prefix_output_files, cluster_cutoff=cluster_setting, annotation_cluster_setting= 0.9)
+
+        # Restore STDOUT to the console
+        sys.stdout = saved_stdout
+
+        new_files_in_directory = Set(next(os.walk(output_directory))[2]) - files_in_directory
+
+        return_value = add_directory_files_to_database(directory = output_directory, description = 'IGREP VH/VL pairing result.', dataset_id = dataset_id, analysis_id = analysis_id, user_id = user_id, file_names = new_files_in_directory, logger = logger)
+        file_ids = return_value.file_ids
+
+        logger.info('IGREP VH/VL pairing algorithm complete.')
+        return ReturnValue('IGREP VH/VL pairing analysis complete. {} files were produced.'.format(len(file_ids)), file_ids = file_ids )
+
+    else:
+        logger.warning('No annotated files were found to analyze.')
+
+
+        return ReturnValue('IGREP VH/VL pairing analysis complete. {} files were produced.'.format(len(file_ids)), file_ids = [] )
 
 
 def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
@@ -1905,7 +2156,7 @@ def run_analysis(self, analysis_id = None, dataset_id = None, file_ids = [], use
 
         #CONSTRUCT AND SAVE ANALYSIS OBJECT
         analysis.name = analysis_name
-        analysis_description = analysis_description
+        analysis.description = analysis_description
         # analysis.db_status = 'WAITING'
         analysis.user_id = user_id
         analysis.dataset_id = dataset.id
@@ -2035,6 +2286,7 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysi
             commands.append(script_command)
 
         session_objects = expunge_session_objects(session)
+
     ##### End database session #####
 
     for command in commands:
@@ -2647,16 +2899,18 @@ def test_function(self, analysis_id = None, user_id = None):
 
     logger = self.logger
 
-    logger.info('Beginning test of ')
+    logger.info('Beginning test of logger stuff.')
 
-    with session_scope() as session:
-        analysis  = session.query(Analysis).get(analysis_id)
-        if not analysis:
-            logger.error( 'Error: analysis with ID {} not found.'.format(analysis_id) )
-        else:
-            return_value = add_directory_files_to_database(directory = analysis.directory, dataset_id = analysis.dataset_id, analysis_id = analysis.id, user_id = user_id, logger = logger)
+    saved_stdout = sys.stdout
+    sys.stdout = LoggerWriter( logger )
 
-    logger.info('Ending test.')
+    test_print()
+
+    sys.stdout = saved_stdout
+
+    logger.info("Finished test of logger stuff.")
+
+
 
     return ReturnValue('Test completed successfully.')
 
@@ -2668,6 +2922,7 @@ def test_print():
 # Returns a list of file ids
 def add_directory_files_to_database(directory = None, description = None, dataset_id = None, analysis_id = None, user_id = None, file_names = None, logger = celery_logger):
 
+    # most file typing can be accomplished through this dictionary
     file_type_dict = {
         'gz' : 'GZIPPED_FASTQ' ,
         'cdr3_clonotype' : 'CDR3_CLONOTYPE' ,
@@ -2693,9 +2948,10 @@ def add_directory_files_to_database(directory = None, description = None, datase
             path = '{}/{}'.format(directory.rstrip('/'), file_name)
 
             if session.query(File).filter_by(path=path).count() > 0:
-                logger.info( 'File already in database: {}'.format(path) )
+                # logger.info( 'File already in database: {}'.format(path) )
+                pass
             else:
-                logger.info( 'File not in database: {}'.format(path) )
+                # logger.info( 'Adding file to database: {}'.format(path) )
 
                 new_file = File()
                 new_file.name = file_name
@@ -2930,7 +3186,8 @@ def run_analysis_pipeline(self, *args,  **kwargs):
             return_value = run_msdb_with_analysis_id( analysis_id = analysis_id, file_ids = file_ids_to_analyze, user_id = user_id, cluster_percent = msdb_cluster_percent, parent_task = self)
 
         if pair_vhvl:
-            return_value = run_pair_vhvl_with_analysis_id( analysis_id = analysis_id, file_ids = file_ids_to_analyze, user_id = user_id, parent_task = self)
+            #return_value = run_pair_vhvl_with_dataset_id( analysis_id = analysis_id, file_ids = file_ids_to_analyze, user_id = user_id, parent_task = self)
+            return_value = run_pair_vhvl_with_dataset_id( user_id= user_id, dataset_id = output_dataset, analysis_id = analysis_id, file_ids = file_ids_to_analyze, vhvl_min = vhvl_min, vhvl_max = vhvl_max, vhvl_step = vhvl_step, parent_task = self)
 
     ##### Add files to Appropriate Dataset/Project #####
 
