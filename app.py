@@ -1536,7 +1536,7 @@ def run_pandaseq_analysis_with_files(self, analysis_id, file_ids, algorithm='pea
             db.session.commit()
             logger.error(error)
 
-##### ***** Need to Check Output Files Here ***** #####
+    ##### ***** Need to Check Output Files Here ***** #####
 
     logger.info( 'All commands in analysis {} have been executed.'.format(analysis) )
     if set(map(lambda f: f.available, files_to_execute)) == {True}:
@@ -1742,59 +1742,8 @@ def run_msdb_with_dataset_id(self, user_id=6, dataset_id = None, analysis_id = N
     return_value = run_msdb_with_analysis_id(analysis_id = analysis_id, file_ids = file_ids, user_id= user_id, cluster_percent = cluster_percent, must_be_present = must_be_present, parent_task = self.task)
     file_ids = return_value.file_ids
 
+    return return_value
 
-    # logger = self.logger
-    
-    # file_paths_to_analyze = []
-    # with session_scope() as session:
-
-    #     dataset = session.query(Dataset).get(dataset_id)
-    #     user = session.query(User).get(user_id)
-
-    #     if file_ids:
-    #         files = map(lambda x: session.query(File).filter(File.id==x).first(), file_ids)
-    #     else:
-    #         files = dataset.files
-    #         file_ids = [file.id for file in files]
-
-    #     if analysis_id == None or analysis_id == 'new':
-
-    #         analysis = Analysis()
-
-    #         #CONSTRUCT AND SAVE ANALYSIS OBJECT
-    #         analysis.description = analysis_description
-    #         analysis.user_id = user_id
-    #         analysis.dataset_id = dataset_id
-    #         #analysis.program = analysis_type
-    #         # analysis.db_status = 'WAITING'
-    #         analysis.started = 'now'
-    #         analysis.files_to_analyze = map(lambda i: int(i), file_ids)
-    #         analysis.params = {}
-    #         analysis.status = 'QUEUED'
-    #         analysis.responses = []
-    #         analysis.available = False
-    #         analysis.inserted_into_db = False
-    #         session.add(analysis)
-    #         session.commit()
-    #         session.refresh(analysis)
-
-    #         if analysis_name == '':
-    #             analysis.name = 'Analysis {}'.format(analysis.id)
-    #         else:
-    #             analysis.name = analysis_name
-
-    #         if dataset.directory:
-    #             analysis.directory = dataset.directory.rstrip('/') + '/Analysis_' + str(analysis.id)
-    #         else: 
-    #             analysis.directory = analysis.dataset.user.path.rstrip('/') + '/Analysis_' + str(analysis.id)
-    #         if not os.path.exists(analysis.directory):
-    #             logger.info ( 'Making analysis directory {}'.format( analysis.directory ) )
-    #             os.makedirs(analysis.directory)
-    #     else:
-    #         analysis = session.query(Analysis).get(analysis_id)
-
-
-    # Clean up the analysis results here
 
 # Returns a ReturnValue with field file_ids which reflects only the new files added during the analysis
 @celery.task(base = LogTask, bind = True)
@@ -1845,6 +1794,10 @@ def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id =
             if file.file_type == 'IGFFT_ANNOTATION':
                 file_paths_to_analyze.append(file.path)
 
+        # prefix for analysis result files
+        prefix = None
+        if analysis:
+            prefix = analysis.name.replace(' ','_')
 
     if file_paths_to_analyze == []:
         logger.warning('No output files from IGREP analysis were found. Skipping mass spec analysis.')
@@ -1867,8 +1820,10 @@ def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id =
 
         new_files_in_directory = Set(next(os.walk(analysis_directory))[2]) - files_in_directory
 
-        return_value = add_directory_files_to_database(directory = analysis_directory, description = 'MSDB analysis result.', dataset_id = dataset_id, analysis_id = analysis_id, user_id = user_id, file_names = new_files_in_directory, logger = logger)
+        return_value = add_directory_files_to_database(directory = analysis_directory, description = 'MSDB analysis result.', dataset_id = dataset_id, analysis_id = analysis_id, user_id = user_id, file_names = new_files_in_directory, prefix = prefix, logger = logger)
         file_ids = return_value.file_ids
+
+        logger.info( 'MSDB analysis complete. {} files were produced.'.format(len(file_ids)) )
 
         return ReturnValue('MSDB analysis complete. {} files were produced.'.format(len(file_ids)), file_ids = [] )
 
@@ -2732,9 +2687,7 @@ def long_task(self):
             message = '{0} {1} {2}...'.format(random.choice(verb),
                                               random.choice(adjective),
                                               random.choice(noun))
-    # total = 100 
-    # for i in range(total): 
-    #     message = ''
+
         self.update_state(state='PROGRESS',
                           meta={'current': i, 'total': total,
                                 'status': message})
@@ -2920,7 +2873,8 @@ def test_print():
 
 # Adds all files in a directory (not already in database) to database
 # Returns a list of file ids
-def add_directory_files_to_database(directory = None, description = None, dataset_id = None, analysis_id = None, user_id = None, file_names = None, logger = celery_logger):
+# Automatically renames files and determines file type using a dictionary of regular expressions
+def add_directory_files_to_database(directory = None, description = None, dataset_id = None, analysis_id = None, user_id = None, file_names = None, prefix = None, logger = celery_logger):
 
     # most file typing can be accomplished through this dictionary
     file_type_dict = {
@@ -2930,6 +2884,18 @@ def add_directory_files_to_database(directory = None, description = None, datase
         'Gucken' : 'MAL_GUCKEN' ,
         'msDB' : 'MSDB' ,
         'parsed_summary' : 'MSDB_SUMMARY' 
+    }
+
+    # Not implemented yet
+    file_type_regex_dict = {
+    }
+
+    file_rename_regex_dict = {
+        r'MASSSPECDB(\d+)msDB.fasta' : r'PREFIX_msDB.fasta',
+        r'cdr3_clonotype_list.txt' : r'PREFIX_cdr3_clonotype_list.txt',
+        r'MASSSPECDB(\d+)malGucken.txt' : r'PREFIX_malGucken.txt',
+        r'cdr3list.txt' : r'PREFIX_cdr3list.txt',
+        r'MASSSPECDB(\d+)parsed_summary.txt' : r'PREFIX_parsed_summary.txt'
     }
 
     if file_names == None:
@@ -2953,29 +2919,61 @@ def add_directory_files_to_database(directory = None, description = None, datase
             else:
                 # logger.info( 'Adding file to database: {}'.format(path) )
 
-                new_file = File()
-                new_file.name = file_name
-                new_file.description = description
-                new_file.dataset_id = dataset_id
-                new_file.user_id = user_id
-                new_file.analysis_id = analysis_id
-                new_file.path = path
-                new_file.available = True 
-                new_file.s3_status = ''
-                new_file.status = ''
+                # Step 1. Make sure the file exists on disk
+                if os.path.isfile(path):
 
-                # Use the default extension, unless we know better
-                new_file.file_type = parse_file_ext(new_file.name)
-                for search_str, file_type in file_type_dict.iteritems():
-                    if search_str in file_name:
-                        new_file.file_type = file_type
+                    # Step 2. If the file exists on disk, rename the file if we have a rule for doing so
+                    for find, replace in file_rename_regex_dict.iteritems():
 
-                session.add(new_file)
-                session.commit()
-                session.refresh( new_file )
-                added_file_ids.append( new_file.id )
-                number_added_files += 1
+                        pattern = re.compile(find)
+                        pattern_match =  pattern.match(file_name)
 
+                        if pattern_match:
+                            new_file_name = re.sub( find, replace, file_name)
+
+                            if prefix:
+                                new_file_name = new_file_name.replace('PREFIX', prefix)
+                            else:
+                                new_file_name = new_file_name.replace('PREFIX_', '')
+
+                            new_path = '{}/{}'.format(directory.rstrip('/'), new_file_name)
+
+                            os.rename( path, new_path )
+
+                            if os.path.isfile( new_path ):
+                                logger.debug('Renamed file {} to {}'.format(path, new_path) )
+
+                                path = new_path
+                                file_name = new_file_name
+                            else:
+                                logger.warning('WARNING: failed to rename file {} to {}'.format(path, new_path) )
+
+                    # Step 3. Add the file to the database
+
+                    new_file = File()
+                    new_file.name = file_name
+                    new_file.description = description
+                    new_file.dataset_id = dataset_id
+                    new_file.user_id = user_id
+                    new_file.analysis_id = analysis_id
+                    new_file.path = path
+                    new_file.available = True 
+                    new_file.s3_status = ''
+                    new_file.status = ''
+
+                    # Use the default extension, unless we know better
+                    new_file.file_type = parse_file_ext(new_file.name)
+                    for search_str, file_type in file_type_dict.iteritems():
+                        if search_str in file_name:
+                            new_file.file_type = file_type
+
+                    session.add(new_file)
+                    session.commit()
+                    session.refresh( new_file )
+                    added_file_ids.append( new_file.id )
+                    number_added_files += 1
+                else:
+                    logger.warning( 'WARNING: file not found: {}'.format(path) ) 
     return ReturnValue('{} files added to database.'.format(number_added_files), file_ids = added_file_ids )
 
 @celery.task(base = LogTask, bind = True)
