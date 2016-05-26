@@ -312,6 +312,8 @@ class LogTask(Task):
     logger = None
     request_id = None
 
+    # points to the top-level task if this is a child task
+    # if this is the top-level task, parent_task == None
     parent_task = None
     maintain_log = True
 
