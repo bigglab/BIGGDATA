@@ -58,22 +58,40 @@ from forms import *
 from functions import * 
 from models import * 
 
-# Autopopulate species in UI dataset_selection, then dataset_default, then human
 # Hide L/R button in carousel at ends
 # Check that user directories are made if server is down
+# Switch browse/filename order everywhere
+# Remove all S3 references
+# If there is an Exception in IGREP, print it in RED
+
+# add cdr3 list as a file type
 
 # Add all analysis files to analysis view/db
 # clustering is in MSDB call
-# Add Mass spec for Igrep, then Abstar, then Mixcr
 
-# Add analysis result page
+# MORE Add analysis result page
 # Preview file
 # hover - head 10 lines tooltip
+
+# Move directories up a level
+    # For multiple datasets - use user/Masspec_1
+    # For single analysis, save msdb in user/Dataset/Analysis/ 
 
 # Short form for analysis msdb
 # add clustering setting for msdb threshold
 # analysis must be present: CDR1, CDR2, CDR3 list
 # Provide a list of IGFFT_ANNOTATION files on the Clustering Page
+
+# Move log to analysis directory
+# save JSON of analysis to log (analysis.config)
+    # Only back up fastqs
+    # One JSON for data
+    # One JSON for analysis settings 
+
+# Take out all S3 references
+# Add file upload page
+    #for each file add a download link
+    # on hover = head (4 lines)
 
 # Questions for Russ:
 # Pairing in the database - always refers to forward/reverse read pairing? VH/VL
@@ -92,9 +110,8 @@ from models import *
 
 # 2. Add direct file upload
 # 3. Add pairing functionality throughout - pair children output as well
-# 5. # Hold off --- Add clustering algorithm
+# 5. LESS # Hold off --- Add clustering algorithm
 # 6. Check for number of files submitted for analysis
-# 7. X Automatically check for R1/R2 etc
 # 8. Require two files for PANDAseq
 # 9. Check new trim analysis (passing analysis, files by ID)
 # 10. /data/resources : all software

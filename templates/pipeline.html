@@ -365,31 +365,91 @@
                                       <input id="analysis_type-0" name="analysis_type" type="radio" value="igrep" class="igrep">IGREP/IGFFT
                                     </label>
                                     <div id="collapse" class="collapse igrep radio1">
-                                      <!-- <table>
-                                        <tr>
-                                          <td>
-                                            {#{ build_pipeline_form.dataset.label }#}
-                                          </td>
-                                          <td>
-                                          </td>
-                                          <td>
-                                            {#{ build_pipeline_form.dataset_files.label }#}
-                                          </td>
-                                        </tr>
 
-                                        <tr>
-                                          <td>
-                                            {#{ build_pipeline_form.dataset( style="min-width: 10em; ", size="7", class="form-control") }#}
-                                          </td>
-                                          <td>
-                                            <span class="glyphicon glyphicon-chevron-right" aria-hidden="true" style="color:gray; margin: 10px;"></span>
-                                          </td>
-                                          <td>
-                                            {#{ build_pipeline_form.dataset_files( style="min-width: 10em;", size="7", class="form-control"  ) }#}
-                                          </td>
-                                        </tr>
-                                      </table> -->
-                                    </div>
+                                      <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                                        <label >
+                                            {{ build_pipeline_form.generate_msdb( class="generate_msdb" ) }}
+                                            <b>Generate MS DB:</b> Generate Mass Spec database using IGREP tools (currently for IGREP analysis only).
+                                        </label>
+                                      </div> <!-- /checkbox -->
+
+                                      <div id="collapse" class="collapse generate_msdb">
+                                        <div style="margin-left: 25px">
+
+                                          <table class='table table-striped' width=100%> 
+                                            <thead>
+                                                <tr>
+                                                    <th width=25%>{{ build_pipeline_form.msdb_cluster_percent.label }}:</th>
+                                                    <th width=75%></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>{{ build_pipeline_form.msdb_cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
+                                                    <td></td>
+                                                </tr>
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      </div>
+
+                                      <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                                        <label >
+                                            {{ build_pipeline_form.pair_vhvl(class = 'pair_vhvl') }}
+                                            <b>Pair VH/VL:</b> Pair heavy and light chains from IGFFT annotation result.
+                                        </label>
+                                      </div> <!-- /checkbox -->
+
+                                      <div id="collapse" class="collapse pair_vhvl">
+                                        <div style="margin-left: 25px; margin-right: 5px;" >
+
+                                          <table class='table table-striped' width=100%> 
+                                            <thead>
+                                                <tr>
+                                                    <th width=25%>Require Fields:</th>
+                                                    <th width=25%>{{ build_pipeline_form.vhvl_min.label }}:</th>
+                                                    <th width=25%>{{ build_pipeline_form.vhvl_max.label }}:</th>
+                                                    <th width=25%>{{ build_pipeline_form.vhvl_step.label }}:</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>
+                                                      <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                                                        <label >
+                                                            {{ build_pipeline_form.require_cdr1 }}
+                                                            <b>Require CDR1</b> 
+                                                        </label>
+                                                      </div> <!-- /checkbox -->
+                                                      <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                                                        <label >
+                                                            {{ build_pipeline_form.require_cdr2 }}
+                                                            <b>Require CDR2</b> 
+                                                        </label>
+                                                      </div> <!-- /checkbox -->
+                                                      <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                                                        <label >
+                                                            {{ build_pipeline_form.require_cdr3( checked="checked", disabled=True )}}
+                                                            <b>Require CDR3</b> 
+                                                        </label>
+                                                      </div> <!-- /checkbox -->
+                                                    </td>
+                                                    <td>{{ build_pipeline_form.vhvl_min(class="form-control", type="number", step = "0.01") }}</td>
+                                                    <td>{{ build_pipeline_form.vhvl_max(class="form-control", type="number", step = "0.01") }}</td>
+                                                    <td>{{ build_pipeline_form.vhvl_step(class="form-control", type="number", step = "0.01") }}</td>
+                                                </tr>
+                                            </tbody>
+                                          </table>
+
+                                        </div>
+                                      </div> <!-- /pair_vhvl collapse -->
+
+                                      
+
+                                      {#{ build_pipeline_form.msdb_cluster_percent.label }#}
+                                      {#{ build_pipeline_form.msdb_cluster_percent(class = 'form-control') }#}
+
+                                    </div> <!-- /igrep collapse -->
                                   </td>
                                 </tr>
                               
@@ -484,14 +544,8 @@
 
                           <div class="checkbox" class="pull-right" style="padding-left: 4px">
                             <label >
-                                {{ build_pipeline_form.cluster }}
+                                {{ build_pipeline_form.cluster(disabled=True) }}
                                 <b>Cluster:</b> Perform USEARCH clustering on results.
-                            </label>
-                          </div> <!-- /checkbox -->
-                          <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                            <label >
-                                {{ build_pipeline_form.generate_msdb }}
-                                <b>Generate MS DB:</b> Generate Mass Spec database using IGREP tools (currently for IGREP analysis only).
                             </label>
                           </div> <!-- /checkbox -->
                           <br>

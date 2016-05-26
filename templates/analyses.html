@@ -23,9 +23,6 @@
 <h4>Run A New Analysis By <a href="{{url_for('.datasets')}}">Selecting A Dataset</a></h4>
 </div>
 
-
-
-
 {% for analysis, files in analysis_file_dict.items() %}
 <br>
 <div class="container">
@@ -36,7 +33,7 @@
 					<table class='table table-striped'>
 					<tbody>
 						<tr>
-							<th><a href="{{url_for('.analysis', id=analysis.id)}}">Analysis {{analysis.id}} - Execution of {{analysis.program}}</a> on <a href="{{url_for('.dataset', id=analysis.dataset.id)}}">Dataset {{analysis.dataset.id}} {{analysis.dataset.name}}</a></th>
+							<th><a href="{{url_for('.analysis', id=analysis.id)}}">Analysis {{analysis.id}} - Execution of {{analysis.program}}</a>{% if analysis.dataset %} on <a href="{{url_for('.dataset', id=analysis.dataset.id)}}">Dataset {{analysis.dataset.id}} {% if analysis.dataset.name != 'Dataset {}'.format(analysis.dataset.id) %}({{analysis.dataset.name}}){% endif %} {% endif %}</a></th>
 							<th>State: {{analysis.status}}</th>
 							<th>{% if analysis.active_command %}Running: {{' '.join(analysis.active_command.split(' ')[0:2])}} {% endif %}</th>
 							<th>{{analysis.name}}</th>

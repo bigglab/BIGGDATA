@@ -1,6 +1,7 @@
 
 
 from flask_wtf import Form
+#from flask.ext.wtf import widgets
 
 from datetime import datetime
 
@@ -8,9 +9,19 @@ import wtforms
 from wtforms.fields import * 
 from wtforms.widgets import * 
 from wtforms.validators import DataRequired
+from wtforms import widgets
 
 validators = wtforms.validators 
 
+class MultiCheckboxField(SelectMultipleField):
+    """
+    A multiple-select, except displays a list of checkboxes.
+
+    Iterating the field will produce subfields, allowing custom rendering of
+    the enclosed checkbox fields.
+    """
+    widget = widgets.ListWidget(prefix_label=False)
+    option_widget = widgets.CheckboxInput()
 
 
 class LoginForm(Form):
@@ -56,14 +67,30 @@ class CreatePandaseqAnalysisForm(Form):
     algorithm = SelectField(u'Algorithm', choices=(['ea_util', 'ea_util'], ['flash', 'flash'], ['pear', 'pear'], ['rdp_mle', 'rdp_mle'],  ['simple_bayesian', 'simple_bayesian'], ['stitch', 'stitch'], ['uparse', 'uparse']), validators=[validators.input_required()])
 
 class CreateMSDBAnalysisForm(Form): 
+    dataset_ids = MultiCheckboxField('Datasets', choices=[])
+    file_ids = MultiCheckboxField('Datasets', choices=[])
     dataset_id = IntegerField()
     name = TextField(u'Name', )
     description = TextField(u'Description')
-    cluster_percent = DecimalField(places=2, rounding=None)
-    cluster_on_cdr1 = BooleanField()
-    cluster_on_cdr2 = BooleanField()
-    cluster_on_cdr3 = BooleanField()
+    msdb_cluster_percent = DecimalField(places=2, rounding=None, default = 0.90)
+    require_cdr1 = BooleanField()
+    require_cdr2 = BooleanField()
+    require_cdr3 = BooleanField()
 
+class CreateVHVLPairingAnalysisForm(Form): 
+    dataset_ids = MultiCheckboxField('Datasets', choices=[])
+    file_ids = MultiCheckboxField('Datasets', choices=[])
+    name = TextField(u'Name', )
+    description = TextField(u'Description')
+    require_cdr1 = BooleanField()
+    require_cdr2 = BooleanField()
+    require_cdr3 = BooleanField()
+    vhvl_min = DecimalField('VH/VL Min', places=2, rounding=None, default = 0.96)
+    vhvl_max = DecimalField('VH/VL Max', places=2, rounding=None, default = 0.96)
+    vhvl_step = DecimalField('VH/VL Step', places=2, rounding=None, default = 0.0 )
+
+    output_dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
+    output_project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
 
 
 class FileDownloadForm(Form):
@@ -258,6 +285,15 @@ class BuildPipelineForm(Form):
     
     cluster = BooleanField(u'Cluster Sequences')
     generate_msdb = BooleanField(u'Generate Mass Spec Database')
+    pair_vhvl = BooleanField(u'Run VHVL Pairing on IGFFT Annotation Files')
 
+    msdb_cluster_percent = DecimalField('Cluster Percent (MSDB)', places=2, rounding=None, default = 0.9)
+    require_cdr1 = BooleanField()
+    require_cdr2 = BooleanField()
+    require_cdr3 = BooleanField()
+
+    vhvl_min = DecimalField('VH/VL Min', places=2, rounding=None, default = 0.96)
+    vhvl_max = DecimalField('VH/VL Max', places=2, rounding=None, default = 0.96)
+    vhvl_step = DecimalField('VH/VL Step', places=2, rounding=None, default = 0.0   )
 
 

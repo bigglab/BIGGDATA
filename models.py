@@ -98,6 +98,18 @@ class User(db.Model):
 
         projects = association_proxy('user_projects', 'project')
 
+        def get_ordered_datasets(self):
+            datasets = Set(self.datasets)
+            datasets.discard(None)
+            datasets.discard(self.default_dataset)
+            datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
+            return datasets
+
+        def get_ordered_projects(self):
+            projects = Set(self.projects)
+            projects.discard(None)
+            projects = sorted(projects, key=lambda x: x.id, reverse=True)
+            return projects
 
         @hybrid_property
         def name(self):
@@ -126,33 +138,23 @@ class User(db.Model):
             self.user_type = 'researcher'
 
         @hybrid_property
-        def raw_path(self):
-            return self.root_path + 'raw/'
+        def scratch_path(self):
+            return self.root_path
 
         @hybrid_property
         def dropbox_path(self):
-            return self.root_path + 'dropbox/'
+            return self.root_path.rstrip('/') + '/dropbox'
 
         @hybrid_property
-        def scratch_path(self):
-            return self.root_path + 'scratch/'
-
-        @hybrid_property
-        def filtered_path(self):
-            return self.root_path + 'filtered/'
+        def path(self):
+            return self.root_path
 
         # returns all user paths, beginning with the user root path
         # intended for use in instantiating user directories
         @hybrid_property
         def all_paths(self):
-            paths = [self.root_path, self.raw_path, self.scratch_path, self.filtered_path, self.dropbox_path]
+            paths = [ self.root_path, self.dropbox_path ]
             return paths
-
-        # @hybrid_property
-        # def is_migrated(self):
-        #     if self.old_dropbox_path != '' or self.old_scratch_path != '':
-        #         return False
-        #     return True
 
         @hybrid_property
         def default_dataset(self):
@@ -266,8 +268,6 @@ class File(db.Model):
             self.available = False 
             self.created = 'now'
 
-            print '__init__: name = {}, directory = {}, path = {}'.format(name, directory, path)
-
             # Clean up file names here:
             if name is not None:
                 name = name.replace(' ', '_')
@@ -288,9 +288,6 @@ class File(db.Model):
                     directory = path
                 else:
                     directory = os.path.dirname(path)
-
-            print '__init__ 2: name = {}, directory = {}, path = {}'.format(name, directory, path)
-
 
             if name == None or path == None or directory == None:
                 self.path = path
@@ -315,7 +312,6 @@ class File(db.Model):
                 file_name = name
                 file_extension = ''
 
-            print '__init__ 3: name = {}, directory = {}, path = {}'.format(name, directory, path)
 
             # Check filenames until we find one that works
             copy_number = 0
@@ -323,8 +319,6 @@ class File(db.Model):
                 copy_number += 1
                 name = '{}_{}.{}'.format(file_name, str(copy_number), file_extension)
                 path = '{}/{}'.format(directory, name)
-
-            print '__init__ 4: name = {}, directory = {}, path = {}'.format(name, directory, path)
 
             self.path = path
             self.name = name
@@ -1288,5 +1282,119 @@ def build_annotation_dataframe_from_mixcr_file(file_path, dataset_id=None, analy
     df = df[cols]
     return df 
 
+def get_dataset_choices(user = current_user, new = False):
+    '''
+    Used to get tuples for the purpose of adding a list of choices to WTForms select field
+    If new == True, add an option to create a new dataset
+    '''
+    # set the dataset options
+    datasets = Set(user.datasets)
+    datasets.discard(None)
+    datasets.discard(user.default_dataset)
+
+    datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
+    dataset_tuples = []
+
+    # Create form choices for datasets and files
+    if len(datasets) > 0:
+        for dataset in datasets:
+            dataset_tuples.append( (str(dataset.id), dataset.name))
+
+        # This form does not need a new dataset option
+        if new:
+            dataset_tuples.insert(0,('new', 'New Dataset'))
+    elif new:
+        dataset_tuples = [ ('new', 'New Dataset') ]
+
+    return dataset_tuples
+
+def get_project_choices(user = None, new = False):
+    '''
+    Used to get tuples for the purpose of adding a list of choices to WTForms select field
+    If new == True, add an option to create a new project
+    '''
+
+    # get a list of user projects for the form
+    projects = Set(user.projects)
+    projects.discard(None)
+    projects = sorted(projects, key=lambda x: x.id, reverse=True)
+    project_tuples = []
+
+    # Create form choices for projects
+    if len(projects) > 0:
+        for project in projects:
+            if project.role(user) == 'Owner' or project.role(user) == 'Editor':
+                project_tuples.append( (str(project.id), project.project_name))
+        if len(project_tuples) > 0 and new:
+            project_tuples.insert(0, ('new', 'New Project'))
+    elif new:
+        project_tuples = [ ('new', 'New Project') ]
+
+    return project_tuples
+
+def generate_new_dataset(user = None, session = db.session):
+    '''
+    Generates a new, default dataset and returns the dataset object
+    '''
+    new_dataset = Dataset()
+    new_dataset.user_id = user.id
+    new_dataset.populate_with_defaults(user)
+    new_dataset.name = 'Dataset'
+    session.add(new_dataset)
+    session.flush()
+    new_dataset.name = 'Dataset ' + str(new_dataset.id)
+    new_dataset.files = [file]
+    user.datasets.append(new_dataset)
+    session.commit()
 
 
+    return new_dataset
+
+def generate_new_project(user = None, dataset = None, session = db.session):
+    # create a new project here with the name default, add the user and dataset to the new project
+    new_project = Project()
+    new_project.user_id = user.id
+    new_project.project_name = 'Project'
+    session.add(new_project)
+    session.flush()
+    new_project.project_name = 'Project ' + str(new_project.id)
+    new_project.users = [user]
+    if dataset:
+        new_project.datasets = [dataset]
+        new_project.cell_types_sequenced = [str(dataset.cell_types_sequenced)]
+        new_project.species = dataset.species
+
+    session.commit()
+
+    return new_project
+
+# Adds a new analysis with a path formatted as: /directory/directory_prefix# where number is analysis.id
+def generate_new_analysis(user = None, dataset = None, directory = None, directory_prefix = None, session = db.session):
+    analysis = Analysis()
+
+    analysis.started = 'now'
+
+    if dataset: analysis.dataset_id = dataset.id
+    if user: analysis.user_id = user.id
+
+    if directory_prefix == None: directory_prefix = 'Analysis_'
+
+    if directory: pass
+    elif dataset: directory = dataset.directory
+    elif user: directory = user.path
+    else: directory = '/data'
+
+    session.add(analysis)
+    session.commit()
+    session.refresh(analysis)
+
+    analysis.name = 'Analysis {}'.format(analysis.id)
+    session.commit()
+    
+    analysis.directory = directory.rstrip('/') + '/{}{}'.format( directory_prefix, analysis.id)
+
+    if not os.path.isdir(analysis.directory):
+        os.makedirs(analysis.directory)
+
+    return analysis
+                        
