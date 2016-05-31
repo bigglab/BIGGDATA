@@ -727,8 +727,8 @@ def datasets():
                 new_project.project_name = 'Project ' + str(new_project.id)
                 new_project.users = [current_user]
                 new_project.datasets = [d]
-                new_project.cell_types_sequenced = str(dataset.cell_types_sequenced)
-                new_project.species = dataset.species
+                new_project.cell_types_sequenced = str(d.cell_types_sequenced)
+                new_project.species = d.species
 
                 db.session.commit()
                 return redirect(url_for('.datasets'))
