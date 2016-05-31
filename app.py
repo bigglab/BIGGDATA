@@ -3009,6 +3009,7 @@ def add_directory_files_to_database(directory = None, description = None, datase
                             else:
                                 logger.warning('WARNING: failed to rename file {} to {}'.format(path, new_path) )
 
+
                     # Step 3. Add the file to the database
 
                     new_file = File()
@@ -3019,6 +3020,7 @@ def add_directory_files_to_database(directory = None, description = None, datase
                     new_file.analysis_id = analysis_id
                     new_file.path = path
                     new_file.available = True 
+                    new_file.s3_status = ''
                     new_file.status = ''
 
                     # Use the default extension, unless we know better
