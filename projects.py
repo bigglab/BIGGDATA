@@ -63,26 +63,19 @@ from models import *
 # Switch browse/filename order everywhere
 # Remove all S3 references
 # If there is an Exception in IGREP, print it in RED
+# Disable download all link if the analysis is still running
+
+# Fix drop-down updating on pair_vhvl page and msdb page
+# File downloading
+
+# start pipeline using JSON config
 
 # add cdr3 list as a file type
 
-# Add all analysis files to analysis view/db
-# clustering is in MSDB call
-
 # MORE Add analysis result page
-# Preview file
-# hover - head 10 lines tooltip
+# Preview file - add code to more pages
+# Add file download link to other pages
 
-# Move directories up a level
-    # For multiple datasets - use user/Masspec_1
-    # For single analysis, save msdb in user/Dataset/Analysis/ 
-
-# Short form for analysis msdb
-# add clustering setting for msdb threshold
-# analysis must be present: CDR1, CDR2, CDR3 list
-# Provide a list of IGFFT_ANNOTATION files on the Clustering Page
-
-# Move log to analysis directory
 # save JSON of analysis to log (analysis.config)
     # Only back up fastqs
     # One JSON for data
@@ -94,10 +87,7 @@ from models import *
     # on hover = head (4 lines)
 
 # Questions for Russ:
-# Pairing in the database - always refers to forward/reverse read pairing? VH/VL
-# Switch all file uploads to direct uploads?
 # Pair uploads?
-# Abstar uses pandaseq - skip that and just use our PANDAseq?
 # USSEARCH - 
 # Output all formats in TSV
 # Add link to analysis from Console
@@ -361,18 +351,11 @@ def create_project():
 def edit_project(project_id):
     edit_project_form = CreateProjectForm()
 
-    try:
-        # first, determine if the project exists, and if the user has permission to edit it
-        project_query = db.session.query(Project).filter(Project.id==project_id)
+    project = db.session.query(Project).get(project_id)
         
-        if project_query and project_query.count() > 0:
-            project = project_query[0]
-        else:
-            flash('Error: there was an error attempting to edit that project.', 'warning')
-            return redirect( url_for('projects.manage_projects') )
-    except:
+    if not project:
         flash('Error: there was an error attempting to edit that project.', 'warning')
-        return redirect( url_for('projects.manage_projects') )        
+        return redirect( url_for('projects.manage_projects') )
 
     if not project or current_user in project.readers or (current_user != project.owner and current_user not in project.editors):
         flash('Error: you do not have permission to edit that project.', 'warning')
@@ -420,6 +403,8 @@ def edit_project(project_id):
             for dataset in datasets:
                 if dataset not in project.datasets:
                     edit_project_form.datasets.data.append(str(dataset.id))
+            print "hey"
+            print edit_project_form.datasets.data
 
             # populate select fields with user names
             edit_project_form.editors.data = editor_defaults # default should be a list of ids NOT SELECTED

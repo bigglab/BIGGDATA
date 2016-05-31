@@ -98,7 +98,7 @@
 	        	<a href="{{ url_for('frontend.edit_default_dataset') }}">Edit Dataset Defaults</a><br>
 	        	<br>
 	        	<label>Files</label><br>
-	        	<a href="{{ url_for('frontend.file_download') }}">Upload a File from Your Computer</a><br>
+	        	<a href="{{ url_for('frontend.file_download') }}">Upload a File from URL/Computer</a><br>
 	        	<a href="{{ url_for('frontend.import_sra') }}">Upload a File from NCBI</a><br>
 	        	<a href="{{ url_for('frontend.files') }}">View All Files</a><br>
 	        	<br>
@@ -112,11 +112,13 @@
 	        <div class="panel-heading"><b>Data Analysis</b></div>
 	        <div class="panel-body">
 	        	<label>Quickstart</label><br>
-	        	<a href="{{ url_for('frontend.pipeline') }}">Single Page Upload and Analyze</a><br>
+	        	<a href="{{ url_for('frontend.pipeline') }}">Create Analysis Pipeline</a><br>
 	        	<br>
 	        	<label>Analyses</label><br>
+	        	<a href="{{ url_for('frontend.analyses') }}">Analyses and Results</a><br>
 	        	<a href="{{ url_for('frontend.datasets') }}">Analyze Dataset</a><br>
-	        	<a href="{{ url_for('frontend.analyses') }}">Analyses Results</a><br>
+	        	<a href="{{ url_for('frontend.msdb') }}">Create MSDB from Annotations</a><br>
+	        	<a href="{{ url_for('frontend.pair_vhvl') }}">Pair VH/VL Annotations</a><br>
 	        	<a href="{{ url_for('frontend.vdj_visualizer') }}">VDJ VIZualizer</a><br>
 	        	<br>
 	        	<label>BIGG Data Documentation</label><br>
@@ -220,16 +222,6 @@
 		        $('#console').html("There was an error - " + textStatus + ':<br>\n' + jqXHR.responseText);
 		    }
 
-        	// console.log( 'Ready state: ' + jqXHR.readyState)
-        	// console.log( 'Status: ' + jqXHR.status)
-
-         //    if (jqXHR.readyState === 4) {  
-		       //  if (jqXHR.status === 200) {  
-		       //    console.log(jqXHR.responseText)  
-		       //  } else {  
-		       //     console.log("Error", jqXHR.statusText);  
-		       //  }   
-
 	   	});		
 
 		clear_timeouts();
@@ -242,13 +234,7 @@
 
 	update_progress();
 
-
-
     function update_progress() {
-
-
-		//$('#console-container').css({"bottom":"0", "height" : "100%" });
-
 
        $.getJSON(status_url, function(data) {
 
@@ -264,15 +250,11 @@
 				}
 
 				timeout = setTimeout( update_progress , interval); 
-			
 			}
-
-
 		}
 
 		if (set_new_interval){
 			interval = new_interval;
-
 			clear_timeouts();
 
 			if (timeout){

@@ -132,14 +132,13 @@
                                       <table class='table'> 
                                         <thead>
                                             <tr>
-                                                <th width=35%><label>Enter A Unique File Name:</label></th>
                                                 <th width=35%><label>Choose the file:</label></th>
+                                                <th width=35%><label>Enter A File Name:</label></th>
                                                 <th width=30%>{{build_pipeline_form.file_pairing.label}} </th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <tr >
-                                                <td><input id="file_1_name" type="input" name="file_1_name" value="" class="form-control"/></td>
                                                 <td>
                                                     <div class="input-group">
                                                         <span class="input-group-btn">
@@ -151,13 +150,13 @@
                                                     </div>
                                                     <!-- <input type="file" name="file" value="" class="form-control"/> -->
                                                 </td>
+                                                <td><input id="file_1_name" type="input" name="file_1_name" value="" class="form-control"/></td>                                                
                                                 <td >
                                                   {{ build_pipeline_form.file_pairing(class="form-control file_pairing") }}
                                                 </td>
                                             </tr>
 
                                             <tr id="collapse" class="collapse file_pairing">
-                                                  <td width=35%><input id="file_2_name" type="input" name="file_2_name" value="" class="form-control"/></td>
                                                   <td width=35%>
                                                       <div class="input-group">
                                                           <span class="input-group-btn">
@@ -169,6 +168,7 @@
                                                       </div>
                                                       <!-- <input type="file" name="file" value="" class="form-control"/> -->
                                                   </td>
+                                                  <td width=35%><input id="file_2_name" type="input" name="file_2_name" value="" class="form-control"/></td>
                                                   <td width=30%></td>
                                               </tr>
 
@@ -606,18 +606,24 @@ $('.carousel').on('slide.bs.carousel',function(e){
             $('#slide1').css( "color", "gray" );
             $('#slide2').css( "color", "gray" );
             $('#slide3').css( "color", "gray" );
+            $('.left.carousel-control').hide();
+            $('.right.carousel-control').show();
             break;
         case 1:
             $('#slide0').css( "color", "gray" );
             $('#slide1').css( "color", "black" );
             $('#slide2').css( "color", "gray" );
             $('#slide3').css( "color", "gray" );
+            $('.left.carousel-control').show();
+            $('.right.carousel-control').show();
             break;
         case 2:
             $('#slide0').css( "color", "gray" );
             $('#slide1').css( "color", "gray" );
             $('#slide2').css( "color", "black" );
             $('#slide3').css( "color", "gray" );
+            $('.left.carousel-control').show();
+            $('.right.carousel-control').show();
             break;
 
         case 3:
@@ -625,6 +631,8 @@ $('.carousel').on('slide.bs.carousel',function(e){
             $('#slide1').css( "color", "gray" );
             $('#slide2').css( "color", "gray" );
             $('#slide3').css( "color", "black" );
+            $('.left.carousel-control').show();
+            $('.right.carousel-control').hide();
 
     }
 
@@ -710,6 +718,10 @@ $(document).ready(function(){
       $(selector).attr(attribute, value);    
     }
   }
+
+  {% if first_error_item == None -%}
+    $('.left.carousel-control').hide();
+  {% endif%}
 
   $("#dataset option").each( function( index ) {
     $(this).triggerHandler('click'); 

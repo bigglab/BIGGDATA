@@ -3,28 +3,53 @@
 {% block content %}
 
 <div class="container">
-	<h3>Analyses Dashboard</h3>
-</div>
-
-<div class='container'>
-{% if status != [] %}
-{% for ln in status %}
-    <h4>{{ln}}</h4>
-{% endfor %}
-{% endif %}
-<br>
-{% if async_task_id %}
-<p>Async Task ID: {{async_task_id}}</p>
-{% endif %}
+	<center><h3>Analyses Dashboard</h3></center>
+	<br>
 </div>
 
 <div class="container">
-<br>
-<h4>Run A New Analysis By <a href="{{url_for('.datasets')}}">Selecting A Dataset</a></h4>
+
+	<div class="row" id="console-container">
+		<div class="col-md-12">
+		    <div class="panel panel-default">
+		        <div class="panel-heading">
+		        	<table width="100%">
+			        	<tbody>
+				        	<tr>
+				        		<td><b>Task Console</b></td>
+				        		<td align="right">
+			        				<span class="pencil glyphicon glyphicon-refresh" style="margin-right: 3px; color:black; cursor: pointer; cursor: hand;" onclick="refresh_console()"></span>
+				        			<span class="pencil glyphicon glyphicon-minus" style="margin-right: 3px; color:black; cursor: pointer; cursor: hand;" onclick="minimize_console()"></span>
+				        			<span class="pencil glyphicon glyphicon-plus" style="color:black; cursor: pointer; cursor: hand;" onclick="maximize_console()"></span>
+			        			</td>
+	
+				        	</tr>
+
+			        	</tbody>
+		        	</table>
+	        	</div>
+
+		        <div class="panel-body">
+		        	<samp>
+		        	<div id ="console" class="form-control" style="overflow-y :scroll; overflow-x: wrap; height: 20ex; resize: vertical;" rows="10">
+ 					 	Loading console... <br>
+			        
+		        	</div>
+					</samp>
+				</div>
+
+		</div>
+	<em style="margin-left: 20px;">Run A New Analysis By <a href="{{url_for('.datasets')}}">Selecting A Dataset</a></em>
+	<br><br>
+
+	</div>
+</div> <!-- /console container -->
+
+
+<div class="container">
 </div>
 
 {% for analysis, files in analysis_file_dict.items() %}
-<br>
 <div class="container">
 	<table class="table table-striped">
 		<tbody>
@@ -33,7 +58,7 @@
 					<table class='table table-striped'>
 					<tbody>
 						<tr>
-							<th><a href="{{url_for('.analysis', id=analysis.id)}}">Analysis {{analysis.id}} - Execution of {{analysis.program}}</a>{% if analysis.dataset %} on <a href="{{url_for('.dataset', id=analysis.dataset.id)}}">Dataset {{analysis.dataset.id}} {% if analysis.dataset.name != 'Dataset {}'.format(analysis.dataset.id) %}({{analysis.dataset.name}}){% endif %} {% endif %}</a></th>
+							<th><a href="{{url_for('.analysis', id=analysis.id)}}">Analysis {{analysis.id}} - Execution of {{analysis.program}}</a>{% if analysis.dataset %} on <a href="{{url_for('.dataset', id=analysis.dataset.id)}}">Dataset {{analysis.dataset.id}} {% if analysis.dataset.name != 'Dataset {}'.format(analysis.dataset.id) %}({{analysis.dataset.name}}){% endif %} </a>{% endif %}</th>
 							<th>State: {{analysis.status}}</th>
 							<th>{% if analysis.active_command %}Running: {{' '.join(analysis.active_command.split(' ')[0:2])}} {% endif %}</th>
 							<th>{{analysis.name}}</th>
@@ -45,7 +70,12 @@
 				</tr>
 				<tr>
 					{% set files = files %}
-					{% include "partials/files.html" with context %}
+					{%- if files and files != [] -%}
+						{% include "partials/files.html" with context %}
+					{%- else -%}
+						<p>No files were produced by this analysis. <a href="{{url_for('.analysis', id=analysis.id)}}">Click here</a> to view results for this analysis. </p>
+					{%- endif -%}
+
 				</tr>
 		</tbody>
 	</table>
@@ -54,12 +84,233 @@
 
 {% endfor %}
 
+<script>
+
+$(document).ready(function(){
+    $('[data-toggle="popover"]').popover(); 
+});
 
 
+	var interval = 5000;
+	var status_url ="{{ url_for( 'frontend.json_celery_log' ) }}"
+	var zip_file_status_url ="{{ url_for( 'frontend.zip_file_status_json' ) }}"
+	var new_interval = 5000;
+	var set_new_interval = false;
+	var zip_timeout;
+
+	function clear_timeouts() {
+		var id = window.setTimeout(function() {}, 0);
+
+		while (id--) {
+			if (id != zip_timeout){
+			    window.clearTimeout(id); // will do nothing if no timeout with id is present
+		   }
+		}
+
+	}
+
+    function maximize_console() {
+    	div = $('#console')
+    	space = window.innerHeight - div.offset().top - 40
+		div.css({ "height" : space });
+		set_new_interval = true;
+		new_interval = 5000;
+		update_progress();
+
+    }
+
+    function minimize_console() {
+    	div = $('#console')
+    	space = window.innerHeight - div.offset().top - 40
+		div.css({ "height" : "20ex" });
+    }
+
+    function refresh_console() {
+		set_new_interval = true;
+    	new_interval = 5000;
+		update_progress();
+    }
+
+    function delete_task(delete_url) {
+
+       $.getJSON(delete_url, function(data) {
+
+		if ( data['interval'] ){
+
+			if (interval != data['interval']){
+				interval = data['interval']
+
+				clear_timeouts();
+
+				if (timeout){
+				    clearTimeout(timeout);
+				}
+
+				timeout = setTimeout( update_progress , interval); 
+			
+			}
 
 
+		}
+
+		if (set_new_interval){
+			interval = new_interval;
+
+			clear_timeouts();
+
+			if (timeout){
+			    clearTimeout(timeout);
+			}
+
+			timeout = setTimeout( update_progress , interval); 
+
+			set_new_interval = false;
+		}
+
+			$('#interval').html( data['message'] );
+
+			$('#console').html( data['message'] );
+			$('#interval').html( interval/1000 );
+
+		}).error(function(jqXHR, textStatus, errorThrown) {
+	        
+            if (jqXHR.readyState == 0) {  
+		        $('#console').html('There was an error: Could not connect to BIGG Data Server.<br>\n' );
+		    } else {
+		        $('#console').html("There was an error - " + textStatus + ':<br>\n' + jqXHR.responseText);
+		    }
+
+	   	});		
+
+		clear_timeouts();
+
+		timeout = setTimeout(function() {
+			update_progress();
+		}, interval); 
+
+	};
+
+    function update_progress() {
+
+       $.getJSON(status_url, function(data) {
+
+		if ( data['interval'] ){
+
+			if (interval != data['interval']){
+				interval = data['interval']
+		
+				clear_timeouts();
+
+				if (timeout){
+				    clearTimeout(timeout);
+				}
+
+				timeout = setTimeout( update_progress , interval); 
+			}
+		}
+
+		if (set_new_interval){
+			interval = new_interval;
+			clear_timeouts();
+
+			if (timeout){
+			    clearTimeout(timeout);
+			}
+
+			timeout = setTimeout( update_progress , interval); 
+
+			set_new_interval = false;
+		}
+
+			$('#interval').html( data['message'] );
+
+			$('#console').html( data['message'] );
+			$('#interval').html( interval/1000 );
+
+		}).error(function(jqXHR, textStatus, errorThrown) {
+	        
+            if (jqXHR.readyState == 0) {  
+		        $('#console').html('There was an error: Could not connect to BIGG Data Server.<br>\n' );
+		    } else {
+		        $('#console').html("There was an error - " + textStatus + ':<br>\n' + jqXHR.responseText);
+		    }
+
+	   	});		
+
+		clear_timeouts();
+
+		timeout = setTimeout(function() {
+			update_progress();
+		}, interval); 
+
+	};
+
+	update_progress();
+
+   function get_zip_file_status() {
+
+       $.getJSON(zip_file_status_url, function(data) {
+
+		if ( data['analysis_status'] ){
+			var analysis_status = data['analysis_status'];
+			for (var key in analysis_status) {
+			    if (analysis_status.hasOwnProperty(key)) { // this will check if key is owned by data object and not by any of it's ancestors
+
+			    	if (analysis_status[key] == 'NONE' ){
+
+			    		var download_message = '<td colspan="8" align = right> <a href="/analysis/' + key + '/download"> Click Here to Download All Files as a Compressed File </a></td>';
+
+				    	$('tr#zip-' + key).html( download_message );
+				    } else if ( !isNaN(analysis_status[key])){
+				    	var download_message = `
+							<td colspan="7" align = right> Download All (`+ data['zip_file_names'][key] +`): </td>
+							<td align=center> 
+								<a href="/download/` + key + `" style="color: inherit; text-decoration: none" download="">
+									<span class="glyphicon glyphicon-download fa-lg" aria-hidden="true" style="color:black; "></span>
+								</a>
+							</td>
+				    	`
+				    	$('tr#zip-' + key).html( download_message );
+
+				    } else if (analysis_status[key] == 'COMPRESSING' ){
+				    	var download_message = '<td colspan="8" align = right> Creating compressed file... </td>';
+				    	$('tr#zip-' + key).html( download_message );
+
+				    }
+
+			    }
+			}			
+		}
+
+			// $('#interval').html( data['message'] );
+			// $('#console').html( data['message'] );
+			// $('#interval').html( interval/1000 );
+
+		}).error(function(jqXHR, textStatus, errorThrown) {
+            if (jqXHR.readyState == 0) {  
+		        $('#console').html('There was an error: Could not connect to BIGG Data Server.<br>\n' );
+		    } else {
+		        $('#console').html("There was an error - " + textStatus + ':<br>\n' + jqXHR.responseText);
+		    }
+	   	});		
+
+		zip_timeout = setTimeout(function() {
+			get_zip_file_status();
+		}, 5000); 
+
+	};
+
+	get_zip_file_status();
 
 
+$('.mightOverflow').bind('mouseenter', function(){
+    var $this = $(this);
+
+    if(this.offsetWidth < this.scrollWidth && !$this.attr('title')){
+        $this.attr('title', $this.text());
+    }
+});
+</script>
 {%endblock content %}
 
 

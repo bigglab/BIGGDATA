@@ -36,7 +36,7 @@ import collections
 #Flask Imports
 from werkzeug import secure_filename
 from flask import Blueprint, render_template, flash, redirect, url_for
-from flask import Flask, Blueprint, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages, send_from_directory
+from flask import Flask, Blueprint, Markup, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages, send_from_directory
 from flask.ext.bcrypt import Bcrypt
 from flask.ext.login import LoginManager, UserMixin, current_user, login_user, logout_user, login_required
 from flask.ext.mail import Mail, Message
@@ -93,19 +93,19 @@ nav.register_element('frontend_user', Navbar(
     View('BIGG DATA', 'frontend.index'),
     View('Dashboard', 'frontend.dashboard'),
     Subgroup(
-        'Import Data', 
+        'Files', 
         View('My Files', 'frontend.files'), 
         View('Import File', 'frontend.file_download'),
         View('Import From NCBI', 'frontend.import_sra'), 
         ),
     Subgroup(
-        'Manage Data',
+        'Datasets',
         View('My Projects', 'projects.manage_projects'),
         View('My Datasets', 'frontend.datasets'),
         View('New Project', 'projects.create_project'),
         ),
     Subgroup(
-        'Run Analysis', 
+        'Analysis', 
         View('My Analyses', 'frontend.analyses'),
         View('Create Analysis Pipline', 'frontend.pipeline'),
         View('Create MSDB from Annotations', 'frontend.msdb'),
@@ -230,87 +230,240 @@ def dashboard(status=[]):
         analysis_file_dict[analysis] = analysis.files.all() 
     return render_template("dashboard.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status, current_user=current_user)
 
-@frontend.route('/file_upload', methods=['GET', 'POST'])
+@frontend.route('/file_upload', methods=['POST'])
 @login_required
 def file_upload():
-    form = FileUploadForm()
+    upload_form = FileUploadForm()
 
-    # get a list of user datasets for the form
-    datasets = Set(current_user.datasets)
-    datasets.discard(None)
-    datasets.discard(current_user.default_dataset)
-
-    datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
-    dataset_tuples = []
-
-    if len(datasets) > 0:
-        for dataset in datasets:
-            dataset_tuples.append( (str(dataset.id), dataset.name))
-
-        if len(dataset_tuples) > 0:
-            #dataset_tuples.append(('new', 'New Dataset'))
-            dataset_tuples.insert(0,('new', 'New Dataset'))
-            form.dataset.choices = dataset_tuples
-
-    # get a list of user projects for the form
+    # get a list of user projects
     projects = Set(current_user.projects)
     projects.discard(None)
     projects = sorted(projects, key=lambda x: x.id, reverse=True)
-    project_tuples = []
 
-    if len(projects) > 0:
-        for project in projects:
-            if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
-                project_tuples.append( (str(project.id), project.project_name))
-        if len(project_tuples) > 0:
-            project_tuples.insert(0, ('new', 'New Project'))
-            form.project.choices = project_tuples
+    form_valid = True
+    new_files = []
+    if upload_form.file_pairing.data == 'none':
+        try:
+            request_file_1 = request.files['file_1']
+        except:
+            flash('Error: unable to upload file.','warning')
+            form_valid = False
+        else:
+            file_1 = File(user_id = current_user.id)
+            if upload_form.file_1_name.data == '':
+                file_1.name = cmd_quote(request_file_1.filename)
+            else:
+                file_1.name = cmd_quote(upload_form.file_1_name.data)
 
-    if request.method == 'POST':
-        request_file = request.files['file']
-        print 'request file: '
-        print request_file.__dict__
-        file = File()
-        file.name = request_file.filename
-        file.file_type = parse_file_ext(file.name)
-        file.description = form.description.data
-        file.chain = form.chain.data
-        file.paired_partner = form.paired_partner.data 
-        file.dataset_id = form.dataset_id.data
-        file.path = '{}/{}'.format(current_user.path, file.name)
-        file.path.replace('//', '') 
- 
-        file.user_id = current_user.id
-        print 'Saving uploaded file to {}'.format(file.path)
-        request_file.save(file.path)
-        file.available = True 
-        print 'Saving File Metadata to Postgres: {}'.format(file.__dict__)
-        db.session.add(file)
-        db.session.commit()
-        flash('file uploaded to {}'.format(file.path))
-        return redirect(url_for('.files'))
+            file_1.file_type = parse_file_ext(file_1.name)
+            #file_1.description = upload_form.description.data
+            #file_1.dataset_id = int(upload_form.dataset.data) set later
+            file_1.path = '{}/{}'.format(current_user.path.rstrip('/'), file_1.name)
+            file_1.path = file_1.path.replace('//', '') 
+            file_1.user_id = current_user.id
+
+            if file_1.exists():
+                file_1.change_name_to_available()
+
+            print 'Saving uploaded file to {}'.format(file_1.path)
+            request_file_1.save(file_1.path)
+            file_1.available = True 
+            db.session.add(file_1)
+            file_1.validate()
+            db.session.commit()
+            db.session.refresh(file_1)
+            new_files.append(file_1)
+
+            flash('New file uploaded with file id {}.'.format( file_1.id ), 'success' )
+
     else:
-        dl_form = FileDownloadForm()
-        return render_template("file_upload.html", upload_form=form, download_form=dl_form, current_user=current_user)
+        try:
+            request_file_1 = request.files['file_1']
+            request_file_2 = request.files['file_2']
+        except:
+            flash('Error: unable to upload files.','warning')
+            form_valid = False
+        else:
+            # First Download File
+            file_1 = File(user_id = current_user.id)
+            if upload_form.file_1_name.data == '':
+                file_1.name = cmd_quote(request_file_1.filename)
+            else:
+                file_1.name = cmd_quote(upload_form.file_1_name.data)
+
+            file_1.file_type = parse_file_ext(file_1.name)
+            #file_1.description = upload_form.description.data
+            file_1.path = '{}/{}'.format(current_user.path.rstrip('/'), file_1.name)
+            file_1.path = file_1.path.replace('//', '') 
+            file_1.user_id = current_user.id
+
+            print "This: {}".format(file_1.user_id)
+            #file_1.dataset_id = int(upload_form.dataset.data)
+            # NOT SET file.chain = upload_form.chain.data
+            # NOT SET file.paired_partner = upload_form.paired_partner.data 
+
+            if file_1.exists():
+                file_1.change_name_to_available()                    
+
+            print "This: {}".format(file_1.user_id)
+
+            
+            print 'Saving uploaded file to {}'.format(file_1.path)
+            request_file_1.save(file_1.path)
+            file_1.available = True
+
+            # Second Download File
+            file_2 = File(user_id = current_user.id)
+            if upload_form.file_2_name.data == '':
+                file_2.name = cmd_quote(request_file_2.filename)
+            else:
+                file_2.name = cmd_quote(upload_form.file_2_name.data)
+
+            file_2.user_id = current_user.id
+            file_2.file_type = parse_file_ext(file_2.name)
+            file_2.description = upload_form.description.data
+            file_2.path = '{}/{}'.format(current_user.path.rstrip('/'), file_2.name)
+            file_2.path = file_2.path.replace('//', '') 
+            #file_2.dataset_id = int(upload_form.dataset.data)
+            # NOT SET file.chain = upload_form.chain.data
+            # NOT SET file.paired_partner = upload_form.paired_partner.data 
+            if file_2.exists():
+                file_2.change_name_to_available()                    
+     
+            print 'Saving uploaded file to {}'.format(file_2.path)
+            request_file_2.save(file_2.path)
+            file_2.available = True 
+            db.session.add(file_1)
+            db.session.add(file_2)
+            file_1.validate()
+            file_2.validate()
+            db.session.commit()
+            db.session.refresh(file_1)
+            db.session.refresh(file_2)
+            new_files.append(file_1)
+            new_files.append(file_2)
+
+            vhvl_paired = False
+            if upload_form.file_pairing.data == 'vhvl': vhvl_paired = True
+
+            if not file_1.pair(file_2, vhvl_paired = vhvl_paired):
+                flash('Unable to pair different file types. Submitted files had types "{}" and "{}".'.format(file_1.file_type, file_2.file_type), 'warning' )
+
+            flash('New files uploaded with file ids {} and {}.'.format( file_1.id, file_2.id ), 'success' )
+
+# check if the user has selected the default project (i.e., the user has no projects)
+    output_file_dataset = None
+    if upload_form.dataset.data == 'new' and new_files != [] and form_valid:
+        # create a new dataset here with the name default, add the user and dataset to the new project
+        new_dataset = Dataset()
+        new_dataset.user_id = current_user.id
+        new_dataset.populate_with_defaults(current_user)
+        new_dataset.name = 'Dataset'
+        db.session.add(new_dataset)
+        db.session.flush()
+        new_dataset.name = 'Dataset ' + str(new_dataset.id)
+        new_dataset.directory = "{}/Dataset_{}".format(current_user.path.rstrip('/') , new_dataset.id)
+
+        upload_form.dataset.choices.append( ( str(new_dataset.id), new_dataset.name ) )
+        db.session.commit()
+
+        if not os.path.isdir(new_dataset.directory):
+            os.makedirs(new_dataset.directory)
+            print 'Created new directory at {}'.format(new_dataset.directory)
+
+        output_file_dataset = new_dataset
+        #flash('New files will be added to dataset "{}".'.format(new_dataset.name), 'success')
+
+    else: # check if the user has selected a project which they have access to
+        user_has_permission = False
+        for dataset in current_user.datasets:
+            if str(dataset.id) == upload_form.dataset.data:
+                #####dataset.files.append(file)
+                user_has_permission = True
+                output_file_dataset = dataset
+
+        if not user_has_permission:
+            flash('Error: you do not have permission to add a file to that dataset.','warning')
+            if first_error_item == None : first_error_item = 3
+            form_valid = False
+
+    if new_files != []:
+        selected_files = []
+        file_id_dict = {}
+
+        for file in new_files:
+            if not os.path.isfile(file.path):
+                print 'Unable to find file {}'.format(file.path)
+            else:
+                print 'Moving {} to {}/{}'.format(file.path, output_file_dataset.directory, file.name)
+
+            file.move( output_file_dataset.directory )
+            #os.rename(file.path, '{}/{}'.format( output_file_dataset.directory, file.name) )
+            file.path = '{}/{}'.format( output_file_dataset.directory, file.name)
+            file.dataset_id = output_file_dataset.id
+            selected_files.append( str(file.id) )
+            file_id_dict[ str(file.id) ] = file.name
+            output_file_dataset.files.append(file)
+
+    db.session.commit()
+
+    if form_valid:
+
+        # now do the same with projects, with the qualification that we add the dataset to the project if it's not there already
+        # check if the user has selected the default project (i.e., the user has no projects)
+        if output_file_dataset:
+
+            if upload_form.project.data == 'new':
+                # create a new project here with the name default, add the user and dataset to the new project
+                new_project = Project()
+                new_project.user_id = current_user.id
+                new_project.project_name = 'Project'
+                db.session.add(new_project)
+                db.session.flush()
+                new_project.project_name = 'Project ' + str(new_project.id)
+                new_project.users = [current_user]
+                new_project.datasets = [output_file_dataset]
+                new_project.cell_types_sequenced = [str(output_file_dataset.cell_types_sequenced)]
+                new_project.species = output_file_dataset.species
+
+                db.session.commit()
+            else: # check if the user has selected a project which they have access to
+                user_has_permission = False
+                for project in projects:
+                    if str(project.id) == upload_form.project.data:
+                        if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
+                            # if the dataset is not in the project, add it
+                            if output_file_dataset not in project.datasets:
+                                project.datasets.append(output_file_dataset)
+                            user_has_permission = True
+
+                            if current_user.default_dataset == None:
+                                output_file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                                output_file_dataset.species = project.species
+
+                            db.session.commit()
+                if not user_has_permission:
+                    flash('Error: you do not have permission to add a dataset to that project.','warning')
+                db.session.commit()
+
+    return redirect( url_for('frontend.dashboard') )
 
 @frontend.route('/file_download', methods=['GET', 'POST'])
 @login_required
 def file_download(status=[], bucket='', key=''):
-    bucket = request.args.get('bucket')
-    key = request.args.get('key')
-    if bucket: 
-        status.append('Your file is available for download at the following URL:')
-        status.append('https://s3.amazonaws.com/{}/{}'.format(bucket, key))
-        form = FileDownloadForm(data={'url':'https://s3.amazonaws.com/{}/{}'.format(bucket, key)})
-    else: 
-        form = FileDownloadForm()
-        form.dataset.choices = get_dataset_choices(current_user, new = True)
-        form.project.choices = get_project_choices(current_user, new = True)
 
-        # get a list of user projects for user later
-        projects = Set(current_user.projects)
-        projects.discard(None)
-        projects = sorted(projects, key=lambda x: x.id, reverse=True)
+    form = FileDownloadForm()
+    upload_form = FileUploadForm()
+
+    form.dataset.choices = get_dataset_choices(current_user, new = True)
+    form.project.choices = get_project_choices(current_user, new = True)
+    upload_form.dataset.choices = form.dataset.choices
+    upload_form.project.choices = form.project.choices
+
+    # get a list of user projects for user later
+    projects = Set(current_user.projects)
+    projects.discard(None)
+    projects = sorted(projects, key=lambda x: x.id, reverse=True)
 
     if request.method == 'POST':
         file = File()
@@ -324,7 +477,6 @@ def file_download(status=[], bucket='', key=''):
         file.path = '{}/{}'.format(current_user.path.rstrip('/'), file.name)
         file.user_id = current_user.id
         file.available = False 
-        file.s3_status = ''
         file.status = ''
         print 'Saving File Metadata to Postgres: {}'.format(file.__dict__)
         db.session.add(file)
@@ -386,43 +538,24 @@ def file_download(status=[], bucket='', key=''):
             file.path = os.path.splitext(file.path)[0] + '_1' + os.path.splitext(file.path)[1]
         #######
 
-        # Making the status message a single line. 
-        status_message = 'Started background task to download file from {}. Saving File To {}. This file will be visible in "My Files", and available for use after the download completes.'.format(file.url, file.path)
-        status.append(status_message)
-        # status.append('Started background task to download file from {}'.format(file.url))
-        # status.append('Saving File To {}'.format(file.path))
-        # status.append('This file will be visible in "My Files", and available for use after the download completes.')
-        print status 
-        
-        # result_id NOT WORKING - STILL REDUNDANT IF THEY CLICK TWICE!!
-        flash_message = ''
-        if not 'async_result_id' in session.__dict__:
-            result = download_file.apply_async((file.url, file.path, file.id), {'user_id': current_user.id}, queue=celery_queue)
-            #flash_message = 'File downloading from {}. '.format(file.url)
-            session['async_result_id'] = result.id
-        time.sleep(1)
-        
-        #async_result = add.AsyncResult(session['async_result_id'])
-        # r = async_result.info
-        r = result.__dict__
-        #r['async_result.info'] = async_result.info 
-        r['async_result.info'] = result.info 
-
         db.session.commit()
-        #flash_message = flash_message + 'File uploaded to {}. '.format(file.path)
-        #flash(flash_message, 'success')
         return redirect( url_for('frontend.dashboard') )
 
-    else:
-        r=''
-    return render_template("file_download.html", download_form=form, status=status, r=r, current_user=current_user)
+    return render_template("file_download.html", download_form=form, upload_form = upload_form, current_user=current_user)
 
 
 ##### Download the file here #####
-@app.route('/download/<int:file_id>', methods=['GET', 'POST'])
+@frontend.route('/download/<int:file_id>', methods=['GET', 'POST'])
 def download(file_id):
-    uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
-    return send_from_directory(directory=uploads, filename=filename)
+
+    file = db.session.query(File).get(file_id)
+
+    if file:
+
+        return send_from_directory(directory=file.directory, filename=file.name)
+
+    else:
+        return redirect( request.referrer )
 
 @frontend.route('/files', methods=['GET', 'POST'])
 @login_required
@@ -430,7 +563,7 @@ def files(status=[], bucket=None, key=None):
     # print request
     db.session.expire_all()
     files = sorted(current_user.files.all(), key=lambda x: x.id, reverse=True)
-    paths = get_files(current_user)
+    paths = get_dropbox_files(current_user)
     form = Form()
 
     #creates list of datasets
@@ -439,24 +572,28 @@ def files(status=[], bucket=None, key=None):
         projectid = str(x.id)
         name = str(x.project_name) 
         projectnames.append(name + ' - ' + projectid)
-    if bucket and key: 
-        status.append('https://s3.amazon.com/{}/{}'.format(bucket, key))
+
     if request.method == 'POST' and os.path.isfile(request.form['submit']):
         file_path = request.form['submit'] 
         file_name = file_path.split('/')[-1]
         if file_path not in [file.path for file in current_user.files]:
             print 'linking new file "{}"  to  {}'.format(file_name, file_path)
-            if link_file_to_user(file_path, current_user, file_name):
-                flash('linked new file to your user: {}'.format(file_path), 'success')
-                paths = paths.remove(file_path)
-                files = sorted(current_user.files, key=lambda x: x.id, reverse=True)
+            file = File(name = file_name, path = file_path, user_id = current_user.id,
+                    check_name = False)
+            file.validate()
+            db.session.add(file)
+            db.session.commit()
+            
+            flash('linked new file to your user: {}'.format(file_path), 'success')
+            paths = paths.remove(file_path)
+            files = sorted(current_user.files, key=lambda x: x.id, reverse=True)
         else: 
             flash('file metadata already created to your user')
-            paths = get_files(current_user)
-        return render_template("files.html", files=files, dropbox_files=paths, form=form, current_user=current_user, status=status, projectnames=map(json.dumps, projectnames))
+            paths = get_dropbox_files(current_user)
+        return render_template("files.html", files=files, dropbox_files=paths, form=form, current_user=current_user)
     else: 
-        paths = get_files(current_user)
-        return render_template("files.html", files=files, dropbox_files=paths, form=form, current_user=current_user, status=status, projectnames=map(json.dumps, projectnames))
+        paths = get_dropbox_files(current_user)
+        return render_template("files.html", files=files, dropbox_files=paths, form=form, current_user=current_user)
 
 @frontend.route('/files/<int:id>', methods=['GET','POST'])
 @login_required
@@ -930,21 +1067,38 @@ def analyses(status=[]):
         analysis_file_dict[analysis] = analysis.files.all() 
     return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status, current_user=current_user)
 
-# @frontend.route('/analysis/<int:analysis_id>/export_to_msdb/<string(length=3):ig_type>')
-# @login_required
-# def export_analysis_to_msdb(analysis_id, ig_type=None):
-#     analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
-#     if ig_type: 
-#         aa_seqs = db.engine.execute("select  cdr3_aa, count(distinct aa) from annotation a WHERE a.analysis_id = {} GROUP BY cdr3_aa ORDER BY count(aa) DESC;".format(analysis.id)).fetchall()
 
 @frontend.route('/analysis/<int:id>', methods=['GET', 'POST'])
 @login_required
 def analysis(id):
-    analysis = db.session.query(Analysis).filter(Analysis.id==id).first()
-    # cdr3_aa_counts = db.engine.execute("select  cdr3_aa, count(1) from annotation a WHERE a.analysis_id = {} GROUP BY cdr3_aa ORDER BY count(1) DESC;".format(analysis.id)).fetchall()
-    # v_hit_counts = db.engine.execute("select  v_top_hit, count(1) from annotation a WHERE a.analysis_id = {} GROUP BY v_top_hit ORDER BY count(1) DESC;".format(analysis.id)).fetchall()
-    # v_hit_loci_counts = db.engine.execute("select  v_top_hit_locus, count(1) from annotation a WHERE a.analysis_id = {} GROUP BY v_top_hit_locus ORDER BY count(1) DESC;".format(analysis.id)).fetchall()
+    analysis = db.session.query(Analysis).filter(Analysis.id==id).first()        
     return render_template("analysis.html", analysis=analysis, current_user=current_user) #, cdr3_aa_counts=cdr3_aa_counts, v_hit_counts=v_hit_counts, v_hit_loci_counts=v_hit_loci_counts)
+
+# Call a celery task to zip all the files and download them
+@frontend.route('/analysis/<int:id>/download', methods=['GET', 'POST'])
+@login_required
+def analysis_download(id):
+    analysis = db.session.query(Analysis).filter(Analysis.id==id).first()
+
+    if analysis.zip_file_id != None:
+        if analysis.zip_file.status == 'COMPRESSING':
+            flash('Error: a compressed file for that analysis is being created.', 'warning ')
+        else:
+            flash('Error: a compressed file for that analysis has been/is being created.', 'warning ')
+        return redirect( url_for('frontend.analyses') )
+
+
+    if analysis.files.count() > 0:
+        result = create_analysis_zip_file.apply_async( ( ),  
+            { 
+                'analysis_id': analysis.id,
+                'user_id': current_user.id 
+            }, queue=celery_queue)
+
+    else:
+        flash('Analysis {} has no files to compress.'.format(analysis.id) , 'warning')
+
+    return redirect( url_for('frontend.analyses') )
     
 @frontend.route('/analysis/mixcr/<int:dataset_id>', methods=['GET', 'POST'])
 @login_required
@@ -980,8 +1134,6 @@ def mixcr(dataset_id, status=[]):
             analysis_file_dict[analysis] = analysis.files.all()
 
         return redirect(url_for('frontend.dashboard')) 
-        # return redirect(url_for('.analyses', status=status))
-        # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
     else: 
         return render_template("mixcr.html", dataset=dataset, form=form, status=status, current_user=current_user) 
 
@@ -1017,7 +1169,6 @@ def pandaseq(dataset_id, status=[]):
     else: 
         return render_template("pandaseq.html", dataset=dataset, form=form, status=status, current_user=current_user) 
 
-from flask import Markup
 @frontend.route('/test/', methods=['GET', 'POST'])
 @login_required
 def test():
@@ -1030,36 +1181,6 @@ def test():
 
     return redirect( url_for('frontend.dashboard') )
 
-# @frontend.route('/analysis/msdb/<int:dataset_id>', methods=['GET', 'POST'])
-# @login_required
-# def msdb(dataset_id, status=[]):
-#     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
-
-#     try:
-#         if dataset and dataset.name == "__default__":
-#             flash('Error: that dataset cannot be analyzed','warning')
-#             return redirect( url_for('frontend.dashboard') )
-#     except:
-#         flash('Error: that dataset cannot be analyzed','warning')
-#         return redirect( url_for('frontend.dashboard') )
-
-#     form = CreateMSDBAnalysisForm()
-#     status = []
-#     if request.method == 'POST' and dataset:
-#         result = run_msdb_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'algorithm': form.algorithm.data}, queue=celery_queue)
-#         status.append(result.__repr__())
-#         status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
-#         time.sleep(1)
-
-#         # return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
-#         analyses = current_user.analyses.all()
-#         analysis_file_dict = OrderedDict()
-#         for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
-#             analysis_file_dict[analysis] = analysis.files.all() 
-#         return redirect(url_for('frontend.analyses', status=status))
-#         # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
-#     else: 
-#         return render_template("msdb.html", dataset=dataset, form=form, status=status, current_user=current_user) 
 
 @frontend.route('/analysis/pair_vhvl/', methods=['GET', 'POST'])
 @login_required
@@ -1554,6 +1675,12 @@ def json_celery_log():
                     {}<br>
                     """.format(  async_task_status )
 
+            ##### Set task heading here #####
+            if task.status == 'SUCCESS': 
+                pass # task_heading_color = 'green'
+            elif task.status == 'FAILURE':
+                pass # task_heading_color = 'red'
+
             entry = """
             <table width="100%">
                 <tbody>
@@ -1593,12 +1720,52 @@ def json_celery_log():
         'message': message,
         'interval': interval,
         'current': 1,
-        'total': 1
+        'total': 1,
      }  # this is the exception raised
 
+    return jsonify( response )
 
+@frontend.route('/zip_file_status_json', methods=['GET', 'POST'])
+@login_required
+def zip_file_status_json():
+ # For determining whether to allow downloads or not for an analysis
+    analysis_status = {}
+    zip_file_names = {}
+
+    for analysis in current_user.analyses:
+
+        # Update the status of each analysis here
+        if analysis.status != 'SUCCESS' and analysis.status != 'FAILURE' and analysis.status != 'COMPLETE':
+
+            if not analysis.async_task_id: 
+                if analysis.status == 'QUEUED':
+                    analysis.status = 'COMPLETE'
+                if not analysis.status and analysis.files.count() == 0:
+                    analysis.status = 'FAILURE'
+
+                db.session.commit()
+
+        if analysis.files.count() != 0:
+
+            if analysis.status != 'SUCCESS' and analysis.status != 'FAILURE' and analysis.status != 'COMPLETE':    
+                analysis_status[analysis.id] = 'RUNNING'
+            elif not analysis.zip_file:
+                analysis_status[analysis.id] = 'NONE'
+            elif analysis.zip_file.status == 'COMPRESSING':
+                analysis_status[analysis.id] = 'COMPRESSING'
+            elif analysis.zip_file.available:
+                analysis_status[analysis.id] = str(analysis.zip_file.id)
+                zip_file_names[analysis.id] = analysis.zip_file.name
+            else:
+                analysis_status[analysis.id] = 'NONE'
+
+    response = {
+        'analysis_status': analysis_status,
+        'zip_file_names': zip_file_names
+    }
 
     return jsonify( response )
+
 
 @frontend.route('/pipeline', methods=['GET', 'POST'])
 @login_required
@@ -1765,6 +1932,7 @@ def pipeline():
                     request_file_1.save(file_1.path)
                     file_1.available = True 
                     db.session.add(file_1)
+                    file_1.validate()
                     db.session.commit()
                     db.session.refresh(file_1)
                     new_files.append(file_1)
@@ -1826,6 +1994,8 @@ def pipeline():
                     file_2.available = True 
                     db.session.add(file_1)
                     db.session.add(file_2)
+                    file_1.validate()
+                    file_2.validate()
                     db.session.commit()
                     db.session.refresh(file_1)
                     db.session.refresh(file_2)

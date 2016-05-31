@@ -30,7 +30,7 @@
 						<th>Available</th>
 						<th>File Size</th>
 						<th>File Created</th>
-						<th>Downloadable</th>
+						<th>Download</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -51,19 +51,16 @@
 							<th></th>
 						{%- endif -%}
 							<th>{{file.created}}</th>
-						{%- if file.s3_status == 'AVAILABLE' -%}
-							<th><a href="https://s3.amazonaws.com/biggdata{{file.s3_path.replace('//','/',10)}}">Downloadable</a></th>
-						{%- else -%}
-							{%- if file.s3_status == 'Staging On S3' -%}
-								<th>Staging On S3</th>
-							{%- else -%}
-								{%- if file.s3_status != 'AVAILABLE' and file.available -%}
-									<th><a href="{#{url_for('.transfer_to_s3', file_id=file.id)}#}">Stage For Transfer</a></th>
-								{%- else -%}
-									<th>{{ file.s3_status }}</th>
-								{%- endif -%}
-							{%- endif -%}
-						{%- endif -%}
+						{% if file.available and file.file_size != None and file.file_size != 0%}
+						<td align=center>
+							<a href="{{ url_for( 'frontend.download', file_id=file.id) }}" onclick="document.someForm.submit();" style="color: inherit; text-decoration: none" download="{{file.name}}">
+								<span class="glyphicon glyphicon-download fa-lg" aria-hidden="true" style="color:black; "></span>
+							</a>
+
+						</td>
+						{% else %}
+							<td></td>
+						{% endif %}
 						</tr>
 					{% endfor %}
 				</tbody>
@@ -257,11 +254,6 @@ $(document).ready(function() {
 	{% endfor %}
 <!-- Datatables for Projects end !-->
 </div>
-
-
-
-
-
 
 <div class="container">
 <br>

@@ -69,8 +69,8 @@ import celery_config
 celery.config_from_object('celery_config')
 
 # @Dave - temporary edit for local environ
-s3 = boto.connect_s3(app.config['AWSACCESSKEYID'], app.config['AWSSECRETKEY'])
-s3_bucket = s3.get_bucket(app.config['S3_BUCKET'])
+# s3 = boto.connect_s3(app.config['AWSACCESSKEYID'], app.config['AWSSECRETKEY'])
+# s3_bucket = s3.get_bucket(app.config['S3_BUCKET'])
 
 # Mongo DB for Legacy Sequence Data
 mongo_connection_uri = 'mongodb://reader:cdrom@geordbas01.ccbb.utexas.edu:27017/'

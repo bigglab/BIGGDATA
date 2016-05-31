@@ -20,13 +20,12 @@
 {% endif %}
 </div>
 
-
 <br>
 <div class="container">
 	<table class="table table-striped">
 		<tr>
 			<th>{{analysis.program}}</th>
-			<th><a href="{{url_for('.dataset', id=analysis.dataset.id)}}">Dataset {{analysis.dataset.id}} {{analysis.dataset.name}}</a></th>
+			<th>{% if analysis.dataset %} <a href="{{url_for('.dataset', id=analysis.dataset.id)}}">Dataset {{analysis.dataset.id}} {% if analysis.dataset.name != 'Dataset {}'.format(analysis.dataset.id) %}({{analysis.dataset.name}}){% endif %} </a>{% endif %}</th>
 			<th>State: {{analysis.status}}</th>
 			<th>{% if analysis.active_command %}Running: {{' '.join(analysis.active_command.split(' ')[0:2])}} {% endif %}</th>
 			<th>{{analysis.name}}</th>
@@ -42,45 +41,106 @@
 
 
 <div class="container">
-	<h4>Files Produced In This Analysis:</h4>
-	<br>
 	{% set files = analysis.files %}
-	{% include "partials/files.html" with context %}
+	{%- if files and files.count() != 0 -%}
+		<h4>Files Produced In This Analysis:</h4>
+		<br>
+		{% include "partials/files.html" with context %}
+	{% else %}
+		<p>No files have been produced by this analysis.</p>
+	{% endif %}
+
 </div>
 
+{% if analysis and analysis.log_file and analysis.log_file.available %}
+<div class="container" style="margin-bottom: 5px">
+	<div id="accordion">
+        <table cellpadding="5" cellspacing="0" border="0">
+            <tbody class="accordian-control">
+                <tr>
+                    <td class="collapse-control"></td>
+                    <td valign="center"><label>Show Log File</label></td>
+                </tr>
+            </tbody>
+        </table>
+        <div id="collapseOne" class="collapse">
 
-<br>
-<br>
+			<samp>
+	        	<div id ="console" class="form-control" style="overflow-x: wrap; height: 100%;" >
+			        
+			        {{ analysis.log_file.get_file_as_html() }}
+	        	</div>
+			</samp>
+        
 
-<!-- 
-<div class="container">
-	<table class="table table-striped">
-		<tbody>
-			<tr>
-				<th>Total Annotations Produced:</th>
-				<th>{{analysis.total_count}}</th>
-			</tr>
-			<tr>
-				<th>Database Import Status:</th>
-				<th>{{analysis.db_status}}</th>
-			</tr>
-		</tbody>
-	</table>
+
+        </div>
+    </div> <!-- /accordian -->
+</div>
+{% endif %}
+
+{% if analysis and analysis.traceback_file and analysis.traceback_file.available %}
+<div class="container" style="margin-bottom: 5px">
+	<div id="accordion">
+        <table cellpadding="5" cellspacing="0" border="0">
+            <tbody class="accordian-control">
+                <tr>
+                    <td class="collapse-control"></td>
+                    <td valign="center"><label>Show Traceback File</label></td>
+                </tr>
+            </tbody>
+        </table>
+        <div id="collapseOne" class="collapse">
+
+			<samp>
+	        	<div id ="console" class="form-control" style="overflow-x: wrap; height: 100%;" >
+			        
+			        {{ analysis.traceback_file.get_file_as_html() }}
+	        	</div>
+			</samp>
+        
+
+
+        </div>
+    </div> <!-- /accordian -->
 </div>
 
+{% endif %}
+
+{% if analysis and analysis.settings_file and analysis.settings_file.available %}
+<div class="container" style="margin-bottom: 5px">
+	<div id="accordion">
+        <table cellpadding="5" cellspacing="0" border="0">
+            <tbody class="accordian-control">
+                <tr>
+                    <td class="collapse-control"></td>
+                    <td valign="center"><label>Show Settings File</label></td>
+                </tr>
+            </tbody>
+        </table>
+        <div id="collapseOne" class="collapse">
+
+			<pre style="background-color: white; overflow-x: wrap;"><code>
+{{ analysis.settings_file.get_file_as_html() }}
+			</code></pre>
+
+			<!-- <samp>
+	        	<div id ="console" class="form-control" style="overflow-x: wrap; height: 100%;" >
+			        
+			        
+	        	</div>
+			</samp> -->
+        
+
+
+        </div>
+    </div> <!-- /accordian -->
+</div>
+
+{% endif %}
+	
 <br>
 <br>
-
- -->
-
-<br><br>
-
-
-
-
-
-
-
 
 <div class='container'>
 	<a href={{url_for('.analyses')}}><h4>Back To Analyses Dashboard</h4></a>
@@ -89,14 +149,85 @@
 <br><br><br><br><br>
 
 
+<script>
 
+    $(document).ready(function(){
+        $('[data-toggle="popover"]').popover(); 
+    });
 
+    $('tbody.accordian-control').on( 'click', 'tr', function () {
+        var parent_accordian = $(this).closest('div')
 
+        var child_accordian = parent_accordian.children('.collapse')
+        child_accordian.collapse('toggle')
 
+        var th = $(this).closest('tbody');
 
+        if ( th.hasClass('shown') ) {
+            th.removeClass('shown');
+        }
+        else {
+            th.addClass('shown');
 
+        }
+    } );
 
+function get_zip_file_status() {
 
+       $.getJSON(zip_file_status_url, function(data) {
+
+        if ( data['analysis_status'] ){
+            var analysis_status = data['analysis_status'];
+            for (var key in analysis_status) {
+                if (analysis_status.hasOwnProperty(key)) { // this will check if key is owned by data object and not by any of it's ancestors
+
+                    if (analysis_status[key] == 'NONE' ){
+
+                        var download_message = '<td colspan="8" align = right> <a href="/analysis/' + key + '/download"> Click Here to Download All Files as a Compressed File </a></td>';
+
+                        $('tr#zip-' + key).html( download_message );
+                    } else if ( !isNaN(analysis_status[key])){
+                        var download_message = `
+                            <td colspan="7" align = right> Download All (`+ data['zip_file_names'][key] +`): </td>
+                            <td align=center> 
+                                <a href="/download/` + key + `" style="color: inherit; text-decoration: none" download="">
+                                    <span class="glyphicon glyphicon-download fa-lg" aria-hidden="true" style="color:black; "></span>
+                                </a>
+                            </td>
+                        `
+                        $('tr#zip-' + key).html( download_message );
+
+                    } else if (analysis_status[key] == 'COMPRESSING' ){
+                        var download_message = '<td colspan="8" align = right> Creating compressed file... </td>';
+                        $('tr#zip-' + key).html( download_message );
+
+                    }
+
+                }
+            }           
+        }
+
+            // $('#interval').html( data['message'] );
+            // $('#console').html( data['message'] );
+            // $('#interval').html( interval/1000 );
+
+        }).error(function(jqXHR, textStatus, errorThrown) {
+            if (jqXHR.readyState == 0) {  
+                $('#console').html('There was an error: Could not connect to BIGG Data Server.<br>\n' );
+            } else {
+                $('#console').html("There was an error - " + textStatus + ':<br>\n' + jqXHR.responseText);
+            }
+        });     
+
+        zip_timeout = setTimeout(function() {
+            get_zip_file_status();
+        }, 5000); 
+
+    };
+
+    get_zip_file_status();
+
+</script>
 
 {%endblock content %}
 

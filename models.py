@@ -1,6 +1,8 @@
 #System Imports
 import ast
+import io        
 import json
+import mmap
 import static
 import sys
 import os
@@ -32,7 +34,7 @@ import collections
 #Flask Imports
 from werkzeug import secure_filename
 from flask import Blueprint, render_template, flash, redirect, url_for
-from flask import Flask, Blueprint, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages, send_from_directory
+from flask import Flask, Blueprint, Markup, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages, send_from_directory
 from flask.ext.bcrypt import Bcrypt
 from flask.ext.login import LoginManager, UserMixin, current_user, login_user, logout_user, login_required
 from flask.ext.mail import Mail, Message
@@ -49,7 +51,7 @@ import wtforms
 from flask_wtf import Form
 import random
 import jinja2 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Boolean
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import JSON, JSONB, ARRAY, BIT, VARCHAR, INTEGER, FLOAT, NUMERIC, OID, REAL, TEXT, TIME, TIMESTAMP, TSRANGE, UUID, NUMRANGE, DATERANGE
@@ -237,13 +239,16 @@ class File(db.Model):
         status = db.Column(db.String(50))
         path = db.Column(db.String(256))
         file_size = db.Column(db.BigInteger)
-        s3_available = db.Column(db.Boolean)
-        s3_status = db.Column(db.String(50))
-        s3_path = db.Column(db.String(256))
         chain = db.Column(db.String(128))
         url = db.Column(db.String(256))
         command = db.Column(db.String(1024))
         created = db.Column(db.DateTime, default=db.func.now())
+
+        # s3_available = db.Column(db.Boolean)
+        # s3_status = db.Column(db.String(50))
+        # s3_path = db.Column(db.String(256))
+
+        line_count = db.Column(db.BigInteger)
 
         vhvl_paired = db.Boolean() # If paired_partner is not null, then vhvl = False implies forward/reverse read pairing
         paired_partner = db.Column(db.Integer, db.ForeignKey('file.id'))
@@ -252,21 +257,50 @@ class File(db.Model):
 
         sequences = db.relationship('Sequence', backref='file', lazy='dynamic')
 
+        @hybrid_property
+        def directory(self):
+            if self.path:
+                return os.path.dirname(self.path) 
+            else:
+                return None
+
+        @hybrid_property
+        def line_count_string(self):
+            if self.line_count:
+                return number_format(self.line_count)
+            else:
+                return None
+
+        # This allows system operations on the file
+        # e.g., if os.path.isfile()file
         def __repr__(self): 
-            if self.paired_partner: 
-                p = 'Paired To: {}'.format(str(self.paired_partner))
-            else: 
-                p = ''
-            return "<File {}: _{}_  {}  {}>".format(self.id, self.file_type, self.name, p)
+            return self.path
+            # if self.paired_partner: 
+            #     p = 'Paired To: {}'.format(str(self.paired_partner))
+            # else: 
+            #     p = ''
+            # return "<File {}: _{}_  {}  {}>".format(self.id, self.file_type, self.name, p)
+
+        def __str__(self):
+            return self.path
+
+        def __unicode__(self):
+            return unicode(self.path) or u''
+
 
         # Important! If you initialize this function with a directory/filename
         # If directory does not exist, this function will create the directory
         # If directory/filename exists --> This will rename the file, so you have to check self.name to make sure it hasn't changed
-        def __init__(self, name = None, directory = None, path = None): 
-            self.s3_status = ''
+        def __init__(self, name = None, directory = None, path = None, file_type = None, user_id = None,
+                    dataset_id = None, analysis_id = None, check_name = False): 
+            # self.s3_status = ''
             self.status = '' 
             self.available = False 
             self.created = 'now'
+            self.file_type = file_type
+            self.dataset_id = dataset_id
+            self.analysis_id = analysis_id
+            self.user_id = user_id
 
             # Clean up file names here:
             if name is not None:
@@ -292,7 +326,6 @@ class File(db.Model):
             if name == None or path == None or directory == None:
                 self.path = path
                 self.name = name
-                self.directory = directory
                 return
 
             # Check directory here
@@ -312,17 +345,36 @@ class File(db.Model):
                 file_name = name
                 file_extension = ''
 
-
-            # Check filenames until we find one that works
-            copy_number = 0
-            while os.path.isfile(path):
-                copy_number += 1
-                name = '{}_{}.{}'.format(file_name, str(copy_number), file_extension)
-                path = '{}/{}'.format(directory, name)
+            if check_name:
+                # Check filenames until we find one that works
+                copy_number = 0
+                while os.path.isfile(path):
+                    copy_number += 1
+                    name = '{}_{}.{}'.format(file_name, str(copy_number), file_extension)
+                    path = '{}/{}'.format(directory, name)
 
             self.path = path
             self.name = name
-            self.directory = directory
+
+            # Change file type if not given
+            if not self.file_type or self.file_type == None or self.file_type =='':
+                if self.path:
+                    self.file_type = parse_file_ext(self.path)
+
+
+            # Set the file size and count if the file exists
+            if os.path.isfile(self.path):
+                self.file_size = os.stat(self.path).st_size
+
+                if self.file_size and not self.line_count:
+                    self.line_count = map_line_count(self.path)
+
+                if not self.available: 
+                    self.available = True
+            else:
+
+                if self.available: 
+                    self.available = False
 
             return
 
@@ -339,6 +391,9 @@ class File(db.Model):
                 if self.dataset_id: 
                     d = self.dataset 
                     d.paired = True 
+
+                self.chain = 'HEAVY/LIGHT'
+                f.chain = 'HEAVY/LIGHT'
                 return True 
             else: 
                 return False
@@ -430,7 +485,6 @@ class File(db.Model):
 
             self.path = path
             self.name = name
-            self.directory = directory
 
             return True
 
@@ -441,6 +495,18 @@ class File(db.Model):
                 if not self.available: 
                     self.available = True
                     db.session.commit()
+
+                if not self.file_type or self.file_type == None or self.file_type =='':
+                    if self.path:
+                        self.file_type = parse_file_ext(self.path)
+
+
+                self.status == 'AVAILABLE'
+
+                self.file_size = os.stat(self.path).st_size
+
+                if self.file_size and not self.line_count:
+                    self.line_count = map_line_count(self.path) 
                 return True
             else:
                 if self.available: 
@@ -454,14 +520,154 @@ class File(db.Model):
 
         # Calls __init__ with self variables
         def change_name_to_available(self):
-            return self.__init__(name = self.name, path = self.path)
+            return self.__init__(name = self.name, path = self.path, file_type = self.file_type, dataset_id = self.dataset_id, analysis_id = self.analysis_id, user_id = self.user_id, check_name = True)
+
 
         # Calls __init__ with self variables
         def change_name_if_taken(self):
             if self.exists():
-                return self.__init__(name = self.name, path = self.path)
+                return self.__init__(name = self.name, path = self.path, file_type = self.file_type, dataset_id = self.dataset_id, analysis_id = self.analysis_id, user_id = self.user_id, check_name = True)
             else:
                return self
+
+        def get_file_as_html(self):
+            file_html = ''
+            if os.path.isfile(self.path):
+
+                with open(self.path, 'r') as infile:
+                    if self.file_type == 'JSON':
+                        try:
+                            json_string = json.load(infile)
+                            json_string = json.dumps(json_string, indent=4, sort_keys=True)
+                            # for line in json_string:
+                            #     line = line.strip()
+                            #     file_html = file_html + line + '<br>\n'
+                            file_html = json_string
+                        except:
+                            file_html = 'Unable to view JSON.<br>\n'
+                    else:
+                        for line in infile:
+                            line = line.strip()
+
+                            if self.file_type == 'LOG':
+                                color = 'black'
+                                if 'WARNING' in line:
+                                    color = 'orange'
+                                elif 'ERROR' in line:
+                                    color = 'red'
+
+                                file_html = file_html + '<font color="{}">{}</font><br>\n'.format( color , line )
+                            else:
+                                file_html = file_html + line + '<br>\n'
+
+            return Markup(file_html)
+
+        def get_file_head(self, num_lines, line_length = 77):
+            head = ''
+            if os.path.isfile(self.path):
+                with io.open( self.path, encoding='ISO-8859-1' ) as infile:
+                    for x in xrange(num_lines):
+                        line = infile.readline()
+                        if not line: break
+                        line = line.strip()
+                        if len(line) > line_length:
+                             line = unicode_truncate(line, 117) + '...'
+                        #line = '{}<br>\n'.format(line)
+                        line = line + '<br>\n'
+                        head = head + line
+
+            return head
+
+
+def unicode_truncate(s, length, encoding='ISO-8859-1'):
+    encoded = s.encode(encoding)[:length]
+    return encoded.decode(encoding, 'ignore')
+
+def map_line_count(filename):
+    f = open(filename, "r+")
+    buf = mmap.mmap(f.fileno(), 0)
+    lines = 0
+    readline = buf.readline
+    while readline():
+        lines += 1
+    return lines
+
+def number_format(number):
+    magnitude = 0
+    while abs(number) >= 1000:
+        magnitude += 1
+        number /= 1000.0
+    if magnitude > 6:
+        magnitude = 6
+    # add more suffixes if you need them
+    return '{}{}'.format(int(number), ['', 'K', 'M', 'G', 'T', 'P','HUGE'][magnitude])
+
+#@event.listens_for(Session, "before_flush")
+def validate_file_object(session, flush_context = None, instances = None):
+    for obj in session:
+        if isinstance(obj, File):
+            file = obj
+
+            if os.path.isfile(file.path):
+                file.file_size = os.stat(file.path).st_size
+
+                if not file.file_type or file.file_type == None or file.file_type =='':
+                    file.file_type = parse_file_ext(file.path)
+
+                if file.file_size and not file.line_count:
+                    file.line_count = map_line_count(file.path)
+
+                if not file.available: 
+                    file.available = True
+            else:
+                if file.available: 
+                    file.available = False
+
+event.listen(db.Session, 'before_flush', validate_file_object)
+event.listen(db.Session, 'before_commit', validate_file_object)
+
+def parse_file_ext(path):
+
+    if path.split('.')[-1] == 'gz':
+        gzipped = True
+    else:
+        gzipped = False
+    if gzipped: 
+        ext = path.split('.')[-2]
+    else:
+        ext = path.split('.')[-1]
+    ext_dict = {}
+    ext_dict['fastq'] = 'FASTQ'
+    ext_dict['fq'] = 'FASTQ'
+    ext_dict['fa'] = 'FASTA'
+    ext_dict['fasta'] = 'FASTA'
+    ext_dict['txt'] = 'TEXT'
+    ext_dict['json'] = 'JSON'
+    ext_dict['tab'] = 'TAB'
+    ext_dict['csv'] = 'CSV'
+    ext_dict['yaml'] = 'YAML'
+    ext_dict['pileup'] = 'PILEUP'
+    ext_dict['sam'] = 'SAM'
+    ext_dict['bam'] = 'BAM'
+    ext_dict['imgt'] = 'IMGT'
+    ext_dict['gtf'] = 'GTF'
+    ext_dict['gff'] = 'GFF'
+    ext_dict['gff3'] = 'GFF3'
+    ext_dict['bed'] = 'BED'
+    ext_dict['wig'] = 'WIGGLE'
+    ext_dict['py'] = 'PYTHON'
+    ext_dict['rb'] = 'RUBY'
+    if ext in ext_dict:
+        file_type = ext_dict[ext]
+    else:
+        file_type = ''
+    if isinstance(file_type, defaultdict):
+        return None
+    else:
+        if gzipped: 
+            return 'GZIPPED_{}'.format(file_type)
+        else: 
+            return file_type
 
 class Dataset(db.Model):
         __tablename__ = 'dataset'
@@ -620,8 +826,6 @@ class Dataset(db.Model):
             except:
                 return "Error: no default dataset found."
 
-
-
 class Project(db.Model):
         __tablename__ = 'project'
         id = db.Column(db.Integer, primary_key=True)
@@ -644,7 +848,6 @@ class Project(db.Model):
         users = association_proxy('project_users', 'user')
         read_only_users = association_proxy('project_users', '_read_only_users')
 
-        #users = db.relationship('User', secondary = 'user_projects', back_populates = 'projects' )
 
         def __repr__(self): 
             return "{} ({})".format(self.project_name, self.id)
@@ -739,10 +942,6 @@ class UserProjects (db.Model):
         self.project = project
         self.read_only = read_only
 
-
-
-
-
 class Sequence(db.Model):  
 
         id = Column(Integer(), primary_key=True)
@@ -755,10 +954,6 @@ class Sequence(db.Model):
 
         def __repr__(self): 
             return "< Sequence {}: {} >".format(self.id, self.header)
-
-
-
-
 
 class Annotation(db.Model):  
 
@@ -844,10 +1039,21 @@ class Annotation(db.Model):
             self.j_hits = OrderedDict()
             self.c_hits = OrderedDict()
 
+# Used to determine if an analysis completed without a valid exit state
+pending_analysis_states = ['QUEUED', 'EXECUTING', 'WAITING', 'GUNZIPPING', 'TRIMMING FILES', 'EXECUTING USEARCH', 'EXECUTING TRIM']
+
 class Analysis(db.Model):  
 
         id = Column(Integer(), primary_key=True)
         user_id = Column(Integer(), ForeignKey('user.id'))
+
+        zip_file_id = Column(Integer(), ForeignKey('file.id', use_alter=True, name='zip_file_id'))
+        log_file_id = Column(Integer(), ForeignKey('file.id', use_alter=True, name='log_file_id'))
+        traceback_file_id = Column(Integer(), ForeignKey('file.id', use_alter=True, name='traceback_file_id'))
+        settings_file_id = Column(Integer(), ForeignKey('file.id', use_alter=True, name='traceback_file_id'))
+
+        async_task_id = Column(String(128))
+
         dataset_id = Column(Integer(), ForeignKey('dataset.id'))
         name = Column(String())
         description = Column(String(256))
@@ -873,7 +1079,15 @@ class Analysis(db.Model):
         error = Column(String(256))
 
         annotations = db.relationship('Annotation', backref='analysis', lazy='dynamic')
-        files = db.relationship('File', backref='analysis', lazy='dynamic')
+        files = db.relationship('File', backref='analysis', lazy='dynamic', foreign_keys='File.analysis_id' )
+        zip_file = db.relationship('File', foreign_keys='Analysis.zip_file_id')
+        log_file = db.relationship('File', foreign_keys='Analysis.log_file_id')
+        traceback_file = db.relationship('File', foreign_keys='Analysis.traceback_file_id')
+        settings_file = db.relationship('File', foreign_keys='Analysis.settings_file_id')
+
+        _dataset = db.relationship('Dataset', foreign_keys='Analysis.dataset_id')
+        _user = db.relationship('User', backref='user_analysis', foreign_keys=[user_id])
+
 
         def __repr__(self): 
             return "< Analysis {}: {} : {} : {}>".format(self.id, self.program, self.name, self.started)
@@ -881,13 +1095,44 @@ class Analysis(db.Model):
         def __init__(self):
             self.available = False
 
-        @validates('commands', 'active_command')
+        @hybrid_property
+        def dataset(self):
+            return self._dataset
+
+
+        @hybrid_property
+        def user(self):
+            return self._user
+
+        @validates('commands', 'active_command', 'error')
         def validate_result(self, key, value):
             max_len = getattr(self.__class__, key).prop.columns[0].type.length
             if value and len(value) > max_len:
                 return value[:max_len]
             return value
 
+        def create_analysis_directory(self, directory = None, directory_prefix = None):
+
+            if self.directory and os.path.isdir( self.directory ) : return
+
+            if directory_prefix == None: directory_prefix = 'Analysis_'
+
+            if directory: pass
+            elif self.dataset: directory = self.dataset.directory
+            elif self.user: directory = self.user.path
+            else: directory = '/data'
+
+            if not self.id:
+                db.session.add(self)
+                db.session.commit()
+                db.session.refresh(self)
+            
+            self.directory = directory.rstrip('/') + '/{}{}'.format( directory_prefix, self.id)
+
+            if not os.path.isdir(self.directory):
+                os.makedirs(self.directory)
+
+            return self.directory
 
 class Experiment(db.Model):
         __tablename__ = 'experiment'
@@ -949,6 +1194,11 @@ class CeleryTask(db.Model):
 
         id = Column(Integer(), primary_key=True)
         user_id = Column(Integer(), ForeignKey('user.id'))
+        analysis_id = db.Column(db.Integer, db.ForeignKey('analysis.id'))
+
+        analysis = db.relationship('Analysis', foreign_keys='CeleryTask.analysis_id')
+        #user = db.relationship('User', foreign_keys='CeleryTask.user_id')
+
         async_task_id = Column(String(128))
 
         # Name of the function called
@@ -1369,10 +1619,13 @@ def generate_new_project(user = None, dataset = None, session = db.session):
     return new_project
 
 # Adds a new analysis with a path formatted as: /directory/directory_prefix# where number is analysis.id
-def generate_new_analysis(user = None, dataset = None, directory = None, directory_prefix = None, session = db.session):
+def generate_new_analysis(user = None, dataset = None, directory = None, name = None, description = None, directory_prefix = None, session = db.session, async_task_id = None):
     analysis = Analysis()
 
     analysis.started = 'now'
+    analysis.name = name
+    analysis.description = description
+    analysis.async_task_id = async_task_id
 
     if dataset: analysis.dataset_id = dataset.id
     if user: analysis.user_id = user.id
@@ -1388,13 +1641,17 @@ def generate_new_analysis(user = None, dataset = None, directory = None, directo
     session.commit()
     session.refresh(analysis)
 
-    analysis.name = 'Analysis {}'.format(analysis.id)
+    if not analysis.name:
+        analysis.name = 'Analysis {}'.format(analysis.id)
+    
     session.commit()
     
     analysis.directory = directory.rstrip('/') + '/{}{}'.format( directory_prefix, analysis.id)
 
     if not os.path.isdir(analysis.directory):
         os.makedirs(analysis.directory)
+
+    session.commit()
 
     return analysis
                         

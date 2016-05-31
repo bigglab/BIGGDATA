@@ -1,25 +1,6 @@
 {% extends "_base.html" %}
 {% block content %}
 <br>
-
-
-
-{% if status %}
-<div class='container'>
-{% for ln in status %}
-    <h4>{{ln}}</h4>
-{% endfor %}
-</div>
-{% endif %}
-
-<br>
-
-{% if r != '' %}
-<div class="container">
-<p>Async Task ID: {{r.id}}</p>
-</div>
-{% endif %}
-
 <br>
 <br>
 
@@ -57,16 +38,64 @@
 <br>
 <div class="container">
     <h4>Upload a Local File</h4>
-    <p>If you want to use a local file, upload it to Amazon S3 first, and then import to our system using the URL   with the form above.</p>
-    <form action="http://biggdata_uploads.s3.amazonaws.com/" method="post" enctype="multipart/form-data">
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <input type="hidden" name="acl" value="public-read" />
-        <input type="hidden" name="success_action_redirect" value="http://biggdata.rsldrt.com/file_download"/>
-
+    <form action="{{ url_for('frontend.file_upload') }}" method="post" enctype="multipart/form-data">
+        {{ upload_form.csrf_token }}
         <table class='table'> 
             <thead>
                 <tr>
-                    {{ download_form.csrf_token }}
+                    <th width=25%><label>Choose the file:</label></th>
+                    <th width=25%><label>Enter A File Name:</label></th>
+                    <th width=20%>{{upload_form.file_pairing.label}} </th>
+                    <th width=20%><label>Add to Dataset/Project:</label> </th>
+                    <th width=10%></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr >
+                    <td>
+                        <div>
+                            <div class="input-group">
+                                <span class="input-group-btn">
+                                    <span class="btn btn-default btn-file">
+                                        Browse...<input id="file_1" name="file_1" type="file"> 
+                                    </span>
+                                </span>
+                                <input type="text" class="form-control" readonly>
+                            </div>
+                        </div>
+                        <div id="collapse" class="collapse file_pairing" style="margin-top: 20px;">
+                            <div class="input-group">
+                                <span class="input-group-btn">
+                                    <span class="btn btn-default btn-file">
+                                        Browse...<input id="file_2" name="file_2" type="file"> 
+                                    </span>
+                                </span>
+                                <input type="text" class="form-control" readonly>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div><input id="file_1_name" type="input" name="file_1_name" value="" class="form-control"/></div>
+                        <div id="collapse" class="collapse file_pairing" style="margin-top: 20px;">
+                            <input id="file_2_name" type="input" name="file_2_name" value="" class="form-control"/>
+                        </div>
+
+                    </td>
+                    <td >
+                      {{ upload_form.file_pairing(class="form-control file_pairing") }}
+                    </td>
+                    <td>
+                        {{ upload_form.dataset(class="form-control") }}<br>
+                        {{ upload_form.project(class="form-control") }}
+                    </td>
+                    <td><input class="btn btn-default form-control" type="submit" value="Submit"></td>
+                </tr>
+            </tbody>
+          </table> <!-- /file_1 upload -->
+
+<!--         <table class='table'> 
+            <thead>
+                <tr>
                     <th width=40%><label>Enter A Unique File Name:</label></th>
                     <th width=40%> <label>Choose the file:</label></th>
                     <th></th>
@@ -84,15 +113,14 @@
                             </span>
                             <input type="text" class="form-control" readonly>
                         </div>
-                        <!-- <input type="file" name="file" value="" class="form-control"/> -->
                     </td>
                     <td>
-                        <input class="btn btn-default form-control" type="submit" value="Upload to Amazon S3">
+                        <input class="btn btn-default form-control" type="submit" value="Upload">
                     </td>
                 </tr>
             </tbody>
-            </table>
-    </form>
+        </table>
+ -->    </form>
 </div>
 
 <br>
@@ -122,6 +150,14 @@
 
         });
     });
+
+$('select[name=file_pairing]').on('change', function () {
+    if ($(this).val() == 'none'){
+      $('.collapse.file_pairing').slideUp();  
+    }else{
+      $('.collapse.file_pairing').slideDown();
+    }
+});
 
 </script>
 

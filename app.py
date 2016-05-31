@@ -8,6 +8,7 @@ import random
 import re
 import static
 import sys
+import tarfile
 import time
 from shutil import copyfile
 import operator
@@ -102,6 +103,10 @@ from contextlib import contextmanager
 def session_scope():
     """Provide a transactional scope around a series of operations."""
     session = Session()
+
+    event.listen(session, 'before_flush', validate_file_object)
+    event.listen(session, 'before_commit', validate_file_object)
+
     try:
         yield session
         session.commit()
@@ -150,11 +155,6 @@ celery_queue = 'default'
 celery_logger = get_task_logger(__name__)
 
 # change celery_queue to anything celery -Q
-
-if not app.config['DAVES_MACHINE']:
-
-    s3 = boto.connect_s3(app.config['AWSACCESSKEYID'], app.config['AWSSECRETKEY'])
-    s3_bucket = s3.get_bucket(app.config['S3_BUCKET'])
 
 # Mongo DB for Legacy Sequence Data
 mongo_connection_uri = 'mongodb://reader:cdrom@geordbas01.ccbb.utexas.edu:27017/'
@@ -308,10 +308,14 @@ class LogTask(Task):
     abstract = True
 
     user_found = False
+    user_id = None
     celery_task = None
     logger = None
     request_id = None
+    logfile = None
 
+    # points to the top-level task if this is a child task
+    # if this is the top-level task, parent_task == None
     parent_task = None
     maintain_log = True
 
@@ -341,6 +345,7 @@ class LogTask(Task):
 
                 if 'user_id' in kw:
                     user_id = kw['user_id']
+                    self.user_id = user_id
                     celery_logger.debug( 'User Id: {}'.format( user_id ) )
                     
                     try:
@@ -371,6 +376,7 @@ class LogTask(Task):
 
                 logger = initiate_celery_task_logger( logger_id = logger_id , logfile = logfile )
                 self.logger = logger
+                self.logfile = logfile
 
                 # Initiate Database Record
                 if self.user_found:
@@ -397,8 +403,8 @@ class LogTask(Task):
         else:
             return return_value
 
-
     def on_failure(self, exc, task_id, args, kwargs, einfo): 
+        
         if self.maintain_log:
             with session_scope() as session:
 
@@ -418,6 +424,43 @@ class LogTask(Task):
                     self.celery_task.result = '{}: {}'.format( exception_type_name , exc ) 
                     self.celery_task.is_complete = True                
                     self.celery_task.failed = True                
+
+                    if self.celery_task.analysis:
+                        analysis = self.celery_task.analysis
+
+                        if not analysis.async_task_id:
+                            analysis.async_task_id = self.request_id
+                        if analysis.status == None or analysis.status in pending_analysis_states:
+                            analysis.status = 'FAILURE'
+                        analysis.finished = 'now'
+                        analysis.error = self.celery_task.result
+                        analysis.active_command = None
+                        analysis.available = False
+
+                        analysis_file_name_prefix = analysis.name.replace(' ', '_')
+
+                        # Need a directory to save any logs
+                        if not analysis.directory:
+                            analysis.create_analysis_directory()
+
+                        if analysis.directory:
+                            # Save the log file
+                            if self.logfile and os.path.isfile(self.logfile):
+                                analysis_logfile_path = '{}/{}.log'.format( analysis.directory.rstrip('/'), analysis_file_name_prefix )
+                                copyfile( self.logfile, analysis_logfile_path )
+                            if os.path.isfile( analysis_logfile_path ):
+                                analysis.log_file = File( path = analysis_logfile_path, file_type = 'LOG', dataset_id = analysis.dataset_id, analysis_id = analysis.id, user_id = self.user_id )
+
+                            # Save the trackback
+                            if einfo and einfo.traceback:
+                                analysis_traceback_path = '{}/{}_traceback.txt'.format( analysis.directory.rstrip('/'), analysis_file_name_prefix )
+
+                                with open(analysis_traceback_path, "w") as traceback_file:
+                                    traceback_file.write(einfo.traceback)
+
+                                if os.path.isfile( analysis_traceback_path ):
+                                    analysis.traceback_file = File( path = analysis_traceback_path, file_type = 'TRACEBACK', dataset_id = analysis.dataset_id, analysis_id = analysis.id, user_id = self.user_id )
+
                     session.commit()
 
     def on_success(self, retval, task_id, args, kwargs):
@@ -437,6 +480,35 @@ class LogTask(Task):
                     self.celery_task.status = 'SUCCESS'
                     self.celery_task.result = str(retval)
                     self.celery_task.is_complete = True                
+
+                    if self.celery_task.analysis:
+                        analysis = self.celery_task.analysis
+
+                        if not analysis.async_task_id:
+                            analysis.async_task_id = self.request_id
+
+                        if analysis.status == None or self.celery_task.analysis.status in pending_analysis_states:
+                            analysis.status = 'SUCCESS'
+                        analysis.finished = 'now'
+                        analysis.active_command = None
+                        analysis.available = True
+
+                        analysis_file_name_prefix = analysis.name.replace(' ', '_')
+
+                        # Need a directory to save any logs
+                        if not analysis.directory:
+                            analysis.create_analysis_directory()
+
+                        if analysis.directory:
+                            # Save the log file
+                            if self.logfile and os.path.isfile(self.logfile):
+                                analysis_logfile_path = '{}/{}.log'.format( analysis.directory.rstrip('/'), analysis_file_name_prefix )
+                                copyfile( self.logfile, analysis_logfile_path )
+                            if os.path.isfile( analysis_logfile_path ):
+                                analysis.log_file = File( path = analysis_logfile_path, file_type = 'LOG', analysis_id = analysis.id, user_id = self.user_id )
+                                if analysis.dataset:
+                                    analysis.log_file.dataset_id = analysis.dataset.id
+
                     session.commit()
 
     # override update_state so that it goes to the appropriate task
@@ -445,6 +517,27 @@ class LogTask(Task):
             return self.parent_task.update_state(*args, **kwargs)
         else:
             return Task.update_state(self, *args, **kwargs)
+
+    def set_analysis_id(self, analysis_id):
+        task = self.task
+        if task.maintain_log:
+
+            with session_scope() as session:
+
+                # Get Database Record
+                if task.user_found:
+
+                    print "Adding analysis id {} to celery task.".format(analysis_id)
+
+                    # We are in a new session, so we have to re-add our persistent object
+                    session.add(task.celery_task)
+                    session.merge(task.celery_task)
+
+                    task.celery_task.analysis_id = analysis_id
+                    session.commit()
+
+                    # send the object to a persistent state
+                    session.expunge(task.celery_task)
 
 def get_filepaths(directory_path):
     file_paths = []
@@ -460,47 +553,13 @@ def get_files(user):
     paths = [file_path for file_path in paths if file_path not in [file.path for file in user.files]]
     return paths
 
+def get_dropbox_files(user):
+    path = user.dropbox_path
+    paths = get_filepaths(path)
+    paths = [file_path for file_path in paths if file_path not in [file.path for file in user.files]]
+    return paths
+
 def tree(): return defaultdict(tree)
-
-def parse_file_ext(path):
-
-    if path.split('.')[-1] == 'gz':
-        gzipped = True
-    else:
-        gzipped = False
-    if gzipped: 
-        ext = path.split('.')[-2]
-    else:
-        ext = path.split('.')[-1]
-    ext_dict = tree()
-    ext_dict['fastq'] = 'FASTQ'
-    ext_dict['fq'] = 'FASTQ'
-    ext_dict['fa'] = 'FASTA'
-    ext_dict['fasta'] = 'FASTA'
-    ext_dict['txt'] = 'TEXT'
-    ext_dict['json'] = 'JSON'
-    ext_dict['tab'] = 'TAB'
-    ext_dict['csv'] = 'CSV'
-    ext_dict['yaml'] = 'YAML'
-    ext_dict['pileup'] = 'PILEUP'
-    ext_dict['sam'] = 'SAM'
-    ext_dict['bam'] = 'BAM'
-    ext_dict['imgt'] = 'IMGT'
-    ext_dict['gtf'] = 'GTF'
-    ext_dict['gff'] = 'GFF'
-    ext_dict['gff3'] = 'GFF3'
-    ext_dict['bed'] = 'BED'
-    ext_dict['wig'] = 'WIGGLE'
-    ext_dict['py'] = 'PYTHON'
-    ext_dict['rb'] = 'RUBY'
-    file_type = ext_dict[ext]
-    if isinstance(file_type, defaultdict):
-        return None
-    else:
-        if gzipped: 
-            return 'GZIPPED_{}'.format(file_type)
-        else: 
-            return file_type
 
 def parse_name_for_chain_type(name):
     if 'tcra' in name.lower() or 'alpha' in name.lower(): 
@@ -529,7 +588,6 @@ def link_file_to_user(path, user_id, name):
     file.description = ''
     file.file_type = parse_file_ext(file.path)
     file.available = True 
-    file.s3_status = ''
     file.chain = parse_name_for_chain_type(name)
     db.session.add(file)
     db.session.commit()
@@ -565,32 +623,32 @@ def instantiate_user_with_directories(new_user_id):
     except ValueError, error:
         return 'Warning: unable to copy sample files into user\'s dropbox: {}'.format(error)
 
-@celery.task(base= LogTask, bind = True)
-def transfer_file_to_s3(self, file_id, user_id = None):
-    logger = self.logger
-    f = db.session.query(File).filter(File.id==file_id).first()
-    if not f: 
-        raise Exception( "File with ID ({}) not found.".format(file_id) )
-    else: 
-        if f.path:
-            if f.s3_path: 
-                logger.info ('Transferring file from {} to {}'.format(f.path, f.s3_path) )
-            else: 
-                f.s3_path = '{}'.format(f.path)
-                logger.info( 'Transferring file from {} to s3://{}/{}'.format(f.path, app.config['S3_BUCKET'], f.s3_path) ) 
-                f.s3_status = 'Staging'
-                db.session.commit()
-        file_size = os.stat(f.path).st_size
-        logger.info ( 'starting transfer of {} byte file'.format(file_size) )
-        def cb(complete, total): 
-            f.s3_status = 'Transferred {} of {} bytes'.format(complete, total)
-            db.session.commit()
-        key = s3_bucket.new_key(f.s3_path)
-        result = key.set_contents_from_filename(f.path, cb=cb, num_cb=10)
-        key.set_canned_acl('public-read')
-        f.s3_status = "AVAILABLE"
-        db.session.commit()
-        return "Transfer complete. {} bytes transferred from {}  to  {}".format(result, f.path, f.s3_path)
+# @celery.task(base= LogTask, bind = True)
+# def transfer_file_to_s3(self, file_id, user_id = None):
+#     logger = self.logger
+#     f = db.session.query(File).filter(File.id==file_id).first()
+#     if not f: 
+#         raise Exception( "File with ID ({}) not found.".format(file_id) )
+#     else: 
+#         if f.path:
+#             if f.s3_path: 
+#                 logger.info ('Transferring file from {} to {}'.format(f.path, f.s3_path) )
+#             else: 
+#                 f.s3_path = '{}'.format(f.path)
+#                 logger.info( 'Transferring file from {} to s3://{}/{}'.format(f.path, app.config['S3_BUCKET'], f.s3_path) ) 
+#                 f.s3_status = 'Staging'
+#                 db.session.commit()
+#         file_size = os.stat(f.path).st_size
+#         logger.info ( 'starting transfer of {} byte file'.format(file_size) )
+#         def cb(complete, total): 
+#             f.s3_status = 'Transferred {} of {} bytes'.format(complete, total)
+#             db.session.commit()
+#         key = s3_bucket.new_key(f.s3_path)
+#         result = key.set_contents_from_filename(f.path, cb=cb, num_cb=10)
+#         key.set_canned_acl('public-read')
+#         f.s3_status = "AVAILABLE"
+#         db.session.commit()
+#         return "Transfer complete. {} bytes transferred from {}  to  {}".format(result, f.path, f.s3_path)
 
 def get_user_dataset_dict(user): 
     datadict = OrderedDict()
@@ -648,7 +706,6 @@ def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_
         if not user_has_permission:
             logger.error( 'You do not have permission to add a file to dataset ({}).'.format(dataset_selection) )
     db.session.commit()
-
 
     # now do the same with projects, with the qualification that we add the dataset to the project if it's not there already
     # check if the user has selected the default project (i.e., the user has no projects)
@@ -777,7 +834,6 @@ def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_
 def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, chain=None, name=None, dataset = None ):
     logger = self.logger
 
-
     current_user = db.session.query(User).filter(User.id==user_id).first()
 
     if not current_user:
@@ -824,9 +880,6 @@ def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, 
         f.status = 'AVAILABLE'
         f.path = filepath
         f.file_size = os.path.getsize(f.path)
-        f.s3_available = False
-        f.s3_status = ''
-        f.s3_path = ''
         f.chain = chain
         # url = db.Column(db.String(256))
         f.command = 'metadata created to link existing file'
@@ -895,7 +948,6 @@ def download_file(self, url, path, file_id, user_id = None):
         f.available = True
         f.file_size = os.path.getsize(f.path)
         logger.info ('Download finished.')
-
     else:
         # Alternatively, delete file here
         f.available = False
@@ -913,7 +965,7 @@ def run_mixcr_with_dataset_id(self, dataset_id, analysis_name='', analysis_descr
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
     logger.info( 'Running MiXCR on Dataset {}.'.format(dataset_id ) )
     analysis = Analysis()
-    analysis.db_status = 'WAITING'
+    analysis.async_task_id = self.task.request_id
     analysis.name = analysis_name
     analysis.description = analysis_description
     analysis.user_id = user_id
@@ -928,6 +980,8 @@ def run_mixcr_with_dataset_id(self, dataset_id, analysis_name='', analysis_descr
     analysis.directory = '{}/Analysis_{}/'.format( dataset.directory.rstrip('/'), analysis.id ) 
     db.session.add(analysis)
     db.session.commit()
+    self.set_analysis_id( int( analysis.id ) )
+
     data_files_by_chain = {}
     for key, values in itertools.groupby(dataset.primary_data_files(), lambda x: x.chain): 
         data_files_by_chain[key] = list(values)
@@ -948,10 +1002,8 @@ def run_mixcr_with_dataset_id(self, dataset_id, analysis_name='', analysis_descr
 
 @celery.task(base = LogTask, bind = True)
 def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None):
-    
-    # --species hsa mmu
-
     logger = self.logger
+    self.set_analysis_id(analysis_id)
 
     analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
     files = [db.session.query(File).get(file_id) for file_id in file_ids]
@@ -1150,8 +1202,8 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
 # been preprocessed (e.g., all pairing has already been performed by PANDAseq)
 @celery.task(base = LogTask, bind = True)
 def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, file_ids = [], species = None):
-    
     logger = self.logger
+    self.set_analysis_id(analysis_id)
 
     with session_scope() as session:
         analysis = session.query(Analysis).filter(Analysis.id==analysis_id).first()
@@ -1344,11 +1396,10 @@ def parse_and_insert_mixcr_annotations_from_file_path(self, file_path, dataset_i
             db.session.commit()
     if analysis: 
         analysis.db_status = 'Finished. {} Annotations Inserted'.format(len(annotations))
-        analysis.status = 'Complete'
+        analysis.status = 'COMPLETE'
     db.session.commit()
     result = annotate_analysis_from_db.apply_async((analysis.id, ), queue=celery_queue)
     return len(annotations)
-
 
 @celery.task(base = LogTask, bind = True)
 def parse_and_insert_mixcr_annotation_dataframe_from_file_path(self, file_path, dataset_id=None, analysis_id=None):
@@ -1398,7 +1449,7 @@ def run_pandaseq_with_dataset_id(self, dataset_id, analysis_name='', analysis_de
     logger.info( 'Running PANDAseq on Dataset {}.'.format( dataset_id ) )
 
     analysis = Analysis()
-    analysis.db_status = "We dont currently import raw or pandaseq'd FASTQ Data."
+    analysis.async_task_id = self.task.request_id    
     analysis.name = analysis_name
     analysis.description = analysis_description
     analysis.user_id = user_id
@@ -1437,6 +1488,7 @@ def run_pandaseq_with_dataset_id(self, dataset_id, analysis_name='', analysis_de
 def run_pandaseq_analysis_with_files(self, analysis_id, file_ids, algorithm='pear'):
     parent_task = self.parent_task
     logger = self.logger
+    self.set_analysis_id(analysis_id)
 
     files = [db.session.query(File).get(file_id) for file_id in file_ids]
     analysis = db.session.query(Analysis).get(analysis_id)
@@ -1552,6 +1604,8 @@ def run_pandaseq_analysis_with_files(self, analysis_id, file_ids, algorithm='pea
 
 def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = celery_logger, trim_illumina_adapters = True, trim_slidingwindow = True, trim_slidingwindow_size = 4, trim_slidingwindow_quality = 15):
     analysis = db.session.query(Analysis).get(analysis_id)
+    self.set_analysis_id(analysis_id)
+
     files = map(lambda x: db.session.query(File).filter(File.id==x).first(), file_ids)
 
     if not analysis:
@@ -1705,8 +1759,7 @@ def run_msdb_with_dataset_id(self, user_id=6, dataset_id = None, analysis_id = N
             else: #create a new directory
                 directory = user.path
 
-
-            analysis = generate_new_analysis(user = user, dataset = dataset, directory = directory, directory_prefix = 'MSDB_Analysis_', session = session)
+            analysis = generate_new_analysis(user = user, dataset = dataset, directory = directory, directory_prefix = 'MSDB_Analysis_', session = session, async_task_id = self.task.request_id)
 
             # Set analysis database values
             if analysis_description != '': analysis.description = analysis_description
@@ -1718,6 +1771,7 @@ def run_msdb_with_dataset_id(self, user_id=6, dataset_id = None, analysis_id = N
 
         # Set local values
         analysis_id = analysis.id
+        self.set_analysis_id(analysis_id)
         output_directory = analysis.directory
 
         # Set analysis database values
@@ -1731,7 +1785,9 @@ def run_msdb_with_dataset_id(self, user_id=6, dataset_id = None, analysis_id = N
         session.add(analysis)
         session.commit()
 
+
         prefix_output_files = analysis.name.replace(' ', '_')
+        self.set_analysis_id(analysis_id)
 
         if file_ids:
             files = map(lambda x: session.query(File).filter(File.id==x).first(), file_ids)
@@ -1794,6 +1850,11 @@ def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id =
             if file.file_type == 'IGFFT_ANNOTATION':
                 file_paths_to_analyze.append(file.path)
 
+        # prefix for analysis result files
+        prefix = None
+        if analysis:
+            prefix = analysis.name.replace(' ','_')
+
     if file_paths_to_analyze == []:
         logger.warning('No output files from IGREP analysis were found. Skipping mass spec analysis.')
         return ReturnValue('No MSDB analysis was performed.', file_ids = [])
@@ -1802,7 +1863,6 @@ def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id =
             # immunogrep_msdb.generate_msdb_file(file_path, 'TAB', translate_fields=igfft_msdb_fields, output_folder_path= analysis_directory, cluster_id = cluster_percent, must_be_present=['CDR3'])
     
         files_in_directory = Set(next(os.walk(analysis_directory))[2])
-
 
         # Briefly pass all STDOUT to the logger
         saved_stdout = sys.stdout
@@ -1815,7 +1875,7 @@ def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id =
 
         new_files_in_directory = Set(next(os.walk(analysis_directory))[2]) - files_in_directory
 
-        return_value = add_directory_files_to_database(directory = analysis_directory, description = 'MSDB analysis result.', dataset_id = dataset_id, analysis_id = analysis_id, user_id = user_id, file_names = new_files_in_directory, logger = logger)
+        return_value = add_directory_files_to_database(directory = analysis_directory, description = 'MSDB analysis result.', dataset_id = dataset_id, analysis_id = analysis_id, user_id = user_id, file_names = new_files_in_directory, prefix = prefix, logger = logger)
         file_ids = return_value.file_ids
 
         logger.info( 'MSDB analysis complete. {} files were produced.'.format(len(file_ids)) )
@@ -1904,7 +1964,7 @@ def run_pair_vhvl_with_dataset_id(self, user_id=6, dataset_id = None, analysis_i
             else: #create a new directory
                 directory = user.path
 
-            analysis = generate_new_analysis(user = user, dataset = dataset, directory = directory, directory_prefix = 'Pairing_Analysis_', session = session)
+            analysis = generate_new_analysis(user = user, dataset = dataset, directory = directory, directory_prefix = 'Pairing_Analysis_', session = session, async_task_id = self.task.request_id)
 
             # Set analysis database values
             if analysis_description != '': analysis.description = analysis_description
@@ -1912,11 +1972,13 @@ def run_pair_vhvl_with_dataset_id(self, user_id=6, dataset_id = None, analysis_i
             if analysis_name != '': analysis.name = analysis_name
             else: analysis.name = 'Pairing Analysis {}'.format( str(analysis.id) )
 
-            analysis.program = 'IGREP VH/VL Pairing'
+            analysis.program = 'IGREP Pairing'
 
 
         # Set local values
         analysis_id = analysis.id
+        self.set_analysis_id(analysis_id)
+
         output_directory = analysis.directory
 
         # Set analysis database values
@@ -1942,6 +2004,7 @@ def run_pair_vhvl_with_dataset_id(self, user_id=6, dataset_id = None, analysis_i
             if file.file_type == 'IGFFT_ANNOTATION':
                 annotated_files.append(file.path)
                 annotated_file_formats.append('TAB')
+
 
     if annotated_files != []:
         
@@ -2056,7 +2119,7 @@ def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
     files_to_execute.append(centroid_output_file)
     files_to_execute.append(consensus_output_file)
     files_to_execute.append(uclust_output_file)
-    analysis.status = 'EXECUTING USEARCH'
+    analysis.status = 'EXECUTING USEARCH' 
     db.session.commit()
     for f in files_to_execute:
         f.command = f.command.encode('ascii')
@@ -2105,9 +2168,9 @@ def run_analysis(self, analysis_id = None, dataset_id = None, file_ids = [], use
             analysis = Analysis()
 
         #CONSTRUCT AND SAVE ANALYSIS OBJECT
+        analysis.async_task_id = self.task.request_id
         analysis.name = analysis_name
         analysis.description = analysis_description
-        # analysis.db_status = 'WAITING'
         analysis.user_id = user_id
         analysis.dataset_id = dataset.id
         analysis.program = analysis_type
@@ -2120,6 +2183,7 @@ def run_analysis(self, analysis_id = None, dataset_id = None, file_ids = [], use
         analysis.inserted_into_db = False
         session.add(analysis)
         session.commit()
+        self.set_analysis_id( int(analysis.id) )
 
         if dataset.directory:
             analysis.directory = dataset.directory.rstrip('/') + '/Analysis_' + str(analysis.id)
@@ -2129,7 +2193,8 @@ def run_analysis(self, analysis_id = None, dataset_id = None, file_ids = [], use
             logger.info ( 'Making analysis directory {}'.format( analysis.directory ) )
             os.makedirs(analysis.directory)
         files = map(lambda x: session.query(File).filter(File.id==x).first(), file_ids)
-    
+
+
         logger.info( 'Analysis Output Set To {}'.format(analysis.directory) )
         logger.info( 'Using these files: {}'.format(files) )
         
@@ -2411,7 +2476,7 @@ def unzip_files( user_id = None, file_ids = [], destination_directory = '~', log
                 new_file.available = False
                 new_file.name =  file.name.replace('.gz', '')
                 new_file.command = 'gunzip -c {} > {}'.format(file.path, new_file.path)
-                analysis.status = 'GUNZIPPING'
+                analysis.status = 'GUNZIPPING' 
                 session.add(new_file)
                 session.commit()
                 session.refresh( new_file )
@@ -2466,6 +2531,7 @@ def unzip_files( user_id = None, file_ids = [], destination_directory = '~', log
 
 def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysis_id = None, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01], species = None, logger = celery_logger, parent_task = None):
     task = parent_task
+
     # Want to run IGREP without putting out EVERY line of output (~100s)
     # So create a list of status outputs and dictionary of counts (repeated status)
     igrep_states = ['Calcuating number of sequences', 'Running IgFFT', 'Evaluating Parameters', 
@@ -2881,19 +2947,16 @@ def add_directory_files_to_database(directory = None, description = None, datase
         'parsed_summary' : 'MSDB_SUMMARY' 
     }
 
-    # line = re.sub(r'\* \[(.*)\]\(#(.*)\)', r'<h2 id="\2">\1</h2>', line.rstrip())
-
-
     # Not implemented yet
     file_type_regex_dict = {
     }
 
     file_rename_regex_dict = {
-        'MASSSPECDB(\d+)msDB.fasta' : 'PREFIX_msDB.fasta',
-        'cdr3_clonotype_list.txt' : 'PREFIX_cdr3_clonotype_list.txt',
-        'MASSSPECDB(\d+)malGucken.txt' : 'PREFIX_malGucken.txt',
-        'cdr3list.txt' : 'PREFIX_cdr3list.txt',
-        'MASSSPECDB(\d+)parsed_summary.txt' : 'PREFIX_parsed_summary.txt'
+        r'MASSSPECDB(\d+)msDB.fasta' : r'PREFIX_msDB.fasta',
+        r'cdr3_clonotype_list.txt' : r'PREFIX_cdr3_clonotype_list.txt',
+        r'MASSSPECDB(\d+)malGucken.txt' : r'PREFIX_malGucken.txt',
+        r'cdr3list.txt' : r'PREFIX_cdr3list.txt',
+        r'MASSSPECDB(\d+)parsed_summary.txt' : r'PREFIX_parsed_summary.txt'
     }
 
     if file_names == None:
@@ -2918,35 +2981,118 @@ def add_directory_files_to_database(directory = None, description = None, datase
                 # logger.info( 'Adding file to database: {}'.format(path) )
 
                 # Step 1. Make sure the file exists on disk
+                if os.path.isfile(path):
 
-                # Step 2. If the file exists on disk, rename the file if we have a rule for doing so
+                    # Step 2. If the file exists on disk, rename the file if we have a rule for doing so
+                    for find, replace in file_rename_regex_dict.iteritems():
 
-                # Step 3. Add the file to the database
+                        pattern = re.compile(find)
+                        pattern_match =  pattern.match(file_name)
 
-                new_file = File()
-                new_file.name = file_name
-                new_file.description = description
-                new_file.dataset_id = dataset_id
-                new_file.user_id = user_id
-                new_file.analysis_id = analysis_id
-                new_file.path = path
-                new_file.available = True 
-                new_file.s3_status = ''
-                new_file.status = ''
+                        if pattern_match:
+                            new_file_name = re.sub( find, replace, file_name)
 
-                # Use the default extension, unless we know better
-                new_file.file_type = parse_file_ext(new_file.name)
-                for search_str, file_type in file_type_dict.iteritems():
-                    if search_str in file_name:
-                        new_file.file_type = file_type
+                            if prefix:
+                                new_file_name = new_file_name.replace('PREFIX', prefix)
+                            else:
+                                new_file_name = new_file_name.replace('PREFIX_', '')
 
-                session.add(new_file)
-                session.commit()
-                session.refresh( new_file )
-                added_file_ids.append( new_file.id )
-                number_added_files += 1
+                            new_path = '{}/{}'.format(directory.rstrip('/'), new_file_name)
 
+                            os.rename( path, new_path )
+
+                            if os.path.isfile( new_path ):
+                                logger.debug('Renamed file {} to {}'.format(path, new_path) )
+
+                                path = new_path
+                                file_name = new_file_name
+                            else:
+                                logger.warning('WARNING: failed to rename file {} to {}'.format(path, new_path) )
+
+                    # Step 3. Add the file to the database
+
+                    new_file = File()
+                    new_file.name = file_name
+                    new_file.description = description
+                    new_file.dataset_id = dataset_id
+                    new_file.user_id = user_id
+                    new_file.analysis_id = analysis_id
+                    new_file.path = path
+                    new_file.available = True 
+                    new_file.status = ''
+
+                    # Use the default extension, unless we know better
+                    new_file.file_type = parse_file_ext(new_file.name)
+                    for search_str, file_type in file_type_dict.iteritems():
+                        if search_str in file_name:
+                            new_file.file_type = file_type
+
+                    session.add(new_file)
+                    session.commit()
+                    session.refresh( new_file )
+                    added_file_ids.append( new_file.id )
+                    number_added_files += 1
+                else:
+                    logger.warning( 'WARNING: file not found: {}'.format(path) ) 
     return ReturnValue('{} files added to database.'.format(number_added_files), file_ids = added_file_ids )
+
+@celery.task(base = LogTask, bind = True)
+def create_analysis_zip_file(self, analysis_id, user_id):
+    logger = self.logger
+
+    # Do not set an analysis id for this task - it will overwrite the existing analysis log
+    # self.task.analysis_id = analysis_id
+
+
+    with session_scope() as session:
+        analysis = session.query(Analysis).get(analysis_id)
+        if not analysis:
+            raise Exception('Error: Analysis {} not found.'.format( analysis_id ) )
+
+        if analysis.zip_file_id != None:
+            raise Exception('Error: Analysis {} already has a zip file.'.format( analysis_id ) )
+
+
+        if analysis.files.count() == 0:
+            return 'Analysis {} contains no files to zip.'.format( analysis_id )
+
+        files_to_zip = []
+        for file in analysis.files:
+            if os.path.isfile(file.path):
+                files_to_zip.append( file.path )
+
+        if files_to_zip == []:
+            return 'No files were found in the analysis directory {}'.format( analysis.directory )
+        else:
+            analysis_tarfile_name_prefix = analysis.name.replace(' ', '_')
+            analysis_tarfile_path = '{}/{}.tar.gz'.format( analysis.directory.rstrip('/'), analysis_tarfile_name_prefix )
+
+        analysis.zip_file = File(path = analysis_tarfile_path, file_type = 'TAR.GZ', dataset_id = analysis.dataset_id, analysis_id = analysis.id, user_id = user_id )
+        analysis.zip_file.status = 'COMPRESSING'
+        session.commit()
+
+    logger.info('Creating tar.gz file for Analysis {}'.format(analysis_id) )
+
+    analysis_tar = tarfile.open(analysis_tarfile_path, "w:gz")
+    for file_path in files_to_zip:
+        logger.info('Adding {} to tar.gz file...'.format( os.path.basename(file_path) ) )
+        analysis_tar.add(file_path)
+    analysis_tar.close()
+
+    if not os.path.isfile(analysis_tarfile_path):
+        logger.info( 'Finished compression for Analysis {}'.format(analysis_id) )
+
+        return 'Failed to create {}'.format( analysis_tarfile_path )
+    else:
+        with session_scope() as session:
+            analysis = session.query(Analysis).get(analysis_id)
+            analysis.zip_file.validate()
+            analysis.zip_file.status = 'AVAILABLE'
+            session.commit()
+
+            logger.info( 'Finished compression for Analysis {}'.format(analysis_id) )
+
+    return 'Completed compression of {} analysis files. Saved result as {}'.format( len(files_to_zip), analysis_tarfile_path )
 
 @celery.task(base = LogTask, bind = True)
 def run_analysis_pipeline(self, *args,  **kwargs):
@@ -3051,7 +3197,6 @@ def run_analysis_pipeline(self, *args,  **kwargs):
             new_file.path = '{}/{}'.format(current_user.path.rstrip('/'), new_file.name)
             new_file.user_id = user_id
             new_file.available = False 
-            new_file.s3_status = ''
             new_file.status = ''
 
             if 'gz' in new_file.file_type.lower():
@@ -3074,36 +3219,41 @@ def run_analysis_pipeline(self, *args,  **kwargs):
             raise Exception('Unable to load files for analysis.')
         else:
 
-            #create a new analysis
-            analysis = Analysis()
-            analysis.db_status = 'RUNNING'
-            analysis.name = name
-            analysis.description = description
-            analysis.user_id = user_id
-            analysis.dataset_id = dataset.id
-            analysis.program = analysis_type
-            analysis.started = 'now'
+            analysis = generate_new_analysis(
+                user = current_user, 
+                dataset = dataset, 
+                directory = dataset.directory, 
+                directory_prefix = 'Analysis_', 
+                session = session,
+                name = name,
+                description = description,
+                async_task_id = self.task.request_id)
+
+            self.set_analysis_id(analysis_id)
+
+
+            # Set other values
+            analysis.program = analysis_type.upper()
             analysis.params = {}
             analysis.status = 'QUEUED'
             analysis.responses = []
             analysis.available = False
-            analysis.inserted_into_db = False
-            session.add(analysis)
             session.commit()
-            session.refresh(analysis)
+
+            analysis_file_name_prefix = analysis.name.replace(' ', '_')
+            analysis_json_path = '{}/{}_settings.json'.format( analysis.directory.rstrip('/'), analysis_file_name_prefix )
+
+            with open(analysis_json_path, 'w') as json_file:
+                json.dump( (args, kwargs) , json_file)
+
+            if os.path.isfile( analysis_json_path ):
+                analysis.settings_file = File( path = analysis_json_path, file_type = 'JSON', dataset_id = analysis.dataset_id, analysis_id = analysis.id, user_id = analysis.user_id )
+
+            # Persist values for outside db session
             analysis_id = analysis.id
             dataset_id = dataset.id
             analysis_name = analysis.name
-
-            if dataset.directory:
-                analysis.directory = dataset.directory.rstrip('/') + '/Analysis_' + str(analysis.id)
-            else: 
-                analysis.directory = analysis.dataset.user.path.rstrip('/') + '/Analysis_' + str(analysis.id)
             analysis_directory = analysis.directory
-
-            if not os.path.isdir( analysis_directory ):
-                logger.info( 'Making analysis directory {}.'.format( analysis_directory ) )
-                os.mkdir( analysis_directory )
 
     ##### Perform Pre-processing #####
     if trim:
@@ -3161,11 +3311,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
 
     ##### Add files to Appropriate Dataset/Project #####
 
-
     return ReturnValue( 'All analyses and processing completed.', file_ids = file_ids_to_analyze)
-
-
-
 
 ######
 #

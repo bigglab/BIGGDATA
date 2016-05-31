@@ -31,7 +31,7 @@ if 'DATABASE_URL' in os.environ.keys():  # HACK TO CHECK IF WE'RE IN PRODUCTION 
 	HOME = os.environ['HOME']
 
 
-S3_BUCKET = 'biggdata'
+# S3_BUCKET = 'biggdata'
 
 AWSACCESSKEYID = os.environ['AWSACCESSKEYID'] 
 AWSSECRETKEY = os.environ['AWSSECRETKEY']

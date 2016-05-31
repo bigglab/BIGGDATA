@@ -102,13 +102,19 @@ class FileDownloadForm(Form):
     dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
     project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
 
-
+# @Dave - rewriting this for the new form
 class FileUploadForm(Form):
-    file     = FileField(u'File Path', validators=[validators.input_required()])
+
+    file_1 = FileField(u'File Path')
+    file_1_name = FileField(u'File Name')
+    file_2 = FileField(u'File Path')
+    file_2_name = FileField(u'File Name')
+    file_pairing = SelectField(u'File Pairing (2 files required)', choices = [ ('none','None'), ('vhvl','Heavy/Light Chain Pairing'), ('forev','Forward/Reverse Pairing') ] )
+
+
+    # file     = FileField(u'File Path', validators=[validators.input_required()])
     description  = TextAreaField(u'File Description')
     chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB']), validators=[validators.input_required()])
-    paired_partner  = IntegerField()
-    dataset_id = IntegerField()
     dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
     project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
 

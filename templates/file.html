@@ -2,8 +2,9 @@
 
 {% block content %}
 
-<div class="editable container">
-<h1><a href='#' data-toggle="collapse" data-target="#dataEdit"><span class="pencil glyphicon glyphicon-pencil"></span></a>Checking out file: {{file.name}}</h1>
+<div class="container">
+<h1>Checking out file: {{file.name}}</h1>
+<br>
 </div>
 
 <!-- 
@@ -24,25 +25,46 @@
 				<th>Dataset ID</th>
 				<th>File Type</th>
 				<th>Paired To</th>
-				<th>Available</th>
+				<th>File Size</th>
+				<th>Lines</th>
+				<th><center>Download</center></th>
 				<!-- <th>Path</th> -->
 			</tr>
 		</thead>
 		<tbody>
 				<tr>
-					<th><a href="{{url_for('.file', id=file.id)}}">{{file.id}}</a></th>
-					<th>{{file.name}}</th>
-					<th>{{file.description}}</th>
-					<th>{{file.chain}}</th>
-					<th>{% if file.dataset_id %}{{file.dataset_id}}{% endif %}</th>
-					<th>{{file.file_type}}</th>
-					<th>{{file.paired_partner}}</th>
-					{% if file.available %}
-						<th>YES</th>
+					<td><a href="#" data-container="body" data-toggle="popover" data-placement="right" data-trigger="hover" data-html="true" data-content="<samp>{{file.get_file_head(4)}}</samp>">{{file.id}}</a></td>
+					<td>{{file.name}}</td>
+					<td>{{file.description}}</td>
+					<td>{{file.chain}}</td>
+					<td>{% if file.dataset_id %}<a href="{{ url_for( 'frontend.dataset', id=file.dataset_id)}}"> {{file.dataset_id}}{% endif %}</td>
+					<td>{{file.file_type}}</td>
+					<td>{{file.paired_partner}}</td>
+					{%- if file.file_size -%}
+						<td>{{file.file_size|filesizeformat}}</td>
+					{%- elif file.available -%}
+						<td>0 bytes</td>
+					{%- else -%}
+						<td></td>
+					{%- endif -%}
+					{%- if file.line_count -%}
+						<td>{{file.line_count_string}}</td>
+					{%- elif file.available -%}
+						<td>0</td>
+					{%- else -%}
+						<td></td>
+					{%- endif -%}
+
+					{% if file.available and file.file_size != None and file.file_size != 0%}
+						<td align=center>
+							<a href="{{ url_for( 'frontend.download', file_id=file.id) }}" onclick="document.someForm.submit();" style="color: inherit; text-decoration: none" download="{{file.name}}">
+								<span class="glyphicon glyphicon-download fa-lg" aria-hidden="true" style="color:black; "></span>
+							</a>
+
+						</td>
 					{% else %}
-						<th>NO</th>
+						<td></td>
 					{% endif %}
-					<!-- <td><a href="#">Edit<span class="pencil glyphicon glyphicon-pencil"></span></a></td> -->
 				</tr>
 		</tbody>
 	</table>
@@ -56,31 +78,34 @@
 	</row>
 	{% endif %}
 </div>
-
+<br>
+<br>
+<em><a href='#' data-toggle="collapse" data-target="#dataEdit"><span class="pencil glyphicon glyphicon-pencil"></span> Click Here</a> to modify file chain/pairing.</em><br><br>
 <!-- File Edit form !-->
 {% if edit == 'edit' %}
 <div class="container">
 	<div id="dataEdit" class="collapse" aria-expanded="false">
 	<form method="POST" action="/files/{{file.id}}">
-		<row>
-			<h2>Editing file</h2>
-			{{ editfileform.csrf_token }}
-		</row>
-		<row>
-			<p>File name:</p>
-				{{ editfileform.name(size=20, value=file.name)}}
-		</row>
-		<row>
-			<p>Paired to:</p>
-				{{ editfileform.paired_partner }}	
-		</row>
-			<p>Chain</p>
-				{{ editfileform.chain }}
-		<row>
-		<br>
-			<button class="btn btn-primary" type="submit">Submit</button>
-		</row>
-	</form>
+		{{ editfileform.csrf_token }}
+		<table class="table table-striped">
+			<thead>
+
+				<tr>
+					<th>File name:</th>
+					<th>Paired to:</th>
+					<th>Chain</th>
+					<th></th>
+				</tr>			
+			</thead>
+			<tbody>
+				<tr>
+					<td>{{ editfileform.name(size=20, value=file.name, class='form-control')}}</td>
+					<td>{{ editfileform.paired_partner(class='form-control') }}</td>
+					<td>{{ editfileform.chain(class='form-control') }}</td>
+					<td><button class="btn btn-default" type="submit">Submit</button></td>
+				</tr>
+			</tbody>
+		</table>
 	</div>
 </div>
 {% endif %}
@@ -94,12 +119,20 @@
 	{% if file.dataset_id != None %}
 		{% set dataset = file.dataset %}
 		<div>
-			<h4><a href="{{url_for('.dataset', id=dataset.id)}}">Dataset {{file.dataset_id}} {{dataset.name}}</a> is associated with this file</h4>
+			<h4><a href="{{url_for('.dataset', id=dataset.id)}}">Dataset {{file.dataset_id}} {% if dataset.name != 'Dataset {}'.format(dataset.id) %}({{dataset.name}}){% endif %}</a> is associated with this file</h4>
 				{% set files = dataset.files %}
 				{% include "partials/files.html" with context %}
 		</div>
 	{% endif %}
 </div>
+
+<script>
+	
+    $(document).ready(function(){
+        $('[data-toggle="popover"]').popover(); 
+    });
+
+</script>
 
 {% endblock content %}
 
