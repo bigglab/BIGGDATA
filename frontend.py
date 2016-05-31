@@ -583,7 +583,7 @@ def files(status=[], bucket=None, key=None):
             file.validate()
             db.session.add(file)
             db.session.commit()
-            
+
             flash('linked new file to your user: {}'.format(file_path), 'success')
             paths = paths.remove(file_path)
             files = sorted(current_user.files, key=lambda x: x.id, reverse=True)
@@ -1193,6 +1193,9 @@ def pair_vhvl(status=[]):
     projects = current_user.get_ordered_projects()
     project_tuples = []
 
+    dataset = None
+
+
     status = []
     if request.method == 'POST':
 
@@ -1282,6 +1285,8 @@ def msdb(status=[]):
     projects = current_user.get_ordered_projects()
     project_tuples = []
 
+    dataset = None
+
     status = []
     if request.method == 'POST':
 
@@ -1359,6 +1364,9 @@ def msdb(status=[]):
 
     msdb_form.dataset_ids.choices = dataset_choices
     msdb_form.file_ids.choices = file_choices
+
+    if not dataset:
+        dataset = None
 
     return render_template("msdb.html", dataset=dataset, msdb_form=msdb_form, status=status, current_user=current_user, dataset_file_dict = dataset_file_dict) 
 
