@@ -1633,7 +1633,7 @@ def generate_new_analysis(user = None, dataset = None, directory = None, name = 
     if directory_prefix == None: directory_prefix = 'Analysis_'
 
     if directory: pass
-    elif dataset: directory = dataset.directory
+    elif dataset and dataset.directory: directory = dataset.directory
     elif user: directory = user.path
     else: directory = '/data'
 
@@ -1646,7 +1646,8 @@ def generate_new_analysis(user = None, dataset = None, directory = None, name = 
     
     session.commit()
     
-    analysis.directory = directory.rstrip('/') + '/{}{}'.format( directory_prefix, analysis.id)
+    if directory:
+        analysis.directory = directory.rstrip('/') + '/{}{}'.format( directory_prefix, analysis.id)
 
     if not os.path.isdir(analysis.directory):
         os.makedirs(analysis.directory)
