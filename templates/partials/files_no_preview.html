@@ -1,0 +1,76 @@
+
+<!-- HTML to write -->
+<table class="table table-striped">
+	<thead>
+		<tr>
+			<th>File ID</th>
+			<th>Name</th>
+			<th>Chain</th>
+			<th>File Type</th>
+			<th>Available</th>
+			<th>File Size</th>
+			<th>Lines</th>
+			<th><center>Download</center></th>
+			<!-- <th>Path</th> -->
+		</tr>
+	</thead>
+	<tbody>
+		{%- for file in files|sort(attribute='id', reverse=True) -%}
+			{% if (analysis and analysis.zip_file_id != file.id) or dataset %}
+				<tr>
+					<td><a href="{{url_for('frontend.file', id=file.id)}}" >{{file.id}}</a> </td>
+
+					<td>{{file.name}}</td>
+					<td>{{file.chain}}</td>
+					<td>{{file.file_type}}</td>
+					{%- if file.available -%}
+						<td>YES</td>
+					{%- else -%}
+						<td>NO</td>
+					{%- endif -%}
+					{%- if file.file_size -%}
+						<td>{{file.file_size|filesizeformat}}</td>
+					{%- elif file.available -%}
+						<td>0 bytes</td>
+					{%- else -%}
+						<td></td>
+					{%- endif -%}
+					{%- if file.line_count -%}
+						<td>{{file.line_count_string}}</td>
+					{%- elif file.available -%}
+						<td>0</td>
+					{%- else -%}
+						<td></td>
+					{%- endif -%}
+					{%- if file.available and file.file_size != None -%}
+						<td align=center>
+							<a href="{{ url_for( 'frontend.download', file_id=file.id) }}" onclick="document.someForm.submit();" style="color: inherit; text-decoration: none" download="{{file.name}}">
+								<span class="glyphicon glyphicon-download fa-lg" aria-hidden="true" style="color:black; "></span>
+							</a>
+						</td>
+					{%- else -%}
+						<td></td>
+					{%- endif -%}
+				</tr>
+			{% endif %}
+		{%- endfor -%}
+		{% if analysis %}
+			<tr id="zip-{{analysis.id}}">
+			{% if analysis.status != 'SUCCESS' and analysis.status != 'FAILURE' and analysis.status != 'COMPLETE' %}
+				<td colspan="8" align = right> Analysis is currently executing... </td>				
+			{% elif analysis.zip_file_id == None %}
+				<td colspan="8" align = right> <a href="{{ url_for( 'frontend.analysis_download', id=analysis.id) }}"> Click Here to Download All Files as a Compressed File </a></td>
+			{% elif analysis.zip_file.status == 'COMPRESSING' %}
+				<td colspan="8" align = right> Creating compressed file... </td>
+			{% else %}
+				<td colspan="7" align = right> Download All ({{ analysis.zip_file.name }}): </td>
+				<td align=center> 
+						<a href="{{ url_for( 'frontend.download', file_id= analysis.zip_file_id) }}" style="color: inherit; text-decoration: none" download="">
+							<span class="glyphicon glyphicon-download fa-lg" aria-hidden="true" style="color:black; "></span>
+						</a>
+				 </td>
+			{% endif %}
+			</tr>
+		{% endif %}
+	</tbody>
+</table>

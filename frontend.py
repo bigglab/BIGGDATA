@@ -693,7 +693,6 @@ def datasets():
     projects = sorted(projects, key=lambda x: x.id, reverse=True)
     project_tuples = []
 
-
     if request.method == 'POST':
         if form.name.data: 
             d = generate_new_dataset(current_user)

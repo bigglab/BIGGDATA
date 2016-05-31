@@ -1586,6 +1586,10 @@ def generate_new_dataset(user = None, session = db.session):
     '''
     Generates a new, default dataset and returns the dataset object
     '''
+
+    if not user:
+        return None
+
     new_dataset = Dataset()
     new_dataset.user_id = user.id
     new_dataset.populate_with_defaults(user)
@@ -1593,9 +1597,17 @@ def generate_new_dataset(user = None, session = db.session):
     session.add(new_dataset)
     session.flush()
     new_dataset.name = 'Dataset ' + str(new_dataset.id)
-    new_dataset.files = [file]
     user.datasets.append(new_dataset)
+
+    new_dataset.directory = "{}/Dataset_{}".format(user.path.rstrip('/') , new_dataset.id)
+
+    if not os.path.isdir(new_dataset.directory):
+        os.makedirs(new_dataset.directory)
+        print 'Created new directory at {}'.format(new_dataset.directory)
+
+
     session.commit()
+
 
 
     return new_dataset
