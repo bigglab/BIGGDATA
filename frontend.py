@@ -696,7 +696,7 @@ def datasets():
 
     if request.method == 'POST':
         if form.name.data: 
-            d = Dataset()
+            d = generate_new_dataset(current_user)
 
             # use default values for the new dataset, if given
             if current_user.default_dataset:

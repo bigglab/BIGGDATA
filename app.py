@@ -1604,7 +1604,6 @@ def run_pandaseq_analysis_with_files(self, analysis_id, file_ids, algorithm='pea
 
 def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = celery_logger, trim_illumina_adapters = True, trim_slidingwindow = True, trim_slidingwindow_size = 4, trim_slidingwindow_quality = 15):
     analysis = db.session.query(Analysis).get(analysis_id)
-    self.set_analysis_id(analysis_id)
 
     files = map(lambda x: db.session.query(File).filter(File.id==x).first(), file_ids)
 
