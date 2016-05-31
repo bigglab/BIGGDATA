@@ -713,10 +713,6 @@ class Dataset(db.Model):
         pairing_technique = db.Column(db.String(256))
         json_id = db.Column(db.String(256))
 
-        # json_project_name = db.Column(db.String(256)) - will use this to add to a new or existing project
-        # publications = db.Column(db.String(256)) - will use this to add to a new or existing project
-        # lab = db.Column(db.String(256))
-
         directory = db.Column(db.String(256))
 
         projects = association_proxy('dataset_projects', 'project')

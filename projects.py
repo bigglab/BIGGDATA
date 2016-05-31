@@ -58,62 +58,22 @@ from forms import *
 from functions import * 
 from models import * 
 
-# Hide L/R button in carousel at ends
 # Check that user directories are made if server is down
-# Switch browse/filename order everywhere
-# Remove all S3 references
 # If there is an Exception in IGREP, print it in RED
-# Disable download all link if the analysis is still running
-
 # Fix drop-down updating on pair_vhvl page and msdb page
-# File downloading
-
 # start pipeline using JSON config
-
 # add cdr3 list as a file type
 
-# MORE Add analysis result page
-# Preview file - add code to more pages
-# Add file download link to other pages
 
-# save JSON of analysis to log (analysis.config)
-    # Only back up fastqs
-    # One JSON for data
-    # One JSON for analysis settings 
-
-# Take out all S3 references
-# Add file upload page
-    #for each file add a download link
-    # on hover = head (4 lines)
-
-# Questions for Russ:
-# Pair uploads?
-# USSEARCH - 
-# Output all formats in TSV
-# Add link to analysis from Console
-
-# Build pandas dataframe
-# Take out CDR3 sequences - provided in header
-# Separate text file with CDR3 sequences CDR3.AA
-#   Now use clonotype - in IGREP binary
-# Not USSEARCH
-
-# 2. Add direct file upload
 # 3. Add pairing functionality throughout - pair children output as well
-# 5. LESS # Hold off --- Add clustering algorithm
 # 6. Check for number of files submitted for analysis
 # 8. Require two files for PANDAseq
 # 9. Check new trim analysis (passing analysis, files by ID)
-# 10. /data/resources : all software
-# 11. /data/resources/germlines : files reffed by system
 # 12. Make sure that analyses can only be run on the correct files and cannot be run on empty filesets
-# 13. Auto populate file name on upload page
 # 14. Add dataset table to project page
-# 15. Add Analysis Type and Cluster setting - min, max, and step
 # 16. Add Dataset Defaults:
 #      Human
 #      SP: Mi-Seq 2x300
-# 17. Check trimming filename failure
 
 # OLDER:
 # 4. Don't allow users to run analyses on empty datasets
