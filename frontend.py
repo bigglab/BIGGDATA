@@ -693,7 +693,6 @@ def datasets():
     projects = sorted(projects, key=lambda x: x.id, reverse=True)
     project_tuples = []
 
-
     if request.method == 'POST':
         if form.name.data: 
             d = generate_new_dataset(current_user)
@@ -729,14 +728,17 @@ def datasets():
                 new_project.datasets = [d]
                 new_project.cell_types_sequenced = str(d.cell_types_sequenced)
                 new_project.species = d.species
+                d.project_id = new_project.id
 
                 db.session.commit()
                 return redirect(url_for('.datasets'))
             else: # check if the user has selected a project which they have access to
                 for project in projects:
                     if str(project.id) == form.project.data:
+                        print "project.role(current_user): {}".format(project.role(current_user) )
                         if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
                             project.datasets.append(d)
+                            d.project_id = project.id
 
                             if current_user.default_dataset == None:
                                 d.cell_types_sequenced = [str(project.cell_types_sequenced)]
@@ -1200,7 +1202,12 @@ def pair_vhvl(status=[]):
     if request.method == 'POST':
 
         # Check the submitted name, use default if possible
-        next_analysis_id = int(db.session.query(func.max(File.id)).first()[0]) + 1
+        current_analysis_id = db.session.query(func.max(File.id)).first()[0]
+        if current_analysis_id:
+            next_analysis_id = int(current_analysis_id) + 1
+        else:
+            next_analysis_id = 1
+
         if pair_vhvl_form.name.data == 'Pairing Analysis {}'.format( str(next_analysis_id) ):
             pair_vhvl_form.name.data = ''
 
@@ -1237,9 +1244,13 @@ def pair_vhvl(status=[]):
             flash('No files selected for analysis.', 'warning')
 
     else: # request.method == 'GET'
-        next_analysis_id = int(db.session.query(func.max(File.id)).first()[0]) + 1
+        # Check the submitted name, use default if possible
+        current_analysis_id = db.session.query(func.max(File.id)).first()[0]
+        if current_analysis_id:
+            next_analysis_id = int(current_analysis_id) + 1
+        else:
+            next_analysis_id = 1
         pair_vhvl_form.name.data = 'Pairing Analysis {}'.format( str(next_analysis_id) )
-
 
     # Fall through to this point if the method if 'GET'
     dataset_choices = []
@@ -1332,7 +1343,12 @@ def msdb(status=[]):
             flash('No files selected for analysis.', 'warning')
 
     else: # request.method == 'GET'
-        next_analysis_id = int(db.session.query(func.max(File.id)).first()[0]) + 1
+        current_analysis_id = db.session.query(func.max(File.id)).first()[0]
+        if current_analysis_id:
+            next_analysis_id = int(current_analysis_id) + 1
+        else:
+            next_analysis_id = 1
+
         msdb_form.name.data = 'MSDB Analysis {}'.format( str(next_analysis_id) )
 
     # Fall through to this point if the method if 'GET'
@@ -1631,7 +1647,6 @@ def json_celery_log():
                                            <span class = "progress-value" style="position:absolute; right:0; left:0; width:100%; text-align:center; z-index:2; color:black;">{3}</span>
                                         </div>
                                     """.format(  async_task_current, async_task_total, percent, progress_message)
-
                         else:
                             log_entries = log_entries + '<font color="{}">{}</font><br>\n'.format( color , line )
             except:
@@ -1689,20 +1704,36 @@ def json_celery_log():
             elif task.status == 'FAILURE':
                 pass # task_heading_color = 'red'
 
+
+            task_analysis_link = ''
+            if task.status == 'SUCCESS' or task.status == 'FAILURE' or task.status == 'COMPLETE':    
+                if task.analysis_id:
+                    task_analysis_link = ' <a href="{1}">Click Here</a><font color="{0}"> to view the analysis results.</color>'.format(task_heading_color, url_for('frontend.analysis', id = task.analysis_id))
+                elif task.name == 'create_analysis_zip_file':
+                    pattern = re.compile('(.+)file (\d+)')
+                    pattern_match =  pattern.match(task.result)
+
+
+                    if pattern_match:
+                        file_id = int(pattern_match.group(2))
+                        file = db.session.query(File).get(file_id)
+                        if file and file.available:
+                            task_analysis_link = ' <a href="{1}" onclick="document.someForm.submit();" download="{2}">Click Here</a><font color="{0}"> to download the file.</color>'.format(task_heading_color, url_for('frontend.download', file_id = file_id), file.name)
+
             entry = """
             <table width="100%">
                 <tbody>
                     <tr>
-                        <td><font color="{}">[Task {} ({}) - {}] {}</font><br>
-                        {}{}</td>
+                        <td><font color="{0}">[Task {1} ({2}) - {3}] {4}</font> {7}<br>
+                        {5}{6}</td>
                         <td align="right" valign="top">
-                        <span class="pencil glyphicon glyphicon-remove" style="margin-right: 3px; color:black; cursor: pointer; cursor: hand;" onclick=delete_task('{}')></span>
+                        <span class="pencil glyphicon glyphicon-remove" style="margin-right: 3px; color:black; cursor: pointer; cursor: hand;" onclick=delete_task('{8}')></span>
 
                         </td>
                     </tr>
                 </tbody>
             </table>
-            <br>""".format( task_heading_color , task.id, task.name , task.status, task_message , log_entries, async_task_progress , url_for( 'frontend.delete_task', task_id = task.id )  )
+            <br>""".format( task_heading_color , task.id, task.name , task.status, task_message , log_entries, async_task_progress , task_analysis_link, url_for( 'frontend.delete_task', task_id = task.id )  )
 
             message = message + entry
 
