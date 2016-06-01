@@ -2941,8 +2941,8 @@ def add_directory_files_to_database(directory = None, description = None, datase
         'gz' : 'GZIPPED_FASTQ' ,
         'cdr3_clonotype' : 'CDR3_CLONOTYPE' ,
         'cdr3list' : 'CDR3_LIST' ,
-        'Gucken' : 'MAL_GUCKEN' ,
-        'msDB' : 'MSDB' ,
+        'Gucken' : 'MSDB_TXT' ,
+        'msDB' : 'MSDB_FASTA' ,
         'parsed_summary' : 'MSDB_SUMMARY' 
     }
 
@@ -2951,9 +2951,9 @@ def add_directory_files_to_database(directory = None, description = None, datase
     }
 
     file_rename_regex_dict = {
-        r'MASSSPECDB(\d+)msDB.fasta' : r'PREFIX_msDB.fasta',
+        r'MASSSPECDB(\d+)msDB.fasta' : r'PREFIX_MSDB.fasta',
         r'cdr3_clonotype_list.txt' : r'PREFIX_cdr3_clonotype_list.txt',
-        r'MASSSPECDB(\d+)malGucken.txt' : r'PREFIX_malGucken.txt',
+        r'MASSSPECDB(\d+)malGucken.txt' : r'PREFIX_MSDB.txt',
         r'cdr3list.txt' : r'PREFIX_cdr3list.txt',
         r'MASSSPECDB(\d+)parsed_summary.txt' : r'PREFIX_parsed_summary.txt'
     }

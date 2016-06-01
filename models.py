@@ -1593,7 +1593,7 @@ def generate_new_dataset(user = None, session = db.session):
     session.add(new_dataset)
     session.flush()
     new_dataset.name = 'Dataset ' + str(new_dataset.id)
-    new_dataset.files = [file]
+    # new_dataset.files = [file]
     user.datasets.append(new_dataset)
     session.commit()
 
