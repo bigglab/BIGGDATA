@@ -488,7 +488,7 @@ def file_download(status=[], bucket='', key=''):
         if form.dataset.data == 'new':
             # create a new dataset here with the name default, add the user and dataset to the new project
             file_dataset = generate_new_dataset(current_user)
-            flash('New file will be added to dataset "{}".'.format(new_dataset.name), 'success')
+            flash('New file will be added to dataset "{}".'.format(file_dataset.name), 'success')
         else: # check if the user has selected a project which they have access to
             user_has_permission = False
             for dataset in current_user.datasets:
