@@ -3097,10 +3097,11 @@ def create_analysis_zip_file(self, analysis_id, user_id):
             analysis.zip_file.validate()
             analysis.zip_file.status = 'AVAILABLE'
             session.commit()
+            zip_file_id = analysis.zip_file.id
 
             logger.info( 'Finished compression for Analysis {}'.format(analysis_id) )
 
-    return 'Completed compression of {} analysis files. Saved result as {}'.format( len(files_to_zip), analysis_tarfile_path )
+    return 'Completed compression of {} analysis files. Saved result as {} in file {}'.format( len(files_to_zip), analysis_tarfile_path, zip_file_id )
 
 @celery.task(base = LogTask, bind = True)
 def run_analysis_pipeline(self, *args,  **kwargs):

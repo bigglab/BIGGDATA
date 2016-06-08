@@ -140,16 +140,32 @@
         input.trigger('fileselect', [numFiles, label]);
     });
     
-    $(document).ready( function() {
-      
-        $('.btn-file :file').on('fileselect', function(event, numFiles, label) {
-            var parent_input_group = $(this).closest('div');
-            var child_input = parent_input_group.children('input');
-            child_input.val(label);
-            $('#key').val(label);
+    // $(document).ready( function() {
 
-        });
+    //     $('.btn-file :file').on('fileselect', function(event, numFiles, label) {
+    //             var parent_input_group = $(this).closest('div');
+    //             var child_input = parent_input_group.children('input');
+    //             child_input.val(label);
+    //             console.log(label);
+    //             $('#key').val(label);
+
+    //     });
+
+    // });
+
+
+$(document).ready( function() {
+  
+    $('.btn-file :file').on('fileselect', function(event, numFiles, label) {
+        var parent_input_group = $(this).closest('div');
+        var child_input = parent_input_group.children('input');
+        child_input.val(label);
+
+        $( '#' + $(this).attr('id') + '_name' ).val(label);
+
     });
+});
+
 
 $('select[name=file_pairing]').on('change', function () {
     if ($(this).val() == 'none'){
