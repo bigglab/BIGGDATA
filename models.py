@@ -134,7 +134,7 @@ class User(db.Model):
             return False
 
         def __repr__(self): 
-            return "<  User {}: {}  {}  {}  >".format(self.username, self.first_name, self.last_name, self.email)
+            return "<  User {} {}: {}  {}  {}  >".format(self.id, self.username, self.first_name, self.last_name, self.email)
 
         def __init__(self): 
             self.user_type = 'researcher'

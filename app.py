@@ -2802,6 +2802,7 @@ def create_datasets_from_JSON_string(json_string, project_id = None, dataset_id 
     if 'GGLAB_DB_FIELDS' not in user_data_description: return "No GGLAB_DB_FIELDS in user_data description of JSON data."
 
     json_dataset_array = user_data_description['GGLAB_DB_FIELDS']
+    new_datasets = [] 
     for json_dataset in json_dataset_array:
 
         # first, check and make sure all of the fields we want are present
@@ -2838,8 +2839,8 @@ def create_datasets_from_JSON_string(json_string, project_id = None, dataset_id 
             contains_rna_seq_data = True
 
         new_dataset = Dataset()
-        
-        new_dataset.user_id = current_user.id
+        new_dataset.user_id = 2
+        # new_dataset.user_id = current_user.id
         new_dataset.name = dataset_name
         new_dataset.description = json_dataset[ "DESCRIPTION" ]
         new_dataset.ig_type = ""
@@ -2892,8 +2893,10 @@ def create_datasets_from_JSON_string(json_string, project_id = None, dataset_id 
         db.session.add(new_dataset)
         db.session.flush()
         db.session.refresh(new_dataset)
+        new_datasets.append(new_dataset)
 
-        if project:
+        if project_id:
+            project = db.session.query(Project).filter(id==project_id).first()
             new_relationship = ProjectDatasets(new_dataset, project)
             db.session.add(new_relationship)
             db.session.flush()
@@ -2905,7 +2908,11 @@ def create_datasets_from_JSON_string(json_string, project_id = None, dataset_id 
             db.session.flush()
             db.session.refresh(current_user)
 
-    return None
+    db.session.commit() 
+    if new_datasets == []: 
+        return None
+    else: 
+        return new_datasets
 
 @celery.task(base= LogTask, bind = True)
 def test_function(self, analysis_id = None, user_id = None):
