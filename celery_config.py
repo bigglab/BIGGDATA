@@ -14,7 +14,8 @@ CELERY_TIMEZONE = 'America/Chicago'
 CELERY_ENABLE_UTC = True
 
 CELERY_RESULT_BACKEND = 'rpc'
-CELERY_RESULT_PERSISTENT = True
+# CELERY_RESULT_PERSISTENT = True
+CELERY_AMQP_TASK_RESULT_EXPIRES = 3600
 
 default_exchange = Exchange('default', type='direct')
 
