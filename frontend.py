@@ -99,14 +99,14 @@ nav.register_element('frontend_user', Navbar(
         View('Import From NCBI', 'frontend.import_sra'), 
         ),
     Subgroup(
-        'Datasets',
+        'Manage Data',
         View('My Projects', 'projects.manage_projects'),
         View('My Datasets', 'frontend.datasets'),
         View('New Project', 'projects.create_project'),
         ),
     Subgroup(
-        'Analysis', 
-        View('My Analyses', 'frontend.analyses'),
+        'Run Analysis', 
+        View('Previous Analyses', 'frontend.analyses'),
         View('Create Analysis Pipline', 'frontend.pipeline'),
         View('Create MSDB from Annotations', 'frontend.msdb'),
         View('Pair VH/VL Annotations', 'frontend.pair_vhvl'),
