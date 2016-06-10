@@ -20,16 +20,22 @@
 			<thead>
 				<tr>
 					<th>{{ form.name.label }}</th>
-					<th>{{ form.description.label }}</th>
+					<th>{{ form.file_ids.label }}</th>
+					<!-- <th>{{ form.description.label }}</th> -->
 					<th>{{ form.algorithm.label }}</th>
+					<th>{{ form.minimum_length.label }}</th>
+					<th>{{ form.minimum_overlap.label }}</th>
 					<th></th>
 				</tr>
 			</thead>
 			<tbody>
 			    <tr>
 				    <td>{{ form.name(size=20, class='form-control') }}</td>
-				    <td>{{ form.description(size=40, class='form-control') }}</td>
+				    <!-- <td>{{ form.description(size=40, class='form-control') }}</td> -->
+				    <td>{{ form.file_ids(class='form-control') }}</td>
 				    <td>{{ form.algorithm(class='form-control') }}</td>
+				    <td>{{ form.minimum_length(class='form-control', size=5) }}</td>
+				    <td>{{ form.minimum_overlap(class='form-control', size=4) }}</td>
 				    <td><input class="btn btn-default" type="submit" value="RUN PANDASEQ"></td>
 			    </tr>
 			</tbody>

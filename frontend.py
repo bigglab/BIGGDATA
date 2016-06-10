@@ -97,6 +97,7 @@ nav.register_element('frontend_user', Navbar(
         View('My Files', 'frontend.files'), 
         View('Import File', 'frontend.file_download'),
         View('Import From NCBI', 'frontend.import_sra'), 
+        View('Import From GSAF', 'frontend.import_gsaf')
         ),
     Subgroup(
         'Manage Data',
@@ -1153,23 +1154,19 @@ def pandaseq(dataset_id, status=[]):
         return redirect( url_for('frontend.dashboard') )
 
     form = CreatePandaseqAnalysisForm()
-    status = []
-    if request.method == 'POST' and dataset:
-        status.append('PANDASEQ Launch Detected')
-        result = run_pandaseq_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'user_id': current_user.id, 'algorithm': form.algorithm.data}, queue=celery_queue)
-        status.append(result.__repr__())
-        status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
-        time.sleep(1)
+    file_options = map(lambda f: [f.id, f.name], [f for f in dataset.files if 'FASTQ' in f.file_type])
+    form.file_ids.choices = file_options
 
-        # return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
-        analyses = current_user.analyses.all()
-        analysis_file_dict = OrderedDict()
-        for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
-            analysis_file_dict[analysis] = analysis.files.all() 
-        return redirect(url_for('.analyses', status=status))
-        # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
+    if request.method == 'POST' and dataset:
+        flash('PANDASEQ Launch Detected', 'success')
+        if len(form.file_ids.data) != 2: 
+            flash('Should select two files for consensus alignment', 'warning')
+        result = run_pandaseq_with_dataset_id.apply_async((dataset_id, ),  {'analysis_name': form.name.data, 'analysis_description': form.description.data, 'file_ids': form.file_ids.data, 'user_id': current_user.id, 'algorithm': form.algorithm.data, 'minimum_overlap': form.minimum_overlap.data, 'minimum_length': form.minimum_length.data}, queue=celery_queue)
+        return redirect(url_for('frontend.dashboard'))
     else: 
-        return render_template("pandaseq.html", dataset=dataset, form=form, status=status, current_user=current_user) 
+        form.name.data = dataset.name
+        return render_template("pandaseq.html", dataset=dataset, form=form, current_user=current_user) 
+
 
 @frontend.route('/test/', methods=['GET', 'POST'])
 @login_required
@@ -1530,6 +1527,31 @@ def import_sra():
             return render_template('sra_import.html', status=status, form=form, result=result, current_user=current_user)
 
     return render_template('sra_import.html', status=status, form=form, result=result, current_user=current_user)
+
+
+@frontend.route('/files/import_gsaf', methods=['GET', 'POST'])
+@login_required
+def import_gsaf():
+    form = GsafDownloadForm()
+    if request.method == 'POST':
+        url = form.url.data
+        req = urllib2.Request(url)
+        try:
+            response = urllib2.urlopen(req)
+            # do stuff...
+        except urllib2.HTTPError as err:
+            error = ['URL Unreachable...', err]
+            flash('URL is unreachable...', 'error')
+            flash(err, 'error')
+            return render_template('import_gsaf.html', form=form)
+        else: 
+            error = None
+            parse_gsaf_response_into_datasets.apply_async((url,), {'user_id':current_user.id}, queue=celery_queue)
+            return redirect(url_for('frontend.dashboard'))
+             # render_template('sra_import.html', status=status, form=form, result=result, current_user=current_user)
+
+    return render_template('import_gsaf.html', form=form)
+
 
 @frontend.route('/delete_task/<task_id>', methods=['GET', 'POST'])
 @login_required

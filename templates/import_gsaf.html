@@ -1,0 +1,29 @@
+{% extends "_base.html" %}
+{% block content %}
+<br>
+
+
+<br>
+
+<div class="container">
+<h3>Download the data directly from your GSAF URL: </h3>
+    <form method="POST" action="/files/import_gsaf" enctype="multipart/form-data">
+    <table class="table table-striped">
+        {{ form.csrf_token }}
+        <thead>
+            <tr>
+                <th>GSAF Access URL</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <th>{{ form.url(size=100) }}</th>
+                <th><input type="submit" value="Submit"></th>
+            </tr>
+        </tbody>
+    </table>
+    </form>
+</div>
+
+
+{% endblock %}

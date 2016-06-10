@@ -59,11 +59,16 @@ class CreateAnalysisForm(Form):
     insert_into_db = BooleanField(u'Insert Into DB')
     cluster = BooleanField(u'Cluster Sequences')
 
+class GsafDownloadForm(Form):
+    url = TextField(u'GSAF Access URL')
 
 class CreatePandaseqAnalysisForm(Form): 
     dataset_id = IntegerField()
     name = TextField(u'Name', )
     description = TextField(u'Description')
+    minimum_overlap = IntegerField(u'Minimum Overlap', default=10)
+    minimum_length = IntegerField(u'Minimum Consensus Length', default=100)
+    file_ids = SelectMultipleField(u'Files To Collapse')
     algorithm = SelectField(u'Algorithm', choices=(['ea_util', 'ea_util'], ['flash', 'flash'], ['pear', 'pear'], ['rdp_mle', 'rdp_mle'],  ['simple_bayesian', 'simple_bayesian'], ['stitch', 'stitch'], ['uparse', 'uparse']), validators=[validators.input_required()])
 
 class CreateMSDBAnalysisForm(Form): 

@@ -1442,13 +1442,17 @@ def annotate_analysis_from_db(analysis_id):
         analysis.available = True 
         db.session.commit()
 
+
 @celery.task(base = LogTask, bind = True)
-def run_pandaseq_with_dataset_id(self, dataset_id, analysis_name='', analysis_description='', user_id=6, algorithm='pear'):
+def run_pandaseq_with_dataset_id(self, dataset_id, analysis_name='', analysis_description='Pandaseq Alignment Consensus', file_ids=[], user_id=2, minimum_length=100, minimum_overlap=10, algorithm='pear'):
     logger = self.logger
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+    files = [db.session.query(File).get(file_id) for file_id in file_ids]
     logger.info( 'Running PANDAseq on Dataset {}.'.format( dataset_id ) )
 
     analysis = Analysis()
+    if analysis_name == '': 
+        analysis_name = 'Analysis_{}'.format(analysis.id)
     analysis.async_task_id = self.task.request_id    
     analysis.name = analysis_name
     analysis.description = analysis_description
@@ -1469,126 +1473,104 @@ def run_pandaseq_with_dataset_id(self, dataset_id, analysis_name='', analysis_de
     if not os.path.isdir(analysis.directory):
         os.mkdir(analysis.directory)
 
-    data_files_by_chain = {}
-    for key, values in itertools.groupby(dataset.primary_data_files(), lambda x: x.chain): 
-        data_files_by_chain[key] = list(values)
-    dataset.primary_data_files_ids = [] 
-    db.session.add(dataset)
-    db.session.commit()
-    logger.info( "Running PANDAseq in these batches of files (sorted by file.chain): {}".format(data_files_by_chain) )
-    for chain, files in data_files_by_chain.items(): 
-        if len(files) == 2: 
-            logger.info( 'About to run PANDAseq concatenation on {} files from chain {}'.format(len(files), chain) )
-            run_pandaseq_analysis_with_files(analysis.id, [file.id for file in files], algorithm=algorithm, parent_task = self)
-        else: 
-            logger.error( 'Bad request for pandaseq alignment of only {} files'.format(len(files)) )
-    return 'PANDAseq analysis complete.' 
 
-@celery.task( base = LogTask, bind = True)
-def run_pandaseq_analysis_with_files(self, analysis_id, file_ids, algorithm='pear'):
-    parent_task = self.parent_task
-    logger = self.logger
-    self.set_analysis_id(analysis_id)
+    if len(files) != 2: 
+        logger.error( 'Bad request for pandaseq alignment of only {} files'.format(len(files)) )
 
-    files = [db.session.query(File).get(file_id) for file_id in file_ids]
-    analysis = db.session.query(Analysis).get(analysis_id)
+    else: 
+        logger.info( 'Running PANDAseq concatenation on these {} files: {}'.format(len(files), ', '.join( [file.name for file in files] ) ))
 
-    if len(file_ids) != 2:
-        raise Exception('PANDAseq can only be run on two files, not {} files.'.format( str( len(file_ids) ) ) )
-    analysis_name = 'Analysis_{}'.format(analysis.id)
+        files_to_execute = []
+        path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
+        path = path.replace('//','/')
+        basename = analysis_name
+        basepath = '{0}/{1}'.format(analysis.directory.rstrip('/'), basename)
+        logger.info( 'Writing output files to base name: {}'.format(basepath) )
 
-    dataset = analysis.dataset
-    files_to_execute = []
-    logger.info( 'Running PANDAseq on these files: {}'.format( ', '.join( [file.name for file in files] ) ) )
-    path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
-    path = path.replace('//','/')
-    #basename = files[0].path.split('/')[-1].split('.')[0]
-    basename = analysis_name
-    basepath = '{0}/{1}'.format(analysis.directory.rstrip('/'), basename)
-    logger.info( 'Writing output files to base name: {}'.format(basepath) )
-    output_files = []
-
-    # Instantiate Source Files
-    alignment_file = File()
-    alignment_file.user_id = dataset.user_id
-    alignment_file.path = '{}.pandaseq_{}.fastq'.format(basepath, algorithm)
-    alignment_file.name = "{}.pandaseq_{}.fastq".format(basename, algorithm)
-    alignment_file.command = 'pandaseq -f {} -r {} -F -T 4 -A {} -w {} 2> {}.log'.format(files[0].path, files[1].path, algorithm, alignment_file.path, alignment_file.path)
-    alignment_file.file_type = 'PANDASEQ_ALIGNED_FASTQ'
-    files_to_execute.append(alignment_file)
-    analysis.status = 'EXECUTING'
-    db.session.commit()
-
-    output_file_ids = []
-
-    for f in files_to_execute:
-        f.command = f.command.encode('ascii')
-        f.dataset_id = analysis.dataset_id 
-        f.analysis_id = analysis.id 
-        f.chain = files[0].chain
-        logger.info( 'Executing: {}'.format(f.command) )
-        analysis.active_command = f.command
-        f.in_use = True 
-        db.session.add(f)
+        # Instantiate Output Files
+        alignment_file = File()
+        alignment_file.user_id = dataset.user_id
+        alignment_file.path = '{}.pandaseq_{}.fastq'.format(basepath, algorithm)
+        alignment_file.name = "{}.pandaseq_{}.fastq".format(basename, algorithm)
+        alignment_file.command = 'pandaseq -f {} -r {} -F -T 4 -A {} -w {} -l {} -o {} 2> {}.log'.format(files[0].path, files[1].path, algorithm, alignment_file.path, minimum_length, minimum_overlap, alignment_file.path)
+        alignment_file.file_type = 'PANDASEQ_ALIGNED_FASTQ'
+        files_to_execute.append(alignment_file)
+        analysis.status = 'EXECUTING'
         db.session.commit()
-        # MAKE THE CALL
-        #response = os.system(f.command)
-        #print 'Response: {}'.format(response)
-        
-        error = None
-        try:
-            command_line_args = shlex.split(f.command)
-            command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
 
-            start = dt.datetime.now()
+        for f in files_to_execute:
+            f.command = f.command.encode('ascii')
+            f.dataset_id = analysis.dataset_id 
+            f.analysis_id = analysis.id 
+            f.chain = files[0].chain
+            logger.info( 'Executing: {}'.format(f.command) )
+            analysis.active_command = f.command
+            f.in_use = True 
+            db.session.add(f)
+            db.session.commit()
+            # MAKE THE CALL
+            #response = os.system(f.command)
+            #print 'Response: {}'.format(response)
+            
+            error = None
+            lowq_errors = 0 
+            try:
+                command_line_args = shlex.split(f.command)
+                command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
 
-            for line in iter(command_line_process.stdout.readline, b''):
-                line = line.strip()
-                if 'ERR' in line or '* * *' in line:
-                    logger.error(line)
-                elif 'STAT' in line:
-                    try:
-                        if 'READS' in line:
-                            current = dt.datetime.now()
-                            elapsed = (current - start).seconds
-                            line_parts = line.split('READS', 1)
-                            reads = line_parts[1].strip()
-                            status = 'Time Elapsed: {} - Number of Reads: {}'.format(elapsed, reads)
-                            self.update_state(state='STATUS', meta={'status': status })
-                    except:
-                        pass
+                start = dt.datetime.now()
 
-            self.update_state(state='SUCCESS',
-                meta={'status': 'PANDAseq complete.' })
+                for line in iter(command_line_process.stdout.readline, b''):
+                    line = line.strip()
+                    if 'ERR' in line or '* * *' in line:
+                        if 'LOWQ' in line: 
+                            lowq_errors += 1 
+                        else: 
+                            logger.error(line)
+                    elif 'STAT' in line:
+                        try:
+                            if 'READS' in line:
+                                current = dt.datetime.now()
+                                elapsed = (current - start).seconds
+                                line_parts = line.split('READS', 1)
+                                reads = line_parts[1].strip()
+                                status = 'Time Elapsed: {} - Number of Reads: {}'.format(elapsed, reads)
+                                self.update_state(state='STATUS', meta={'status': status })
+                        except:
+                            pass
 
-            response, error = command_line_process.communicate()
-            command_line_process.stdout.close()
-            command_line_process.wait()
-        except subprocess.CalledProcessError as error:
-            error = error.output
-            logger.error(error)
+                self.update_state(state='SUCCESS',
+                    meta={'status': 'PANDAseq complete.' })
 
-        if error == None:
-            if os.path.isfile(f.path): 
-                f.available = True 
-                f.file_size = os.path.getsize(f.path)
-                dataset.primary_data_files_ids = [f.id]
-                db.session.commit()
-                db.session.refresh(f)
-                output_file_ids.append(f.id)
+                response, error = command_line_process.communicate()
+                command_line_process.stdout.close()
+                command_line_process.wait()
+            except subprocess.CalledProcessError as error:
+                error = error.output
+                logger.error(error)
+            if lowq_errors != 0: 
+                logger.error('Pandaseq Run Encountered {} Low-Quality-Read Errors'.format(lowq_errors))
+            if error == None:
+                if os.path.isfile(f.path): 
+                    f.available = True 
+                    f.file_size = os.path.getsize(f.path)
+                    dataset.primary_data_files_ids = [f.id]
+                    db.session.commit()
+                    db.session.refresh(f)
+                    output_file_ids = [f.id]
+                else:
+                    f.available = False
+                    analysis.status = 'FAILED'
+                    db.session.commit()
+                    logger.error('PANDAseq Error: unable to create file {}'.format(f.path) )
+
             else:
                 f.available = False
                 analysis.status = 'FAILED'
                 db.session.commit()
-                logger.error('PANDAseq Error: unable to create file {}'.format(f.path) )
+                logger.error(error)
 
-        else:
-            f.available = False
-            analysis.status = 'FAILED'
-            db.session.commit()
-            logger.error(error)
-
-    ##### ***** Need to Check Output Files Here ***** #####
+        ##### ***** Need to Check Output Files Here ***** #####
 
     logger.info( 'All commands in analysis {} have been executed.'.format(analysis) )
     if set(map(lambda f: f.available, files_to_execute)) == {True}:
@@ -1599,8 +1581,10 @@ def run_pandaseq_analysis_with_files(self, analysis_id, file_ids, algorithm='pea
     analysis.finished = 'now'
     db.session.commit()
 
-    # Make PandaSeq Alignment Primary Dataset Data Files! Currently done in dataset.primary_data_files() 
     return ReturnValue('PANDAseq analysis complete.', file_ids = output_file_ids)
+
+
+
 
 def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = celery_logger, trim_illumina_adapters = True, trim_slidingwindow = True, trim_slidingwindow_size = 4, trim_slidingwindow_quality = 15):
     analysis = db.session.query(Analysis).get(analysis_id)
@@ -2762,13 +2746,70 @@ def flash_errors( form, category="warning" ):
         for error in errors:
             flash("{0} - {1}".format( getattr( form, field ).label.text, error ), category )
 
-# @Dave - function to create datasets from a JSON url
-def create_datasets_from_JSON_url(url, project):
-    # get the url
-    # download the file
-    # convert to a string
+@celery.task(base= LogTask, bind = True)
+def parse_gsaf_response_into_datasets(self, url, user_id=2, celery_queue='default'):
+    if self.parent_task:
+        task = self.parent_task
+    else:
+        task = self
+    logger = self.logger
+    logger.info('Beginning import of files from GSAF URL.')
+
+    request = urllib2.Request(url)
+    logger.info('Retrieving HTML from URL {}'.format(url))
+    response = urllib2.urlopen(request)
+
+    file_arrays = [l.rstrip().split('\t') for l in response.readlines() if '<!--gsafdata' in l]
+    file_arrays_by_sample_name = itertools.groupby(file_arrays, lambda x: x[1].split('_')[0])
+    with session_scope() as session:
+        user=session.query(User).filter(User.id==user_id).all()[0]
+        new_file_ids=[]
+        for sample_name, file_arrays in file_arrays_by_sample_name:
+            logger.info('Collecting Info On Sample {}'.format(sample_name))
+            dataset = Dataset()
+            dataset.user_id = user_id
+            dataset.name = sample_name
+            session.add(dataset)
+            session.flush()
+            session.refresh(dataset)
+            dataset.directory = "{}/Dataset_{}_{}".format(user.path.rstrip('/') , dataset.name, dataset.id)
+            if not os.path.isdir(dataset.directory):
+                os.mkdir(dataset.directory)
+            for file_array in file_arrays: 
+                            # first create a new db file to place the download in
+                file_name = file_array[1]
+                file_url = file_array[-1].replace('-->','')
+                try:
+                    response = urllib2.urlopen(file_url)
+                except urllib2.HTTPError as err:
+                    logger.error(err)
+                    logger.error('The GSAF URLs may be stale. Try to download one file directly...')
+                else: 
+                    new_file = File()
+                    new_file.url = file_url
+                    new_file.name = file_name
+                    new_file.file_type = parse_file_ext(new_file.name)
+                    new_file.dataset_id = dataset.id
+                    new_file.path = '{}/{}'.format(dataset.directory.rstrip('/'), new_file.name)
+                    new_file.user_id = user_id
+                    new_file.available = False 
+                    new_file.status = ''
+
+                    # if 'gz' in new_file.file_type.lower():
+                    #     new_file.file_type = 'GZIPPED_FASTQ'
+
+                    session.add(new_file)
+                    session.commit()
+                    session.refresh( new_file )
+                    new_file_ids.append( new_file.id )
+
+                    # add the new file to the dataset
+                    dataset.files.append(new_file)
+
+                    download_file( url = new_file.url, path = new_file.path, file_id = new_file.id, user_id = user_id, parent_task = task)
+
     # call create_datasets_from_JSON_string(json_string, project)
-    pass
+    return ReturnValue('import finished', file_ids=new_file_ids)
 
 # @Dave - function to create datasets from a JSON file
 # If the project is give, the datasets are added to the project
@@ -3275,7 +3316,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         logger.info (return_value)
 
     if pandaseq:
-        return_value = run_pandaseq_analysis_with_files(analysis_id = analysis_id, file_ids = file_ids_to_analyze, algorithm = pandaseq_algorithm, parent_task = task)
+        return_value = run_pandaseq_analysis_with_dataset_id(dataset_id, analysis_id = analysis_id, file_ids = file_ids_to_analyze, algorithm = pandaseq_algorithm, parent_task = task)
         file_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
