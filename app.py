@@ -14,7 +14,7 @@ from shutil import copyfile
 import operator
 import datetime as dt
 import shlex
-
+import hashlib
 os.environ['http_proxy']=''
 import urllib2
 import itertools
@@ -900,8 +900,17 @@ def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, 
     file_str.lstrip(', ')
     return ReturnValue('{} files were added to Dataset {} (): {}'.format( file_count, d.id, d.directory, file_str ), file_ids = file_ids )
 
+
+def md5(fname):
+    hash_md5 = hashlib.md5()
+    with open(fname, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+
 @celery.task(base= LogTask, bind = True)
-def download_file(self, url, path, file_id, user_id = None):
+def download_file(self, url, path, file_id, checksum=None, user_id = None):
     logger = self.logger
 
     logger.info ( 'Downloading file from: {}'.format(url) )
@@ -945,7 +954,13 @@ def download_file(self, url, path, file_id, user_id = None):
     f = db.session.query(File).filter(File.id==file_id).first()
 
     if os.path.isfile(f.path):
-        f.available = True
+        if checksum: 
+            if md5(f.path) == checksum: 
+                logger.info('File {} Checksums Agree {}'.format(f.path, checksum))
+                f.available = True
+            else: 
+                logger.warning('File {} Checksums Disagree!'.format(f.path))
+                f.available = False
         f.file_size = os.path.getsize(f.path)
         logger.info ('Download finished.')
     else:
@@ -2779,6 +2794,7 @@ def parse_gsaf_response_into_datasets(self, url, user_id=2, celery_queue='defaul
                             # first create a new db file to place the download in
                 file_name = file_array[1]
                 file_url = file_array[-1].replace('-->','')
+                file_checksum = file_array[4]
                 try:
                     response = urllib2.urlopen(file_url)
                 except urllib2.HTTPError as err:
@@ -2806,7 +2822,7 @@ def parse_gsaf_response_into_datasets(self, url, user_id=2, celery_queue='defaul
                     # add the new file to the dataset
                     dataset.files.append(new_file)
 
-                    download_file( url = new_file.url, path = new_file.path, file_id = new_file.id, user_id = user_id, parent_task = task)
+                    download_file( url = new_file.url, checksum=file_checksum, path = new_file.path, file_id = new_file.id, user_id = user_id, parent_task = task)
 
     # call create_datasets_from_JSON_string(json_string, project)
     return ReturnValue('import finished', file_ids=new_file_ids)
