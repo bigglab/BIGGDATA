@@ -78,196 +78,23 @@
 
                                         <tr>
                                           <td>
-                                            {{ build_pipeline_form.dataset( style="min-width: 10em; ", size="7", class="form-control") }}
+                                            {{ build_pipeline_form.dataset( style="min-width: 15em; ", size="10", class="form-control") }}
                                           </td>
                                           <td>
-                                            <span class="glyphicon glyphicon-chevron-right" aria-hidden="true" style="color:gray; margin: 10px;"></span>
+                                            <span class="glyphicon glyphicon-chevron-right" aria-hidden="true" style="color:gray; margin: 20px;"></span>
                                           </td>
                                           <td>
-                                            {{ build_pipeline_form.dataset_files( style="min-width: 10em;", size="7", class="form-control"  ) }}
+                                            {{ build_pipeline_form.dataset_files( style="min-width: 20em;", size="10", class="form-control"  ) }}
+                                            <p>Hold CNTL (Command on Mac) to select multiple
                                           </td>
                                         </tr>
                                       </table>
                                     </div>
                                   </td>
                                 </tr>
-                              
-                                <tr>
-                                  <td width="15px"></td>
-                                  <td>                              
-                                    <label class="radio">
-                                      <input id="file_source-1" name="file_source" type="radio" value="file_gsaf" class="file_gsaf">Files from GSAF URL
-                                    </label>
-                                    <div id="collapse" class="collapse file_gsaf radio">
-
-                                      <table class='table table-striped'> 
-                                          <thead>
-                                              <tr>
-                                                  <th>{{ build_pipeline_form.gsaf_url.label }}:</th>
-                                                  <th></th>
-                                              </tr>
-                                          </thead>
-                                          <tbody>
-                                              <tr>
-                                                  <td>{{ build_pipeline_form.gsaf_url(size=30, class="form-control") }}</td>
-                                                  <td></td>
-                                              </tr>
-                                          </tbody>
-                                      </table>
-
-
-                                    </div>
-
-                                  </td>
-                                </tr>
-
-                                <tr>
-                                  <td width="15px"></td>
-                                  <td>                              
-                                    <label class="radio">
-                                      <input id="file_source-2" name="file_source" type="radio" value="file_upload" class="file_upload">File Upload from Desktop
-                                    </label>
-                                    <div id="collapse" class="collapse file_upload radio" style="margin-right: 5px; ">
-
-                                      <table class='table'> 
-                                        <thead>
-                                            <tr>
-                                                <th width=35%><label>Choose the file:</label></th>
-                                                <th width=35%><label>Enter A File Name:</label></th>
-                                                <th width=30%>{{build_pipeline_form.file_pairing.label}} </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr >
-                                                <td>
-                                                    <div class="input-group">
-                                                        <span class="input-group-btn">
-                                                            <span class="btn btn-default btn-file">
-                                                                Browse...<input id="file_1" name="file_1" type="file"> 
-                                                            </span>
-                                                        </span>
-                                                        <input type="text" class="form-control" readonly>
-                                                    </div>
-                                                    <!-- <input type="file" name="file" value="" class="form-control"/> -->
-                                                </td>
-                                                <td><input id="file_1_name" type="input" name="file_1_name" value="" class="form-control"/></td>                                                
-                                                <td >
-                                                  {{ build_pipeline_form.file_pairing(class="form-control file_pairing") }}
-                                                </td>
-                                            </tr>
-
-                                            <tr id="collapse" class="collapse file_pairing">
-                                                  <td width=35%>
-                                                      <div class="input-group">
-                                                          <span class="input-group-btn">
-                                                              <span class="btn btn-default btn-file">
-                                                                  Browse...<input id="file_2" name="file_2" type="file"> 
-                                                              </span>
-                                                          </span>
-                                                          <input type="text" class="form-control" readonly>
-                                                      </div>
-                                                      <!-- <input type="file" name="file" value="" class="form-control"/> -->
-                                                  </td>
-                                                  <td width=35%><input id="file_2_name" type="input" name="file_2_name" value="" class="form-control"/></td>
-                                                  <td width=30%></td>
-                                              </tr>
-
-                                        </tbody>
-                                      </table> <!-- /file_1 upload -->
-                                      <!-- <div id="collapse" class="collapse paired_file in">
-                                        <table class='table'> 
-                                          <tbody>
-                                              <tr id="collapse" class="collapse paired_file in">
-                                                  <td width=35%><input id="file_2_name" type="input" name="file_2_name" value="" class="form-control"/></td>
-                                                  <td width=35%>
-                                                      <div class="input-group">
-                                                          <span class="input-group-btn">
-                                                              <span class="btn btn-default btn-file">
-                                                                  Browse...<input id="file_2" name="file_2" type="file"> 
-                                                              </span>
-                                                          </span>
-                                                          <input type="text" class="form-control" readonly>
-                                                      </div>
-                                                      <input type="file" name="file" value="" class="form-control"/>
-                                                  </td>
-                                                  <td width=30%></td>
-                                              </tr>
-                                          </tbody>
-                                        </table> /file_2 upload                                      
-
-                                      </div> -->
-
-
-                                    </div>
-
-                                  </td>
-                                </tr>
-                              
-                                <tr>
-                                  <td width="15px"></td>
-                                  <td>                              
-                                    <label class="radio">
-                                      <input id="file_source-2" name="file_source" type="radio" value="file_url" class="file_url">File from URL
-                                    </label>
-                                    <div id="collapse" class="collapse file_url radio">
-
-                                      <table class='table table-striped'> 
-                                          <thead>
-                                              <tr>
-                                                  <th>{{ build_pipeline_form.download_url.label }}:</th>
-                                                  <th><label>Chain:</label></th>
-                                                  <th></th>
-                                              </tr>
-                                          </thead>
-                                          <tbody>
-                                              <tr>
-                                                  <td>{{ build_pipeline_form.download_url(size=30, class="form-control") }}</td>
-                                                  <td>{{ build_pipeline_form.download_chain(class="form-control") }}</td>
-                                                  <td></td>
-                                              </tr>
-                                          </tbody>
-                                      </table>
-
-                                    </div>
-
-                                  </td>
-                                </tr>
-                              
-                                <tr>
-                                  <td width="15px"></td>
-                                  <td>                              
-                                    <label class="radio">
-                                      <input id="file_source-3" name="file_source" type="radio" value="file_ncbi" class="file_ncbi">Files from NCBI
-                                    </label>
-                                    <div id="collapse" class="collapse file_ncbi radio">
-                                      <table class='table table-striped'> 
-                                          <thead>
-                                              <tr>
-                                                  <th><label>Accession (begins with 'SRR', SRR1525443 for instance)</label>:</th>
-                                                  <th><label>Chain:</label></th>
-                                                  <th></th>
-                                              </tr>
-                                          </thead>
-                                          <tbody>
-                                              <tr>
-                                                  <td>{{ build_pipeline_form.ncbi_accession(size=20, class="form-control") }}</td>
-                                                  <td>{{ build_pipeline_form.ncbi_chain(class="form-control") }}</td>
-                                                  <td></td>
-                                              </tr>
-                                          </tbody>
-                                      </table>
-
-                                    </div>
-                                  </td>
-                                </tr>
-
                               </table>
-
-                            </div> <!-- /accordian -->
-
-
-                        </div>
-
+                            </div>
+                        </div>                              
                         <div class="item">
                           <div id="accordion">
 
@@ -278,7 +105,7 @@
                                   <div class="checkbox" class="pull-right" style="padding-left: 4px">
                                     <label>
                                         {{ build_pipeline_form.trim(class='trim') }}
-                                        <b>Trimmomatic:</b> Trim FASTQ data
+                                        <b>Trimmomatic:</b> Trim FASTQ data by quality
                                     </label>
                                   </div> <!-- /checkbox -->
 
@@ -288,7 +115,7 @@
                                       <div class="checkbox" class="pull-right" style="padding-left: 4px">
                                         <label>
                                             {{ build_pipeline_form.trim_slidingwindow(class='trim_slidingwindow') }}
-                                            <b>Use Sliding Window:</b> Perform a sliding window trimming, cutting once the average quality within the window falls below a threshold. Default is a window of size 4 which trims reads under Q15.
+                                            <b>Use Sliding Window:</b> Perform a sliding window trimming, cutting once the average quality within the window falls below a threshold. Default is to trim at a window of 4 bases with mean quality under PHRED 15.
                                         </label>
                                       </div>
 
@@ -326,7 +153,7 @@
                                   <div class="checkbox" class="pull-right" style="padding-left: 4px">
                                     <label >
                                         {{ build_pipeline_form.pandaseq(class='pandaseq') }}
-                                        <b>PANDAseq:</b> Assemble overlapping pair-end reads (recommended)
+                                        <b>PANDAseq:</b> Assemble overlapping pair-end reads (highly recommended for overlapping reads)
                                     </label>
                                   </div> <!-- /checkbox -->
 
@@ -349,7 +176,8 @@
                                 
                               </tr>
                             </table>
-
+                            <br>
+                            <br>
                           </div> <!-- /accordian  -->
                         </div>
 
@@ -362,14 +190,14 @@
                                   <td width="15px"></td>
                                   <td>                              
                                     <label class="radio">
-                                      <input id="analysis_type-0" name="analysis_type" type="radio" value="igrep" class="igrep">IGREP/IGFFT
+                                      <input id="analysis_type-0" name="analysis_type" type="radio" value="igrep" class="igrep">IGFFT (Georgiou In-House)
                                     </label>
                                     <div id="collapse" class="collapse igrep radio1">
 
                                       <div class="checkbox" class="pull-right" style="padding-left: 4px">
                                         <label >
                                             {{ build_pipeline_form.generate_msdb( class="generate_msdb" ) }}
-                                            <b>Generate MS DB:</b> Generate Mass Spec database using IGREP tools (currently for IGREP analysis only).
+                                            <b>Generate MS DB:</b> Generate Mass Spec database using IGREP tools (currently for IGFFT analysis only).
                                         </label>
                                       </div> <!-- /checkbox -->
 
@@ -515,6 +343,24 @@
 
                             </div> <!-- /accordian -->
 
+                            <div>
+                              <br>
+                              <center><b>Parameters For Analysis:</b></center>
+                              <br>
+                              <table class="table table-striped">
+                                <thead>
+                                  <tr>
+                                    <th>Choose Species</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                  <td>{{ build_pipeline_form.species(class="form-control") }}</td>
+                                </tr>
+                                </tbody>
+                              </table>
+                            </div>
+
                         </div>  <!-- /item analysis -->
 
                         <div class="item">
@@ -525,34 +371,45 @@
                               <tr>
                                 <th>Analysis Name</th>
                                 <th>Analysis Description</th>
-                                <th>Choose Output Dataset/Project</th>
-                                <th>Choose Species</th>
                               </tr>
                             </thead>
                             <tbody>
                               <tr>
-                                <td>{{ build_pipeline_form.name(size=25, class="form-control") }}</td>
+                                <td>{{ build_pipeline_form.name(size=15, class="form-control") }}</td>
                                 <td>{{ build_pipeline_form.description(size=25, rows=1, class="form-control") }}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          <table class="table table-striped">
+                            <thead>
+                              <tr>
+                                <th>Choose Output Dataset/Project</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
                                 <td>
                                   {{ build_pipeline_form.output_dataset(class="form-control") }}<br>
                                   {{ build_pipeline_form.output_project(class="form-control") }}
                                   </td>
-                                <td>{{ build_pipeline_form.species(class="form-control") }}</td>
                               </tr>
                             </tbody>
                           </table>
 
-                          <div class="checkbox" class="pull-right" style="padding-left: 4px">
+<!--                           <div class="checkbox" class="pull-right" style="padding-left: 4px">
                             <label >
                                 {{ build_pipeline_form.cluster(disabled=True) }}
                                 <b>Cluster:</b> Perform USEARCH clustering on results.
                             </label>
-                          </div> <!-- /checkbox -->
-                          <br>
+                          </div>
+ -->                          
                           <br>
                           <center>
                             <span><input class="btn btn-default form-control" type="submit" value="Run Analysis Pipeline" style="max-width: 15em;"></span> 
                           </center>
+                          <br>
+                          <br>
+                          <br>
                         </div> <!-- /item -->
                       </div>
                     </form>
