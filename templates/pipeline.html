@@ -3,7 +3,7 @@
 {% block wide_content %}
 
 <div class="container">
-  <h3 align="center">BIGG Data - Build Analysis Pipeline</h3>
+  <h3 align="center">BIGG Data - VDJ Annotation Pipeline</h3>
   <br>
 </div>
 
@@ -351,15 +351,19 @@
                                 <thead>
                                   <tr>
                                     <th>Choose Species</th>
+                                    <th>Choose Loci</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                 <tr>
                                   <td>{{ build_pipeline_form.species(class="form-control") }}</td>
+                                  <td>{{ build_pipeline_form.loci() }}</td>
                                 </tr>
                                 </tbody>
                               </table>
                             </div>
+                            <br>
+                            <br>
 
                         </div>  <!-- /item analysis -->
 
@@ -383,14 +387,14 @@
                           <table class="table table-striped">
                             <thead>
                               <tr>
-                                <th>Choose Output Dataset/Project</th>
+                                <th>Choose Output Dataset</th>
                               </tr>
                             </thead>
                             <tbody>
                               <tr>
                                 <td>
                                   {{ build_pipeline_form.output_dataset(class="form-control") }}<br>
-                                  {{ build_pipeline_form.output_project(class="form-control") }}
+                                  <!-- {{ build_pipeline_form.output_project(class="form-control") }} -->
                                   </td>
                               </tr>
                             </tbody>

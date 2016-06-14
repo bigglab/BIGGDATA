@@ -243,6 +243,19 @@ class CreateProjectForm(Form):
     #species = TextField('Species', [validators.length(max=128)])
     species = SelectField( 'Species', choices=[('', ''), ('H. sapiens', 'H. sapiens'), ('M. musculus', 'M. musculus')] )
 
+
+class MultiCheckboxField(SelectMultipleField):
+    """
+    A multiple-select, except displays a list of checkboxes.
+
+    Iterating the field will produce subfields, allowing custom rendering of
+    the enclosed checkbox fields.
+    """
+    widget = wtforms.widgets.ListWidget(prefix_label=False)
+    option_widget = wtforms.widgets.CheckboxInput()
+
+
+
 class BuildPipelineForm(Form):
     file_source = RadioField('Select a File Source', choices=[ ('file_dataset' , 'Files from Dataset'), ('file_gsaf' , 'Files from GSAF URL'), ('file_upload' , 'Upload Files'), ('file_url' , 'File from URL'), ('file_ncbi' , 'Files from NCBI') ])
 
@@ -290,6 +303,8 @@ class BuildPipelineForm(Form):
     pandaseq_algorithm = SelectField(u'PANDAseq Algorithm', choices=(['ea_util', 'ea_util'], ['flash', 'flash'], ['pear', 'pear'], ['rdp_mle', 'rdp_mle'],  ['simple_bayesian', 'simple_bayesian'], ['stitch', 'stitch'], ['uparse', 'uparse']), validators=[validators.input_required()])
 
     analysis_type = RadioField('Select a File Source', choices=[ ('igrep' , 'IGREP/IGFFT'), ('mixcr' , 'MixCR'), ('abstar' , 'ABStar')])
+
+    loci = MultiCheckboxField('Loci', choices=[('igh', 'IGH'), ('igl,igk', 'IGL/IGK'), ('tcra', 'TCRA'), ('tcrb', 'TCRB')])
 
     name = TextField(u'Name', )
     description = TextField(u'Description')

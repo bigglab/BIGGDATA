@@ -108,7 +108,7 @@ nav.register_element('frontend_user', Navbar(
     Subgroup(
         'Run Analysis', 
         View('Previous Analyses', 'frontend.analyses'),
-        View('Create Analysis Pipline', 'frontend.pipeline'),
+        View('VDJ Annotation Pipline', 'frontend.pipeline'),
         View('Create MSDB from Annotations', 'frontend.msdb'),
         View('Pair VH/VL Annotations', 'frontend.pair_vhvl'),
         View('VDJ VIZualizer', 'frontend.vdj_visualizer'),
