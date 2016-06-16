@@ -168,7 +168,7 @@ def create_user():
     if test_user:
         flash('Error: that username is taken.', 'warning')
         login_form = LoginForm()
-        return render_template("login.html", login_form=login_form, create_user_form=form, current_user=current_user)
+        return render_template("login.html", login_form=login_form, registration_form=form, current_user=current_user)
 
     user = load_user(form.email.data)
     if user:
