@@ -930,11 +930,10 @@ def download_file(self, url, path, file_id, checksum=None, user_id = None):
     total_size = response.info().getheader('Content-Length').strip()
     total_size = int(total_size)
     bytes_so_far = 0
-    logger.info ( 'File size: {}'.format(total_size) )
+    logger.info ( 'Target file size: {}'.format(total_size) )
 
     # Initiate the download bar
-    self.update_state(state='PROGRESS', 
-                        meta={'status': 'Downloading', 'current' : str(0), 'total' : str(1), 'units' : 'bytes' })
+    # self.update_state(state='PROGRESS', meta={'status': 'Downloading', 'current' : str(0), 'total' : str(1), 'units' : 'bytes' })
 
     CHUNK = 16 * 1024
     with open(path, 'wb') as outfile: 
@@ -945,11 +944,10 @@ def download_file(self, url, path, file_id, checksum=None, user_id = None):
             bytes_so_far += len( chunk )
 
             # Send a progress message with the number of bytes downloaded.
-            self.update_state(state='PROGRESS', 
-                    meta={'status': 'Downloading', 'current' : str(bytes_so_far), 'total' : str(total_size), 'units' : 'bytes' })
+            # self.update_state(state='PROGRESS', meta={'status': 'Downloading', 'current' : str(bytes_so_far), 'total' : str(total_size), 'units' : 'bytes' })
 
     # This status will take down the progress bar and show that the download is complete.
-    self.update_state(state='SUCCESS', meta={'status': 'Download complete.'} )
+    # self.update_state(state='SUCCESS', meta={'status': 'Download complete.'} )
 
     f = db.session.query(File).filter(File.id==file_id).first()
 
@@ -1459,34 +1457,36 @@ def annotate_analysis_from_db(analysis_id):
 
 
 @celery.task(base = LogTask, bind = True)
-def run_pandaseq_with_dataset_id(self, dataset_id, analysis_name='', analysis_description='Pandaseq Alignment Consensus', file_ids=[], user_id=2, minimum_length=100, minimum_overlap=10, algorithm='pear'):
+def run_pandaseq_with_dataset_id(self, dataset_id, analysis_id=None, analysis_name='', analysis_description='Pandaseq Alignment Consensus', file_ids=[], user_id=2, minimum_length=100, minimum_overlap=10, algorithm='pear'):
     logger = self.logger
     dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
     files = [db.session.query(File).get(file_id) for file_id in file_ids]
     logger.info( 'Running PANDAseq on Dataset {}.'.format( dataset_id ) )
 
-    analysis = Analysis()
-    if analysis_name == '': 
-        analysis_name = 'Analysis_{}'.format(analysis.id)
-    analysis.async_task_id = self.task.request_id    
-    analysis.name = analysis_name
-    analysis.description = analysis_description
-    analysis.user_id = user_id
-    analysis.dataset_id = dataset.id
-    analysis.program = 'pandaseq'
-    analysis.started = 'now'
-    analysis.params = {}
-    analysis.status = 'QUEUED'
-    analysis.responses = []
-    analysis.available = False
-    analysis.inserted_into_db = False
-    db.session.add(analysis)
-    db.session.commit()
-    db.session.refresh(analysis)
-
-    analysis.directory = '{}/Analysis_{}/'.format( dataset.directory.rstrip('/'), analysis.id )
-    if not os.path.isdir(analysis.directory):
-        os.mkdir(analysis.directory)
+    if analysis_id: 
+        analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
+    else: 
+        analysis = Analysis()
+        if analysis_name == '': 
+            analysis_name = 'Analysis_{}'.format(analysis.id)
+        analysis.async_task_id = self.task.request_id    
+        analysis.name = analysis_name
+        analysis.description = analysis_description
+        analysis.user_id = user_id
+        analysis.dataset_id = dataset.id
+        analysis.program = 'pandaseq'
+        analysis.started = 'now'
+        analysis.params = {}
+        analysis.status = 'QUEUED'
+        analysis.responses = []
+        analysis.available = False
+        analysis.inserted_into_db = False
+        db.session.add(analysis)
+        db.session.commit()
+        db.session.refresh(analysis)
+        analysis.directory = '{}/Analysis_{}/'.format( dataset.directory.rstrip('/'), analysis.id )
+        if not os.path.isdir(analysis.directory):
+            os.mkdir(analysis.directory)
 
 
     if len(files) != 2: 
@@ -1499,6 +1499,8 @@ def run_pandaseq_with_dataset_id(self, dataset_id, analysis_name='', analysis_de
         path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
         path = path.replace('//','/')
         basename = analysis_name
+        if basename == '' or basename == None: 
+            basename = 'Analysis_{}'.format(analysis.id)
         basepath = '{0}/{1}'.format(analysis.directory.rstrip('/'), basename)
         logger.info( 'Writing output files to base name: {}'.format(basepath) )
 
@@ -3297,8 +3299,9 @@ def run_analysis_pipeline(self, *args,  **kwargs):
 
             self.set_analysis_id(analysis_id)
 
-
             # Set other values
+            if analysis.name == "" or analysis.name == None: 
+                analysis.name = 'Analysis_{}'.format(analysis.id)
             analysis.program = analysis_type.upper()
             analysis.params = {}
             analysis.status = 'QUEUED'
@@ -3332,7 +3335,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         logger.info (return_value)
 
     if pandaseq:
-        return_value = run_pandaseq_analysis_with_dataset_id(dataset_id, analysis_id = analysis_id, file_ids = file_ids_to_analyze, algorithm = pandaseq_algorithm, parent_task = task)
+        return_value = run_pandaseq_with_dataset_id(dataset_id, analysis_id = analysis_id, file_ids = file_ids_to_analyze, algorithm = pandaseq_algorithm, parent_task = task)
         file_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 

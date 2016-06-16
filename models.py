@@ -1645,10 +1645,8 @@ def generate_new_analysis(user = None, dataset = None, directory = None, name = 
     session.refresh(analysis)
 
     if not analysis.name:
-        analysis.name = 'Analysis {}'.format(analysis.id)
-    
-    session.commit()
-    
+        analysis.name = 'Analysis_{}'.format(analysis.id)
+        
     if directory:
         analysis.directory = directory.rstrip('/') + '/{}{}'.format( directory_prefix, analysis.id)
 
