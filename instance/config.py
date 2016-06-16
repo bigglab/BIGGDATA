@@ -33,8 +33,8 @@ if 'DATABASE_URL' in os.environ.keys():  # HACK TO CHECK IF WE'RE IN PRODUCTION 
 
 # S3_BUCKET = 'biggdata'
 
-AWSACCESSKEYID = os.environ['AWSACCESSKEYID'] 
-AWSSECRETKEY = os.environ['AWSSECRETKEY']
+# AWSACCESSKEYID = os.environ['AWSACCESSKEYID'] 
+# AWSSECRETKEY = os.environ['AWSSECRETKEY']
 
 SECRET_KEY = '\x95\x90+\x1c\xd36\xa3\x94\x99\xaeA\xac\xd3M5\x0b\xc7\xefF\xf3\x08\x05t\xd9'
 
