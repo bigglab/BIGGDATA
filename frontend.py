@@ -1866,7 +1866,7 @@ def pipeline():
 
             # build a dictionary entry indicating the files in each dataset ('dataset_id':{'file_id':'file_name'})
             file_id_dict = {}
-            for file in dataset.files:
+            for file in [file for file in dataset.files if 'FASTQ' in file.file_type]:
                 file_id_dict[ str(file.id) ] = file.name 
 
             dataset_file_dict[ str(dataset.id) ] = file_id_dict
