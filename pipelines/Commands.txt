@@ -1,0 +1,26 @@
+Notes:
+If something says permission denied, use:
+> chmod 775 ./*
+
+
+
+Download Data
+> bash /home/gg-jm76798/Desktop/Lesson/Tools/GSAF_downloader.sh "http://gsaf.s3.amazonaws.com/JA16492.SA16153.html?AWSAccessKeyId=AKIAIVYXWYWNPBNEDIAQ&Expires=1474903436&Signature=vbad0TGiiASZZBD8vgzlxv6Qhs4%3D"
+
+VH data - stitch
+> python /home/gg-jm76798/Desktop/Lesson/Tools/Stitcher.py VHonly_R1.fastq.gz VHonly_R2.fastq.gz
+
+VH or Paired data - annotate (must be unzipped)
+> python /home/gg-jm76798/Desktop/Lesson/Tools/IGREP/pipelines/Annotator.py Paired_R1.fastq Paired_R2.fastq -species homosapiens -locus IGH,IGK,IGL
+
+Processing
+Pairing:
+> python /home/gg-jm76798/Desktop/Lesson/Tools/Pairing_v1.02.py Paired_R1.trimmed.filtered.q20p50.mixcr.annotation Paired_R2.trimmed.filtered.q20p50.mixcr.annotation -group 'Pairing_test' -cluster 0.9
+
+Saturation Analysis:
+> python /home/gg-jm76798/Desktop/Lesson/Tools/SaturationCurves_v1.02.py Paired_R1.trimmed.filtered.q20p50.mixcr.annotation Paired_R2.trimmed.filtered.q20p50.mixcr.annotation -group 'Saturation' -cluster 0.9 -head 10000
+
+VH / VL Analysis
+> python /home/gg-jm76798/Desktop/Lesson/Tools/VH_Analyzer_v1.04.py VHonly.assembled.trimmed.filtered.q20p50.mixcr.annotation -group 'test' -CDR 'None'
+> python /home/gg-jm76798/Desktop/Lesson/Tools/VH_Analyzer_v1.04.py VHonly.assembled.trimmed.filtered.q20p50.mixcr.annotation -group 'test' -CDR 'CDR_List.txt'
+
