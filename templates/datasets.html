@@ -74,7 +74,7 @@
 						{%- if dataset.files.all() == [] -%}
 							<a href="{{url_for('.dataset', id=dataset.id)}}">Click To Add Files</a>
 						{% else %}
-							<a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a> <a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">MIXCR</a> <a href="{{url_for('.create_analysis', dataset_id=dataset.id)}}">ANNOTATE</a>
+							<a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a>  <a href="{{url_for('.pipeline', dataset_id=dataset.id)}}">ANNOTATE</a>
 						{% endif %}
 					</td>
 				</tr>
@@ -90,7 +90,8 @@
 		columnDefs: [
   		{ targets: 'no-sort', orderable: false }
   		],
-  		order: [[ 1, 'desc' ]]
+  		order: [[ 1, 'desc' ]], 
+  		pageLength:100
 	});
  
 	var table_data = [

@@ -540,6 +540,8 @@ def file_download(status=[], bucket='', key=''):
         #######
 
         db.session.commit()
+        download_file.apply_async((file.url, file.path, file.id), {'user_id' : current_user.id})
+
         return redirect( url_for('frontend.dashboard') )
 
     return render_template("file_download.html", download_form=form, upload_form = upload_form, current_user=current_user)
@@ -1830,7 +1832,7 @@ def zip_file_status_json():
 
 @frontend.route('/pipeline', methods=['GET', 'POST'])
 @login_required
-def pipeline():
+def pipeline(selected_dataset=None):
 
     build_pipeline_form = BuildPipelineForm(request.form)
 
@@ -1934,148 +1936,148 @@ def pipeline():
                         form_valid = False
                         first_error_item = 0
 
-        # elif build_pipeline_form.file_source.data == 'file_gsaf':
+        elif build_pipeline_form.file_source.data == 'file_gsaf':
  
-        #     if build_pipeline_form.gsaf_url.data == '':
-        #         flash('Error: you must provide a valid GSAF URL to upload a file, or choose another file source.','warning')
-        #         runtime_attributes.append(('input[id=gsaf_url]', 'style', form_warning_style))                   
-        #         form_valid = False
-        #         first_error_item = 0
-        #     elif not validators.url(build_pipeline_form.gsaf_url.data):
-        #         flash('Error: you must provide a valid GSAF URL to upload a file, or choose another file source.','warning')
-        #         runtime_attributes.append(('input[id=gsaf_url]', 'style', form_warning_style))                   
-        #         first_error_item = 0
-        #         form_valid = False
+            if build_pipeline_form.gsaf_url.data == '':
+                flash('Error: you must provide a valid GSAF URL to upload a file, or choose another file source.','warning')
+                runtime_attributes.append(('input[id=gsaf_url]', 'style', form_warning_style))                   
+                form_valid = False
+                first_error_item = 0
+            elif not validators.url(build_pipeline_form.gsaf_url.data):
+                flash('Error: you must provide a valid GSAF URL to upload a file, or choose another file source.','warning')
+                runtime_attributes.append(('input[id=gsaf_url]', 'style', form_warning_style))                   
+                first_error_item = 0
+                form_valid = False
 
-        # elif build_pipeline_form.file_source.data == 'file_url':
+        elif build_pipeline_form.file_source.data == 'file_url':
 
-        #     if build_pipeline_form.download_url.data == '':
-        #         flash('Error: you must provide a URL to upload a file, or choose another file source.','warning')
-        #         runtime_attributes.append(('input[id=download_url]', 'style', form_warning_style))   
-        #         first_error_item = 0
-        #         form_valid = False
-        #     elif not validators.url(build_pipeline_form.download_url.data):
-        #         flash('Error: you must provide a valid URL to upload a file, or choose another file source.','warning')
-        #         runtime_attributes.append(('input[id=download_url]', 'style', form_warning_style))   
-        #         first_error_item = 0
-        #         form_valid = False
+            if build_pipeline_form.download_url.data == '':
+                flash('Error: you must provide a URL to upload a file, or choose another file source.','warning')
+                runtime_attributes.append(('input[id=download_url]', 'style', form_warning_style))   
+                first_error_item = 0
+                form_valid = False
+            elif not validators.url(build_pipeline_form.download_url.data):
+                flash('Error: you must provide a valid URL to upload a file, or choose another file source.','warning')
+                runtime_attributes.append(('input[id=download_url]', 'style', form_warning_style))   
+                first_error_item = 0
+                form_valid = False
 
-        # elif build_pipeline_form.file_source.data == 'file_upload':
+        elif build_pipeline_form.file_source.data == 'file_upload':
 
-        #     new_files = []
+            new_files = []
 
-        #     if build_pipeline_form.file_pairing.data == 'none':
-        #         try:
-        #             request_file_1 = request.files['file_1']
-        #         except:
-        #             flash('Error: unable to upload file.','warning')
-        #             runtime_attributes.append(('input[id=file_1]', 'style', form_warning_style))   
-        #             first_error_item = 0
-        #             form_valid = False
-        #         else:
-        #             file_1 = File()
-        #             if build_pipeline_form.file_1_name.data == '':
-        #                 file_1.name = cmd_quote(request_file_1.filename)
-        #             else:
-        #                 file_1.name = cmd_quote(build_pipeline_form.file_1_name.data)
+            if build_pipeline_form.file_pairing.data == 'none':
+                try:
+                    request_file_1 = request.files['file_1']
+                except:
+                    flash('Error: unable to upload file.','warning')
+                    runtime_attributes.append(('input[id=file_1]', 'style', form_warning_style))   
+                    first_error_item = 0
+                    form_valid = False
+                else:
+                    file_1 = File()
+                    if build_pipeline_form.file_1_name.data == '':
+                        file_1.name = cmd_quote(request_file_1.filename)
+                    else:
+                        file_1.name = cmd_quote(build_pipeline_form.file_1_name.data)
 
-        #             file_1.file_type = parse_file_ext(file_1.name)
-        #             file_1.description = build_pipeline_form.description.data
-        #             #file_1.dataset_id = int(build_pipeline_form.dataset.data) set later
-        #             file_1.path = '{}/{}'.format(current_user.path.rstrip('/'), file_1.name)
-        #             file_1.path = file_1.path.replace('//', '') 
-        #             file_1.user_id = current_user.id
+                    file_1.file_type = parse_file_ext(file_1.name)
+                    file_1.description = build_pipeline_form.description.data
+                    #file_1.dataset_id = int(build_pipeline_form.dataset.data) set later
+                    file_1.path = '{}/{}'.format(current_user.path.rstrip('/'), file_1.name)
+                    file_1.path = file_1.path.replace('//', '') 
+                    file_1.user_id = current_user.id
 
-        #             if file_1.exists():
-        #                 file_1.change_name_to_available()
+                    if file_1.exists():
+                        file_1.change_name_to_available()
 
-        #             print 'Saving uploaded file to {}'.format(file_1.path)
-        #             request_file_1.save(file_1.path)
-        #             file_1.available = True 
-        #             db.session.add(file_1)
-        #             file_1.validate()
-        #             db.session.commit()
-        #             db.session.refresh(file_1)
-        #             new_files.append(file_1)
+                    print 'Saving uploaded file to {}'.format(file_1.path)
+                    request_file_1.save(file_1.path)
+                    file_1.available = True 
+                    db.session.add(file_1)
+                    file_1.validate()
+                    db.session.commit()
+                    db.session.refresh(file_1)
+                    new_files.append(file_1)
 
-        #     else:
-        #         try:
-        #             request_file_1 = request.files['file_1']
-        #             request_file_2 = request.files['file_2']
-        #         except:
-        #             flash('Error: unable to upload files.','warning')
-        #             runtime_attributes.append(('input[id=file_1_name]', 'style', form_warning_style))   
-        #             runtime_attributes.append(('input[id=file_2_name]', 'style', form_warning_style))   
-        #             first_error_item = 0
-        #             form_valid = False
-        #         else:
-        #             # First Download File
-        #             file_1 = File()
-        #             if build_pipeline_form.file_1_name.data == '':
-        #                 file_1.name = cmd_quote(request_file_1.filename)
-        #             else:
-        #                 file_1.name = cmd_quote(build_pipeline_form.file_1_name.data)
+            else:
+                try:
+                    request_file_1 = request.files['file_1']
+                    request_file_2 = request.files['file_2']
+                except:
+                    flash('Error: unable to upload files.','warning')
+                    runtime_attributes.append(('input[id=file_1_name]', 'style', form_warning_style))   
+                    runtime_attributes.append(('input[id=file_2_name]', 'style', form_warning_style))   
+                    first_error_item = 0
+                    form_valid = False
+                else:
+                    # First Download File
+                    file_1 = File()
+                    if build_pipeline_form.file_1_name.data == '':
+                        file_1.name = cmd_quote(request_file_1.filename)
+                    else:
+                        file_1.name = cmd_quote(build_pipeline_form.file_1_name.data)
 
-        #             file_1.file_type = parse_file_ext(file_1.name)
-        #             file_1.description = build_pipeline_form.description.data
-        #             file_1.path = '{}/{}'.format(current_user.path.rstrip('/'), file_1.name)
-        #             file_1.path = file_1.path.replace('//', '') 
-        #             file_1.user_id = current_user.id
-        #             #file_1.dataset_id = int(build_pipeline_form.dataset.data)
-        #             # NOT SET file.chain = build_pipeline_form.chain.data
-        #             # NOT SET file.paired_partner = build_pipeline_form.paired_partner.data 
+                    file_1.file_type = parse_file_ext(file_1.name)
+                    file_1.description = build_pipeline_form.description.data
+                    file_1.path = '{}/{}'.format(current_user.path.rstrip('/'), file_1.name)
+                    file_1.path = file_1.path.replace('//', '') 
+                    file_1.user_id = current_user.id
+                    #file_1.dataset_id = int(build_pipeline_form.dataset.data)
+                    # NOT SET file.chain = build_pipeline_form.chain.data
+                    # NOT SET file.paired_partner = build_pipeline_form.paired_partner.data 
 
-        #             if file_1.exists():
-        #                 file_1.change_name_to_available()                    
+                    if file_1.exists():
+                        file_1.change_name_to_available()                    
                     
-        #             print 'Saving uploaded file to {}'.format(file_1.path)
-        #             request_file_1.save(file_1.path)
-        #             file_1.available = True
+                    print 'Saving uploaded file to {}'.format(file_1.path)
+                    request_file_1.save(file_1.path)
+                    file_1.available = True
 
-        #             # Second Download File
-        #             file_2 = File()
-        #             if build_pipeline_form.file_2_name.data == '':
-        #                 file_2.name = cmd_quote(request_file_2.filename)
-        #             else:
-        #                 file_2.name = cmd_quote(build_pipeline_form.file_2_name.data)
+                    # Second Download File
+                    file_2 = File()
+                    if build_pipeline_form.file_2_name.data == '':
+                        file_2.name = cmd_quote(request_file_2.filename)
+                    else:
+                        file_2.name = cmd_quote(build_pipeline_form.file_2_name.data)
 
-        #             file_2.user_id = current_user.id
-        #             file_2.file_type = parse_file_ext(file_2.name)
-        #             file_2.description = build_pipeline_form.description.data
-        #             file_2.path = '{}/{}'.format(current_user.path.rstrip('/'), file_2.name)
-        #             file_2.path = file_2.path.replace('//', '') 
-        #             #file_2.dataset_id = int(build_pipeline_form.dataset.data)
-        #             # NOT SET file.chain = build_pipeline_form.chain.data
-        #             # NOT SET file.paired_partner = build_pipeline_form.paired_partner.data 
-        #             if file_2.exists():
-        #                 file_2.change_name_to_available()                    
+                    file_2.user_id = current_user.id
+                    file_2.file_type = parse_file_ext(file_2.name)
+                    file_2.description = build_pipeline_form.description.data
+                    file_2.path = '{}/{}'.format(current_user.path.rstrip('/'), file_2.name)
+                    file_2.path = file_2.path.replace('//', '') 
+                    #file_2.dataset_id = int(build_pipeline_form.dataset.data)
+                    # NOT SET file.chain = build_pipeline_form.chain.data
+                    # NOT SET file.paired_partner = build_pipeline_form.paired_partner.data 
+                    if file_2.exists():
+                        file_2.change_name_to_available()                    
              
-        #             print 'Saving uploaded file to {}'.format(file_2.path)
-        #             request_file_2.save(file_2.path)
-        #             file_2.available = True 
-        #             db.session.add(file_1)
-        #             db.session.add(file_2)
-        #             file_1.validate()
-        #             file_2.validate()
-        #             db.session.commit()
-        #             db.session.refresh(file_1)
-        #             db.session.refresh(file_2)
-        #             new_files.append(file_1)
-        #             new_files.append(file_2)
+                    print 'Saving uploaded file to {}'.format(file_2.path)
+                    request_file_2.save(file_2.path)
+                    file_2.available = True 
+                    db.session.add(file_1)
+                    db.session.add(file_2)
+                    file_1.validate()
+                    file_2.validate()
+                    db.session.commit()
+                    db.session.refresh(file_1)
+                    db.session.refresh(file_2)
+                    new_files.append(file_1)
+                    new_files.append(file_2)
 
-        #             vhvl_paired = False
-        #             if build_pipeline_form.file_pairing.data == 'vhvl': vhvl_paired = True
+                    vhvl_paired = False
+                    if build_pipeline_form.file_pairing.data == 'vhvl': vhvl_paired = True
 
-        #             if not file_1.pair(file_2, vhvl_paired = vhvl_paired):
-        #                 flash('Unable to pair different file types. Submitted files had types "{}" and "{}".'.format(file_1.file_type, file_2.file_type), 'warning' )
+                    if not file_1.pair(file_2, vhvl_paired = vhvl_paired):
+                        flash('Unable to pair different file types. Submitted files had types "{}" and "{}".'.format(file_1.file_type, file_2.file_type), 'warning' )
 
-        # elif build_pipeline_form.file_source.data == 'file_ncbi': 
+        elif build_pipeline_form.file_source.data == 'file_ncbi': 
 
-        #     if build_pipeline_form.ncbi_accession.data == '':
-        #         flash('Error: you must choose an NCBI accession, or choose another file source.','warning')
-        #         runtime_attributes.append(('input[id=ncbi_accession]', 'style', form_warning_style))   
-        #         first_error_item = 0
-        #         form_valid = False
+            if build_pipeline_form.ncbi_accession.data == '':
+                flash('Error: you must choose an NCBI accession, or choose another file source.','warning')
+                runtime_attributes.append(('input[id=ncbi_accession]', 'style', form_warning_style))   
+                first_error_item = 0
+                form_valid = False
 
         else: # file_source.data == 'None':
             flash('Error: you must select a file source.','warning')
@@ -2105,136 +2107,136 @@ def pipeline():
             if first_error_item == None: first_error_item = 2
             form_valid = False
 
-        # ##### Check output dataset and project #####
-        # if form_valid or (build_pipeline_form.file_source.data == 'file_upload' and new_files != []):
+        ##### Check output dataset and project #####
+        if form_valid or (build_pipeline_form.file_source.data == 'file_upload' and new_files != []):
 
-        #     # check if the user has selected the default project (i.e., the user has no projects)
-        #     output_file_dataset = None
-        #     if build_pipeline_form.output_dataset.data == 'new':
-        #         # create a new dataset here with the name default, add the user and dataset to the new project
-        #         new_dataset = Dataset()
-        #         new_dataset.user_id = current_user.id
-        #         new_dataset.populate_with_defaults(current_user)
-        #         new_dataset.name = 'Dataset'
-        #         db.session.add(new_dataset)
-        #         db.session.flush()
-        #         new_dataset.name = 'Dataset ' + str(new_dataset.id)
-        #         new_dataset.directory = "{}/Dataset_{}".format(current_user.path.rstrip('/') , new_dataset.id)
-        #         dataset_file_dict[ str(new_dataset.id) ] = []
+            # check if the user has selected the default project (i.e., the user has no projects)
+            output_file_dataset = None
+            if build_pipeline_form.output_dataset.data == 'new':
+                # create a new dataset here with the name default, add the user and dataset to the new project
+                new_dataset = Dataset()
+                new_dataset.user_id = current_user.id
+                new_dataset.populate_with_defaults(current_user)
+                new_dataset.name = 'Dataset'
+                db.session.add(new_dataset)
+                db.session.flush()
+                new_dataset.name = 'Dataset ' + str(new_dataset.id)
+                new_dataset.directory = "{}/Dataset_{}".format(current_user.path.rstrip('/') , new_dataset.id)
+                dataset_file_dict[ str(new_dataset.id) ] = []
 
-        #         build_pipeline_form.dataset.choices.append( ( str(new_dataset.id), new_dataset.name ) )
-        #         db.session.commit()
+                build_pipeline_form.dataset.choices.append( ( str(new_dataset.id), new_dataset.name ) )
+                db.session.commit()
 
-        #         if not os.path.isdir(new_dataset.directory):
-        #             os.makedirs(new_dataset.directory)
-        #             print 'Created new directory at {}'.format(new_dataset.directory)
+                if not os.path.isdir(new_dataset.directory):
+                    os.makedirs(new_dataset.directory)
+                    print 'Created new directory at {}'.format(new_dataset.directory)
 
-        #         output_file_dataset = new_dataset
-        #         #flash('New files will be added to dataset "{}".'.format(new_dataset.name), 'success')
+                output_file_dataset = new_dataset
+                #flash('New files will be added to dataset "{}".'.format(new_dataset.name), 'success')
 
-        #         # used to pass the dataset selection to the celery task
-        #         build_pipeline_form.output_dataset.data = str(output_file_dataset.id)
-        #     else: # check if the user has selected a project which they have access to
-        #         user_has_permission = False
-        #         for dataset in current_user.datasets:
-        #             if str(dataset.id) == build_pipeline_form.output_dataset.data:
-        #                 #####dataset.files.append(file)
-        #                 user_has_permission = True
-        #                 output_file_dataset = dataset
+                # used to pass the dataset selection to the celery task
+                build_pipeline_form.output_dataset.data = str(output_file_dataset.id)
+            else: # check if the user has selected a project which they have access to
+                user_has_permission = False
+                for dataset in current_user.datasets:
+                    if str(dataset.id) == build_pipeline_form.output_dataset.data:
+                        #####dataset.files.append(file)
+                        user_has_permission = True
+                        output_file_dataset = dataset
 
-        #         if not user_has_permission:
-        #             flash('Error: you do not have permission to add a file to that dataset.','warning')
-        #             if first_error_item == None : first_error_item = 3
-        #             form_valid = False
+                if not user_has_permission:
+                    flash('Error: you do not have permission to add a file to that dataset.','warning')
+                    if first_error_item == None : first_error_item = 3
+                    form_valid = False
 
-        #     if build_pipeline_form.file_source.data == 'file_upload' and new_files != []:
-        #         selected_files = []
-        #         file_id_dict = {}
+            if build_pipeline_form.file_source.data == 'file_upload' and new_files != []:
+                selected_files = []
+                file_id_dict = {}
 
-        #         for file in new_files:
-        #             if not os.path.isfile(file.path):
-        #                 print 'Unable to find file {}'.format(file.path)
-        #             else:
-        #                 print 'Moving {} to {}/{}'.format(file.path, output_file_dataset.directory, file.name)
+                for file in new_files:
+                    if not os.path.isfile(file.path):
+                        print 'Unable to find file {}'.format(file.path)
+                    else:
+                        print 'Moving {} to {}/{}'.format(file.path, output_file_dataset.directory, file.name)
 
-        #             file.move( output_file_dataset.directory )
-        #             #os.rename(file.path, '{}/{}'.format( output_file_dataset.directory, file.name) )
-        #             file.path = '{}/{}'.format( output_file_dataset.directory, file.name)
-        #             file.dataset_id = output_file_dataset.id
-        #             selected_files.append( str(file.id) )
-        #             file_id_dict[ str(file.id) ] = file.name
-        #             output_file_dataset.files.append(file)
-        #             build_pipeline_form.dataset_files.choices.append( ( str(file.id), file.name ) ) 
+                    file.move( output_file_dataset.directory )
+                    #os.rename(file.path, '{}/{}'.format( output_file_dataset.directory, file.name) )
+                    file.path = '{}/{}'.format( output_file_dataset.directory, file.name)
+                    file.dataset_id = output_file_dataset.id
+                    selected_files.append( str(file.id) )
+                    file_id_dict[ str(file.id) ] = file.name
+                    output_file_dataset.files.append(file)
+                    build_pipeline_form.dataset_files.choices.append( ( str(file.id), file.name ) ) 
 
-        #         # If new files are created and the form is invalid, this passes those files back into the form
-        #         # and automatically selects those files from the multiple select
-        #         dataset_file_dict[ str(output_file_dataset.id) ] = file_id_dict
-        #         build_pipeline_form.file_source.data = 'file_dataset'
-        #         build_pipeline_form.dataset_files.data = selected_files
-        #         build_pipeline_form.dataset.data = str(output_file_dataset.id)
+                # If new files are created and the form is invalid, this passes those files back into the form
+                # and automatically selects those files from the multiple select
+                dataset_file_dict[ str(output_file_dataset.id) ] = file_id_dict
+                build_pipeline_form.file_source.data = 'file_dataset'
+                build_pipeline_form.dataset_files.data = selected_files
+                build_pipeline_form.dataset.data = str(output_file_dataset.id)
 
-        #     db.session.commit()
+            db.session.commit()
 
-        # if form_valid:
+        if form_valid:
 
-        #     # now do the same with projects, with the qualification that we add the dataset to the project if it's not there already
-        #     # check if the user has selected the default project (i.e., the user has no projects)
-        #     if output_file_dataset:
+            # now do the same with projects, with the qualification that we add the dataset to the project if it's not there already
+            # check if the user has selected the default project (i.e., the user has no projects)
+            if output_file_dataset:
 
-        #         if build_pipeline_form.output_project.data == 'new':
-        #             # create a new project here with the name default, add the user and dataset to the new project
-        #             new_project = Project()
-        #             new_project.user_id = current_user.id
-        #             new_project.project_name = 'Project'
-        #             db.session.add(new_project)
-        #             db.session.flush()
-        #             new_project.project_name = 'Project ' + str(new_project.id)
-        #             new_project.users = [current_user]
-        #             new_project.datasets = [output_file_dataset]
-        #             new_project.cell_types_sequenced = [str(output_file_dataset.cell_types_sequenced)]
-        #             new_project.species = output_file_dataset.species
+                if build_pipeline_form.output_project.data == 'new':
+                    # create a new project here with the name default, add the user and dataset to the new project
+                    new_project = Project()
+                    new_project.user_id = current_user.id
+                    new_project.project_name = 'Project'
+                    db.session.add(new_project)
+                    db.session.flush()
+                    new_project.project_name = 'Project ' + str(new_project.id)
+                    new_project.users = [current_user]
+                    new_project.datasets = [output_file_dataset]
+                    new_project.cell_types_sequenced = [str(output_file_dataset.cell_types_sequenced)]
+                    new_project.species = output_file_dataset.species
 
-        #             db.session.commit()
-        #         else: # check if the user has selected a project which they have access to
-        #             user_has_permission = False
-        #             for project in projects:
-        #                 if str(project.id) == build_pipeline_form.output_project.data:
-        #                     if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
-        #                         # if the dataset is not in the project, add it
-        #                         if output_file_dataset not in project.datasets:
-        #                             project.datasets.append(output_file_dataset)
-        #                         user_has_permission = True
+                    db.session.commit()
+                else: # check if the user has selected a project which they have access to
+                    user_has_permission = False
+                    for project in projects:
+                        if str(project.id) == build_pipeline_form.output_project.data:
+                            if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
+                                # if the dataset is not in the project, add it
+                                if output_file_dataset not in project.datasets:
+                                    project.datasets.append(output_file_dataset)
+                                user_has_permission = True
 
-        #                         if current_user.default_dataset == None:
-        #                             output_file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
-        #                             output_file_dataset.species = project.species
+                                if current_user.default_dataset == None:
+                                    output_file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                                    output_file_dataset.species = project.species
 
-        #                         db.session.commit()
-        #             if not user_has_permission:
-        #                 flash('Error: you do not have permission to add a dataset to that project.','warning')
-        #             db.session.commit()
-        # ##### End check of output dataset and project #####
+                                db.session.commit()
+                    if not user_has_permission:
+                        flash('Error: you do not have permission to add a dataset to that project.','warning')
+                    db.session.commit()
+        ##### End check of output dataset and project #####
 
-        # if not form_valid:
+        if not form_valid:
 
-        #     if len(new_files) != 0:
-        #         build_pipeline_form.dataset_files.default = build_pipeline_form.dataset_files.data
+            if len(new_files) != 0:
+                build_pipeline_form.dataset_files.default = build_pipeline_form.dataset_files.data
 
-        #     if len(new_files) == 1:
-        #         # Flash this only if the rest of the form submission is unsuccessful 
-        #         flash('New files uploaded to {} in dataset {}'.format(new_files[0].path, output_file_dataset.name), 'success')
-        #     elif len(new_files) == 2:
-        #         # Flash this only if the rest of the form submission is unsuccessful 
-        #         flash('New files uploaded to {} {} in dataset {}'.format(file_1.path, file_1.path, output_file_dataset.name), 'success')
+            if len(new_files) == 1:
+                # Flash this only if the rest of the form submission is unsuccessful 
+                flash('New files uploaded to {} in dataset {}'.format(new_files[0].path, output_file_dataset.name), 'success')
+            elif len(new_files) == 2:
+                # Flash this only if the rest of the form submission is unsuccessful 
+                flash('New files uploaded to {} {} in dataset {}'.format(file_1.path, file_1.path, output_file_dataset.name), 'success')
 
-        #     # set attributes to render the form correctly
-        #     if build_pipeline_form.file_source.data != 'None':
-        #         runtime_attributes.append(('input[value={}]'.format(build_pipeline_form.file_source.data), 'checked', 'checked'))
-        #     if build_pipeline_form.analysis_type.data != 'None':
-        #         runtime_attributes.append(('input[value={}]'.format(build_pipeline_form.analysis_type.data), 'checked', 'checked'))
+            # set attributes to render the form correctly
+            if build_pipeline_form.file_source.data != 'None':
+                runtime_attributes.append(('input[value={}]'.format(build_pipeline_form.file_source.data), 'checked', 'checked'))
+            if build_pipeline_form.analysis_type.data != 'None':
+                runtime_attributes.append(('input[value={}]'.format(build_pipeline_form.analysis_type.data), 'checked', 'checked'))
 
 
-        #     return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes, first_error_item = first_error_item )
+            return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes, first_error_item = first_error_item )
 
         if form_valid: 
 
@@ -2265,6 +2267,7 @@ def pipeline():
                 'pandaseq_algorithm' : build_pipeline_form.pandaseq_algorithm.data,
                 'cluster' : build_pipeline_form.cluster.data,
                 'species' : build_pipeline_form.species.data,
+                'loci': build_pipeline_form.loci.data,
                 'generate_msdb' : build_pipeline_form.generate_msdb.data,
                 'pair_vhvl' : build_pipeline_form.pair_vhvl.data,
                 'msdb_cluster_percent' : str(build_pipeline_form.msdb_cluster_percent.data),

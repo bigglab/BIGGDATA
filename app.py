@@ -1014,7 +1014,7 @@ def run_mixcr_with_dataset_id(self, dataset_id, analysis_name='', analysis_descr
     return  'MiXCR analysis completed successfully.'
 
 @celery.task(base = LogTask, bind = True)
-def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None):
+def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None, loci=None):
     logger = self.logger
     self.set_analysis_id(analysis_id)
 
@@ -1033,6 +1033,10 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     else:
         species = 'hsa'
 
+    if loci == None: 
+        loci = 'ALL'
+    else: 
+        loci = ','.join(loci)
 
     if not analysis:
         raise Exception('MixCR Exception: Analysis with ID {} cannot be found.'.format(analysis_id))
@@ -1060,25 +1064,25 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     alignment_file.user_id = dataset.user_id
     alignment_file.path = '{}.aln.vdjca'.format(basepath)
     alignment_file.name = "{}.aln.vdjca".format(basename)
-    # MIGHT NEED TO ADD THIS ARGUMENT to align   -OjParameters.parameters.mapperMaxSeedsDistance=5
-    alignment_file.command = 'mixcr align --species {} --save-description -f {} {}'.format(species, ' '.join([f.path for f in files]), alignment_file.path)
+    # MIGHT NEED TO ADD THIS ARGUMENT to align (from costas)   -OjParameters.parameters.mapperMaxSeedsDistance=5 
+    alignment_file.command = 'mixcr align -t 6 -OjParameters.parameters.mapperMaxSeedsDistance=5 --chains {} --species {} --save-description -f {} {}'.format(loci, species, ' '.join([f.path for f in files]), alignment_file.path)
 
     alignment_file.file_type = 'MIXCR_ALIGNMENTS'
     files_to_execute.append(alignment_file)    
-    clone_index_file = File()
-    clone_index_file.user_id = dataset.user_id
-    clone_index_file.file_type = 'MIXCR_CLONE_INDEX'
-    clone_index_file.path = '{}.aln.clns.index'.format(basepath)
-    clone_index_file.name = '{}.aln.clns.index'.format(basename)
-    clone_index_file.command = 'echo "Indexing Done On Clone Assemble Step"'
+    # clone_index_file = File()
+    # clone_index_file.user_id = dataset.user_id
+    # clone_index_file.file_type = 'MIXCR_CLONE_INDEX'
+    # clone_index_file.path = '{}.aln.clns.index'.format(basepath)
+    # clone_index_file.name = '{}.aln.clns.index'.format(basename)
+    # clone_index_file.command = 'echo "Indexing Done On Clone Assemble Step"'
     clone_file = File()
     clone_file.user_id = dataset.user_id
     clone_file.file_type = 'MIXCR_CLONES'
     clone_file.path = '{}.aln.clns'.format(basepath)
     clone_file.name = '{}.aln.clns'.format(basename)
-    clone_file.command = 'mixcr assemble  -OassemblingFeatures=VDJRegion --index {} -f {} {}'.format(clone_index_file.path, alignment_file.path, clone_file.path)
+    clone_file.command = 'mixcr assemble  -OassemblingFeatures=VDJRegion -f {} {}'.format(alignment_file.path, clone_file.path)
     files_to_execute.append(clone_file)
-    files_to_execute.append(clone_index_file)
+    # files_to_execute.append(clone_index_file)
     db.session.add(alignment_file)
     db.session.add(clone_file)
     db.session.commit()
@@ -1089,7 +1093,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     clone_output_file.path = '{}.txt'.format(clone_file.path)
     clone_output_file.file_type = 'MIXCR_CLONES_TEXT'
     clone_output_file.name = '{}.txt'.format(clone_file.name)
-    clone_output_file.command = 'mixcr exportClones -sequence -quality -s -f {} {}'.format(clone_file.path, clone_output_file.path)
+    clone_output_file.command = 'mixcr exportClones -sequence -quality -s --preset full {} {}'.format(clone_file.path, clone_output_file.path)
     files_to_execute.append(clone_output_file)
     alignment_output_file = File()
     alignment_output_file.user_id = dataset.user_id    
@@ -1097,16 +1101,16 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     alignment_output_file.path = '{}.txt'.format(alignment_file.path)
     alignment_output_file.file_type = 'MIXCR_ALIGNMENT_TEXT'
     alignment_output_file.name = '{}.txt'.format(alignment_file.name)
-    alignment_output_file.command = 'mixcr exportAlignments -cloneId {}  -s -f -readId -descrR1 --preset full  {} {}'.format(clone_index_file.path, alignment_file.path, alignment_output_file.path)
+    alignment_output_file.command = 'mixcr exportAlignments  -s -readId -descrR1 --preset full  {} {}'.format(alignment_file.path, alignment_output_file.path)
     files_to_execute.append(alignment_output_file)
-    pretty_alignment_file = File()
-    pretty_alignment_file.user_id = dataset.user_id    
-    pretty_alignment_file.parent_id = alignment_file.id 
-    pretty_alignment_file.path = '{}.pretty.txt'.format(alignment_file.path)
-    pretty_alignment_file.file_type = 'MIXCR_PRETTY_ALIGNMENT_TEXT'
-    pretty_alignment_file.name =  '{}.pretty.txt'.format(alignment_file.name)
-    pretty_alignment_file.command = 'mixcr exportAlignmentsPretty {} {}'.format(alignment_file.path, pretty_alignment_file.path)
-    files_to_execute.append(pretty_alignment_file)
+    # pretty_alignment_file = File()
+    # pretty_alignment_file.user_id = dataset.user_id    
+    # pretty_alignment_file.parent_id = alignment_file.id 
+    # pretty_alignment_file.path = '{}.pretty.txt'.format(alignment_file.path)
+    # pretty_alignment_file.file_type = 'MIXCR_PRETTY_ALIGNMENT_TEXT'
+    # pretty_alignment_file.name =  '{}.pretty.txt'.format(alignment_file.name)
+    # pretty_alignment_file.command = 'mixcr exportAlignmentsPretty {} {}'.format(alignment_file.path, pretty_alignment_file.path)
+    # files_to_execute.append(pretty_alignment_file)
     analysis.status = 'EXECUTING'
     db.session.commit()
 
@@ -1135,14 +1139,14 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
                 line = line.strip()
 
                 tracking_percent = False
-
+                tracking = True 
                 if 'Exception' in line:
                     logger.error( line )
                     execution_error = True
                 elif 'Error' in line:
                     logger.error( line )
                     execution_error = True
-                elif '%' in line:
+                elif ('Alignment:' in line) & ('%' in line):
                     tracking_percent = True
                     tracking_status, line = line.split(':', 1)
                     if line.endswith('%'):
@@ -3199,6 +3203,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     pandaseq_algorithm = kwargs['pandaseq_algorithm']
     cluster = kwargs['cluster']
     species = kwargs['species']
+    loci = kwargs['loci']
     generate_msdb = kwargs['generate_msdb']
     pair_vhvl = kwargs['pair_vhvl']
     msdb_cluster_percent = float( kwargs['msdb_cluster_percent'] )
@@ -3351,7 +3356,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         logger.info (return_value)
 
     elif analysis_type == 'mixcr':
-        return_value = run_mixcr_analysis_id_with_files(analysis_id = analysis_id, file_ids = file_ids_to_analyze, species = species, parent_task = task)
+        return_value = run_mixcr_analysis_id_with_files(analysis_id = analysis_id, file_ids = file_ids_to_analyze, species = species, loci=loci, parent_task = task)
         file_ids_to_analyze = return_value.file_ids
 
     elif analysis_type == 'abstar':

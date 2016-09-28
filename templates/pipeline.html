@@ -362,7 +362,7 @@
                                   <td width="15px"></td>
                                   <td>                              
                                     <label class="radio">
-                                      <input id="analysis_type-0" name="analysis_type" type="radio" value="igrep" class="igrep">IGFFT (+ Generate MS DB)
+                                      <input id="analysis_type-0" name="analysis_type" type="radio" value="igrep" class="igrep">IGFFT (and To Generate MS DB)
                                     </label>
                                     <div id="collapse" class="collapse igrep radio1">
 
@@ -393,12 +393,15 @@
                                         </div>
                                       </div>
 
+                                      <!--
                                       <div class="checkbox" class="pull-right" style="padding-left: 4px">
                                         <label >
                                             {{ build_pipeline_form.pair_vhvl(class = 'pair_vhvl') }}
                                             <b>Pair VH/VL:</b> Pair heavy and light chains from IGFFT annotation result.
                                         </label>
-                                      </div> <!-- /checkbox -->
+                                      </div>  
+                                      -->
+
 
                                       <div id="collapse" class="collapse pair_vhvl">
                                         <div style="margin-left: 25px; margin-right: 5px;" >
@@ -459,26 +462,6 @@
                                     <label class="radio">
                                       <input id="analysis_type-1" name="analysis_type" type="radio" value="mixcr" class="mixcr">MixCR
                                     </label>
-                                    <div id="collapse" class="collapse mixcr radio1">
-                                    <br>
-                                      <table class='table table-striped'> 
-                                          <thead>
-                                              <tr>
-                                                <th>Species</th>
-                                                <th></th>
-                                              </tr>
-                                          </thead>
-                                          <tbody>
-                                              <tr>
-                                                <td>{{ build_pipeline_form.species(class="form-control") }}</td>
-                                                <td></td>
-                                              </tr>
-                                          </tbody>
-                                      </table>
-
-
-                                    </div>
-
                                   </td>
                                 </tr>
                               
@@ -514,6 +497,27 @@
                               </table>
 
                             </div> <!-- /accordian -->
+
+                            <div id="settings">
+                              <br>
+                              <table class='table table-striped'> 
+                                  <thead>
+                                      <tr>
+                                        <th>Species</th>
+                                        <th>Loci</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      <tr>
+                                        <td>{{ build_pipeline_form.species(class="form-control") }}</td>
+                                        <td>{{ build_pipeline_form.loci() }}</td>
+                                      </tr>
+                                  </tbody>
+                              </table>
+
+
+                            </div>
+
 
                         </div>  <!-- /item analysis -->
 

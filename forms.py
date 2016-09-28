@@ -304,7 +304,7 @@ class BuildPipelineForm(Form):
 
     analysis_type = RadioField('Select a File Source', choices=[ ('igrep' , 'IGREP/IGFFT'), ('mixcr' , 'MixCR'), ('abstar' , 'ABStar')])
 
-    loci = MultiCheckboxField('Loci', choices=[('igh', 'IGH'), ('igl,igk', 'IGL/IGK'), ('tcra', 'TCRA'), ('tcrb', 'TCRB')])
+    loci = MultiCheckboxField('Loci', choices=[('IGH', 'IGH'), ('IGL', 'IGL'), ('IGK', 'IGK'), ('TCRA', 'TCRA'), ('TCRB', 'TCRB') ,('TCRG', 'TCRG'), ('TCRD', 'TCRD')])
 
     name = TextField(u'Name', )
     description = TextField(u'Description')
