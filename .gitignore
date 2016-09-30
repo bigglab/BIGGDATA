@@ -7,4 +7,5 @@ data/scratch_root/*
 legacy/* 
 credentials.txt
 biggdata.sh
+paringtempfile.txt
 .DS_Store
