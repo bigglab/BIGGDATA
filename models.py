@@ -908,7 +908,7 @@ class ProjectDatasets (db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     dataset_id = db.Column(db.Integer, db.ForeignKey('dataset.id'))
 
-    dataset = db.relationship(Dataset, backref = db.backref("dataset_projects"))
+    dataset = db.relationship(Dataset, backref = db.backref("dataset_projects", cascade='save-update, merge, delete, delete-orphan'))
     project = db.relationship(Project, backref = db.backref("project_datasets",  cascade="all, delete-orphan"))
 
     def __init__(self, dataset = None, project = None):

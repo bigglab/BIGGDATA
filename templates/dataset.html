@@ -12,8 +12,8 @@
 				<th>Name</th>
 				<th>Description</th>
 				<th>IG Type</th>
-				<th>Heavy/Light Paired?</th>
-				<th></th>
+				<th> </th>
+				<th> </th>
 			</tr>
 		</thead>
 		<tbody>
@@ -23,29 +23,31 @@
 					<th>{{dataset.description}}</th>
 					<th>{{dataset.ig_type}}</th>
 					{% if dataset.paired %}
-						<th>YES</th>
+						<th>VH/VL Paired</th>
 					{% else %}
 						<th></th>
 					{% endif %}
-					<th>
-					</th>
+					<th><h5><a href="{{url_for('.delete_dataset', id=dataset.id)}}">Delete Dataset From Database</a></h5></th>
 				</tr>
 			{% endfor %}
 		</tbody>
 	</table>
+
+
 
 	<div id="accordion">
         <table cellpadding="5" cellspacing="0" border="0">
             <tbody class="accordian-control">
                 <tr>
                     <td class="collapse-control"></td>
-                    <td valign="center"><label>Show detailed dataset information...</label></td>
+                    <td valign="center"><label>Show Detailed Dataset Properties</label></td>
                 </tr>
             </tbody>
         </table>
         <div id="collapseOne" class="collapse">
         	<br>
 
+<div>
 
 			<div class="panel panel-default">
 			    <div class="panel-heading">
@@ -269,14 +271,15 @@
 <br>
 <br>
 
+
 {% if dataset.files.all() != [] %}
 	<div class='container'>
-		<h4>There are files available... let's run some analysis!</h4>
+		<h4> </h4>
 		<table class="table table-striped">
-			<tr><th><a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">RUN PANDASEQ TO COLLAPSE OVERLAPS</a></th></tr>				
-			<tr><th><a href="{{url_for('.mixcr', dataset_id=dataset.id)}}">RUN MIXCR TO ANNOTATE READS</a></th></tr>				
-			<tr><th><a href="{{url_for('.create_analysis', dataset_id=dataset.id)}}">RUN ANNOTATION</a></th></tr>				
-		</table>
+			<tr><th><a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">RUN PANDASEQ TO COLLAPSE OVERLAPPING READS</a></th></tr>				
+			<tr><th><a href="{{url_for('.pipeline', selected_dataset=dataset.id)}}">RUN VDJ ALIGNMENT TO ANNOTATE READS</a></th></tr>				
+<!-- 			<tr><th><a href="{{url_for('.create_analysis', dataset_id=dataset.id)}}">RUN ANNOTATION</a></th></tr>
+ -->		</table>
 	</div>
 	<br><br>
 {% endif %}
@@ -318,7 +321,6 @@
 </div>
 
 <br>
-<br>
 
 {% if form.file_ids.choices != [] %}
 	<div class='container'>
@@ -334,6 +336,10 @@
 	</div>
 {% endif %}
 <br>
+
+
+
+
 
 <div class='container'>
 	<a href={{url_for('.datasets')}}><h4>Back To All Datasets</h4></a>

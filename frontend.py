@@ -221,6 +221,8 @@ def under_construction():
     gif_path=retrieve_golden()
     return render_template("under_construction.html", gif_path=gif_path)
 
+
+
 @frontend.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard(status=[]):
@@ -940,6 +942,20 @@ def edit_dataset(id):
             edit_dataset_form = edit_dataset_form, 
             current_user=current_user, 
             default_dataset = current_user.default_dataset)
+
+@frontend.route('/delete_dataset/<int:id>')
+@login_required
+def delete_dataset(id):
+    dataset = db.session.query(Dataset).filter(Dataset.id==id).first()
+    if current_user==dataset.user: 
+        db.session.delete(dataset)
+        db.session.commit()
+        flash('Dataset {} Deleted'.format(id), 'success')
+        return redirect ( url_for( 'frontend.datasets') )
+    else: 
+        flash('You dont have permission to delete that dataset :(' ) 
+        return redirect ( url_for( 'frontend.datasets' ) )
+
 
 @frontend.route('/edit_dataset/default', methods=['GET', 'POST'])
 @login_required

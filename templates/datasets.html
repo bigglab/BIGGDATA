@@ -49,34 +49,30 @@
 		<thead>
 			<tr>
 				<th class='no-sort'> </th>
-				<th>Dataset</th>
+				<th>Dataset #</th>
 				<th>Name</th>
 				<th>Description</th>
 				<th>IG Type</th>
-				<th>VDJ+VJ Paired</th>
 				<th class='no-sort'>Run Analysis</th>
+				<th> </th>
 			</tr>
 		</thead>
 		<tbody>
 			{% for dataset, files in datadict.iteritems() %}
 				<tr>
-					<td {% if dataset.files.all() != [] -%}class='details-control'{%- endif -%}></td>
+					<td {% if files != [] -%}class='details-control'{%- endif -%}></td>
 					<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.id}}</a></td>
 					<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
 					<td>{{dataset.description}}</td>
 					<td>{{dataset.ig_type}}</td>
-					{% if dataset.paired %}
-						<td>YES</td>
-					{% else %}
-						<td></td>
-					{% endif %}
 					<td>
-						{%- if dataset.files.all() == [] -%}
+						{%- if files == [] -%}
 							<a href="{{url_for('.dataset', id=dataset.id)}}">Click To Add Files</a>
 						{% else %}
 							<a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a>  <a href="{{url_for('.pipeline', dataset_id=dataset.id)}}">ANNOTATE</a>
 						{% endif %}
 					</td>
+					<td><a href="{{url_for('.delete_dataset', id=dataset.id)}}">Delete</a></td>
 				</tr>
 			{% endfor %}
 			
@@ -96,10 +92,10 @@
  
 	var table_data = [
 	{%- for dataset, files in datadict.iteritems() -%}
-		{%- if dataset.files.all() == [] -%}
+		{%- if files == [] -%}
 			`<a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
 		{% else %}
-			{%- set files = dataset.files -%}
+			{%- set files = files -%}
 			`{%- include "partials/files_no_preview.html" with context %}`,
 		{% endif %}
 	{%- endfor -%}
