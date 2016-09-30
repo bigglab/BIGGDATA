@@ -49,12 +49,12 @@
 		<thead>
 			<tr>
 				<th class='no-sort'> </th>
-				<th>Dataset</th>
+				<th>Dataset #</th>
 				<th>Name</th>
 				<th>Description</th>
 				<th>IG Type</th>
-				<th>VDJ+VJ Paired</th>
 				<th class='no-sort'>Run Analysis</th>
+				<th> </th>
 			</tr>
 		</thead>
 		<tbody>
@@ -65,11 +65,6 @@
 					<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
 					<td>{{dataset.description}}</td>
 					<td>{{dataset.ig_type}}</td>
-					{% if dataset.paired %}
-						<td>YES</td>
-					{% else %}
-						<td></td>
-					{% endif %}
 					<td>
 						{%- if dataset.files.all() == [] -%}
 							<a href="{{url_for('.dataset', id=dataset.id)}}">Click To Add Files</a>
@@ -77,6 +72,7 @@
 							<a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a>  <a href="{{url_for('.pipeline', dataset_id=dataset.id)}}">ANNOTATE</a>
 						{% endif %}
 					</td>
+					<td><a href="{{url_for('.delete_dataset', id=dataset.id)}}">Delete</a></td>
 				</tr>
 			{% endfor %}
 			
