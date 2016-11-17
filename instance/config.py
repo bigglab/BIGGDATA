@@ -21,6 +21,8 @@ HOME='/data/resources/software/BIGGDATA'
 TRIMMOMATIC = 'java -jar /data/resources/software/Trimmomatic-0.35/trimmomatic-0.35.jar'
 TRIMMOMATIC_ADAPTERS = '/data/resources/software/Trimmomatic-0.35/adapters'
 MIGMAP = 'java -Xmx2g -jar /data/resources/software/migmap-0.9.8/migmap-0.9.8.jar'
+MIXCR = '/data/resources/software/mixcr-2.0.2/mixcr '
+
 
 #SCRATCH_ROOT='/data/<username>/scratch'
 USER_ROOT='/data/<username>/'
