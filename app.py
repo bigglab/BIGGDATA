@@ -72,6 +72,8 @@ import immunogrep_msdb
 import immunogrep_gglab_pairing as pairing
 import immunogrep_ngs_pair_tools as processing
 
+
+
 # Initialize Application
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_pyfile('config.py')
@@ -1015,6 +1017,7 @@ def run_mixcr_with_dataset_id(self, dataset_id, analysis_name='', analysis_descr
 
 @celery.task(base = LogTask, bind = True)
 def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None, loci=None):
+
     logger = self.logger
     self.set_analysis_id(analysis_id)
 
@@ -1065,7 +1068,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     alignment_file.path = '{}.aln.vdjca'.format(basepath)
     alignment_file.name = "{}.aln.vdjca".format(basename)
     # MIGHT NEED TO ADD THIS ARGUMENT to align (from costas)   -OjParameters.parameters.mapperMaxSeedsDistance=5 
-    alignment_file.command = 'mixcr align -t 6 -OjParameters.parameters.mapperMaxSeedsDistance=5 --chains {} --species {} --save-description -f {} {}'.format(loci, species, ' '.join([f.path for f in files]), alignment_file.path)
+    alignment_file.command = '{} align -t 6 -OjParameters.parameters.mapperMaxSeedsDistance=5 --chains {} --species {} --save-description -f {} {}'.format(app.config['MIXCR'], loci, species, ' '.join([f.path for f in files]), alignment_file.path)
 
     alignment_file.file_type = 'MIXCR_ALIGNMENTS'
     files_to_execute.append(alignment_file)    
@@ -1080,7 +1083,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     clone_file.file_type = 'MIXCR_CLONES'
     clone_file.path = '{}.aln.clns'.format(basepath)
     clone_file.name = '{}.aln.clns'.format(basename)
-    clone_file.command = 'mixcr assemble  -OassemblingFeatures=VDJRegion -f {} {}'.format(alignment_file.path, clone_file.path)
+    clone_file.command = '{} assemble  -OassemblingFeatures=VDJRegion -f {} {}'.format(app.config['MIXCR'], alignment_file.path, clone_file.path)
     files_to_execute.append(clone_file)
     # files_to_execute.append(clone_index_file)
     db.session.add(alignment_file)
@@ -1093,7 +1096,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     clone_output_file.path = '{}.txt'.format(clone_file.path)
     clone_output_file.file_type = 'MIXCR_CLONES_TEXT'
     clone_output_file.name = '{}.txt'.format(clone_file.name)
-    clone_output_file.command = 'mixcr exportClones -sequence -quality -s --preset full {} {}'.format(clone_file.path, clone_output_file.path)
+    clone_output_file.command = '{} exportClones -sequence -quality -s --preset full {} {}'.format(app.config['MIXCR'], clone_file.path, clone_output_file.path)
     files_to_execute.append(clone_output_file)
     alignment_output_file = File()
     alignment_output_file.user_id = dataset.user_id    
@@ -1101,7 +1104,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     alignment_output_file.path = '{}.txt'.format(alignment_file.path)
     alignment_output_file.file_type = 'MIXCR_ALIGNMENT_TEXT'
     alignment_output_file.name = '{}.txt'.format(alignment_file.name)
-    alignment_output_file.command = 'mixcr exportAlignments  -s -readId -descrR1 --preset full  {} {}'.format(alignment_file.path, alignment_output_file.path)
+    alignment_output_file.command = '{} exportAlignments  -s -readId -descrR1 --preset full  {} {}'.format(app.config['MIXCR'], alignment_file.path, alignment_output_file.path)
     files_to_execute.append(alignment_output_file)
     # pretty_alignment_file = File()
     # pretty_alignment_file.user_id = dataset.user_id    
