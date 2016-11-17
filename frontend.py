@@ -696,7 +696,6 @@ def datasets():
     projects = Set(current_user.projects)
     projects.discard(None)
     projects = sorted(projects, key=lambda x: x.id, reverse=True)
-    project_tuples = []
 
     if request.method == 'POST':
         if form.name.data: 
@@ -2277,6 +2276,9 @@ def pipeline(selected_dataset=None):
                 'trim_slidingwindow_size' : build_pipeline_form.trim_slidingwindow_size.data,
                 'trim_slidingwindow_quality' : build_pipeline_form.trim_slidingwindow_quality.data,
                 'trim_illumina_adapters' : build_pipeline_form.trim_illumina_adapters.data,
+                'filter' : build_pipeline_form.filter.data, 
+                'filter_quality' : build_pipeline_form.filter_quality.data, 
+                'filter_percentage' : build_pipeline_form.filter_percentage.data, 
                 'pandaseq' : build_pipeline_form.pandaseq.data,
                 'analysis_type' : build_pipeline_form.analysis_type.data,
                 'description' : build_pipeline_form.description.data,

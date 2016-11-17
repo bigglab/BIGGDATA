@@ -1731,6 +1731,152 @@ def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = c
     logger.info( 'Trim job for analysis {} has been executed.'.format(analysis) )
     return ReturnValue( 'Success', file_ids = output_file_ids)
 
+
+# Quality filtering with fastx_toolkit on  % of read above certain PHRED threshold
+@celery.task(base = LogTask, bind = True)
+def run_quality_filtering_with_dataset_id(self, dataset_id, analysis_id=None, analysis_name='', analysis_description='Fastq Quality Filter', file_ids=[], minimum_percentage=50, minimum_quality=20):
+    logger = self.logger
+    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
+    files = [db.session.query(File).get(file_id) for file_id in file_ids]
+    logger.info( 'Running Quality Filter on Dataset {}.'.format( dataset_id ) )
+
+    if analysis_id: 
+        analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
+    else: 
+        analysis = Analysis()
+        if analysis_name == '': 
+            analysis_name = 'Analysis_{}'.format(analysis.id)
+        analysis.async_task_id = self.task.request_id    
+        analysis.name = analysis_name
+        analysis.description = analysis_description
+        analysis.user_id = user_id
+        analysis.dataset_id = dataset.id
+        analysis.program = 'quality_filter'
+        analysis.started = 'now'
+        analysis.params = {}
+        analysis.status = 'QUEUED'
+        analysis.responses = []
+        analysis.available = False
+        analysis.inserted_into_db = False
+        db.session.add(analysis)
+        db.session.commit()
+        db.session.refresh(analysis)
+        analysis.directory = '{}/Analysis_{}/'.format( dataset.directory.rstrip('/'), analysis.id )
+        if not os.path.isdir(analysis.directory):
+            os.mkdir(analysis.directory)
+
+
+    logger.info( 'Running Quality Filtering with {}% bases above PHRED {} on these files: {}'.format(minimum_percentage, minimum_quality, ', '.join( [file.name for file in files] ) ))
+
+    files_to_execute = []
+    output_file_ids = [] 
+    for file in files: 
+        path = '/{}'.format('/'.join(file.path.split('/')[:-1]))
+        path = path.replace('//','/')
+        basename = file.path.split('/')[-1].split('.')[0]
+        # basepath = '{0}/{1}'.format(analysis.directory, analysis_name)
+        if basename == '' or basename == None: 
+            basename = 'Analysis_{}'.format(analysis.id)
+        basepath = '{0}/{1}'.format(analysis.directory.rstrip('/'), basename)
+        logger.info( 'Writing output files to base name: {}'.format(basepath) )
+
+        # Instantiate Output Files
+        filtered_file = File()
+        filtered_file.user_id = dataset.user_id
+        filtered_file.path = '{}.filtered_q{}p{}.fastq'.format(basepath, minimum_quality, minimum_percentage)
+        filtered_file.name = '{}.filtered_q{}p{}.fastq'.format(basepath, minimum_quality, minimum_percentage)
+        filtered_file.command = 'fastq_quality_filter -q {} -p {} -i {} -o {} -Q 33 '.format(minimum_quality, minimum_percentage,  file.path, filtered_file.path) #-Q 33 for more recent Illumina quality outputs
+        filtered_file.file_type = 'FASTQ'
+        files_to_execute.append(filtered_file)
+        analysis.status = 'EXECUTING'
+        db.session.commit()
+
+    for f in files_to_execute:
+        f.command = f.command.encode('ascii')
+        f.dataset_id = analysis.dataset_id 
+        f.analysis_id = analysis.id 
+        # f.chain = files[0].chain
+        logger.info( 'Executing: {}'.format(f.command) )
+        analysis.active_command = f.command
+        f.in_use = True 
+        db.session.add(f)
+        db.session.commit()
+        # MAKE THE CALL
+        #response = os.system(f.command)
+        #print 'Response: {}'.format(response)
+        
+        error = None
+        try:
+            command_line_args = shlex.split(f.command)
+            command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+
+            start = dt.datetime.now()
+
+            for line in iter(command_line_process.stdout.readline, b''):
+                line = line.strip()
+                logger.info(line)
+                # if 'ERR' in line or '* * *' in line:
+                #     if 'LOWQ' in line: 
+                #         lowq_errors += 1 
+                #     else: 
+                #         logger.error(line)
+                # elif 'STAT' in line:
+                #     try:
+                #         if 'READS' in line:
+                #             current = dt.datetime.now()
+                #             elapsed = (current - start).seconds
+                #             line_parts = line.split('READS', 1)
+                #             reads = line_parts[1].strip()
+                #             status = 'Time Elapsed: {} - Number of Reads: {}'.format(elapsed, reads)
+                #             self.update_state(state='STATUS', meta={'status': status })
+                #     except:
+                #         pass
+
+            # self.update_state(state='SUCCESS',
+            #     meta={'status': 'PANDAseq complete.' })
+
+            response, error = command_line_process.communicate()
+            command_line_process.stdout.close()
+            command_line_process.wait()
+        except subprocess.CalledProcessError as error:
+            error = error.output
+            logger.error(error)
+        if error == None:
+            if os.path.isfile(f.path): 
+                f.available = True 
+                f.file_size = os.path.getsize(f.path)
+                dataset.primary_data_files_ids = [f.id]
+                db.session.commit()
+                db.session.refresh(f)
+                output_file_ids.append(f.id)
+            else:
+                f.available = False
+                analysis.status = 'FAILED'
+                db.session.commit()
+                logger.error('Quality Filtering Error: unable to create file {}'.format(f.path) )
+
+        else:
+            f.available = False
+            analysis.status = 'FAILED'
+            db.session.commit()
+            logger.error(error)
+
+    ##### ***** Need to Check Output Files Here ***** #####
+
+    logger.info( 'Filtering steps for analysis {} have been executed.'.format(analysis) )
+    if set(map(lambda f: f.available, files_to_execute)) == {True}:
+        analysis.status = 'SUCCESS'
+        analysis.available = True
+    if not analysis.status == 'FAILED': analysis.status = 'SUCCESS'
+    analysis.active_command = ''
+    analysis.finished = 'now'
+    db.session.commit()
+
+    return ReturnValue('Quality Filtering complete.', file_ids = output_file_ids)
+
+
+
+
 # Standalone celery task to run MSDB analysis on a dataset. 
 # This adds a new analysis if analysis = 'new' is passed or analysis_id == None
 # Calls run_msdb_with_analysis_id
@@ -3197,6 +3343,9 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     trim_slidingwindow_size = kwargs['trim_slidingwindow_size']
     trim_slidingwindow_quality = kwargs['trim_slidingwindow_quality']
     trim_illumina_adapters = kwargs['trim_illumina_adapters']
+    filter = kwargs['filter']
+    filter_percentage = kwargs['filter_percentage']
+    filter_quality = kwargs['filter_quality']
     pandaseq = kwargs['pandaseq']
     analysis_type = kwargs['analysis_type']
     description = kwargs['description']
@@ -3342,6 +3491,11 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     if pandaseq:
         return_value = run_pandaseq_with_dataset_id(dataset_id, analysis_id = analysis_id, file_ids = file_ids_to_analyze, algorithm = pandaseq_algorithm, parent_task = task)
         file_ids_to_analyze = return_value.file_ids
+        logger.info (return_value)
+
+    if filter: 
+        return_value = run_quality_filtering_with_dataset_id(dataset_id, analysis_id=analysis_id, file_ids=file_ids_to_analyze, minimum_percentage=filter_percentage, minimum_quality=filter_quality, parent_task = task)
+        file_ids_to_analyze = return_value.file_ids 
         logger.info (return_value)
 
     ##### Perform Analysis #####
