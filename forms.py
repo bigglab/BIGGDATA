@@ -299,6 +299,10 @@ class BuildPipelineForm(Form):
     trim_slidingwindow_quality = IntegerField(u'Required Quality (Integer)') # requiredQuality: specifies the average quality required.
     trim_illumina_adapters = BooleanField(u'Trim Illumina Adapters')
 
+    filter = BooleanField(u'Quality Filter Reads')
+    filter_quality = IntegerField(u'Minimum Quality', default=20)
+    filter_percentage = IntegerField(u'Read Percentage', default=50)
+
     pandaseq = BooleanField('PANDAseq', default='checked')
     pandaseq_algorithm = SelectField(u'PANDAseq Algorithm', choices=(['ea_util', 'ea_util'], ['flash', 'flash'], ['pear', 'pear'], ['rdp_mle', 'rdp_mle'],  ['simple_bayesian', 'simple_bayesian'], ['stitch', 'stitch'], ['uparse', 'uparse']), validators=[validators.input_required()])
 

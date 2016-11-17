@@ -326,7 +326,7 @@
                                   <div class="checkbox" class="pull-right" style="padding-left: 4px">
                                     <label >
                                         {{ build_pipeline_form.pandaseq(class='pandaseq') }}
-                                        <b>PANDAseq:</b> Assemble overlapping pair-end reads (recommended)
+                                        <b>PANDAseq:</b> Assemble overlapping pair-end reads
                                     </label>
                                   </div> <!-- /checkbox -->
 
@@ -344,9 +344,34 @@
                                         </tbody>
                                     </table>
                                   </div> <!-- /collapse -->
-
                                 </td>
-                                
+                              </tr>
+                              <tr>
+                                <td>
+                                  <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                                    <label >
+                                        {{ build_pipeline_form.filter(class='quality_filter') }}
+                                        <b>Quality Filter:</b> Filter out reads with certain % of read below given PHRED quality
+                                    </label>
+                                  </div> <!-- /checkbox -->
+
+                                  <div id="collapse" class="collapse quality_filter in">
+                                        <table class='table table-striped'> 
+                                            <thead>
+                                                <tr>
+                                                    <th>{{ build_pipeline_form.filter_quality.label }}</th>
+                                                    <th>{{ build_pipeline_form.filter_percentage.label }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>{{ build_pipeline_form.filter_quality(type="number", maxlength=3, size=3, class="form-control") }}</td>
+                                                    <td>{{ build_pipeline_form.filter_percentage(type="number", maxlength=3,size=3, class="form-control") }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                  </div> <!-- /collapse -->
+                                </td>
                               </tr>
                             </table>
 
@@ -544,12 +569,14 @@
                             </tbody>
                           </table>
 
-                          <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                          <!-- <div class="checkbox" class="pull-right" style="padding-left: 4px">
                             <label >
                                 {{ build_pipeline_form.cluster(disabled=True) }}
                                 <b>Cluster:</b> Perform USEARCH clustering on results.
                             </label>
-                          </div> <!-- /checkbox -->
+                          </div>
+                          -->
+
                           <br>
                           <br>
                           <center>
