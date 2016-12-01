@@ -2367,17 +2367,17 @@ def run_analysis(self, analysis_id = None, dataset_id = None, file_ids = [], use
 
     ##### End Session #####
 
-    if analysis_type == 'IGFFT' and file_ids_to_unzip != []:
-        return_value = unzip_files( user_id = user_id, file_ids = file_ids, destination_directory = analysis.directory, logger = logger)
+    gzipped_file_ids = [file.id for file in files if file.file_type == 'GZIPPED_FASTQ'] 
+    unzipped_file_ids = [file.id for file in files] - gzipped_file_ids
+
+    file_ids_for_analysis = unzipped_file_ids
+    if gzipped_file_ids != []: 
+        return_value = unzip_files( user_id = user_id, file_ids = gzipped_file_ids, destination_directory = analysis.directory, logger = logger)
         file_ids_for_analysis.append( return_value.file_ids )
 
-        if file_ids_for_analysis == []: file_ids_for_analysis = file_ids
-        dataset_id = dataset.id
-        user_id = dataset.user_id
-
-        analysis.status = 'EXECUTING'
 
     ##### Add all of the file changes to the database #####
+    analysis.status = 'EXECUTING'
     with session_scope() as session:
         add_session_objects(session, session_objects)
         session.commit()
