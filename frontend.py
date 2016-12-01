@@ -1850,6 +1850,7 @@ def zip_file_status_json():
 def pipeline(selected_dataset=None):
 
     build_pipeline_form = BuildPipelineForm(request.form)
+    selected_dataset = request.args.get('dataset_id')
 
     # set the dataset options
     datasets = Set(current_user.datasets)
@@ -2309,7 +2310,7 @@ def pipeline(selected_dataset=None):
         build_pipeline_form.trim_slidingwindow_quality.data = 15
         
 
-    return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes, first_error_item = first_error_item )
+    return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes, first_error_item = first_error_item, selected_dataset=selected_dataset )
 
 
  

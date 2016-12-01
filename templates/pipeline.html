@@ -53,6 +53,7 @@
                         
                         <div class="item active" name='file_source'>
                           <center><b>Select Files to Analyze</b></center>
+                          <!-- <center><b>Selected Dataset: {{selected_dataset}}</b></center> -->
 
                             <div id="accordion">
 
@@ -61,9 +62,9 @@
                                   <td width="15px"></td>
                                   <td>                              
                                     <label class="radio">
-                                      <input id="file_source-0" name="file_source" type="radio" value="file_dataset" class="file_dataset">Files from Dataset
+                                      <input checked id="file_source-0" name="file_source" type="radio" value="file_dataset" class="file_dataset">Files from Dataset
                                     </label>
-                                    <div id="collapse" class="collapse file_dataset radio">
+                                    <div id="collapse" class="file_dataset radio">
                                       <table>
                                         <tr>
                                           <td>
@@ -78,7 +79,7 @@
 
                                         <tr>
                                           <td>
-                                            {{ build_pipeline_form.dataset( style="min-width: 10em; ", size="7", class="form-control") }}
+                                            {{ build_pipeline_form.dataset(default=[selected_dataset], style="min-width: 10em; ", size="7", class="form-control") }}
                                           </td>
                                           <td>
                                             <span class="glyphicon glyphicon-chevron-right" aria-hidden="true" style="color:gray; margin: 10px;"></span>
