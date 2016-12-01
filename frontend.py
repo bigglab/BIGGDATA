@@ -139,19 +139,22 @@ def login():
     login_form = LoginForm()
     if login_form.validate_on_submit():
         user = load_user(login_form.email.data)
-        if user:
-            print "found user" + user.first_name  
-            if bcrypt.check_password_hash(user.password_hash, login_form.password.data):
-                user.authenticated = True
-                db.session.add(user)
-                db.session.commit()
-                login_user(user, remember=True)
-                flash('Success: You are logged in!', 'success')
-                db.session.refresh(user)
-                return redirect(url_for("frontend.dashboard"))
-            else: 
-                flash("Password doesn't match for " + user.first_name, 'error')
-                print "password didnt match for " + user.first_name 
+        if user: 
+            if user.authorized == True:
+                print "found user" + user.first_name  
+                if bcrypt.check_password_hash(user.password_hash, login_form.password.data):
+                    user.authenticated = True
+                    db.session.add(user)
+                    db.session.commit()
+                    login_user(user, remember=True)
+                    flash('Success: You are logged in!', 'success')
+                    db.session.refresh(user)
+                    return redirect(url_for("frontend.dashboard"))
+                else: 
+                    flash("Password doesn't match for " + user.first_name, 'error')
+                    print "password didnt match for " + user.first_name 
+            elif user.authorized == False: 
+                flash('User is not yet authorized for access to BIGGDATA. Contact Russell Durrett for more info.')
         else: 
             flash("couldn't find that user... try registering a new user", 'normal')
     #also supply create_user_form here for convenience
@@ -187,18 +190,36 @@ def create_user():
     new_user.email = form.email.data
     new_user.username = form.username.data
     new_user.password_hash = bcrypt.generate_password_hash(form.password.data)
-    
-    # Just authorize automatically, for now
+
+    # Authorized = False to verify each user manually as Georgiou / UT 
+    new_user.authorized = False 
+
+    #Just default to yes for now - more with login than manual authorization 
     new_user.authenticated = True 
+
     new_user.root_path = app.config['USER_ROOT'].replace('<username>', new_user.username)
 
     db.session.add(new_user)
     db.session.commit()
-    login_user(new_user, remember=True)
-    flash("Success! New user created and logged in.", 'success')
+
+    msg = Message('New User Request', sender=['BIGGDATA.io', 'admin@biggdata.io'], recipients=['russdurrett@utexas.edu'])
+    msg.body = 'New User {}, id {} has requested an account on BIGGDATA. Please go to the DB and change "authorized" to TRUE for this user.'.format(new_user.username, new_user.id)
+    mail.send(msg)
+
+    # login_user(new_user, remember=True)
+    # flash("Success! New user created and logged in.", 'success')
+    flash("Success! New user requested and will be verified within 24 hours.", 'success')
     #create home and scratch if necessary 
     result = instantiate_user_with_directories.apply_async((new_user.id, ), queue=celery_queue)
-    return redirect(url_for("frontend.dashboard"))
+    return redirect(url_for("frontend.index"))
+
+
+# Dashboard To Verify Users - Currently Manual
+# @frontend.route("/verify_user", methods=["GET", "POST"])
+# def verify_user():
+#     unverified_users = db.session.query(User).filter(User.username == form.username.data).all()
+
+
 
 @frontend.route("/logout", methods=["GET"])
 def logout():

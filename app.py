@@ -85,6 +85,7 @@ Bootstrap(app)
 db.init_app(app)
 db.app = app 
 
+mail = Mail(app)
 
 #####
 #
@@ -610,20 +611,20 @@ def instantiate_user_with_directories(new_user_id):
             return 'Failed to create directory {}: {}'.format(path, error)
     
     # COPY SOME EXAMPLE FILES TO PLAY WITH
-    try:
-        share_root = app.config['SHARE_ROOT'] 
-        if os.path.isdir(share_root):
-            files = os.listdir(share_root)
-        else:
-            return 'Warning: share root path "{}"" not found'.format(share_root)
-        print 'copying these files to new users dropbox: {}'.format(','.join(files))
-        for f in files: 
-            fullfilepath = '{}/{}'.format(new_user.path, f)
-            copyfile('{}/{}'.format(share_root, f), '{}/{}'.format(new_user.path, f))
-            link_file_to_user(fullfilepath, new_user.id, f)
-        return False 
-    except ValueError, error:
-        return 'Warning: unable to copy sample files into user\'s dropbox: {}'.format(error)
+    # try:
+        # share_root = app.config['SHARE_ROOT'] 
+        # if os.path.isdir(share_root):
+        #     files = os.listdir(share_root)
+        # else:
+        #     return 'Warning: share root path "{}"" not found'.format(share_root)
+    #     print 'copying these files to new users dropbox: {}'.format(','.join(files))
+    #     for f in files: 
+    #         fullfilepath = '{}/{}'.format(new_user.path, f)
+    #         copyfile('{}/{}'.format(share_root, f), '{}/{}'.format(new_user.path, f))
+    #         link_file_to_user(fullfilepath, new_user.id, f)
+    #     return False 
+    # except ValueError, error:
+    #     return 'Warning: unable to copy sample files into user\'s dropbox: {}'.format(error)
 
 # @celery.task(base= LogTask, bind = True)
 # def transfer_file_to_s3(self, file_id, user_id = None):

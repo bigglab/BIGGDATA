@@ -55,7 +55,12 @@ IGREP_COMMON_TOOLS = '/data/resources/software/IGREP/common_tools'
 IGREP_PIPELINES = '/data/resources/software/IGREP/pipelines'
 
 
-
+MAIL_SERVER='smtp.gmail.com'
+MAIL_PORT=587
+MAIL_USE_SSL=False
+MAIL_USE_TLS=True
+MAIL_USERNAME = 'biggdata.io@gmail.com'
+MAIL_PASSWORD = 'rag1rag2'
 
 
 

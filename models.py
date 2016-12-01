@@ -87,6 +87,7 @@ class User(db.Model):
         password_hash = db.Column(db.String(128))
         data = db.Column(db.Text())
         authenticated = db.Column(db.Boolean, default=False)
+        authorized = db.Column(db.Boolean, default=False)
         user_type = db.Column(db.String(128))
 
         # user paths
