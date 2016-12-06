@@ -2482,7 +2482,7 @@ def unzip_files( user_id = None, file_ids = [], destination_directory = '~', log
     else:
         return ReturnValue('{} files unzipped.'.format( str( number_files_unzipped ) ), file_ids = output_file_ids )
 
-def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysis_id = None, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01], species = None, logger = celery_logger, parent_task = None):
+def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysis_id = None, overlap=False, paired=False, cluster=False, cluster_setting=[0.85,0.9,.01], species = None, loci=None, logger = celery_logger, parent_task = None):
     task = parent_task
 
     # Want to run IGREP without putting out EVERY line of output (~100s)
@@ -2524,13 +2524,18 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysi
 
         annotated_file_ids = []
         for file in files: 
-            loci = ''
-            if file.chain == 'HEAVY': loci = 'igh'
-            if file.chain == 'LIGHT': loci = 'igk,igl'
-            if file.chain == 'HEAVY/LIGHT': loci = 'igh,igk,igl'
+            if not loci: 
+                loci = ''
+                if file.chain == 'HEAVY': loci = 'igh'
+                if file.chain == 'LIGHT': loci = 'igk,igl'
+                if file.chain == 'HEAVY/LIGHT': loci = 'igh,igk,igl'
 
-            # Set default loci here
-            if loci == '': loci = 'igh,igk,igl'
+                # Set default loci here
+                if loci == '': loci = 'igh,igk,igl'
+
+            else: 
+                loci = ','.join(loci) 
+                loci = loci.lower() 
 
             # annotated_f = igfft.igfft_multiprocess(f.path, file_type='FASTQ', species=species, locus=loci, parsing_settings={'isotype': isotyping_barcodes, 'remove_insertions': remove_insertions}, num_processes=number_threads, delete_alignment_file=True)           
             # annotated_files.append(annotated_f[0])
@@ -3310,7 +3315,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         file_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
-        return_value = run_igrep_annotation_on_dataset_files(dataset_id = dataset_id, file_ids = file_ids_to_analyze, user_id = user_id, analysis_id = analysis_id, species = species, logger = logger, parent_task = task)
+        return_value = run_igrep_annotation_on_dataset_files(dataset_id = dataset_id, file_ids = file_ids_to_analyze, user_id = user_id, analysis_id = analysis_id, species = species, loci=loci, logger = logger, parent_task = task)
         file_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
