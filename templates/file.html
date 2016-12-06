@@ -92,6 +92,7 @@
 
 				<tr>
 					<th>File name:</th>
+					<th>File type:</th>
 					<th>Paired to:</th>
 					<th>Chain</th>
 					<th></th>
@@ -100,6 +101,7 @@
 			<tbody>
 				<tr>
 					<td>{{ editfileform.name(size=20, value=file.name, class='form-control')}}</td>
+					<td>{{ editfileform.file_type(value=file.file_type, class='form-control')}}</td>
 					<td>{{ editfileform.paired_partner(class='form-control') }}</td>
 					<td>{{ editfileform.chain(class='form-control') }}</td>
 					<td><button class="btn btn-default" type="submit">Submit</button></td>

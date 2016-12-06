@@ -660,8 +660,15 @@ def file(id):
             editfileform.paired_partner.choices = [(x.id, x.name) for x in f.user.files if ((x.user_id != None) and (x.dataset == None) and (x.name != f.name))]
             editfileform.paired_partner.choices.append((0, None))
 
+        file_types = ['FASTQ', 'GZIPPED_FASTQ', 'IGFFT_ANNOTATION', 'MIXCR_ANNOTATION']
+        if f.file_type not in file_types: 
+            file_types.append(f.file_type)
+
+        editfileform.file_type.choices = [(x, x) for x in file_types]
+
         if editfileform.validate_on_submit():
             f.name = editfileform.name.data
+            f.file_type = editfileform.file_type.data
             if f.paired_partner != None:
                 f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
 

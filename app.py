@@ -1788,7 +1788,7 @@ def run_quality_filtering_with_dataset_id(self, dataset_id, analysis_id=None, an
         filtered_file = File()
         filtered_file.user_id = dataset.user_id
         filtered_file.path = '{}.filtered_q{}p{}.fastq'.format(basepath, minimum_quality, minimum_percentage)
-        filtered_file.name = '{}.filtered_q{}p{}.fastq'.format(basepath, minimum_quality, minimum_percentage)
+        filtered_file.name = '{}.filtered_q{}p{}.fastq'.format(basename, minimum_quality, minimum_percentage)
         filtered_file.command = 'fastq_quality_filter -q {} -p {} -i {} -o {} -Q 33 '.format(minimum_quality, minimum_percentage,  file.path, filtered_file.path) #-Q 33 for more recent Illumina quality outputs
         filtered_file.file_type = 'FASTQ'
         files_to_execute.append(filtered_file)
@@ -2640,7 +2640,7 @@ def unzip_files( user_id = None, file_ids = [], destination_directory = '~', log
                 # file does not need to be unzipped, so add it to the list as-is
                 output_file_ids.append(file.id)
 
-        print 'Here'
+        # print 'Here'
 
         session_objects = expunge_session_objects(session)
     ##### End Session #####
