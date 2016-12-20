@@ -2478,7 +2478,7 @@ def unzip_files( user_id = None, file_ids = [], destination_directory = '~', log
         session.commit()
 
     if number_files_to_unzip == 0:
-        return ReturnValue('No file to unzip, moving forward with file ids {}'.format( str( ','.join(file_ids))), file_ids = output_file_ids )
+        return ReturnValue('No file to unzip, moving forward with file ids {}'.format( str( ','.join([str(id) for id in file_ids]))), file_ids = output_file_ids )
     else:
         return ReturnValue('{} files unzipped.'.format( str( number_files_unzipped ) ), file_ids = output_file_ids )
 
