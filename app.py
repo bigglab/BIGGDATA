@@ -2674,6 +2674,7 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysi
                 session.add(new_file)
                 session.commit()
                 session.refresh(new_file)
+                logger.info('Created New {} File {} -> {}'.format(new_file.file_type, new_file.id, new_file.path))
                 annotated_file_ids.append(new_file.id)
 
             else:
