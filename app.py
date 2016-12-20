@@ -3319,6 +3319,14 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         file_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
+        if generate_msdb:
+            return_value = run_msdb_with_analysis_id( analysis_id = analysis_id, file_ids = file_ids_to_analyze, user_id = user_id, cluster_percent = msdb_cluster_percent, parent_task = self)
+
+        if pair_vhvl:
+            #return_value = run_pair_vhvl_with_dataset_id( analysis_id = analysis_id, file_ids = file_ids_to_analyze, user_id = user_id, parent_task = self)
+            return_value = run_pair_vhvl_with_dataset_id( user_id= user_id, dataset_id = output_dataset, analysis_id = analysis_id, file_ids = file_ids_to_analyze, vhvl_min = vhvl_min, vhvl_max = vhvl_max, vhvl_step = vhvl_step, parent_task = self)
+
+
     elif analysis_type == 'mixcr':
         return_value = run_mixcr_analysis_id_with_files(analysis_id = analysis_id, file_ids = file_ids_to_analyze, species = species, loci=loci, parent_task = task)
         file_ids_to_analyze = return_value.file_ids
@@ -3338,14 +3346,6 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     else:
         raise Exception( 'Analysis type "{}" cannot be performed.'.format(analysis_type) )
 
-    ##### Perform Post-Processing #####
-    if analysis_type == 'igrep':
-        if generate_msdb:
-            return_value = run_msdb_with_analysis_id( analysis_id = analysis_id, file_ids = file_ids_to_analyze, user_id = user_id, cluster_percent = msdb_cluster_percent, parent_task = self)
-
-        if pair_vhvl:
-            #return_value = run_pair_vhvl_with_dataset_id( analysis_id = analysis_id, file_ids = file_ids_to_analyze, user_id = user_id, parent_task = self)
-            return_value = run_pair_vhvl_with_dataset_id( user_id= user_id, dataset_id = output_dataset, analysis_id = analysis_id, file_ids = file_ids_to_analyze, vhvl_min = vhvl_min, vhvl_max = vhvl_max, vhvl_step = vhvl_step, parent_task = self)
 
     ##### Add files to Appropriate Dataset/Project #####
 
