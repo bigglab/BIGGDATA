@@ -2472,13 +2472,13 @@ def unzip_files( user_id = None, file_ids = [], destination_directory = '~', log
                 number_files_unzipped += 1
 
     # Save all of the changes
-    logger.info('Saving changes.')
+    # logger.info('Saving changes.')
     with session_scope() as session:
         add_session_objects(session, session_objects)
         session.commit()
 
     if number_files_to_unzip == 0:
-        return ReturnValue('No file to unzip.'.format( str( number_files_unzipped ) ), file_ids = output_file_ids )
+        return ReturnValue('No file to unzip, moving forward with file ids {}'.format( str( ','.join(file_ids))), file_ids = output_file_ids )
     else:
         return ReturnValue('{} files unzipped.'.format( str( number_files_unzipped ) ), file_ids = output_file_ids )
 
