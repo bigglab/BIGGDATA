@@ -3269,7 +3269,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
                 analysis.name = 'Analysis_{}'.format(analysis.id)
             analysis.program = analysis_type.upper()
             analysis.params = {}
-            analysis.status = 'QUEUED'
+            analysis.status = 'RUNNING'
             analysis.responses = []
             analysis.available = False
             session.commit()
@@ -3350,7 +3350,14 @@ def run_analysis_pipeline(self, *args,  **kwargs):
 
     ##### Add files to Appropriate Dataset/Project #####
 
+    analysis.status = 'COMPLETE'
+    session.commit()
+
     return ReturnValue( 'All analyses and processing completed.', file_ids = file_ids_to_analyze)
+
+
+
+
 
 ######
 #

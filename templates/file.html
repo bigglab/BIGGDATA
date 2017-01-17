@@ -80,7 +80,7 @@
 </div>
 <br>
 <br>
-<em><a href='#' data-toggle="collapse" data-target="#dataEdit"><span class="pencil glyphicon glyphicon-pencil"></span> Click Here</a> to modify file chain/pairing.</em><br><br>
+<em><a href='#' data-toggle="collapse" data-target="#dataEdit"><span class="pencil glyphicon glyphicon-pencil"></span> Click Here</a> to edit file details.</em><br><br>
 <!-- File Edit form !-->
 {% if edit == 'edit' %}
 <div class="container">
@@ -88,7 +88,7 @@
 	<form method="POST" action="/files/{{file.id}}">
 		{{ editfileform.csrf_token }}
 		<table class="table table-striped">
-			<thead>
+<!-- 			<thead>
 
 				<tr>
 					<th>File name:</th>
@@ -98,12 +98,15 @@
 					<th></th>
 				</tr>			
 			</thead>
-			<tbody>
+ -->			<tbody>
 				<tr>
-					<td>{{ editfileform.name(size=20, value=file.name, class='form-control')}}</td>
-					<td>{{ editfileform.file_type(value=file.file_type, class='form-control')}}</td>
-					<td>{{ editfileform.paired_partner(class='form-control') }}</td>
-					<td>{{ editfileform.chain(class='form-control') }}</td>
+					<td>Name: {{ editfileform.name(size=20, value=file.name, class='form-control')}}</td>
+					<td>Description: {{ editfileform.description(size=40, value=file.description, class='form-control')}}</td>
+					<td>Type: {{ editfileform.file_type(value=file.file_type, class='form-control')}}</td>
+				</tr>
+				<tr>
+					<td>Paired to: {{ editfileform.paired_partner(class='form-control') }}</td>
+					<td>Chain: {{ editfileform.chain(class='form-control') }}</td>
 					<td><button class="btn btn-default" type="submit">Submit</button></td>
 				</tr>
 			</tbody>

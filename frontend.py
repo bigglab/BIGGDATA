@@ -476,6 +476,7 @@ def file_upload():
 @login_required
 def file_download(status=[], bucket='', key=''):
 
+    dropbox_files = get_dropbox_files(current_user)
     form = FileDownloadForm()
     upload_form = FileUploadForm()
 
@@ -567,7 +568,7 @@ def file_download(status=[], bucket='', key=''):
 
         return redirect( url_for('frontend.dashboard') )
 
-    return render_template("file_download.html", download_form=form, upload_form = upload_form, current_user=current_user)
+    return render_template("file_download.html", download_form=form, upload_form = upload_form, current_user=current_user, dropbox_files=dropbox_files)
 
 
 ##### Download the file here #####
@@ -817,6 +818,11 @@ def dataset(id):
         print 'linking file id {} to dataset {}'.format(form.file_ids.data, dataset.__dict__)
         f = db.session.query(File).filter(File.id==form.file_ids.data).first()
         f.dataset_id = dataset.id 
+        if current_user.dropbox_path in f.path: 
+            new_path = dataset.directory + '/' + f.path.split('/')[-1]
+            print 'moving dropbox file to new dataset path: {}'.format(new_path)
+            os.rename(f.path, new_path)
+            f.path = new_path
         db.session.commit()
         flash('dataset saved')
         return render_template("dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, current_user=current_user)

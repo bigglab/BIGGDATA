@@ -93,35 +93,35 @@
             </tbody>
           </table> <!-- /file_1 upload -->
 
-<!--         <table class='table'> 
-            <thead>
-                <tr>
-                    <th width=40%><label>Enter A Unique File Name:</label></th>
-                    <th width=40%> <label>Choose the file:</label></th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><input id="key" type="input" name="key" value="" class="form-control"/></td>
-                    <td>
-                        <div class="input-group">
-                            <span class="input-group-btn">
-                                <span class="btn btn-default btn-file">
-                                    Browse...<input id="file" name="file" type="file"> 
-                                </span>
-                            </span>
-                            <input type="text" class="form-control" readonly>
-                        </div>
-                    </td>
-                    <td>
-                        <input class="btn btn-default form-control" type="submit" value="Upload">
-                    </td>
-                </tr>
-            </tbody>
-        </table>
- -->    </form>
+    </form>
 </div>
+
+
+
+<div class="container">
+<br>
+{% if dropbox_files %}
+    <h4>Or click to add any of these from your dropbox:</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for file in dropbox_files %}
+                <tr>
+                    <form role='form' method='POST' action='/files'>
+                    <th><input type='submit' name='submit' value={{file}}></th>
+                    </form>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
+</div>
+
+
 
 <br>
 <br>
