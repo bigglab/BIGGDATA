@@ -94,7 +94,7 @@ $(document).ready(function(){
 	var interval = 5000;
 	var status_url ="{{ url_for( 'frontend.json_celery_log' ) }}"
 	var zip_file_status_url ="{{ url_for( 'frontend.zip_file_status_json' ) }}"
-	var new_interval = 5000;
+	var new_interval = 10000;
 	var set_new_interval = false;
 	var zip_timeout;
 
@@ -114,7 +114,7 @@ $(document).ready(function(){
     	space = window.innerHeight - div.offset().top - 40
 		div.css({ "height" : space });
 		set_new_interval = true;
-		new_interval = 5000;
+		new_interval = 10000;
 		update_progress();
 
     }
@@ -127,7 +127,7 @@ $(document).ready(function(){
 
     function refresh_console() {
 		set_new_interval = true;
-    	new_interval = 5000;
+    	new_interval = 10000;
 		update_progress();
     }
 
