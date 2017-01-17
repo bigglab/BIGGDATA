@@ -2665,16 +2665,16 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysi
                     new_file.analysis_id = analysis_id
 
                 new_file.name = file.name.replace('fastq','igfft.annotation')
-                new_file.name = file.name.replace('fq','igfft.annotation')
+                new_file.name = new_file.name.replace('fq','igfft.annotation')
                 new_file.path = file.path.replace('fastq','igfft.annotation')
-                new_file.path = file.path.replace('fq','igfft.annotation')
+                new_file.path = new_file.path.replace('fq','igfft.annotation')
                 new_file.file_type = 'IGFFT_ANNOTATION'
                 new_file.created='now'
                 new_file.available=True 
                 session.add(new_file)
                 session.commit()
                 session.refresh(new_file)
-                logger.info('Created New {} File {} -> {}'.format(new_file.file_type, new_file.id, new_file.path))
+                logger.info('Created New {} File #{} {}  at  {}'.format(new_file.file_type, new_file.id, new_file.name, new_file.path))
                 annotated_file_ids.append(new_file.id)
 
             else:
