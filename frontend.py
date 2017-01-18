@@ -698,6 +698,23 @@ def file(id):
 
         return render_template("file.html", file=f, editfileform=editfileform, edit=edit, current_user=current_user)
 
+
+@frontend.route('/delete_file/<int:id>')
+@login_required
+def delete_file(id):
+    file = db.session.query(File).get(id)
+    if current_user==file.user: 
+        path = file.path
+        db.session.delete(file)
+        db.session.commit()
+        flash('File {}, {} Deleted'.format(id, path), 'success')
+        return redirect ( url_for( 'frontend.files') )
+    else: 
+        flash('You dont have permission to delete that file :(' ) 
+        return redirect ( url_for( 'frontend.files' ) )
+
+
+
 @frontend.route('/files/download/<int:id>')
 @login_required
 def send_file_from_id(id):
@@ -823,8 +840,9 @@ def dataset(id):
             print 'moving dropbox file to new dataset path: {}'.format(new_path)
             os.rename(f.path, new_path)
             f.path = new_path
+            flash('Dropbox file {} moved to Dataset directory: {}'.format(f.name, f.path), 'success')
         db.session.commit()
-        flash('dataset saved')
+        flash('Dataset Successfully Edited', 'success')
         return render_template("dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, current_user=current_user)
     else: 
         return render_template("dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, current_user=current_user)

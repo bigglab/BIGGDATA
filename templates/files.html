@@ -25,12 +25,12 @@
 					<tr>
 						<th>File ID</th>
 						<th>Name</th>
-						<th>Chain</th>
 						<th>File Type</th>
 						<th>Available</th>
 						<th>File Size</th>
 						<th>File Created</th>
 						<th>Download</th>
+						<th>Delete</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -38,29 +38,28 @@
 						<tr>
 							<th><a href="{{url_for('.file', id=file.id)}}">{{file.id}}</a></th>
 							<th>{{file.name}}</th>
-							<th>{{file.chain}}</th>
 							<th>{{file.file_type}}</th>
-						{%- if file.available -%}
-							<th>YES</th>
-						{%- else -%}
-							<th>NO</th>
-						{%- endif -%}
-						{%- if file.file_size -%}
-							<th>{{file.file_size|filesizeformat}}</th>
-						{%- else -%}
-							<th></th>
-						{%- endif -%}
-							<th>{{file.created}}</th>
-						{% if file.available and file.file_size != None and file.file_size != 0%}
-						<td align=center>
-							<a href="{{ url_for( 'frontend.download', file_id=file.id) }}" onclick="document.someForm.submit();" style="color: inherit; text-decoration: none" download="{{file.name}}">
-								<span class="glyphicon glyphicon-download fa-lg" aria-hidden="true" style="color:black; "></span>
-							</a>
-
-						</td>
-						{% else %}
-							<td></td>
-						{% endif %}
+							{%- if file.available -%}
+								<th>YES</th>
+							{%- else -%}
+								<th>NO</th>
+							{%- endif -%}
+							{%- if file.file_size -%}
+								<th>{{file.file_size|filesizeformat}}</th>
+							{%- else -%}
+								<th></th>
+							{%- endif -%}
+								<th>{{file.created}}</th>
+							{% if file.available and file.file_size != None and file.file_size != 0%}
+								<td align=center>
+									<a href="{{ url_for( 'frontend.download', file_id=file.id) }}" onclick="document.someForm.submit();" style="color: inherit; text-decoration: none" download="{{file.name}}">
+									<span class="glyphicon glyphicon-download fa-lg" aria-hidden="true" style="color:black; "></span>
+								</a>
+								</td>
+							{% else %}
+								<td></td>
+							{% endif %}
+								<td align=center><a href="{{url_for('.delete_file', id=file.id)}}" onclick="return confirm('Are you sure you want to delete this file?');">Delete</a></td>
 						</tr>
 					{% endfor %}
 				</tbody>
