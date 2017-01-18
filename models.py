@@ -1396,71 +1396,6 @@ def parse_alignments_from_mixcr_hits(hits):
         return score_dict 
 
 
-def build_annotations_from_mixcr_file(file_path, dataset_id=None, analysis_id=None):
-    f = open(file_path)
-    headers = f.readline().split('\t')
-    annotations = []
-    for line in f.readlines():
-        fields = line.split('\t')
-        ann = Annotation() 
-        ann.analysis_name = 'MIXCR'
-        if dataset_id: ann.dataset_id = dataset_id 
-        if analysis_id: ann.analysis_id = analysis_id
-        for i,k in enumerate(headers): 
-
-            # COULD USE THIS TO BUILD SEQUENCE DOCUMENTS
-            if "Description R1" == k: ann.header = fields[i]
-            if "Read(s) sequence" == k: ann.read_sequences   = fields[i]
-            if "Read(s) sequence qualities" == k: ann.read_qualities   = fields[i]
-            if "All V hits" == k: ann.v_hits  = parse_alignments_from_mixcr_hits(fields[i])
-            if "All D hits" == k: ann.d_hits  = parse_alignments_from_mixcr_hits(fields[i])
-            if "All J hits" == k: ann.j_hits  = parse_alignments_from_mixcr_hits(fields[i])
-            if "All C hits" == k: ann.c_hits  = parse_alignments_from_mixcr_hits(fields[i])
-            if len(ann.v_hits): ann.v_top_hit = trim_ig_allele_name(sorted(ann.v_hits.items(), key=lambda x: x[1], reverse=True)[0][0])
-            if len(ann.v_hits): ann.v_top_hit_locus = trim_ig_locus_name(ann.v_top_hit)
-            if len(ann.d_hits): ann.d_top_hit = trim_ig_allele_name(sorted(ann.d_hits.items(), key=lambda x: x[1], reverse=True)[0][0])
-            if len(ann.d_hits): ann.d_top_hit_locus = trim_ig_locus_name(ann.d_top_hit)
-            if len(ann.j_hits): ann.j_top_hit = trim_ig_allele_name(sorted(ann.j_hits.items(), key=lambda x: x[1], reverse=True)[0][0])
-            if len(ann.j_hits): ann.j_top_hit_locus = trim_ig_locus_name(ann.j_top_hit)
-            if len(ann.c_hits): ann.c_top_hit = trim_ig_allele_name(sorted(ann.c_hits.items(), key=lambda x: x[1], reverse=True)[0][0])
-            if len(ann.c_hits): ann.c_top_hit_locus = trim_ig_locus_name(ann.c_top_hit)
-            # if "All V alignments" == k: ann.   = fields[i]
-            # if "All D alignments" == k: ann.   = fields[i]
-            # if "All J alignments" == k: ann.   = fields[i]
-            # if "All C alignments" == k: ann.   = fields[i]
-            if "N. Seq. FR1" == k: ann.fr1_nt   = fields[i]
-            # if "Min. qual. FR1" == k: ann.   = fields[i]
-            if "N. Seq. CDR1" == k: ann.cdr1_nt   = fields[i]
-            # if "Min. qual. CDR1" == k: ann.   = fields[i]
-            if "N. Seq. FR2" == k: ann.fr2_nt   = fields[i]
-            # if "Min. qual. FR2" == k: ann.   = fields[i]
-            if "N. Seq. CDR2" == k: ann.cdr2_nt   = fields[i]
-            # if "Min. qual. CDR2" == k: ann.   = fields[i]
-            if "N. Seq. FR3" == k: ann.fr3_nt   = fields[i]
-            # if "Min. qual. FR3" == k: ann.   = fields[i]
-            if "N. Seq. CDR3" == k: ann.cdr3_nt   = fields[i]
-            # if "Min. qual. CDR3" == k: ann.   = fields[i]
-            if "N. Seq. FR4" == k: ann.fr4_nt   = fields[i]
-            # if "Min. qual. FR4" == k: ann.   = fields[i]
-            if "AA. Seq. FR1" == k: ann.fr1_aa   = fields[i]
-            if "AA. Seq. CDR1" == k: ann.cdr1_aa   = fields[i]
-            if "AA. Seq. FR2" == k: ann.fr2_aa   = fields[i]
-            if "AA. Seq. CDR2" == k: ann.cdr2_aa   = fields[i]
-            if "AA. Seq. FR3" == k: ann.fr3_aa   = fields[i]
-            if "AA. Seq. CDR3" == k: ann.cdr3_aa   = fields[i]
-            if "AA. Seq. FR4" == k: ann.fr4_aa   = fields[i]
-            # if "Ref. points" == k: ann.   = fields[i]
-
-
-            # if "data.productive" == k: 
-            #     if 'PRODUCTIVE' in v: 
-            #         ann.productive = True
-            #     else: 
-            #         ann.productive = False 
-
-        annotations.append(ann)
-    return annotations
-
 
 def select_top_hit(hits):
     if hits !=  None :
@@ -1469,65 +1404,91 @@ def select_top_hit(hits):
     else: 
         return None
 
-def build_annotation_dataframe_from_mixcr_file(file_path, dataset_id=None, analysis_id=None):
+
+def build_annotation_dataframe_from_mixcr_file(file_path, dropna=True):
     df = pd.read_table(file_path, low_memory=False)
-    df['All V hits'] = df['All V hits'].apply(parse_alignments_from_mixcr_hits)
-    df['All D hits'] = df['All D hits'].apply(parse_alignments_from_mixcr_hits)
-    df['All J hits'] = df['All J hits'].apply(parse_alignments_from_mixcr_hits)
-    df['All C hits'] = df['All C hits'].apply(parse_alignments_from_mixcr_hits)
-    df['v_top_hit'] = df['All V hits'].apply(select_top_hit)
+    essential_columns = ['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']
+    if dropna: df = df.dropna(subset=essential_columns, how='any')
+    df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
+    df['allDHitsWithScore'] = df['allDHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
+    df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
+    df['allCHitsWithScore'] = df['allCHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
+    df['v_top_hit'] = df['allVHitsWithScore'].apply(select_top_hit)
     df['v_top_hit_locus'] = df['v_top_hit'].apply(trim_ig_locus_name)
-    df['d_top_hit'] = df['All D hits'].apply(select_top_hit)
+    df['d_top_hit'] = df['allDHitsWithScore'].apply(select_top_hit)
     df['d_top_hit_locus'] = df['d_top_hit'].apply(trim_ig_locus_name)
-    df['j_top_hit'] = df['All J hits'].apply(select_top_hit)
+    df['j_top_hit'] = df['allJHitsWithScore'].apply(select_top_hit)
     df['j_top_hit_locus'] = df['j_top_hit'].apply(trim_ig_locus_name)
-    df['c_top_hit'] = df['All C hits'].apply(select_top_hit)
+    df['c_top_hit'] = df['allCHitsWithScore'].apply(select_top_hit)
     df['c_top_hit_locus'] = df['c_top_hit'].apply(trim_ig_locus_name)
-    df['All V hits'] = df['All V hits'].apply(json.dumps)
-    df['All D hits'] = df['All D hits'].apply(json.dumps)
-    df['All J hits'] = df['All J hits'].apply(json.dumps)
-    df['All C hits'] = df['All C hits'].apply(json.dumps)
-    df['analysis_id'] = analysis_id
-    df['dataset_id'] = dataset_id 
-
-
-    column_reindex = {
-    "Description R1":'header',
-    'Read(s) sequence': 'read_sequences',
-    'Read(s) sequence qualities': 'read_qualities',
-    'All V hits':'v_hits',
-    'All D hits':'d_hits',
-    'All J hits':'j_hits',
-    'All C hits':'c_hits',
-    "N. Seq. FR1":'fr1_nt',
-    "N. Seq. CDR1" : 'cdr1_nt',
-    "N. Seq. FR2" : 'fr2_nt',
-    "N. Seq. CDR2" : 'cdr2_nt',
-    "N. Seq. FR3" : 'fr3_nt' ,
-    "N. Seq. CDR3": 'cdr3_nt',
-    "N. Seq. FR4" : 'fr4_nt',
-    "AA. Seq. FR1"  : 'fr1_aa' ,
-    "AA. Seq. CDR1" : 'cdr1_aa',
-    "AA. Seq. FR2"  : 'fr2_aa' ,
-    "AA. Seq. CDR2" : 'cdr2_aa',
-    "AA. Seq. FR3"  : 'fr3_aa' ,
-    "AA. Seq. CDR3" : 'cdr3_aa',
-    "AA. Seq. FR4"  : 'fr4_aa' ,
-    }
-    df = df.rename(str, columns=column_reindex)
-    cols = column_reindex.values() 
-    cols.append('analysis_id')
-    cols.append('dataset_id')
-    cols.append('v_top_hit_locus')
-    cols.append('d_top_hit_locus')
-    cols.append('j_top_hit_locus')
-    cols.append('c_top_hit_locus')
-    cols.append('v_top_hit')
-    cols.append('d_top_hit')
-    cols.append('j_top_hit')
-    cols.append('c_top_hit')
-    df = df[cols]
+    df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(json.dumps)
+    df['allDHitsWithScore'] = df['allDHitsWithScore'].apply(json.dumps)
+    df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(json.dumps)
+    df['allCHitsWithScore'] = df['allCHitsWithScore'].apply(json.dumps)
     return df 
+
+
+
+
+# def build_annotation_dataframe_from_mixcr_version1_file(file_path, dataset_id=None, analysis_id=None):
+#     df = pd.read_table(file_path, low_memory=False)
+#     df['All V hits'] = df['All V hits'].apply(parse_alignments_from_mixcr_hits)
+#     df['All D hits'] = df['All D hits'].apply(parse_alignments_from_mixcr_hits)
+#     df['All J hits'] = df['All J hits'].apply(parse_alignments_from_mixcr_hits)
+#     df['All C hits'] = df['All C hits'].apply(parse_alignments_from_mixcr_hits)
+#     df['v_top_hit'] = df['All V hits'].apply(select_top_hit)
+#     df['v_top_hit_locus'] = df['v_top_hit'].apply(trim_ig_locus_name)
+#     df['d_top_hit'] = df['All D hits'].apply(select_top_hit)
+#     df['d_top_hit_locus'] = df['d_top_hit'].apply(trim_ig_locus_name)
+#     df['j_top_hit'] = df['All J hits'].apply(select_top_hit)
+#     df['j_top_hit_locus'] = df['j_top_hit'].apply(trim_ig_locus_name)
+#     df['c_top_hit'] = df['All C hits'].apply(select_top_hit)
+#     df['c_top_hit_locus'] = df['c_top_hit'].apply(trim_ig_locus_name)
+#     df['All V hits'] = df['All V hits'].apply(json.dumps)
+#     df['All D hits'] = df['All D hits'].apply(json.dumps)
+#     df['All J hits'] = df['All J hits'].apply(json.dumps)
+#     df['All C hits'] = df['All C hits'].apply(json.dumps)
+#     df['analysis_id'] = analysis_id
+#     df['dataset_id'] = dataset_id 
+#     column_reindex = {
+#     "Description R1":'header',
+#     'Read(s) sequence': 'read_sequences',
+#     'Read(s) sequence qualities': 'read_qualities',
+#     'All V hits':'v_hits',
+#     'All D hits':'d_hits',
+#     'All J hits':'j_hits',
+#     'All C hits':'c_hits',
+#     "N. Seq. FR1":'fr1_nt',
+#     "N. Seq. CDR1" : 'cdr1_nt',
+#     "N. Seq. FR2" : 'fr2_nt',
+#     "N. Seq. CDR2" : 'cdr2_nt',
+#     "N. Seq. FR3" : 'fr3_nt' ,
+#     "N. Seq. CDR3": 'cdr3_nt',
+#     "N. Seq. FR4" : 'fr4_nt',
+#     "AA. Seq. FR1"  : 'fr1_aa' ,
+#     "AA. Seq. CDR1" : 'cdr1_aa',
+#     "AA. Seq. FR2"  : 'fr2_aa' ,
+#     "AA. Seq. CDR2" : 'cdr2_aa',
+#     "AA. Seq. FR3"  : 'fr3_aa' ,
+#     "AA. Seq. CDR3" : 'cdr3_aa',
+#     "AA. Seq. FR4"  : 'fr4_aa' ,
+#     }
+#     df = df.rename(str, columns=column_reindex)
+#     cols = column_reindex.values() 
+#     cols.append('analysis_id')
+#     cols.append('dataset_id')
+#     cols.append('v_top_hit_locus')
+#     cols.append('d_top_hit_locus')
+#     cols.append('j_top_hit_locus')
+#     cols.append('c_top_hit_locus')
+#     cols.append('v_top_hit')
+#     cols.append('d_top_hit')
+#     cols.append('j_top_hit')
+#     cols.append('c_top_hit')
+#     df = df[cols]
+#     return df 
+
+
 
 def get_dataset_choices(user = current_user, new = False):
     '''
