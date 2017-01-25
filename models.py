@@ -1478,9 +1478,9 @@ def parse_mixcr_alignment_string_to_shm(alignment):
 
 
 clean_annotation_dataframe_columns = [
+ 'readName',
  'readSequence',
  'readQuality',
- 'readName',
  'allVHitsWithScore',
  'allDHitsWithScore',
  'allJHitsWithScore',
@@ -1521,7 +1521,6 @@ clean_annotation_dataframe_columns = [
 ]
 
 
-
 def build_annotation_dataframe_from_igfft_file(file_path, dropna=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
     df = pd.read_table(file_path, low_memory=False)
     column_reindex = {
@@ -1557,6 +1556,8 @@ def build_annotation_dataframe_from_igfft_file(file_path, dropna=['aaSeqFR1', 'a
     df['v_top_hit_locus'] = df['v_top_hit'].apply(trim_ig_locus_name)
     df['j_top_hit'] = df['allJHitsWithScore'].apply(select_top_hit)
     df['j_top_hit_locus'] = df['j_top_hit'].apply(trim_ig_locus_name)
+    df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(json.dumps)
+    df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(json.dumps)
     df['d_top_hit'] = None
     df['d_top_hit_locus'] = None
     df['nFullSeq'] = df.apply(parse_full_length_nt_seq_from_annotation_dataframe, axis=1)
