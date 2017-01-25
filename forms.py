@@ -267,33 +267,28 @@ class BuildPipelineForm(Form):
     file_2_name = FileField(u'File Name')
     file_pairing = SelectField(u'File Pairing (2 files required)', choices = [ ('none','None'), ('vhvl','Heavy/Light Chain Pairing'), ('forev','Forward/Reverse Pairing') ] )
 
+
+    name = TextField(u'Name', )
+    description = TextField(u'Description')
+
+
+
     dataset = SelectMultipleField(u'Select Dataset', choices = [ ('','') ] )
     dataset_files = SelectMultipleField(u'Select Files', choices = [ ('','') ])
-
-    name = TextField()
-    description = TextField()
-    species = SelectField( 'Species', choices=[('H. sapiens', 'H. sapiens'), ('M. musculus', 'M. musculus')] )
 
     output_dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
     output_project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
 
     ncbi_accession = TextField()
-    #ncbi_description = TextField()
     ncbi_chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
-    #ncbi_dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
-    #ncbi_project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
 
     download_url     = TextField(u'File URL', validators=[validators.input_required()], widget=TextInput())
-    #download_description  = TextAreaField(u'File Description')
     download_chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
     #download_dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
     #download_project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
 
     gsaf_url     = TextField(u'GSAF URL', validators=[validators.input_required()], widget=TextInput())
-    #gsaf_description  = TextAreaField(u'File Description')
     gsaf_chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
-    #gsaf_dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
-    #gsaf_project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
 
     trim = BooleanField(u'Trim Illumina Adapters')
     trim_slidingwindow = BooleanField(u'Use Sliding Window Trimming') # Perform a sliding window trimming, cutting once the average quality within the window falls below a threshold.
@@ -301,20 +296,20 @@ class BuildPipelineForm(Form):
     trim_slidingwindow_quality = IntegerField(u'Required Quality (Integer)') # requiredQuality: specifies the average quality required.
     trim_illumina_adapters = BooleanField(u'Trim Illumina Adapters')
 
-    filter = BooleanField(u'Quality Filter Reads')
+    filter = BooleanField(u'Quality Filter Reads', default='checked')
     filter_quality = IntegerField(u'Minimum Quality', default=20)
     filter_percentage = IntegerField(u'Read Percentage', default=50)
 
-    pandaseq = BooleanField('PANDAseq', default='checked')
+    pandaseq = BooleanField('PANDAseq')
     pandaseq_algorithm = SelectField(u'PANDAseq Algorithm', choices=(['ea_util', 'ea_util'], ['flash', 'flash'], ['pear', 'pear'], ['rdp_mle', 'rdp_mle'],  ['simple_bayesian', 'simple_bayesian'], ['stitch', 'stitch'], ['uparse', 'uparse']), validators=[validators.input_required()])
 
     analysis_type = RadioField('Select a File Source', choices=[ ('igrep' , 'IGREP/IGFFT'), ('mixcr' , 'MixCR'), ('abstar' , 'ABStar')])
 
-    loci = MultiCheckboxField('Loci', choices=[('IGH', 'IGH'), ('IGL', 'IGL'), ('IGK', 'IGK'), ('TCRA', 'TCRA'), ('TCRB', 'TCRB') ,('TCRG', 'TCRG'), ('TCRD', 'TCRD')])
+    loci = MultiCheckboxField('Loci', choices=[('IGH', 'IGH'), ('IGL', 'IGL'), ('IGK', 'IGK'), ('TCRA', 'TCRA'), ('TCRB', 'TCRB') ,('TCRG', 'TCRG'), ('TCRD', 'TCRD')], default = ['IGH', 'IGK', 'IGL'])
+    species = SelectField( 'Species', choices=[('H. sapiens', 'H. sapiens'), ('M. musculus', 'M. musculus')] )
 
-    name = TextField(u'Name', )
-    description = TextField(u'Description')
-    
+    standardize_outputs = BooleanField('Standardize Output', default='checked')
+
     cluster = BooleanField(u'Cluster Sequences')
     generate_msdb = BooleanField(u'Generate Mass Spec Database')
     pair_vhvl = BooleanField(u'Run VHVL Pairing on IGFFT Annotation Files')

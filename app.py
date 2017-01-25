@@ -1190,7 +1190,8 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
             f.file_size = os.path.getsize(f.path)
             db.session.commit()
             db.session.refresh(f)
-            output_file_ids.append(f.id)
+            if f.file_type == 'MIXCR_ALIGNMENT_TEXT': 
+                output_file_ids.append(f.id)
         else:
             if error != None:
                 logger.error( error )
@@ -1388,6 +1389,46 @@ def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, 
     # PARSE WITH parse_and_insert_mixcr_annotation_dataframe_from_file_path to speed up? 
     # if not analysis.status == 'FAILED': result = parse_and_insert_mixcr_annotations_from_file_path(parseable_mixcr_alignments_file_path, dataset_id=analysis.dataset.id, analysis_id=analysis.id)
     return ReturnValue('Abstar analysis completed successfully.', file_ids = output_file_ids)
+
+
+
+@celery.task(base=LogTask, bind=True)
+def standardize_output_files(self, file_ids=None, *args, **kwargs):
+
+    if self.parent_task:
+        task = self.parent_task
+    else:
+        task = self
+    logger = self.logger
+
+    ##### Obtain Files for Analysis #####
+    if not file_ids:
+        logger.warning('No File Ids To Standardize?')
+
+    with session_scope() as session:
+
+        files_to_standardize = []
+        for file_id in file_ids: 
+            files_to_standardize.append(session.query(File).get(file_id))
+        logger.info('Stanardizing {} files: {}'.format(str(len(files_to_standardize)), ','.join(map(lambda f: f.name, files_to_standardize))))
+        standardized_file_ids = [] 
+        for file in files_to_standardize: 
+            logger.info('Standardizing file {} and adding to Dataset id {}'.format(str(file.name), str(file.dataset_id)))
+            
+            if 'IGFFT' in file.file_type: 
+                df = build_annotation_dataframe_from_igfft_file(file.path)
+            if 'MIXCR' in file.file_type: 
+                df = build_annotation_dataframe_from_mixcr_file(file.path)
+            def add_bigg_txt(string): return string.replace('.txt', '', 99) + '.bigg.txt'
+            new_file = File(name = add_bigg_txt(file.name), directory = file.directory, path = add_bigg_txt(file.path), file_type = 'BIGG_ANNOTATION', dataset_id = file.dataset_id, analysis_id = file.analysis_id, check_name = False)
+            df.to_csv(new_file.path, sep='\t', index=False)
+            session.add(new_file)
+            session.commit()
+            standardized_file_ids.append(new_file.id)
+        return_value = ReturnValue('{} Files Standardized.'.format(len(standardized_file_ids)), file_ids=standardized_file_ids)
+    
+    return return_value
+
 
 @celery.task(base = LogTask, bind = True)
 def parse_and_insert_mixcr_annotations_from_file_path(self, file_path, dataset_id=None, analysis_id=None):
@@ -3070,6 +3111,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     species = kwargs['species']
     loci = kwargs['loci']
     generate_msdb = kwargs['generate_msdb']
+    standardize_outputs = kwargs['standardize_outputs']
     pair_vhvl = kwargs['pair_vhvl']
     msdb_cluster_percent = float( kwargs['msdb_cluster_percent'] )
     require_cdr1 = kwargs['require_cdr1']
@@ -3214,14 +3256,14 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         file_ids_to_analyze = return_value.file_ids 
         logger.info (return_value)
 
-    ##### Perform Analysis #####
+    ##### Perform Annotation Generation #####
     if analysis_type == 'igrep':
 
         return_value = unzip_files( user_id = user_id, file_ids = file_ids_to_analyze, destination_directory = analysis_directory, logger = logger)
         file_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
-        return_value = run_igrep_annotation_on_dataset_files(dataset_id = dataset_id, file_ids = file_ids_to_analyze, user_id = user_id, analysis_id = analysis_id, species = species, loci=loci, logger = logger, parent_task = task)
+        return_value = annotated_file_return_value = run_igrep_annotation_on_dataset_files(dataset_id = dataset_id, file_ids = file_ids_to_analyze, user_id = user_id, analysis_id = analysis_id, species = species, loci=loci, logger = logger, parent_task = task)
         file_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
@@ -3231,7 +3273,6 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         if pair_vhvl:
             #return_value = run_pair_vhvl_with_dataset_id( analysis_id = analysis_id, file_ids = file_ids_to_analyze, user_id = user_id, parent_task = self)
             return_value = run_pair_vhvl_with_dataset_id( user_id= user_id, dataset_id = output_dataset, analysis_id = analysis_id, file_ids = file_ids_to_analyze, vhvl_min = vhvl_min, vhvl_max = vhvl_max, vhvl_step = vhvl_step, parent_task = self)
-
 
     elif analysis_type == 'mixcr':
         return_value = run_mixcr_analysis_id_with_files(analysis_id = analysis_id, file_ids = file_ids_to_analyze, species = species, loci=loci, parent_task = task)
@@ -3245,12 +3286,20 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         logger.info (return_value)
 
         # Run Abstar function
-        return_value = run_abstar_analysis_id_with_files(user_id = user_id, analysis_id = analysis_id, file_ids = file_ids_to_analyze, species = species, parent_task = task)
+        return_value = annotated_file_return_value =run_abstar_analysis_id_with_files(user_id = user_id, analysis_id = analysis_id, file_ids = file_ids_to_analyze, species = species, parent_task = task)
         file_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 
     else:
         raise Exception( 'Analysis type "{}" cannot be performed.'.format(analysis_type) )
+
+
+    # Coerce Annotations into Standard Format: 
+    if standardize_outputs: 
+        annotation_files = return_value.file_ids
+        return_value = standardize_output_files(analysis_id = analysis_id, file_ids = annotation_files, parent_task = task)
+        logger.info (return_value)
+        file_ids_to_analyze = return_value.file_ids
 
 
     ##### Add files to Appropriate Dataset/Project #####

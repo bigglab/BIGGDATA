@@ -2296,6 +2296,7 @@ def pipeline(selected_dataset=None):
                 'cluster' : build_pipeline_form.cluster.data,
                 'species' : build_pipeline_form.species.data,
                 'loci': build_pipeline_form.loci.data,
+                'standardize_outputs': build_pipeline_form.standardize_outputs.data,
                 'generate_msdb' : build_pipeline_form.generate_msdb.data,
                 'pair_vhvl' : build_pipeline_form.pair_vhvl.data,
                 'msdb_cluster_percent' : str(build_pipeline_form.msdb_cluster_percent.data),
@@ -2317,7 +2318,7 @@ def pipeline(selected_dataset=None):
         build_pipeline_form.trim_illumina_adapters.data = True
         build_pipeline_form.trim_slidingwindow_size.data = 4
         build_pipeline_form.trim_slidingwindow_quality.data = 15
-        
+        # build_pipeline_form.loci = ["IGH", "IGL", "IGK"]
 
     return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes, first_error_item = first_error_item, selected_dataset=selected_dataset )
 

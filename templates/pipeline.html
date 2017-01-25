@@ -28,7 +28,10 @@
                   <a data-target="#myCarousel" data-slide-to="2" class="active" href="#" style="color: inherit; text-decoration: none">Select Analysis</a> </span>
                 <span style="color:gray"> > </span> 
                 <span id="slide3" style="color:gray">
-                  <a data-target="#myCarousel" data-slide-to="3" class="active" href="#" style="color: inherit; text-decoration: none">Select Output</a> </span>
+                  <a data-target="#myCarousel" data-slide-to="3" class="active" href="#" style="color: inherit; text-decoration: none">Select Post-Processing</a> </span>
+                <span style="color:gray"> > </span> 
+                <span id="slide4" style="color:gray">
+                  <a data-target="#myCarousel" data-slide-to="4" class="active" href="#" style="color: inherit; text-decoration: none">Select Output</a> </span>
                 </b></td>
                 <td align="right"></td>
               </tr>
@@ -486,7 +489,7 @@
                                   <td width="15px"></td>
                                   <td>                              
                                     <label class="radio">
-                                      <input id="analysis_type-1" name="analysis_type" type="radio" value="mixcr" class="mixcr">MixCR
+                                      <input id="analysis_type-1" name="analysis_type" type="radio" value="mixcr"  checked="yep" class="mixcr">MixCR
                                     </label>
                                   </td>
                                 </tr>
@@ -547,6 +550,46 @@
 
                         </div>  <!-- /item analysis -->
 
+
+                        <div class="item" name='postprocessing'>
+                            <center><b>Choose Postprocessing Options</b></center>
+                          <div id="accordion">
+
+                            <table >
+                              <tr>
+                                <td>
+                                  <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                                    <label>
+                                    </label>
+                                    </div>
+
+
+                                  <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                                    <label>
+                                        {{ build_pipeline_form.standardize_outputs(class='standardize_outputs') }}
+                                        <b>Stardize Output To BIGG-compatible Format</b> 
+                                    </label>
+                                  </div> <!-- /checkbox -->
+
+                                  <div id="collapse" class="collapse standardize_outputs">
+                                    <div style="margin-left: 25px">
+
+                                      <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                                        <label>
+                                            <b>This will route the raw annotation file through our standardization, which will reformat columns to be identical regardless of alignment program.</b>
+                                        </label>
+                                      </div>
+                     
+                                    </div>
+                                  </div> 
+                                </td>
+                              </tr>
+                            </table>
+
+                          </div> <!-- /accordian  -->
+                        </div>
+
+
                         <div class="item">
                           <center><b>Select where you would like to output your files.</b></center>
                           <br>
@@ -604,6 +647,7 @@
               <li data-target="#myCarousel" data-slide-to="1"></li>
               <li data-target="#myCarousel" data-slide-to="2"></li>
               <li data-target="#myCarousel" data-slide-to="3"></li>
+              <li data-target="#myCarousel" data-slide-to="4"></li>
             </ol>
 
             <!-- Left and right controls -->
@@ -636,6 +680,7 @@ $('.carousel').on('slide.bs.carousel',function(e){
             $('#slide1').css( "color", "gray" );
             $('#slide2').css( "color", "gray" );
             $('#slide3').css( "color", "gray" );
+            $('#slide4').css( "color", "gray" );
             $('.left.carousel-control').hide();
             $('.right.carousel-control').show();
             break;
@@ -644,6 +689,7 @@ $('.carousel').on('slide.bs.carousel',function(e){
             $('#slide1').css( "color", "black" );
             $('#slide2').css( "color", "gray" );
             $('#slide3').css( "color", "gray" );
+            $('#slide4').css( "color", "gray" );
             $('.left.carousel-control').show();
             $('.right.carousel-control').show();
             break;
@@ -652,6 +698,7 @@ $('.carousel').on('slide.bs.carousel',function(e){
             $('#slide1').css( "color", "gray" );
             $('#slide2').css( "color", "black" );
             $('#slide3').css( "color", "gray" );
+            $('#slide4').css( "color", "gray" );
             $('.left.carousel-control').show();
             $('.right.carousel-control').show();
             break;
@@ -661,6 +708,17 @@ $('.carousel').on('slide.bs.carousel',function(e){
             $('#slide1').css( "color", "gray" );
             $('#slide2').css( "color", "gray" );
             $('#slide3').css( "color", "black" );
+            $('#slide4').css( "color", "gray" );
+            $('.left.carousel-control').show();
+            $('.right.carousel-control').show();
+            break;
+
+        case 4:
+            $('#slide0').css( "color", "gray" );
+            $('#slide1').css( "color", "gray" );
+            $('#slide2').css( "color", "gray" );
+            $('#slide3').css( "color", "gray" );
+            $('#slide4').css( "color", "black" );
             $('.left.carousel-control').show();
             $('.right.carousel-control').hide();
 
