@@ -1351,6 +1351,33 @@ def build_annotation_from_mongo_dict(d):
         print 'CAN NOT INTERPRET NON-IMGT DOCUMENTS (yet)'
         return False
 
+#Sometimes we need to retranslate FR4 in new mixcr output... 
+codon_aa_dict = {"UUU":"F", "UUC":"F", "UUA":"L", "UUG":"L",
+       "UCU":"S", "UCC":"S", "UCA":"S", "UCG":"S",
+       "UAU":"Y", "UAC":"Y", "UAA":"*", "UAG":"*",
+       "UGU":"C", "UGC":"C", "UGA":"*", "UGG":"W",
+       "CUU":"L", "CUC":"L", "CUA":"L", "CUG":"L",
+       "CCU":"P", "CCC":"P", "CCA":"P", "CCG":"P",
+       "CAU":"H", "CAC":"H", "CAA":"Q", "CAG":"Q",
+       "CGU":"R", "CGC":"R", "CGA":"R", "CGG":"R",
+       "AUU":"I", "AUC":"I", "AUA":"I", "AUG":"M",
+       "ACU":"T", "ACC":"T", "ACA":"T", "ACG":"T",
+       "AAU":"N", "AAC":"N", "AAA":"K", "AAG":"K",
+       "AGU":"S", "AGC":"S", "AGA":"R", "AGG":"R",
+       "GUU":"V", "GUC":"V", "GUA":"V", "GUG":"V",
+       "GCU":"A", "GCC":"A", "GCA":"A", "GCG":"A",
+       "GAU":"D", "GAC":"D", "GAA":"E", "GAG":"E",
+       "GGU":"G", "GGC":"G", "GGA":"G", "GGG":"G",}
+
+def translate_human_nt(string):
+    string = string.replace('T', 'U', 999) 
+    start = 0 
+    final = ''
+    while start+2 < len(string):
+        codon = string[start:start+3]
+        final = final + codon_aa_dict[codon]
+        start+=3
+    return final
 
 
 def trim_ig_allele_name(long_name): 
@@ -1417,17 +1444,88 @@ def parse_j_alignments_from_IGFFT_dataframe(row):
        scores = row['J-Gene_Alignment_Scores'].split(',')
        return(OrderedDict(zip(hits, scores)))
 
-def parse_full_length_aa_seq_from_annotation_dataframe(row): 
+def parse_full_length_nt_seq_from_annotation_dataframe(row): 
        return row['nSeqFR1'] + row['nSeqCDR1'] + row['nSeqFR2'] + row['nSeqCDR2'] + row['nSeqFR3'] + row['nSeqCDR3'] + row['nSeqFR4']
 
-def parse_full_length_nt_seq_from_annotation_dataframe(row): 
+def parse_full_length_aa_seq_from_annotation_dataframe(row): 
        return row['aaSeqFR1'] + row['aaSeqCDR1'] + row['aaSeqFR2'] + row['aaSeqCDR2'] + row['aaSeqFR3'] + row['aaSeqCDR3'] + row['aaSeqFR4']
 
 
-def build_annotation_dataframe_from_igfft_file(file_path, dropna=True):
+def parse_mixcr_alignment_string_to_shm(alignment):
+    #only consider the first alignment 
+    alignment = alignment.split(';')[0] 
+    #different fields of alignment are separated by '|'
+    sub_strings = alignment.split('|')
+    germ_start = sub_strings[0]
+    germ_end = sub_strings[1]
+    query_start = sub_strings[3]
+    query_end = sub_strings[4]
+    algn_len = sub_strings[2]
+    alignment_string = sub_strings[5]
+    num_mismatch = alignment_string.count('S')
+    num_del = alignment_string.count('D')
+    num_ins = alignment_string.count('I')
+    shm = (num_mismatch+num_del+num_ins)/float(algn_len)*100
+    return shm
+
+# def parse_mixcr_vAlignment_to_shm(row):
+#     alignment = row['vAlignment']
+#     return parse_mixcr_alignment_string_to_shm(alignment)
+
+# def parse_mixcr_jAlignment_to_shm(row):
+#     alignment = row['jAlignment']
+#     return parse_mixcr_alignment_string_to_shm(alignment)
+
+
+clean_annotation_dataframe_columns = [
+ 'readSequence',
+ 'readQuality',
+ 'readName',
+ 'allVHitsWithScore',
+ 'allDHitsWithScore',
+ 'allJHitsWithScore',
+ 'allCHitsWithScore',
+ 'v_top_hit',
+ 'v_top_hit_locus',
+ 'd_top_hit',
+ 'd_top_hit_locus',
+ 'j_top_hit',
+ 'j_top_hit_locus',
+ 'c_top_hit',
+ 'c_top_hit_locus',
+ 'nFullSeq',
+ 'aaFullSeq',
+ 'nSeqFR1',
+ 'nSeqCDR1',
+ 'nSeqFR2',
+ 'nSeqCDR2',
+ 'nSeqFR3',
+ 'nSeqCDR3',
+ 'nSeqFR4',
+ 'qualFR1',
+ 'qualCDR1',
+ 'qualFR2',
+ 'qualCDR2',
+ 'qualFR3',
+ 'qualCDR3',
+ 'qualFR4',
+ 'aaSeqFR1',
+ 'aaSeqCDR1',
+ 'aaSeqFR2',
+ 'aaSeqCDR2',
+ 'aaSeqFR3',
+ 'aaSeqCDR3',
+ 'aaSeqFR4',
+ 'v_region_shm',
+ 'j_region_shm',
+]
+
+
+
+def build_annotation_dataframe_from_igfft_file(file_path, dropna=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
     df = pd.read_table(file_path, low_memory=False)
     column_reindex = {
-          'Header' : 'descrR1',
+          'Header' : 'readName',
           'Sequence' : 'readSequence',
           'Quality_Score' : 'readQuality',
           'FR1_Sequence.NT' : 'nSeqFR1',
@@ -1444,29 +1542,45 @@ def build_annotation_dataframe_from_igfft_file(file_path, dropna=True):
           'FR3_Sequence.AA' : 'aaSeqFR3',
           'CDR3_Sequence.AA' : 'aaSeqCDR3',
           'FR4_Sequence.AA' : 'aaSeqFR4',
-          'Reading_Frames: FR1,CDR1,FR2,CDR2,FR3,CDR3,FR4' : '',
           'Isotype' : 'c_top_hit',
+          'Isotype percent similarity' : 'cBestIdentityPercent',
     }
     df = df.rename(str, columns=column_reindex)
-    essential_columns = ['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']
-    if dropna: df = df.dropna(subset=essential_columns, how='any')
+    if dropna != False: df = df.dropna(subset=dropna, how='any')
+    df = df.dropna(subset=['Top_V-Gene_Hits', 'Top_J-Gene_Hits'], how='any')
     df['c_top_hit_locus'] = df['c_top_hit'] 
     df['allVHitsWithScore'] = df.apply(parse_v_alignments_from_IGFFT_dataframe, axis=1)
     df['allJHitsWithScore'] = df.apply(parse_j_alignments_from_IGFFT_dataframe, axis=1)
+    df['allDHitsWithScore'] = None
+    df['allCHitsWithScore'] = None
     df['v_top_hit'] = df['allVHitsWithScore'].apply(select_top_hit)
     df['v_top_hit_locus'] = df['v_top_hit'].apply(trim_ig_locus_name)
     df['j_top_hit'] = df['allJHitsWithScore'].apply(select_top_hit)
     df['j_top_hit_locus'] = df['j_top_hit'].apply(trim_ig_locus_name)
-    df['nFullSeq'] = df.apply(parse_full_length_nt_seq_from_igfft_dataframe, axis=1)
-    df['aaFullSeq'] = df.apply(parse_full_length_aa_seq_from_igfft_dataframe, axis=1)
+    df['d_top_hit'] = None
+    df['d_top_hit_locus'] = None
+    df['nFullSeq'] = df.apply(parse_full_length_nt_seq_from_annotation_dataframe, axis=1)
+    df['aaFullSeq'] = df.apply(parse_full_length_aa_seq_from_annotation_dataframe, axis=1)
+    df['v_region_shm'] = df['VRegion.SHM.Per_nt']
+    df['j_region_shm'] = df['JRegion.SHM.Per_nt']
+    df['qualFR1'] = None
+    df['qualCDR1'] = None
+    df['qualFR2'] = None
+    df['qualCDR2'] = None
+    df['qualFR3'] = None
+    df['qualCDR3'] = None
+    df['qualFR4'] = None
+    df = df[clean_annotation_dataframe_columns]
     return df 
 
 
 
-def build_annotation_dataframe_from_mixcr_file(file_path, dropna=True):
+def build_annotation_dataframe_from_mixcr_file(file_path, dropna=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
     df = pd.read_table(file_path, low_memory=False)
-    essential_columns = ['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']
-    if dropna: df = df.dropna(subset=essential_columns, how='any')
+    if dropna != False: df = df.dropna(subset=dropna, how='any')
+    df['readSequence'] = df['readSequence']
+    df['readQuality'] = df['readQuality']
+    df['readName'] = df['descrR1']
     df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
     df['allDHitsWithScore'] = df['allDHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
     df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
@@ -1483,14 +1597,19 @@ def build_annotation_dataframe_from_mixcr_file(file_path, dropna=True):
     df['allDHitsWithScore'] = df['allDHitsWithScore'].apply(json.dumps)
     df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(json.dumps)
     df['allCHitsWithScore'] = df['allCHitsWithScore'].apply(json.dumps)
+    df['v_region_shm'] = df['allVAlignments'].apply(parse_mixcr_alignment_string_to_shm)
+    df['j_region_shm'] = df['allJAlignments'].apply(parse_mixcr_alignment_string_to_shm)
+    # retranslate FR4 region in mixcr output. Don't love this, but its unfortunately necessary:
+    df['aaSeqFR4'] = df['nSeqFR4'].apply(translate_human_nt)
     df['nFullSeq'] = df.apply(parse_full_length_nt_seq_from_annotation_dataframe, axis=1)
     df['aaFullSeq'] = df.apply(parse_full_length_aa_seq_from_annotation_dataframe, axis=1)
+    df = df[clean_annotation_dataframe_columns]
     return df 
 
 
+# need to implement: 
 def clean_annotation_dataframe_for_mass_spec(dataframe): 
     df = dataframe[~dataframe['aaFullSeq'].str.contains('\*|_')]
-
     def clean(row):
         if row['v_top_hit'].startswith('IGL'):
             row['aaFullSeq'] = row['aaFullSeq'] + 'GQPK'
@@ -1498,6 +1617,7 @@ def clean_annotation_dataframe_for_mass_spec(dataframe):
             row['aaFullSeq'] = row['aaFullSeq'] + 'R'
         return row
     df = df.apply(clean, axis=1)
+
 
 
 
