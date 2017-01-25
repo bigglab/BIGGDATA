@@ -97,6 +97,8 @@ def build_exp_from_dict(dict):
         setattr(ex, k.lower(), v)
     return ex
 
+
+# need to rework for new annotation format: 
 def build_annotation_from_mongo_dict(d): 
     d = flatten_dictionary(d)
     nd = {}

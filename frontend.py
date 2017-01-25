@@ -1452,49 +1452,6 @@ def msdb(status=[]):
 
     return render_template("msdb.html", dataset=dataset, msdb_form=msdb_form, status=status, current_user=current_user, dataset_file_dict = dataset_file_dict) 
 
-@frontend.route('/analysis/create/<int:dataset_id>', methods=['GET', 'POST'])
-@login_required
-def create_analysis(dataset_id, status=[]):
-    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
-
-    try:
-        if dataset and dataset.name == "__default__":
-            flash('Error: that dataset cannot be analyzed','warning')
-            return redirect( url_for('frontend.dashboard') )
-    except:
-        flash('Error: that dataset cannot be analyzed','warning')
-        return redirect( url_for('frontend.dashboard') )
-
-    form = CreateAnalysisForm()
-    file_options = map(lambda f: [f.id, f.name], [f for f in dataset.files if 'FASTQ' in f.file_type])
-    form.file_ids.choices = file_options
-    status = []
-    if request.method == 'POST' and dataset:
-        status.append('Analysis Launch Detected')
-        result = run_analysis.apply_async(
-            (None, dataset_id, form.file_ids.data, ),  
-                {'analysis_type': 'IGFFT', 
-                'analysis_name': form.name.data, 
-                'analysis_description': form.description.data, 
-                'trim': form.trim.data, 
-                'cluster': form.cluster.data, 
-                'overlap': form.overlap.data, 
-                'paired': form.paired.data,
-                'user_id': current_user.id }, 
-            queue=celery_queue)
-        status.append(result.__repr__())
-        status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
-        time.sleep(1)
-        # return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
-        analyses = current_user.analyses.all()
-        analysis_file_dict = OrderedDict()
-        for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
-            analysis_file_dict[analysis] = analysis.files.all() 
-        return redirect(url_for('.analyses', status=status))
-        # return render_template("analyses.html", analyses=analyses, analysis_file_dict=analysis_file_dict, status=status)
-    else: 
-        return render_template("create_analysis.html", dataset=dataset, form=form, status=status, current_user=current_user) 
-
 
 @frontend.route('/browse_sequences', methods=['GET', 'POST'])
 @login_required
