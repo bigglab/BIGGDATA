@@ -1476,6 +1476,11 @@ def parse_mixcr_alignment_string_to_shm(alignment):
 #     alignment = row['jAlignment']
 #     return parse_mixcr_alignment_string_to_shm(alignment)
 
+def clean_null_string(string): 
+    if string == 'null': 
+        return None
+    else: 
+        return string 
 
 clean_annotation_dataframe_columns = [
  'readName',
@@ -1550,14 +1555,14 @@ def build_annotation_dataframe_from_igfft_file(file_path, dropna=['aaSeqFR1', 'a
     df['c_top_hit_locus'] = df['c_top_hit'] 
     df['allVHitsWithScore'] = df.apply(parse_v_alignments_from_IGFFT_dataframe, axis=1)
     df['allJHitsWithScore'] = df.apply(parse_j_alignments_from_IGFFT_dataframe, axis=1)
-    df['allDHitsWithScore'] = None
-    df['allCHitsWithScore'] = None
+    df['allDHitsWithScore'] = ''
+    df['allCHitsWithScore'] = ''
     df['v_top_hit'] = df['allVHitsWithScore'].apply(select_top_hit)
     df['v_top_hit_locus'] = df['v_top_hit'].apply(trim_ig_locus_name)
     df['j_top_hit'] = df['allJHitsWithScore'].apply(select_top_hit)
     df['j_top_hit_locus'] = df['j_top_hit'].apply(trim_ig_locus_name)
-    df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(json.dumps)
-    df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(json.dumps)
+    df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(json.dumps).apply(clean_null_string)
+    df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(json.dumps).apply(clean_null_string)
     df['d_top_hit'] = None
     df['d_top_hit_locus'] = None
     df['nFullSeq'] = df.apply(parse_full_length_nt_seq_from_annotation_dataframe, axis=1)
@@ -1594,10 +1599,10 @@ def build_annotation_dataframe_from_mixcr_file(file_path, dropna=['aaSeqFR1', 'a
     df['j_top_hit_locus'] = df['j_top_hit'].apply(trim_ig_locus_name)
     df['c_top_hit'] = df['allCHitsWithScore'].apply(select_top_hit)
     df['c_top_hit_locus'] = df['c_top_hit'].apply(trim_ig_locus_name)
-    df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(json.dumps)
-    df['allDHitsWithScore'] = df['allDHitsWithScore'].apply(json.dumps)
-    df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(json.dumps)
-    df['allCHitsWithScore'] = df['allCHitsWithScore'].apply(json.dumps)
+    df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(json.dumps).apply(clean_null_string)
+    df['allDHitsWithScore'] = df['allDHitsWithScore'].apply(json.dumps).apply(clean_null_string)
+    df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(json.dumps).apply(clean_null_string)
+    df['allCHitsWithScore'] = df['allCHitsWithScore'].apply(json.dumps).apply(clean_null_string)
     df['v_region_shm'] = df['allVAlignments'].apply(parse_mixcr_alignment_string_to_shm)
     df['j_region_shm'] = df['allJAlignments'].apply(parse_mixcr_alignment_string_to_shm)
     # retranslate FR4 region in mixcr output. Don't love this, but its unfortunately necessary:
