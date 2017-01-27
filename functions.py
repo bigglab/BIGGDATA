@@ -1,7 +1,5 @@
 import operator 
 import json 
-
-
 from models import * 
 
 def _modify_function(f):

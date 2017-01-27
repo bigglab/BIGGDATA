@@ -1,7 +1,5 @@
--readId
--sequence
--quality
 -descrR1
+-sequence
 -vHitsWithScore
 -dHitsWithScore
 -jHitsWithScore

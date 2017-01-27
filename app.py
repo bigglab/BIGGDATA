@@ -1105,7 +1105,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     alignment_output_file.path = '{}.txt'.format(alignment_file.path)
     alignment_output_file.file_type = 'MIXCR_ALIGNMENT_TEXT'
     alignment_output_file.name = '{}.txt'.format(alignment_file.name)
-    alignment_output_file.command = '{} exportAlignments  -s --preset-file /data/resources/software/BIGGDATA/mixcr_output_presets.txt {} {}'.format(app.config['MIXCR'], alignment_file.path, alignment_output_file.path)
+    alignment_output_file.command = '{} exportAlignments  -s --preset-file /data/resources/software/BIGGDATA/utils/mixcr_output_presets.txt {} {}'.format(app.config['MIXCR'], alignment_file.path, alignment_output_file.path)
     files_to_execute.append(alignment_output_file)
     # pretty_alignment_file = File()
     # pretty_alignment_file.user_id = dataset.user_id    
