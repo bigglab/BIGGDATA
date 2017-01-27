@@ -231,7 +231,7 @@ def build_annotation_dataframe_from_igfft_file(file_path, dropna=['aaSeqFR1', 'a
 
 
 def build_annotation_dataframe_from_mixcr_file(file_path, dropna=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
-    df = pd.read_table(file_path, low_memory=False)
+    df = pd.read_table(file_path) #, low_memory=False)
     if dropna != False: df = df.dropna(subset=dropna, how='any')
     df['readSequence'] = df['readSequence']
     df['readName'] = df['descrR1']
