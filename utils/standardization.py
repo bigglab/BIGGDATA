@@ -25,6 +25,7 @@ codon_aa_dict = {"UUU":"F", "UUC":"F", "UUA":"L", "UUG":"L",
        "GGU":"G", "GGC":"G", "GGA":"G", "GGG":"G",}
 
 def translate_human_nt(string):
+    if not type(string) == str: return ''
     string = string.replace('T', 'U', 999) 
     start = 0 
     final = ''
@@ -100,10 +101,12 @@ def parse_j_alignments_from_IGFFT_dataframe(row):
        return(OrderedDict(zip(hits, scores)))
 
 def parse_full_length_nt_seq_from_annotation_dataframe(row): 
-       return row['nSeqFR1'] + row['nSeqCDR1'] + row['nSeqFR2'] + row['nSeqCDR2'] + row['nSeqFR3'] + row['nSeqCDR3'] + row['nSeqFR4']
+    #return row['nSeqFR1'] + row['nSeqCDR1'] + row['nSeqFR2'] + row['nSeqCDR2'] + row['nSeqFR3'] + row['nSeqCDR3'] + row['nSeqFR4']
+    return ''.join(row[['nSeqFR1', 'nSeqCDR1', 'nSeqFR2', 'nSeqCDR2', 'nSeqFR3', 'nSeqCDR3', 'nSeqFR4']].dropna().values.astype(str))
 
 def parse_full_length_aa_seq_from_annotation_dataframe(row): 
-       return row['aaSeqFR1'] + row['aaSeqCDR1'] + row['aaSeqFR2'] + row['aaSeqCDR2'] + row['aaSeqFR3'] + row['aaSeqCDR3'] + row['aaSeqFR4']
+    #return row['aaSeqFR1'] + row['aaSeqCDR1'] + row['aaSeqFR2'] + row['aaSeqCDR2'] + row['aaSeqFR3'] + row['aaSeqCDR3'] + row['aaSeqFR4']
+    return ''.join(row[['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']].dropna().values.astype(str))
 
 
 def parse_mixcr_alignment_string_to_shm(alignment):
@@ -177,7 +180,7 @@ clean_annotation_dataframe_columns = [
 ]
 
 
-def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_ms_peptides=False, require=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
+def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_ms_peptides=False, require_annotations=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
     df = pd.read_table(file_path) #, low_memory=False)
     column_reindex = {
           'Header' : 'readName',
@@ -200,7 +203,7 @@ def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_
           'Isotype percent similarity' : 'cBestIdentityPercent',
     }
     df = df.rename(str, columns=column_reindex)
-    if require != False: df = df.dropna(subset=require, how='any')
+    if require_annotations != False: df = df.dropna(subset=require_annotations, how='any')
     df = df.dropna(subset=['Top_V-Gene_Hits', 'Top_J-Gene_Hits'], how='any')
     df['c_top_hit_locus'] = df['c_top_hit'] 
     df['allVHitsWithScore'] = df.apply(parse_v_alignments_from_IGFFT_dataframe, axis=1)
@@ -215,8 +218,8 @@ def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_
     df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(json.dumps).apply(clean_null_string)
     df['d_top_hit'] = None
     df['d_top_hit_locus'] = None
-    df['nFullSeq'] = df.apply(parse_full_length_nt_seq_from_annotation_dataframe, axis=1)
-    df['aaFullSeq'] = df.apply(parse_full_length_aa_seq_from_annotation_dataframe, axis=1)
+    df['nFullSeq'] = df.apply(parse_full_length_nt_seq_from_annotation_dataframe, axis=1) if len(df) >=1 else ''
+    df['aaFullSeq'] = df.apply(parse_full_length_aa_seq_from_annotation_dataframe, axis=1) if len(df) >=1 else ''
     df = df[~df['aaFullSeq'].str.contains('\*|_')] if rmindels == True else df
     df = append_cterm_peptides_for_mass_spec(df) if append_ms_peptides == True else df
     df['v_region_shm'] = df['VRegion.SHM.Per_nt']
@@ -234,9 +237,9 @@ def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_
 
 
 
-def build_annotation_dataframe_from_mixcr_file(file_path, rmindels=True, append_ms_peptides=False, require=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
+def build_annotation_dataframe_from_mixcr_file(file_path, rmindels=True, append_ms_peptides=False, require_annotations=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
     df = pd.read_table(file_path) #, low_memory=False)
-    if require != False: df = df.dropna(subset=require, how='any')
+    if require_annotations != False: df = df.dropna(subset=require_annotations, how='any')
     df['readSequence'] = df['readSequence']
     df['readName'] = df['descrR1']
     df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
@@ -257,10 +260,10 @@ def build_annotation_dataframe_from_mixcr_file(file_path, rmindels=True, append_
     df['allCHitsWithScore'] = df['allCHitsWithScore'].apply(json.dumps).apply(clean_null_string)
     df['v_region_shm'] = df['allVAlignments'].apply(parse_mixcr_alignment_string_to_shm)
     df['j_region_shm'] = df['allJAlignments'].apply(parse_mixcr_alignment_string_to_shm)
-    # retranslate FR4 region in mixcr output. Don't love this, but its unfortunately necessary:
+    # retranslate FR4 region in mixcr output. Don't love this, but its unfortunately necessary as mixcr will annotation aaSeqFR4 as something like AKEAL_SPSPQ:
     df['aaSeqFR4'] = df['nSeqFR4'].apply(translate_human_nt)
-    df['nFullSeq'] = df.apply(parse_full_length_nt_seq_from_annotation_dataframe, axis=1)
-    df['aaFullSeq'] = df.apply(parse_full_length_aa_seq_from_annotation_dataframe, axis=1)
+    df['nFullSeq'] = df.apply(parse_full_length_nt_seq_from_annotation_dataframe, axis=1) if len(df) >=1 else ''
+    df['aaFullSeq'] = df.apply(parse_full_length_aa_seq_from_annotation_dataframe, axis=1) if len(df) >=1 else ''
     df = df[~df['aaFullSeq'].str.contains('\*|_')] if rmindels == True else df
     df = append_cterm_peptides_for_mass_spec(df) if append_ms_peptides == True  else df
     df = collapse_annotation_dataframe(df)
@@ -279,6 +282,7 @@ def append_cterm_peptides_for_mass_spec(dataframe):
 
 
 def collapse_annotation_dataframe(df, on='aaFullSeq'):
+    if len(df) == 0: return df 
     # Remove duplicates and assign read counts.
     grouped = df.groupby(on, as_index=False, sort=False)
     df_collapsed = grouped.first()

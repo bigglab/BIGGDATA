@@ -2143,7 +2143,7 @@ def pipeline(selected_dataset=None):
                 # used to pass the dataset selection to the celery task
                 build_pipeline_form.output_dataset.data = str(output_file_dataset.id)
             else: # check if the user has selected a project which they have access to
-                output_dataset = session.query(Dataset).get(int(build_pipeline_form.output_dataset.id))
+                output_dataset = db.session.query(Dataset).get(int(build_pipeline_form.output_dataset.data))
                 if output_dataset.user_has_write_access(current_user):
                     output_file_dataset = dataset
                 else:
@@ -2270,14 +2270,12 @@ def pipeline(selected_dataset=None):
                 'species' : build_pipeline_form.species.data,
                 'loci': build_pipeline_form.loci.data,
                 'standardize_outputs': build_pipeline_form.standardize_outputs.data,
+                'require_annotations': build_pipeline_form.require_annotations.data,
                 'append_cterm_peptides': build_pipeline_form.append_cterm_peptides.data,
                 'remove_seqs_with_indels': build_pipeline_form.remove_seqs_with_indels.data,
                 'generate_msdb' : build_pipeline_form.generate_msdb.data,
                 'pair_vhvl' : build_pipeline_form.pair_vhvl.data,
                 'msdb_cluster_percent' : str(build_pipeline_form.msdb_cluster_percent.data),
-                'require_cdr1' : build_pipeline_form.require_cdr1.data,
-                'require_cdr2' : build_pipeline_form.require_cdr2.data,
-                'require_cdr3' : build_pipeline_form.require_cdr3.data,
                 'vhvl_min' : str(build_pipeline_form.vhvl_min.data),
                 'vhvl_max' : str(build_pipeline_form.vhvl_max.data),
                 'vhvl_step' : str(build_pipeline_form.vhvl_step.data)

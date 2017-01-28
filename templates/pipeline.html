@@ -431,7 +431,7 @@
                                       </div>  
                                       -->
 
-
+<!-- 
                                       <div id="collapse" class="collapse pair_vhvl">
                                         <div style="margin-left: 25px; margin-right: 5px;" >
 
@@ -452,19 +452,19 @@
                                                             {{ build_pipeline_form.require_cdr1 }}
                                                             <b>Require CDR1</b> 
                                                         </label>
-                                                      </div> <!-- /checkbox -->
+                                                      </div> 
                                                       <div class="checkbox" class="pull-right" style="padding-left: 4px">
                                                         <label >
                                                             {{ build_pipeline_form.require_cdr2 }}
                                                             <b>Require CDR2</b> 
                                                         </label>
-                                                      </div> <!-- /checkbox -->
+                                                      </div>
                                                       <div class="checkbox" class="pull-right" style="padding-left: 4px">
                                                         <label >
                                                             {{ build_pipeline_form.require_cdr3( checked="checked", disabled=True )}}
                                                             <b>Require CDR3</b> 
                                                         </label>
-                                                      </div> <!-- /checkbox -->
+                                                      </div> 
                                                     </td>
                                                     <td>{{ build_pipeline_form.vhvl_min(class="form-control", type="number", step = "0.01") }}</td>
                                                     <td>{{ build_pipeline_form.vhvl_max(class="form-control", type="number", step = "0.01") }}</td>
@@ -474,7 +474,7 @@
                                           </table>
 
                                         </div>
-                                      </div> <!-- /pair_vhvl collapse -->
+                                      </div> -->
 
                                       
 
@@ -579,6 +579,13 @@
                                       <div style="padding-left: 4px">
                                         <label>
                                             <b>This will route the raw annotation file through our standardization, which will reformat columns to be identical regardless of alignment program.</b>
+                                        </label>
+                                      </div>
+
+                                      <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                                        <label>
+                                            <b>Filter out any annotations without these peptide sequences annotated.</b>
+                                            {{ build_pipeline_form.require_annotations(class='require_annotations') }}
                                         </label>
                                       </div>
 

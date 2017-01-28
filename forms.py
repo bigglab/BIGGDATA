@@ -309,6 +309,8 @@ class BuildPipelineForm(Form):
     species = SelectField( 'Species', choices=[('H. sapiens', 'H. sapiens'), ('M. musculus', 'M. musculus')] )
 
     standardize_outputs = BooleanField('Standardize Output', default='checked')
+    require_annotations = MultiCheckboxField('Require Annotations', choices=[('aaSeqFR1', 'FR1'),('aaSeqCDR1', 'CDR1'),('aaSeqFR2', 'FR2'),('aaSeqCDR2', 'CDR2'),('aaSeqFR3', 'FR3'),('aaSeqCDR3', 'CDR3'),('aaSeqFR4', 'FR4')], default = ['aaSeqCDR3'])
+
     remove_seqs_with_indels = BooleanField('Remove Sequences With Indels', default='checked')
     append_cterm_peptides = BooleanField('Append Peptides to C-Term for Mass Spec') # , default='checked')
 
@@ -318,9 +320,6 @@ class BuildPipelineForm(Form):
     pair_vhvl = BooleanField(u'Run VHVL Pairing on IGFFT Annotation Files')
 
     msdb_cluster_percent = DecimalField('Cluster Percent (MSDB)', places=2, rounding=None, default = 0.9)
-    require_cdr1 = BooleanField()
-    require_cdr2 = BooleanField()
-    require_cdr3 = BooleanField()
 
     vhvl_min = DecimalField('VH/VL Min', places=2, rounding=None, default = 0.96)
     vhvl_max = DecimalField('VH/VL Max', places=2, rounding=None, default = 0.96)

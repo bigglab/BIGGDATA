@@ -1385,7 +1385,7 @@ def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, 
 
 
 @celery.task(base=LogTask, bind=True)
-def standardize_output_files(self, file_ids=None, append_ms_peptides=False, rmindels=True, *args, **kwargs):
+def standardize_output_files(self, file_ids=None, append_ms_peptides=False, rmindels=True, require_annotations=['aaSeqCDR3'], *args, **kwargs):
 
     if self.parent_task:
         task = self.parent_task
@@ -1402,14 +1402,14 @@ def standardize_output_files(self, file_ids=None, append_ms_peptides=False, rmin
         files_to_standardize = []
         for file_id in file_ids: 
             files_to_standardize.append(session.query(File).get(file_id))
-        logger.info('Stanardizing {} files: {}'.format(str(len(files_to_standardize)), ','.join(map(lambda f: f.name, files_to_standardize))))
+        logger.info('Standardizing {} files: {}'.format(str(len(files_to_standardize)), ','.join(map(lambda f: f.name, files_to_standardize))))
         standardized_file_ids = [] 
         for file in files_to_standardize: 
             logger.info('Standardizing file {} and adding to Dataset id {}'.format(str(file.name), str(file.dataset_id)))
             if 'IGFFT' in file.file_type: 
-                df = build_annotation_dataframe_from_igfft_file(file.path, rmindels=rmindels, append_ms_peptides=append_ms_peptides)
+                df = build_annotation_dataframe_from_igfft_file(file.path, rmindels=rmindels, append_ms_peptides=append_ms_peptides, require_annotations=require_annotations)
             if 'MIXCR' in file.file_type: 
-                df = build_annotation_dataframe_from_mixcr_file(file.path, rmindels=rmindels, append_ms_peptides=append_ms_peptides)
+                df = build_annotation_dataframe_from_mixcr_file(file.path, rmindels=rmindels, append_ms_peptides=append_ms_peptides, require_annotations=require_annotations)
             def add_bigg_txt(string): return string.replace('.txt', '', 99) + '.bigg.txt'
             new_file = File(name = add_bigg_txt(file.name), directory = file.directory, path = add_bigg_txt(file.path), file_type = 'BIGG_ANNOTATION', dataset_id = file.dataset_id, analysis_id = file.analysis_id, check_name = False)
             df.to_csv(new_file.path, sep='\t', index=False)
@@ -3103,13 +3103,11 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     loci = kwargs['loci']
     generate_msdb = kwargs['generate_msdb']
     standardize_outputs = kwargs['standardize_outputs']
+    require_annotations = kwargs['require_annotations']
     append_cterm_peptides = kwargs['append_cterm_peptides']
     remove_seqs_with_indels = kwargs['remove_seqs_with_indels']
     pair_vhvl = kwargs['pair_vhvl']
     msdb_cluster_percent = float( kwargs['msdb_cluster_percent'] )
-    require_cdr1 = kwargs['require_cdr1']
-    require_cdr2 = kwargs['require_cdr2']
-    require_cdr3 = kwargs['require_cdr3']
     vhvl_min = float( kwargs['vhvl_min'] )
     vhvl_max = float( kwargs['vhvl_max'] )
     vhvl_step = float( kwargs['vhvl_step'] )
@@ -3302,7 +3300,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         else: 
             append_ms_peptides=False 
             print 'Not Appending MS Peptides'
-        return_value = standardize_output_files(analysis_id = analysis_id, file_ids = annotation_files, append_ms_peptides=append_ms_peptides, rmindels=rmindels, parent_task = task)
+        return_value = standardize_output_files(analysis_id = analysis_id, file_ids = annotation_files, append_ms_peptides=append_ms_peptides, rmindels=rmindels, require_annotations=require_annotations, parent_task = task)
         logger.info (return_value)
         file_ids_to_analyze = return_value.file_ids
 
