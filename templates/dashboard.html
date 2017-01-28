@@ -137,6 +137,11 @@
 
 <script>
 
+
+$(document).ready(function(){
+    maximize_console();
+});
+
 	var interval = 10000;
 	var status_url ="{{ url_for( 'frontend.json_celery_log' ) }}"
 	var new_interval = 10000;
