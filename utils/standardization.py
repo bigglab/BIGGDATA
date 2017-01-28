@@ -139,6 +139,7 @@ def clean_null_string(string):
 
 clean_annotation_dataframe_columns = [
  'readName',
+ 'readCount',
  'readSequence',
  'v_top_hit',
  'v_top_hit_locus',
@@ -176,8 +177,8 @@ clean_annotation_dataframe_columns = [
 ]
 
 
-def build_annotation_dataframe_from_igfft_file(file_path, dropna=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
-    df = pd.read_table(file_path, low_memory=False)
+def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_ms_peptides=False, require=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
+    df = pd.read_table(file_path) #, low_memory=False)
     column_reindex = {
           'Header' : 'readName',
           'Sequence' : 'readSequence',
@@ -199,7 +200,7 @@ def build_annotation_dataframe_from_igfft_file(file_path, dropna=['aaSeqFR1', 'a
           'Isotype percent similarity' : 'cBestIdentityPercent',
     }
     df = df.rename(str, columns=column_reindex)
-    if dropna != False: df = df.dropna(subset=dropna, how='any')
+    if require != False: df = df.dropna(subset=require, how='any')
     df = df.dropna(subset=['Top_V-Gene_Hits', 'Top_J-Gene_Hits'], how='any')
     df['c_top_hit_locus'] = df['c_top_hit'] 
     df['allVHitsWithScore'] = df.apply(parse_v_alignments_from_IGFFT_dataframe, axis=1)
@@ -216,6 +217,8 @@ def build_annotation_dataframe_from_igfft_file(file_path, dropna=['aaSeqFR1', 'a
     df['d_top_hit_locus'] = None
     df['nFullSeq'] = df.apply(parse_full_length_nt_seq_from_annotation_dataframe, axis=1)
     df['aaFullSeq'] = df.apply(parse_full_length_aa_seq_from_annotation_dataframe, axis=1)
+    df = df[~df['aaFullSeq'].str.contains('\*|_')] if rmindels == True else df
+    df = append_cterm_peptides_for_mass_spec(df) if append_ms_peptides == True else df
     df['v_region_shm'] = df['VRegion.SHM.Per_nt']
     df['j_region_shm'] = df['JRegion.SHM.Per_nt']
     df['qualFR1'] = None
@@ -225,14 +228,15 @@ def build_annotation_dataframe_from_igfft_file(file_path, dropna=['aaSeqFR1', 'a
     df['qualFR3'] = None
     df['qualCDR3'] = None
     df['qualFR4'] = None
+    df = collapse_annotation_dataframe(df)
     df = df[clean_annotation_dataframe_columns]
     return df 
 
 
 
-def build_annotation_dataframe_from_mixcr_file(file_path, dropna=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
+def build_annotation_dataframe_from_mixcr_file(file_path, rmindels=True, append_ms_peptides=False, require=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
     df = pd.read_table(file_path) #, low_memory=False)
-    if dropna != False: df = df.dropna(subset=dropna, how='any')
+    if require != False: df = df.dropna(subset=require, how='any')
     df['readSequence'] = df['readSequence']
     df['readName'] = df['descrR1']
     df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
@@ -257,19 +261,28 @@ def build_annotation_dataframe_from_mixcr_file(file_path, dropna=['aaSeqFR1', 'a
     df['aaSeqFR4'] = df['nSeqFR4'].apply(translate_human_nt)
     df['nFullSeq'] = df.apply(parse_full_length_nt_seq_from_annotation_dataframe, axis=1)
     df['aaFullSeq'] = df.apply(parse_full_length_aa_seq_from_annotation_dataframe, axis=1)
-    df = df[clean_annotation_dataframe_columns]
+    df = df[~df['aaFullSeq'].str.contains('\*|_')] if rmindels == True else df
+    df = append_cterm_peptides_for_mass_spec(df) if append_ms_peptides == True  else df
+    df = collapse_annotation_dataframe(df)
+    df = df[clean_annotation_dataframe_columns] 
     return df 
 
 
-# need to implement: 
-def clean_annotation_dataframe_for_mass_spec(dataframe): 
-    df = dataframe[~dataframe['aaFullSeq'].str.contains('\*|_')]
-    def clean(row):
-        if row['v_top_hit'].startswith('IGL'):
-            row['aaFullSeq'] = row['aaFullSeq'] + 'GQPK'
-        if row['v_top_hit'].startswith('IGK'):
-            row['aaFullSeq'] = row['aaFullSeq'] + 'R'
-        return row
-    df = df.apply(clean, axis=1)
+def append_cterm_peptides_for_mass_spec(dataframe): 
+    # Append tryptic C-term to full length sequences.
+    appendSeq = pd.Series(data = '', index=dataframe.index)
+    appendSeq[dataframe['v_top_hit'].str.startswith('IGL')] = 'GQPK'
+    appendSeq[dataframe['v_top_hit'].str.startswith('IGK')] = 'R'
+    appendSeq[dataframe['v_top_hit'].str.startswith('IGH')] = 'ASTK' # need to vet gene names start with IGH... 
+    dataframe['aaFullSeq'] = dataframe['aaFullSeq'] + appendSeq
+    return dataframe
 
+
+def collapse_annotation_dataframe(df, on='aaFullSeq'):
+    # Remove duplicates and assign read counts.
+    grouped = df.groupby(on, as_index=False, sort=False)
+    df_collapsed = grouped.first()
+    df_collapsed['readCount'] = grouped.size().tolist()
+    return df_collapsed
+    
 

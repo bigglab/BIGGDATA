@@ -1393,7 +1393,7 @@ def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, 
 
 
 @celery.task(base=LogTask, bind=True)
-def standardize_output_files(self, file_ids=None, *args, **kwargs):
+def standardize_output_files(self, file_ids=None, append_ms_peptides=False, rmindels=True, *args, **kwargs):
 
     if self.parent_task:
         task = self.parent_task
@@ -1414,11 +1414,10 @@ def standardize_output_files(self, file_ids=None, *args, **kwargs):
         standardized_file_ids = [] 
         for file in files_to_standardize: 
             logger.info('Standardizing file {} and adding to Dataset id {}'.format(str(file.name), str(file.dataset_id)))
-            
             if 'IGFFT' in file.file_type: 
-                df = build_annotation_dataframe_from_igfft_file(file.path)
+                df = build_annotation_dataframe_from_igfft_file(file.path, rmindels=rmindels, append_ms_peptides=append_ms_peptides)
             if 'MIXCR' in file.file_type: 
-                df = build_annotation_dataframe_from_mixcr_file(file.path)
+                df = build_annotation_dataframe_from_mixcr_file(file.path, rmindels=rmindels, append_ms_peptides=append_ms_peptides)
             def add_bigg_txt(string): return string.replace('.txt', '', 99) + '.bigg.txt'
             new_file = File(name = add_bigg_txt(file.name), directory = file.directory, path = add_bigg_txt(file.path), file_type = 'BIGG_ANNOTATION', dataset_id = file.dataset_id, analysis_id = file.analysis_id, check_name = False)
             df.to_csv(new_file.path, sep='\t', index=False)
@@ -3112,6 +3111,8 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     loci = kwargs['loci']
     generate_msdb = kwargs['generate_msdb']
     standardize_outputs = kwargs['standardize_outputs']
+    append_cterm_peptides = kwargs['append_cterm_peptides']
+    remove_seqs_with_indels = kwargs['remove_seqs_with_indels']
     pair_vhvl = kwargs['pair_vhvl']
     msdb_cluster_percent = float( kwargs['msdb_cluster_percent'] )
     require_cdr1 = kwargs['require_cdr1']
@@ -3297,7 +3298,19 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     # Coerce Annotations into Standard Format: 
     if standardize_outputs: 
         annotation_files = return_value.file_ids
-        return_value = standardize_output_files(analysis_id = analysis_id, file_ids = annotation_files, parent_task = task)
+        if remove_seqs_with_indels == True: 
+            rmindels=True 
+            print 'Removing indels'
+        else: 
+            rmindels=False 
+            print 'Leaving indels'
+        if append_cterm_peptides == True: 
+            append_ms_peptides=True
+            print 'Appending MS Peptides'
+        else: 
+            append_ms_peptides=False 
+            print 'Not Appending MS Peptides'
+        return_value = standardize_output_files(analysis_id = analysis_id, file_ids = annotation_files, append_ms_peptides=append_ms_peptides, rmindels=rmindels, parent_task = task)
         logger.info (return_value)
         file_ids_to_analyze = return_value.file_ids
 

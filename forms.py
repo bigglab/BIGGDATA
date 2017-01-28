@@ -309,6 +309,9 @@ class BuildPipelineForm(Form):
     species = SelectField( 'Species', choices=[('H. sapiens', 'H. sapiens'), ('M. musculus', 'M. musculus')] )
 
     standardize_outputs = BooleanField('Standardize Output', default='checked')
+    remove_seqs_with_indels = BooleanField('Remove Sequences With Indels', default='checked')
+    append_cterm_peptides = BooleanField('Append Peptides to C-Term for Mass Spec') # , default='checked')
+
 
     cluster = BooleanField(u'Cluster Sequences')
     generate_msdb = BooleanField(u'Generate Mass Spec Database')

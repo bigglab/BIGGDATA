@@ -2297,6 +2297,8 @@ def pipeline(selected_dataset=None):
                 'species' : build_pipeline_form.species.data,
                 'loci': build_pipeline_form.loci.data,
                 'standardize_outputs': build_pipeline_form.standardize_outputs.data,
+                'append_cterm_peptides': build_pipeline_form.append_cterm_peptides.data,
+                'remove_seqs_with_indels': build_pipeline_form.remove_seqs_with_indels.data,
                 'generate_msdb' : build_pipeline_form.generate_msdb.data,
                 'pair_vhvl' : build_pipeline_form.pair_vhvl.data,
                 'msdb_cluster_percent' : str(build_pipeline_form.msdb_cluster_percent.data),
