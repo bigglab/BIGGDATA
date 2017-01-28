@@ -399,14 +399,10 @@ def file_upload():
         #flash('New files will be added to dataset "{}".'.format(new_dataset.name), 'success')
 
     else: # check if the user has selected a project which they have access to
-        user_has_permission = False
-        for dataset in current_user.datasets:
-            if str(dataset.id) == upload_form.dataset.data:
-                #####dataset.files.append(file)
-                user_has_permission = True
-                output_file_dataset = dataset
-
-        if not user_has_permission:
+        output_dataset = db.session.query(Dataset).get(int(upload_form.dataset.data))
+        if output_dataset.user_has_write_access(current_user):
+            output_file_dataset = dataset
+        else:
             flash('Error: you do not have permission to add a file to that dataset.','warning')
             if first_error_item == None : first_error_item = 3
             form_valid = False
@@ -452,21 +448,17 @@ def file_upload():
 
                 db.session.commit()
             else: # check if the user has selected a project which they have access to
-                user_has_permission = False
-                for project in projects:
-                    if str(project.id) == upload_form.project.data:
-                        if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
-                            # if the dataset is not in the project, add it
-                            if output_file_dataset not in project.datasets:
-                                project.datasets.append(output_file_dataset)
-                            user_has_permission = True
+                project = db.session.query(Project).get(int(upload_form.project.data))
+                if project.user_has_write_access(current_user):
+                    if output_file_dataset not in project.datasets:
+                        project.datasets.append(output_file_dataset)
 
-                            if current_user.default_dataset == None:
-                                output_file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
-                                output_file_dataset.species = project.species
+                    if current_user.default_dataset == None:
+                        output_file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                        output_file_dataset.species = project.species
 
-                            db.session.commit()
-                if not user_has_permission:
+                    db.session.commit()
+                else:
                     flash('Error: you do not have permission to add a dataset to that project.','warning')
                 db.session.commit()
 
@@ -515,14 +507,11 @@ def file_download(status=[], bucket='', key=''):
             file_dataset = generate_new_dataset(current_user)
             flash('New file will be added to dataset "{}".'.format(file_dataset.name), 'success')
         else: # check if the user has selected a project which they have access to
-            user_has_permission = False
-            for dataset in current_user.datasets:
-                if str(dataset.id) == form.dataset.data:
+            dataset = db.session.query(Dataset).get(int(form.dataset_id.data))
+            if dataset.user_has_write_access(current_user):
                     dataset.files.append(file)
                     file_dataset = dataset
-                    user_has_permission = True
-
-            if not user_has_permission:
+            else:
                 flash('Error: you do not have permission to add a file to that dataset.','warning')
         db.session.commit()
 
@@ -533,21 +522,17 @@ def file_download(status=[], bucket='', key=''):
             if form.project.data == 'new':
                 new_project = generate_new_project(user = current_user, dataset = file_dataset)
             else: # check if the user has selected a project which they have access to
-                user_has_permission = False
-                for project in projects:
-                    if str(project.id) == form.project.data:
-                        if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
-                            # if the dataset is not in the project, add it
-                            if file_dataset not in project.datasets:
-                                project.datasets.append(file_dataset)
-                            user_has_permission = True
+                project = db.session.query(Project).get(int(form.project.data))
+                if project.user_has_write_access(current_user):
+                    if file_dataset not in project.datasets:
+                        project.datasets.append(file_dataset)
 
-                            if current_user.default_dataset == None:
-                                file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
-                                file_dataset.species = project.species
+                    if current_user.default_dataset == None:
+                        file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                        file_dataset.species = project.species
 
-                            db.session.commit()
-                if not user_has_permission:
+                    db.session.commit()
+                else:
                     flash('Error: you do not have permission to add a dataset to that project.','warning')
                 db.session.commit()        
 
@@ -730,8 +715,8 @@ def send_file_from_id(id):
 @frontend.route('/datasets', methods=['GET', 'POST'])
 @login_required
 def datasets():
-    files = current_user.files.all()
-    datasets = current_user.datasets.all()
+    # files = current_user.files.all()
+    datasets = current_user.get_ordered_datasets()
     datasets = [dataset for dataset in datasets if dataset.name != '__default__']
     
     datadict = get_user_dataset_dict(current_user)
@@ -783,21 +768,20 @@ def datasets():
                 db.session.commit()
                 return redirect(url_for('.datasets'))
             else: # check if the user has selected a project which they have access to
-                for project in projects:
-                    if str(project.id) == form.project.data:
-                        print "project.role(current_user): {}".format(project.role(current_user) )
-                        if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
-                            project.datasets.append(d)
-                            d.project_id = project.id
+                project = db.session.query(Project).get(int(form.project.data))
+                if project.user_has_write_access(current_user):
+                    project.datasets.append(d)
+                    d.project_id = project.id
 
-                            if current_user.default_dataset == None:
-                                d.cell_types_sequenced = [str(project.cell_types_sequenced)]
-                                d.species = project.species
+                    if current_user.default_dataset == None:
+                        d.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                        d.species = project.species
 
-                            db.session.commit()
-                            return redirect(url_for('.datasets'))
-                flash('Error: you do not have permission to add a dataset to that project.','warning')
-                return redirect(url_for('.datasets'))
+                    db.session.commit()
+                    return redirect(url_for('.datasets'))
+                else: 
+                    flash('Error: you do not have permission to add a dataset to that project.','warning')
+                    return redirect(url_for('.datasets'))
             db.session.commit()
             d.directory = current_user.path.rstrip('/') + '/dataset_' + d.id 
             db.session.commit()
@@ -858,7 +842,7 @@ def edit_dataset(id):
         flash('Error: Dataset {} not found.'.format(str(id)), 'warning')
         return redirect( url_for('frontend.datasets') )
 
-    if dataset.role(current_user) != "Owner":
+    if not dataset.user_has_write_access(current_user):
         flash('Error: You do not have permission to edit Dataset {}.'.format(str(id)), 'warning')
         return redirect( url_for('frontend.datasets') )
 
@@ -2159,14 +2143,10 @@ def pipeline(selected_dataset=None):
                 # used to pass the dataset selection to the celery task
                 build_pipeline_form.output_dataset.data = str(output_file_dataset.id)
             else: # check if the user has selected a project which they have access to
-                user_has_permission = False
-                for dataset in current_user.datasets:
-                    if str(dataset.id) == build_pipeline_form.output_dataset.data:
-                        #####dataset.files.append(file)
-                        user_has_permission = True
-                        output_file_dataset = dataset
-
-                if not user_has_permission:
+                output_dataset = session.query(Dataset).get(int(build_pipeline_form.output_dataset.id))
+                if output_dataset.user_has_write_access(current_user):
+                    output_file_dataset = dataset
+                else:
                     flash('Error: you do not have permission to add a file to that dataset.','warning')
                     if first_error_item == None : first_error_item = 3
                     form_valid = False
@@ -2220,21 +2200,17 @@ def pipeline(selected_dataset=None):
 
                     db.session.commit()
                 else: # check if the user has selected a project which they have access to
-                    user_has_permission = False
-                    for project in projects:
-                        if str(project.id) == build_pipeline_form.output_project.data:
-                            if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
-                                # if the dataset is not in the project, add it
-                                if output_file_dataset not in project.datasets:
-                                    project.datasets.append(output_file_dataset)
-                                user_has_permission = True
+                    project = db.session.query(Project).get(int(build_pipeline_form.output_project.data))
+                    if project.user_has_write_access(current_user):
+                        if output_file_dataset not in project.datasets:
+                            project.datasets.append(output_file_dataset)
 
-                                if current_user.default_dataset == None:
-                                    output_file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
-                                    output_file_dataset.species = project.species
+                        if current_user.default_dataset == None:
+                            output_file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                            output_file_dataset.species = project.species
 
-                                db.session.commit()
-                    if not user_has_permission:
+                        db.session.commit()
+                    else:
                         flash('Error: you do not have permission to add a dataset to that project.','warning')
                     db.session.commit()
         ##### End check of output dataset and project #####

@@ -755,13 +755,10 @@ class Dataset(db.Model):
 
         def role(self, user):
             dataset_role = None
-
-            if self.user_id == current_user.id:
+            if self.user_id == user.id:
                 return "Owner"
-
             for project in self.projects:
                 project_role = project.role(user)
-
                 if project_role == "Owner":
                     return "Owner"
                 elif project_role == "Editor":
@@ -769,6 +766,14 @@ class Dataset(db.Model):
                 elif project_role == "Read Only" and dataset_role != "Editor":
                     dataset_role = "Read Only"
             return dataset_role
+
+        def user_has_write_access(self, user): 
+            user_role = self.role(user)
+            if user_role == 'Owner' or user_role == 'Editor':
+                return True 
+            else: 
+                return False 
+
 
         def files_by_type(self, type_string):
             all_files = self.files.all()
@@ -904,6 +909,15 @@ class Project(db.Model):
             except:
                 pass
             return None
+
+
+        def user_has_write_access(self, user): 
+            user_role = self.role(user)
+            if user_role == 'Owner' or user_role == 'Editor':
+                return True 
+            else: 
+                return False 
+
 
 class ProjectDatasets (db.Model):
     __tablename__ = 'project_dataset'

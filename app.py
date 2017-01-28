@@ -655,7 +655,7 @@ def instantiate_user_with_directories(new_user_id):
 
 def get_user_dataset_dict(user): 
     datadict = OrderedDict()
-    for dataset in sorted(user.datasets, key=lambda x: x.id, reverse=True):
+    for dataset in sorted(user.get_ordered_datasets(), key=lambda x: x.id, reverse=True):
         if dataset.name != '__default__':
             datadict[dataset] = sorted(dataset.files.all(), key=lambda x: x.file_type)
     return datadict
@@ -670,15 +670,15 @@ def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_
 
     # load projects and datasets
     # set the dataset options
-    datasets = Set(user.datasets)
-    datasets.discard(None)
-    datasets.discard(user.default_dataset)
-    datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
+    # datasets = Set(user.datasets)
+    # datasets.discard(None)
+    # datasets.discard(user.default_dataset)
+    # datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
 
-    # get a list of user projects for the form
-    projects = Set(user.projects)
-    projects.discard(None)
-    projects = sorted(projects, key=lambda x: x.id, reverse=True)
+    # # get a list of user projects for the form
+    # projects = Set(user.projects)
+    # projects.discard(None)
+    # projects = sorted(projects, key=lambda x: x.id, reverse=True)
 
     # check if the user has selected the default project (i.e., the user has no projects)
     file_dataset = None
@@ -697,16 +697,10 @@ def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_
         db.session.commit()
 
     else: # check if the user has selected a project which they have access to
-        user_has_permission = False
-        for dataset in user.datasets:
-            if str(dataset.id) == dataset_selection:
-                file_dataset = dataset
-                user_has_permission = True
-
-                # if user.default_dataset == None:
-                #     d.cell_types_sequenced = [str(project.cell_types_sequenced)]
-                #     d.species = project.species
-        if not user_has_permission:
+        dataset = db.session.query(Dataset).get(int(dataset_selection))
+        if dataset.user_has_write_access(user):
+            file_dataset = dataset
+        else: 
             logger.error( 'You do not have permission to add a file to dataset ({}).'.format(dataset_selection) )
     db.session.commit()
 
@@ -728,21 +722,19 @@ def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_
 
             db.session.commit()
         else: # check if the user has selected a project which they have access to
-            user_has_permission = False
-            for project in projects:
-                if str(project.id) == project_selection:
-                    if project.role(user) == 'Owner' or project.role(user) == 'Editor':
-                        # if the dataset is not in the project, add it
-                        if file_dataset not in project.datasets:
-                            project.datasets.append(file_dataset)
-                        user_has_permission = True
+            output_project = db.session.query(Project).get(int(project_selection))
 
-                        if user.default_dataset == None:
-                            file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
-                            file_dataset.species = project.species
+            if output_project.user_has_write_access(current_user): 
+                if file_dataset not in project.datasets:
+                    project.datasets.append(file_dataset)
 
-                        db.session.commit()
-            if not user_has_permission:
+                if user.default_dataset == None:
+                    file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
+                    file_dataset.species = project.species
+
+                db.session.commit()
+
+            else:
                 logger.error( 'Error: you do not have permission to add a dataset to that project ({}).'.format( project_selection ) )
             db.session.commit()        
 
@@ -791,11 +783,11 @@ def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_
 
             # flatten and clean up the directory tree:
             source = '{}/{}/1/fastq.gz'.format(directory, accession)
-            destination = '{}/{}_1_fastq.gz'.format(directory, accession)
+            destination = '{}/{}_1.fastq.gz'.format(directory, accession)
             os.rename( source, destination )
 
             file_paths = [ destination ]
-            filename_array = ['{}_1_.fastq.gz'.format(accession)]
+            filename_array = ['{}_1.fastq.gz'.format(accession)]
 
             os.rmdir( '{}/{}/1/'.format(directory, accession) )
             os.rmdir( '{}/{}/'.format(directory, accession) )
@@ -810,11 +802,11 @@ def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_
 
                 # flatten and clean up the directory tree:
                 source = '{}/{}/{}/fastq.gz'.format(directory, accession, directory_number)
-                destination = '{}/{}_{}_fastq.gz'.format(directory, accession, directory_number)
+                destination = '{}/{}_{}.fastq.gz'.format(directory, accession, directory_number)
                 os.rename( source, destination )
 
                 file_paths.append( destination )
-                filename_array.append( '{}_{}_.fastq.gz'.format(accession, directory_number) )
+                filename_array.append( '{}_{}.fastq.gz'.format(accession, directory_number) )
 
                 os.rmdir( '{}/{}/{}/'.format(directory, accession, directory_number) )
 
