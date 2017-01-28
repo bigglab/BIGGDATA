@@ -68,7 +68,6 @@ from sqlalchemy.orm.collections import attribute_mapped_collection
 #Local Imports 
 from forms import *
 from functions import * 
-# from standardization_utils import * 
 from utils.standardization import * 
 
 db = SQLAlchemy()
@@ -103,8 +102,12 @@ class User(db.Model):
 
         projects = association_proxy('user_projects', 'project')
 
+
         def get_ordered_datasets(self):
-            datasets = Set(self.datasets)
+            projects_datasets = [dataset for dataset_list in map(lambda p: p.datasets, self.get_ordered_projects()) for dataset in dataset_list]
+            owned_datasets = self.datasets.all()
+            # datasets = Set(self.datasets) #only returns owned datasets - need to include shared datasets through user_projects table 
+            datasets = Set(projects_datasets + owned_datasets) # THIS DOES ONE QUERY PER PROJECT - NOT EFFICIENT ENOUGH 
             datasets.discard(None)
             datasets.discard(self.default_dataset)
             datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
@@ -115,6 +118,7 @@ class User(db.Model):
             projects.discard(None)
             projects = sorted(projects, key=lambda x: x.id, reverse=True)
             return projects
+
 
         @hybrid_property
         def name(self):

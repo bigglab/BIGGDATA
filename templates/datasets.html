@@ -52,7 +52,7 @@
 				<th>Dataset #</th>
 				<th>Name</th>
 				<th>Description</th>
-				<th>IG Type</th>
+				<th>Projects</th>
 				<th class='no-sort'>Run Analysis</th>
 				<th> </th>
 			</tr>
@@ -64,7 +64,7 @@
 					<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.id}}</a></td>
 					<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
 					<td>{{dataset.description}}</td>
-					<td>{{dataset.ig_type}}</td>
+					<td>{{dataset.projects|map(attribute='project_name')|join(',')}}</td>
 					<td>
 						{%- if files == [] -%}
 							<a href="{{url_for('.dataset', id=dataset.id)}}">Click To Add Files</a>

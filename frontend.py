@@ -1861,23 +1861,20 @@ def pipeline(selected_dataset=None):
     build_pipeline_form = BuildPipelineForm(request.form)
     selected_dataset = request.args.get('dataset_id')
 
-    # set the dataset options
-    datasets = Set(current_user.datasets)
-    datasets.discard(None)
-    datasets.discard(current_user.default_dataset)
 
-    datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
+    # get a list of user projects - relational includes those they own and those shared with them
+    projects = current_user.get_ordered_projects()
+
+    # get datasets from owned and shared projects
+    datasets = current_user.get_ordered_datasets()
+
+    project_tuples = []
     dataset_tuples = []
     new_tuples = []
 
     dataset_file_dict = {}
     dataset_project_dict = {}
 
-    # get a list of user projects for the form
-    projects = Set(current_user.projects)
-    projects.discard(None)
-    projects = sorted(projects, key=lambda x: x.id, reverse=True)
-    project_tuples = []
 
     # Create form choices for datasets and files
     if len(datasets) > 0:
