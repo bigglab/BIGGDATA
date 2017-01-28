@@ -633,6 +633,7 @@ def validate_file_object(session, flush_context = None, instances = None):
 event.listen(db.Session, 'before_flush', validate_file_object)
 event.listen(db.Session, 'before_commit', validate_file_object)
 
+#abstracted to functions.py: 
 def parse_file_ext(path):
 
     if path.split('.')[-1] == 'gz':
@@ -648,6 +649,7 @@ def parse_file_ext(path):
     ext_dict['fq'] = 'FASTQ'
     ext_dict['fa'] = 'FASTA'
     ext_dict['fasta'] = 'FASTA'
+    ext_dict['fna'] = 'FASTA'
     ext_dict['txt'] = 'TEXT'
     ext_dict['json'] = 'JSON'
     ext_dict['tab'] = 'TAB'
@@ -675,6 +677,8 @@ def parse_file_ext(path):
             return 'GZIPPED_{}'.format(file_type)
         else: 
             return file_type
+
+
 
 class Dataset(db.Model):
         __tablename__ = 'dataset'

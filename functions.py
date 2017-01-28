@@ -206,51 +206,6 @@ def build_annotation_from_mongo_dict(d):
         return False
 
 
-#####
-#
-# File Functions
-#
-#####
-
-def parse_file_ext(path):
-
-    if path.split('.')[-1] == 'gz':
-        gzipped = True
-    else:
-        gzipped = False
-    if gzipped: 
-        ext = path.split('.')[-2]
-    else:
-        ext = path.split('.')[-1]
-    ext_dict = tree()
-    ext_dict['fastq'] = 'FASTQ'
-    ext_dict['fq'] = 'FASTQ'
-    ext_dict['fa'] = 'FASTA'
-    ext_dict['fasta'] = 'FASTA'
-    ext_dict['txt'] = 'TEXT'
-    ext_dict['json'] = 'JSON'
-    ext_dict['tab'] = 'TAB'
-    ext_dict['csv'] = 'CSV'
-    ext_dict['yaml'] = 'YAML'
-    ext_dict['pileup'] = 'PILEUP'
-    ext_dict['sam'] = 'SAM'
-    ext_dict['bam'] = 'BAM'
-    ext_dict['imgt'] = 'IMGT'
-    ext_dict['gtf'] = 'GTF'
-    ext_dict['gff'] = 'GFF'
-    ext_dict['gff3'] = 'GFF3'
-    ext_dict['bed'] = 'BED'
-    ext_dict['wig'] = 'WIGGLE'
-    ext_dict['py'] = 'PYTHON'
-    ext_dict['rb'] = 'RUBY'
-    file_type = ext_dict[ext]
-    if isinstance(file_type, defaultdict):
-        return None
-    else:
-        if gzipped: 
-            return 'GZIPPED_{}'.format(file_type)
-        else: 
-            return file_type
 
 #####
 #

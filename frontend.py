@@ -646,7 +646,7 @@ def file(id):
             editfileform.paired_partner.choices = [(x.id, x.name) for x in f.user.files if ((x.user_id != None) and (x.dataset == None) and (x.name != f.name))]
             editfileform.paired_partner.choices.append((0, None))
 
-        file_types = ['FASTQ', 'GZIPPED_FASTQ', 'IGFFT_ANNOTATION', 'MIXCR_ANNOTATION']
+        file_types = ['FASTQ', 'GZIPPED_FASTQ', 'FASTA', 'GZIPPED_FASTA', 'IGFFT_ANNOTATION', 'MIXCR_ANNOTATION']
         if f.file_type not in file_types: 
             file_types.append(f.file_type)
 
@@ -670,7 +670,7 @@ def file(id):
                     f3 = db.session.query(File).filter(File.id==f.paired_partner).first()
                     f3.paired_partner=f.id
                     f2.paired_partner=None
-            else:
+            elif editfileform.paired_partner.data != 0:
                 f.paired_partner = editfileform.paired_partner.data
                 f2 = db.session.query(File).filter(File.id==f.paired_partner).first()
                 f2.paired_partner = f.id
@@ -1874,7 +1874,7 @@ def pipeline(selected_dataset=None):
 
             # build a dictionary entry indicating the files in each dataset ('dataset_id':{'file_id':'file_name'})
             file_id_dict = {}
-            for file in [file for file in dataset.files if 'FASTQ' in file.file_type]:
+            for file in [file for file in dataset.files if 'FASTQ' in file.file_type or 'FASTA' in file.file_type]:
                 file_id_dict[ str(file.id) ] = file.name 
 
             dataset_file_dict[ str(dataset.id) ] = file_id_dict
