@@ -299,7 +299,7 @@ class File(db.Model):
         # If directory does not exist, this function will create the directory
         # If directory/filename exists --> This will rename the file, so you have to check self.name to make sure it hasn't changed
         def __init__(self, name = None, directory = None, path = None, file_type = None, user_id = None,
-                    dataset_id = None, analysis_id = None, check_name = False): 
+                    dataset_id = None, analysis_id = None, parent_id=None, check_name = False): 
             # self.s3_status = ''
             self.status = '' 
             self.available = False 
@@ -308,6 +308,7 @@ class File(db.Model):
             self.dataset_id = dataset_id
             self.analysis_id = analysis_id
             self.user_id = user_id
+            self.parent_id = parent_id
 
             # Clean up file names here:
             if name is not None:

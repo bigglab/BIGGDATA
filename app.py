@@ -1386,7 +1386,7 @@ def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, 
 
 
 @celery.task(base=LogTask, bind=True)
-def standardize_output_files(self, file_ids=None, append_ms_peptides=False, rmindels=True, require_annotations=['aaSeqCDR3'], *args, **kwargs):
+def standardize_output_files(self, user_id=None, analysis_id=None, file_ids=None, append_ms_peptides=False, rmindels=True, require_annotations=['aaSeqCDR3'], *args, **kwargs):
 
     if self.parent_task:
         task = self.parent_task
@@ -1412,7 +1412,7 @@ def standardize_output_files(self, file_ids=None, append_ms_peptides=False, rmin
             if 'MIXCR' in file.file_type: 
                 df = build_annotation_dataframe_from_mixcr_file(file.path, rmindels=rmindels, append_ms_peptides=append_ms_peptides, require_annotations=require_annotations)
             def add_bigg_txt(string): return string.replace('.txt', '', 99) + '.bigg.txt'
-            new_file = File(name = add_bigg_txt(file.name), directory = file.directory, path = add_bigg_txt(file.path), file_type = 'BIGG_ANNOTATION', dataset_id = file.dataset_id, analysis_id = file.analysis_id, check_name = False)
+            new_file = File(name = add_bigg_txt(file.name), directory = file.directory, path = add_bigg_txt(file.path), file_type = 'BIGG_ANNOTATION', dataset_id = file.dataset_id, analysis_id = file.analysis_id, user_id=user_id, parent_id=file.id, check_name = False)
             df.to_csv(new_file.path, sep='\t', index=False)
             session.add(new_file)
             session.commit()
@@ -3304,7 +3304,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         else: 
             append_ms_peptides=False 
             print 'Not Appending MS Peptides'
-        return_value = standardize_output_files(analysis_id = analysis_id, file_ids = annotation_files, append_ms_peptides=append_ms_peptides, rmindels=rmindels, require_annotations=require_annotations, parent_task = task)
+        return_value = standardize_output_files(user_id=user_id, analysis_id = analysis_id, file_ids = annotation_files, append_ms_peptides=append_ms_peptides, rmindels=rmindels, require_annotations=require_annotations, parent_task = task)
         logger.info (return_value)
         file_ids_to_analyze = return_value.file_ids
 
