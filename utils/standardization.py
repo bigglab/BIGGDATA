@@ -423,4 +423,47 @@ def collapse_annotation_dataframe(df, on='aaFullSeq'):
     df_collapsed['readCount'] = grouped.size().tolist()
     return df_collapsed
     
+annotation_dataframe_dtypes = {
+    "readName": str, 
+    "readCount": int, 
+    "readSequence": str, 
+    "v_top_hit": str, 
+    "v_top_hit_locus": str, 
+    "d_top_hit": str, 
+    "d_top_hit_locus": str, 
+    "j_top_hit": str, 
+    "j_top_hit_locus": str, 
+    "c_top_hit": str, 
+    "c_top_hit_locus": str, 
+    "nFullSeq": str, 
+    "aaFullSeq": str, 
+    "nSeqFR1": str, 
+    "nSeqCDR1": str, 
+    "nSeqFR2": str, 
+    "nSeqCDR2": str, 
+    "nSeqFR3": str, 
+    "nSeqCDR3": str, 
+    "nSeqFR4": str, 
+    "qualFR1": str, 
+    "qualCDR1": str, 
+    "qualFR2": str, 
+    "qualCDR2": str, 
+    "qualFR3": str, 
+    "qualCDR3": str, 
+    "qualFR4": str, 
+    "aaSeqFR1": str, 
+    "aaSeqCDR1": str, 
+    "aaSeqFR2": str, 
+    "aaSeqCDR2": str, 
+    "aaSeqFR3": str, 
+    "aaSeqCDR3": str, 
+    "aaSeqFR4": str, 
+    "v_region_shm": np.float64, 
+    "j_region_shm": np.float64}
+
+
+def read_annotation_dataframe(file_path): 
+    df = pd.read_table(file_path, dtype=annotation_dataframe_dtypes)
+    df['readName'] = df['readName'].apply(lambda n: n.split(' ')[0])
+    return df 
 
