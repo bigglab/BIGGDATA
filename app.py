@@ -1822,7 +1822,10 @@ def run_quality_filtering_with_dataset_id(self, dataset_id, analysis_id=None, an
         filtered_file.user_id = dataset.user_id
         filtered_file.path = '{}.filtered_q{}p{}.fastq'.format(basepath, minimum_quality, minimum_percentage)
         filtered_file.name = '{}.filtered_q{}p{}.fastq'.format(basename, minimum_quality, minimum_percentage)
-        filtered_file.command = 'fastq_quality_filter -q {} -p {} -i {} -o {} -Q 33 '.format(minimum_quality, minimum_percentage,  file.path, filtered_file.path) #-Q 33 for more recent Illumina quality outputs
+        if file.file_type == 'FASTQ': 
+            filtered_file.command = 'fastq_quality_filter -q {} -p {} -i {} -o {} -Q 33 '.format(minimum_quality, minimum_percentage,  file.path, filtered_file.path) #-Q 33 for more recent Illumina quality outputs
+        elif file.file_type == 'GZIPPED_FASTQ': 
+            filtered_file.command = ' gunzip -c {} | fastq_quality_filter -q {} -p {} -i - -o {} -Q 33 '.format(file.path, minimum_quality, minimum_percentage, filtered_file.path) #-Q 33 for more recent Illumina quality outputs
         filtered_file.file_type = 'FASTQ'
         files_to_execute.append(filtered_file)
         analysis.status = 'EXECUTING'
@@ -1830,6 +1833,7 @@ def run_quality_filtering_with_dataset_id(self, dataset_id, analysis_id=None, an
 
     for f in files_to_execute:
         f.command = f.command.encode('ascii')
+        # if type(f.command) == list: f.command = [command.encode('ascii') for command in f.command]
         f.dataset_id = analysis.dataset_id 
         f.analysis_id = analysis.id 
         # f.chain = files[0].chain
@@ -1845,7 +1849,15 @@ def run_quality_filtering_with_dataset_id(self, dataset_id, analysis_id=None, an
         error = None
         try:
             command_line_args = shlex.split(f.command)
-            command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+            if '|' in command_line_args: 
+                pipe_index = command_line_args.index('|')
+                gunzip_args = command_line_args[:pipe_index]
+                command_line_args = command_line_args[(pipe_index+1):]
+                gunzip_process = subprocess.Popen( gunzip_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+                command_line_process = subprocess.Popen( command_line_args , stdin=gunzip_process.stdout, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+                gunzip_process.stdout.close()
+            else: 
+                command_line_process = subprocess.Popen( f.command , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
 
             start = dt.datetime.now()
 
