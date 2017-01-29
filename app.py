@@ -1045,9 +1045,10 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     path = path.replace('///','/')
     path = path.replace('//','/')
 
-    #basename = files[0].path.split('/')[-1].split('.')[0]
-    basename = analysis_name
-    basepath = '{0}/{1}'.format(analysis.directory, analysis_name)
+    basename = parse_basename(map(lambda file: file.path, files))
+    # basename = files[0].path.split('/')[-1].split('.')[0]
+    # basename = analysis_name
+    basepath = '{0}/{1}'.format(analysis.directory, basename)
     logger.info( 'Writing output files to base name: {}'.format(basepath) )
     output_files = []
 
@@ -1058,8 +1059,8 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     # Instantiate Source Files
     alignment_file = File()
     alignment_file.user_id = dataset.user_id
-    alignment_file.path = '{}.aln.vdjca'.format(basepath)
-    alignment_file.name = "{}.aln.vdjca".format(basename)
+    alignment_file.path = '{}.mixcr'.format(basepath)
+    alignment_file.name = "{}.mixcr".format(basename)
     # MIGHT NEED TO ADD THIS ARGUMENT to align (from costas)   -OjParameters.parameters.mapperMaxSeedsDistance=5 
     alignment_file.command = '{} align -t 6 -OjParameters.parameters.mapperMaxSeedsDistance=5 --chains {} --species {} --save-description -f {} {}'.format(app.config['MIXCR'], loci, species, ' '.join([f.path for f in files]), alignment_file.path)
 
@@ -1074,8 +1075,8 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     clone_file = File()
     clone_file.user_id = dataset.user_id
     clone_file.file_type = 'MIXCR_CLONES'
-    clone_file.path = '{}.aln.clns'.format(basepath)
-    clone_file.name = '{}.aln.clns'.format(basename)
+    clone_file.path = '{}.clns.mixcr'.format(basepath)
+    clone_file.name = '{}.clns.mixcr'.format(basename)
     clone_file.command = '{} assemble  -OassemblingFeatures=VDJRegion -f {} {}'.format(app.config['MIXCR'], alignment_file.path, clone_file.path)
     files_to_execute.append(clone_file)
     # files_to_execute.append(clone_index_file)
@@ -1535,7 +1536,10 @@ def run_pandaseq_with_dataset_id(self, dataset_id, analysis_id=None, analysis_na
         files_to_execute = []
         path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
         path = path.replace('//','/')
-        basename = analysis_name
+
+        basename = parse_basename(map(lambda file: file.path, files)) 
+        #files[0].path.split('/')[-1].split('.')[0]
+        # basename = analysis_name
         if basename == '' or basename == None: 
             basename = 'Analysis_{}'.format(analysis.id)
         basepath = '{0}/{1}'.format(analysis.directory.rstrip('/'), basename)

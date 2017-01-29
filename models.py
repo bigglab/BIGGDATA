@@ -678,6 +678,28 @@ def parse_file_ext(path):
         else: 
             return file_type
 
+def parse_basename(file_names): 
+    if type(file_names) == str: file_names = [file_names] 
+    if len(file_names) == 2: 
+        file_bases = map(lambda f: f.split('/')[-1].split('.')[0], file_names)
+        file_base_arrays = map(lambda f: f.split('_'), file_bases) 
+        basename_array = [] 
+        for i, string in enumerate(file_base_arrays[0]):
+            if string == '1' and file_base_arrays[1][i] == '2': 
+                continue 
+            elif string == 'R1' and file_base_arrays[1][i] == 'R2':  
+                continue 
+            else: 
+                basename_array.append(string)
+        basename = '_'.join(basename_array)
+        if not basename == '': 
+            return basename 
+        else: 
+            return 'Analyzed'
+    else: 
+        return file_names[0].split('/')[-1].split('.')[0]
+
+
 
 
 class Dataset(db.Model):

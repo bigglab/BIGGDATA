@@ -282,7 +282,7 @@ def append_cterm_peptides_for_mass_spec(dataframe):
 
 
 def collapse_annotation_dataframe(df, on='aaFullSeq'):
-    if len(df) == 0: return df 
+    if len(df) == 0: return df.reindex(columns = df.columns.tolist() + ['readCount'])
     # Remove duplicates and assign read counts.
     grouped = df.groupby(on, as_index=False, sort=False)
     df_collapsed = grouped.first()
