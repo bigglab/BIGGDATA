@@ -462,8 +462,8 @@ annotation_dataframe_dtypes = {
     "j_region_shm": np.float64}
 
 
-def read_annotation_dataframe(file_path): 
+def read_annotation_dataframe_file(file_path): 
     df = pd.read_table(file_path, dtype=annotation_dataframe_dtypes)
     df['readName'] = df['readName'].apply(lambda n: n.split(' ')[0])
-    return df 
+    return df
 
