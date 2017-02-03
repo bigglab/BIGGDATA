@@ -142,7 +142,7 @@ def clean_null_string(string):
 
 clean_annotation_dataframe_columns = [
  'readName',
- 'readCount',
+ 'collapsedCount',
  'readSequence',
  'v_top_hit',
  'v_top_hit_locus',
@@ -279,7 +279,7 @@ igfft_dtypes = {"Header": str,
 
 
 def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_ms_peptides=False, require_annotations=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
-    df = pd.read_table(file_path, dtype=igfft_dtypes) #, low_memory=False)
+    df = pd.read_table(file_path, dtype=igfft_dtypes, error_bad_lines=False) #, low_memory=False)
     column_reindex = {
           'Header' : 'readName',
           'Sequence' : 'readSequence',
@@ -372,7 +372,7 @@ mixcr_dtypes = {"descrR1" : str,
 
 
 def build_annotation_dataframe_from_mixcr_file(file_path, rmindels=True, append_ms_peptides=False, require_annotations=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
-    df = pd.read_table(file_path, dtype=mixcr_dtypes) #, low_memory=False)
+    df = pd.read_table(file_path, dtype=mixcr_dtypes, error_bad_lines=False) #, low_memory=False)
     if require_annotations != False: df = df.dropna(subset=require_annotations, how='any')
     df['readSequence'] = df['readSequence']
     df['readName'] = df['descrR1']
@@ -416,16 +416,18 @@ def append_cterm_peptides_for_mass_spec(dataframe):
 
 
 def collapse_annotation_dataframe(df, on='aaFullSeq'):
-    if len(df) == 0: return df.reindex(columns = df.columns.tolist() + ['readCount'])
+    if len(df) == 0: return df.reindex(columns = df.columns.tolist() + ['collapsedCount'])
     # Remove duplicates and assign read counts.
     grouped = df.groupby(on, as_index=False, sort=False)
     df_collapsed = grouped.first()
-    df_collapsed['readCount'] = grouped.size().tolist()
+    df_collapsed['collapsedCount'] = grouped.size().tolist()
     return df_collapsed
     
+
+
 annotation_dataframe_dtypes = {
     "readName": str, 
-    "readCount": int, 
+    "collapsedCount": int, 
     "readSequence": str, 
     "v_top_hit": str, 
     "v_top_hit_locus": str, 
