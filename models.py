@@ -963,6 +963,7 @@ class ProjectDatasets (db.Model):
         self.project = project
         self.dataset = dataset
 
+
 class UserProjects (db.Model):
     __tablename__ = 'user_project'
 
@@ -1450,7 +1451,7 @@ def get_project_choices(user = None, new = False):
 
     return project_tuples
 
-def generate_new_dataset(user = None, session = db.session):
+def generate_new_dataset(user = None, session = db.session, name=None, description=None):
     '''
     Generates a new, default dataset and returns the dataset object
     '''
@@ -1461,36 +1462,52 @@ def generate_new_dataset(user = None, session = db.session):
     new_dataset = Dataset()
     new_dataset.user_id = user.id
     new_dataset.populate_with_defaults(user)
-    new_dataset.name = 'Dataset'
+    new_dataset.name = 'New Dataset'
+    new_dataset.description = description
     session.add(new_dataset)
     session.flush()
-    new_dataset.name = 'Dataset ' + str(new_dataset.id)
+
+    if name: 
+        if name == '__default__':
+            flash('Error: cannot create a dataset with that name.', 'warning')
+            return redirect(url_for('.datasets'))
+        new_dataset.name = name 
+        new_dataset.directory = "{}/{}_{}".format(user.path.rstrip('/') , new_dataset.name, new_dataset.id)
+        if not os.path.isdir(new_dataset.directory):
+            os.makedirs(new_dataset.directory)
+            print 'Created directory for dataset {} at {}'.format(new_dataset.name, new_dataset.directory)
+    else: 
+        new_dataset.name = 'Dataset ' + str(new_dataset.id)
+        new_dataset.directory = "{}/Dataset_{}".format(user.path.rstrip('/') , new_dataset.id)
+        if not os.path.isdir(new_dataset.directory):
+            os.makedirs(new_dataset.directory)
+            print 'Created new directory at {}'.format(new_dataset.directory)
+
     user.datasets.append(new_dataset)
-
-    new_dataset.directory = "{}/Dataset_{}".format(user.path.rstrip('/') , new_dataset.id)
-
-    if not os.path.isdir(new_dataset.directory):
-        os.makedirs(new_dataset.directory)
-        print 'Created new directory at {}'.format(new_dataset.directory)
     session.commit()
     return new_dataset
 
-def generate_new_project(user = None, dataset = None, session = db.session):
+
+def generate_new_project(user = None, datasets = None, name=None, description=None, session = db.session):
     # create a new project here with the name default, add the user and dataset to the new project
     new_project = Project()
     new_project.user_id = user.id
-    new_project.project_name = 'Project'
-    session.add(new_project)
-    session.flush()
-    new_project.project_name = 'Project ' + str(new_project.id)
+    if name: 
+        new_project.project_name = name 
+        session.add(new_project)
+        session.flush()
+    else: 
+        new_project.project_name = 'Project'
+        session.add(new_project)
+        session.flush()
+        new_project.project_name = 'Project ' + str(new_project.id)
     new_project.users = [user]
-    if dataset:
-        new_project.datasets = [dataset]
-        new_project.cell_types_sequenced = [str(dataset.cell_types_sequenced)]
-        new_project.species = dataset.species
-
+    if datasets:
+        if type(datasets)==list: 
+            new_project.datasets = datasets
+        else: 
+            new_project.datasets = [datasets]
     session.commit()
-
     return new_project
 
 # Adds a new analysis with a path formatted as: /directory/directory_prefix# where number is analysis.id

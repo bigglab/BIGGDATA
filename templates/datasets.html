@@ -48,12 +48,11 @@
 	<table id="datasets" class="display table-striped table table-bordered" cellspacing="0" width="100%">
 		<thead>
 			<tr>
-				<th class='no-sort'> </th>
+				<th class='no-sort' style="width:20px;""> </th>
 				<th>Dataset #</th>
 				<th>Name</th>
 				<th>Description</th>
 				<th>Projects</th>
-				<th class='no-sort'>Run Analysis</th>
 				<th> </th>
 			</tr>
 		</thead>
@@ -65,13 +64,6 @@
 					<td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
 					<td>{{dataset.description}}</td>
 					<td>{{dataset.projects|map(attribute='project_name')|join(',')}}</td>
-					<td>
-						{%- if files == [] -%}
-							<a href="{{url_for('.dataset', id=dataset.id)}}">Click To Add Files</a>
-						{% else %}
-							<a href="{{url_for('.pandaseq', dataset_id=dataset.id)}}">PANDASEQ</a>  <a href="{{url_for('.pipeline', dataset_id=dataset.id)}}">ANNOTATE</a>
-						{% endif %}
-					</td>
 					<td><a href="{{url_for('.delete_dataset', id=dataset.id)}}">Delete</a></td>
 				</tr>
 			{% endfor %}
@@ -104,6 +96,7 @@
 	table.rows().every( function () {
 	    this.child( table_data[this.index()] );
 	} );
+
 
 	$('#datasets tbody').on( 'click', 'td.details-control', function () {
 	    var child = table.row( this ).child;

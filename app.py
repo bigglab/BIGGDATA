@@ -1857,7 +1857,7 @@ def run_quality_filtering_with_dataset_id(self, dataset_id, analysis_id=None, an
                 command_line_process = subprocess.Popen( command_line_args , stdin=gunzip_process.stdout, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
                 gunzip_process.stdout.close()
             else: 
-                command_line_process = subprocess.Popen( f.command , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+                command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
 
             start = dt.datetime.now()
 

@@ -520,7 +520,7 @@ def file_download(status=[], bucket='', key=''):
         # check if the user has selected the default project (i.e., the user has no projects)
         if file_dataset:
             if form.project.data == 'new':
-                new_project = generate_new_project(user = current_user, dataset = file_dataset)
+                new_project = generate_new_project(user = current_user, datasets = file_dataset)
             else: # check if the user has selected a project which they have access to
                 project = db.session.query(Project).get(int(form.project.data))
                 if project.user_has_write_access(current_user):
@@ -715,78 +715,53 @@ def send_file_from_id(id):
 @frontend.route('/datasets', methods=['GET', 'POST'])
 @login_required
 def datasets():
-    # files = current_user.files.all()
-    datasets = current_user.get_ordered_datasets()
-    datasets = [dataset for dataset in datasets if dataset.name != '__default__']
-    
-    datadict = get_user_dataset_dict(current_user)
-
     form = CreateDatasetForm()
     form.project.choices = get_project_choices(current_user, new = True)
 
-    projects = Set(current_user.projects)
-    projects.discard(None)
-    projects = sorted(projects, key=lambda x: x.id, reverse=True)
-
     if request.method == 'POST':
-        if form.name.data: 
-            d = generate_new_dataset(current_user)
-
-            # use default values for the new dataset, if given
-            if current_user.default_dataset:
-                d.populate_with_defaults(current_user)
-
-            d.name = form.name.data
-
-            if d.name == '__default__':
-                flash('Error: cannot create a dataset with that name.', 'warning')
-                return redirect(url_for('.datasets'))
-
-            d.description = form.description.data
-            d.paired = form.paired.data 
-            d.ig_type = form.ig_type.data 
-            d.user_id = current_user.id
-
-            db.session.add(d)
-            db.session.flush()
-
-            # check if the user has selected the default project (i.e., the user has no projects)
-            if form.project.data == 'new':
-                # create a new project here with the name default, add the user and dataset to the new project
-                new_project = Project()
-                new_project.user_id = current_user.id
-                new_project.project_name = 'Project'
-                db.session.add(new_project)
-                db.session.flush()
-                new_project.project_name = 'Project ' + str(new_project.id)
-                new_project.users = [current_user]
-                new_project.datasets = [d]
-                new_project.cell_types_sequenced = str(d.cell_types_sequenced)
-                new_project.species = d.species
-                d.project_id = new_project.id
-
+        d = generate_new_dataset(current_user, name=form.name.data, description=form.description.data)
+        print 'generated new dataset {}'.format(str(d))
+        if form.project.data == 'new':
+            # create a new project here with the name default, add the user and dataset to the new project
+            new_project = generate_new_project(user=current_user, datasets=[d])
+            print "generated new project {}".format(str(new_project))
+            # d.project_id = new_project.id
+            # db.session.add(new_project)
+            # db.session.commit()
+            # return redirect(url_for('.datasets'))
+        else: # check if the user has selected a project which they have access to
+            project = db.session.query(Project).get(int(form.project.data))
+            print 'Adding new dataset #{} to project #{}'.format(d.id, project.id)
+            if project.user_has_write_access(current_user):
+                pd = ProjectDatasets(dataset=d, project=project)
+                # project.datasets.append(d)
+                # d.project_id = project.id
                 db.session.commit()
+                # return redirect(url_for('.datasets'))
+            else: 
+                flash('Error: you do not have permission to add a dataset to that project.','warning')
                 return redirect(url_for('.datasets'))
-            else: # check if the user has selected a project which they have access to
-                project = db.session.query(Project).get(int(form.project.data))
-                if project.user_has_write_access(current_user):
-                    project.datasets.append(d)
-                    d.project_id = project.id
-
-                    if current_user.default_dataset == None:
-                        d.cell_types_sequenced = [str(project.cell_types_sequenced)]
-                        d.species = project.species
-
-                    db.session.commit()
-                    return redirect(url_for('.datasets'))
-                else: 
-                    flash('Error: you do not have permission to add a dataset to that project.','warning')
-                    return redirect(url_for('.datasets'))
-            db.session.commit()
-            d.directory = current_user.path.rstrip('/') + '/dataset_' + d.id 
-            db.session.commit()
-        return redirect(url_for('.datasets')) # render_template("datasets.html", datadict=datadict, form=Form())
+        # db.session.commit()
+        # return redirect(url_for('.datasets')) 
+        return redirect(url_for('.dataset', id=d.id))
+        #return render_template("dataset.html", datadict=datadict, form=form, id=d.id, dataset=d, current_user=current_user)
     else: 
+         # files = current_user.files.all()
+        # pretime = time.time()
+        # datasets = current_user.get_ordered_datasets()
+        # datasets = [dataset for dataset in datasets if dataset.name != '__default__']
+        # print "time to get datasets: {}".format(time.time()-pretime)
+
+        pretime = time.time()
+        datadict = get_user_dataset_dict(current_user)
+        print "time to get datadict: {}".format(time.time()-pretime)
+
+        # pretime = time.time()
+        # projects = Set(current_user.projects)
+        # projects.discard(None)
+        # projects = sorted(projects, key=lambda x: x.id, reverse=True)
+        # print "time to get projects: {}".format(time.time()-pretime)
+
         return render_template("datasets.html", datadict=datadict, form=form, current_user=current_user)
 
 @frontend.route('/datasets/<int:id>', methods=['GET', 'POST'])
