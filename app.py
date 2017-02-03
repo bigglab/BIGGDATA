@@ -1033,6 +1033,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
         loci = 'ALL'
     else: 
         loci = ','.join(loci)
+        loci = loci.replace('TCR', 'TR', 99)
 
     if not analysis:
         raise Exception('MixCR Exception: Analysis with ID {} cannot be found.'.format(analysis_id))
