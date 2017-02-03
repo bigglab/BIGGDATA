@@ -2465,6 +2465,7 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysi
         logger.info( 'Running IGREP IGFFT on Dataset {}.'.format( dataset.id ) )
         igrep_script_path = app.config['IGREP_PIPELINES']
 
+
         if species == None:
             if dataset.species == 'Human': species = 'homosapiens' 
             elif dataset.species == 'Mouse': species = 'musmusculus' 
@@ -2475,6 +2476,8 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysi
             species = 'homosapiens'
         else:
             species = 'homosapiens'
+
+
 
         annotated_file_ids = []
         for file in files: 
