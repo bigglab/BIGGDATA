@@ -1316,58 +1316,48 @@ def msdb(status=[]):
 
     msdb_form = CreateMSDBAnalysisForm()
 
-    # get a list of datasets and projects
-    datasets = current_user.get_ordered_datasets()
-    projects = current_user.get_ordered_projects()
-    project_tuples = []
-
-    dataset = None
-
-    status = []
     if request.method == 'POST':
 
-        must_be_present=['CDR3']
-        if msdb_form.require_cdr1.data: must_be_present.append('CDR1')
-        if msdb_form.require_cdr2.data: must_be_present.append('CDR2')
 
-        file_ids_to_pair = []
-
-        # Check the submitted name, use default if possible
-        next_analysis_id = int(db.session.query(func.max(File.id)).first()[0]) + 1
-        if msdb_form.name.data == 'MSDB Analysis {}'.format( str(next_analysis_id) ):
-            msdb_form.name.data = ''
-
-
-        if len(msdb_form.dataset_ids.data) == 1:
-            output_dataset_id = int(msdb_form.dataset_ids.data[0])
-        else: # This mvoes the output director up to /user.path/Pairing_Analysis_#
-            output_dataset_id = None
-
+        file_ids_to_use = [] 
         for dataset in current_user.datasets:
             if str(dataset.id) in msdb_form.dataset_ids.data:
                 for file in dataset.files:
                     if str(file.id) in msdb_form.file_ids.data:
-                        file_ids_to_pair.append(file.id)
+                        file_ids_to_use.append(file.id)
 
-        if file_ids_to_pair != []:
+        if file_ids_to_use != []:
 
-            result = run_msdb_with_dataset_id.apply_async( ( ), 
+
+            result = run_new_msdb.apply_async( ( ), 
                     { 
                         'user_id' : current_user.id, 
-                        'dataset_id' : output_dataset_id, 
+                        # 'dataset_id' : output_dataset_id, 
                         'analysis_id' : None, 
                         'analysis_name' : msdb_form.name.data,
                         'analysis_description' : msdb_form.description.data,
-                        'file_ids' : file_ids_to_pair, 
+                        'file_ids' : file_ids_to_use, 
                         'cluster_percent' : float(msdb_form.msdb_cluster_percent.data), 
-                        'must_be_present' : must_be_present
+                        'require_annotations' : msdb_form.require_annotations.data, 
+                        'read_cutoff': msdb_form.read_cutoff.data, 
+                        'cluster_on': msdb_form.cluster_on.data, 
+                        'append_cterm_peptides': msdb_form.append_cterm_peptides.data
                      }, queue=celery_queue )
 
             return redirect( url_for('frontend.dashboard') )
         else:
             flash('No files selected for analysis.', 'warning')
+            redirect(url_for('frontend.msdb'))
 
     else: # request.method == 'GET'
+
+        # # get a list of datasets and projects
+        # datasets = 
+        # projects = current_user.get_ordered_projects()
+        # project_tuples = []
+
+        # dataset = None
+
         current_analysis_id = db.session.query(func.max(File.id)).first()[0]
         if current_analysis_id:
             next_analysis_id = int(current_analysis_id) + 1
@@ -1376,40 +1366,41 @@ def msdb(status=[]):
 
         msdb_form.name.data = 'MSDB Analysis {}'.format( str(next_analysis_id) )
 
-    # Fall through to this point if the method if 'GET'
-    dataset_choices = []
-    file_choices = []
-    dataset_file_dict = {}
 
-    # build choices for the file_ids and dataset_ids
-    # only include files which are annotation files
-    for dataset in current_user.datasets:
 
-        dataset_added = False
+        dataset_choices = []
+        file_choices = []
+        dataset_file_dict = {}
 
-        for file in dataset.files:
+        # build choices for the file_ids and dataset_ids
+        # only include files which are annotation files
+        for dataset in current_user.get_ordered_datasets():
 
-            if file.file_type == 'IGFFT_ANNOTATION':
+            dataset_added = False
 
-                if dataset_added == False:
-                    # Add the dataset as an option
-                    dataset_added = True
-                    dataset_choices.append( (str(dataset.id), dataset.name) )
-                    dataset_file_dict[str(dataset.id)] = []
+            for file in dataset.files:
 
-                # Add the file to the list of options
-                file_choices.append( (str(file.id), file.name) )
-                dataset_file_dict[str(dataset.id)].append( str(file.id) )
+                if file.file_type in  ['IGFFT_ANNOTATION', 'MIXCR_ANNOTATION', 'BIGG_ANNOTATION']:
 
-                # Use description to associate datasets/files
+                    if dataset_added == False:
+                        # Add the dataset as an option
+                        dataset_added = True
+                        dataset_choices.append( (str(dataset.id), dataset.name) )
+                        dataset_file_dict[str(dataset.id)] = []
 
-    msdb_form.dataset_ids.choices = dataset_choices
-    msdb_form.file_ids.choices = file_choices
+                    # Add the file to the list of options
+                    file_choices.append( (str(file.id), file.name) )
+                    dataset_file_dict[str(dataset.id)].append( str(file.id) )
 
-    if not dataset:
-        dataset = None
+                    # Use description to associate datasets/files
 
-    return render_template("msdb.html", dataset=dataset, msdb_form=msdb_form, status=status, current_user=current_user, dataset_file_dict = dataset_file_dict) 
+        msdb_form.dataset_ids.choices = dataset_choices
+        msdb_form.file_ids.choices = file_choices
+
+        if not dataset:
+            dataset = None
+
+        return render_template("msdb.html", dataset=dataset, msdb_form=msdb_form, status=status, current_user=current_user, dataset_file_dict = dataset_file_dict) 
 
 
 @frontend.route('/browse_sequences', methods=['GET', 'POST'])

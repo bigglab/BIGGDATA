@@ -3,12 +3,11 @@
 {% block content %}
 
 <div class="container">
-<h3>Generate Mass Spec Files using IGREP</h3>
+<h3>Generate Mass Spec Database From Multiple Files:</h3>
 </div>
 <br>
 
 <div class="container">
-	<h4>Clustering Configuration:</h4>
 
 	<form method="POST" action="{{ url_for( 'frontend.msdb' ) }}">
     {{ msdb_form.csrf_token }}
@@ -17,38 +16,36 @@
       <table class='table table-striped' width=100%> 
         <thead>
             <tr>
-                <th width=25%>MSDB Analysis Name</th>
-                <th width=25%>MSDB Analysis Description</th>
-                <th width=12%>Required Fields</th>
-                <th width=12%>Cluster %</th>
+                <th >MSDB Analysis Name</th>
+                <th >MSDB Description</th>
                 <!-- <th width=18%><label>Add to Dataset/Project:</label></th> -->
-                <th width=10%></th>
+                <th >Append C-term Peptides</th>
+                <th >Read Cutoff</th>
             </tr>
         </thead>
         <tbody>
             <tr>
               <td>{{ msdb_form.name(class = 'form-control') }}</td>
               <td>{{ msdb_form.description(class = 'form-control') }}</td>
-              <td>
-                <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                  <label >
-                      {{ msdb_form.require_cdr1 }}
-                      <b>Require CDR1</b> 
-                  </label>
-                </div> 
-                <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                  <label >
-                      {{ msdb_form.require_cdr2 }}
-                      <b>Require CDR2</b> 
-                  </label>
-                </div> 
-                <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                  <label >
-                      {{ msdb_form.require_cdr3( checked="checked", disabled=True )}}
-                      <b>Require CDR3</b> 
-                  </label>
-                </div> 
-              </td>
+              <td>{{ msdb_form.append_cterm_peptides(class = 'form-control') }}</td>
+              <td>{{ msdb_form.read_cutoff(class = 'form-control') }}</td>
+              <!-- <td><input type='submit' class="btn btn-default form-control" value="Generate MSDB"></td> -->
+            </tr>
+        </tbody>
+      </table>
+      <table class='table table-striped' width=100%> 
+        <thead>
+            <tr>
+                <th width=25%>Required Annotated</th>
+                <th width=25%>Cluster On</th>
+                <th width=15%>Cluster %</th>
+                <!-- <th width=18%><label>Add to Dataset/Project:</label></th> -->
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+              <td>{{ msdb_form.require_annotations() }}</td>
+              <td>{{ msdb_form.cluster_on() }}</td>
               <td>{{ msdb_form.msdb_cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
               <td><input type='submit' class="btn btn-default form-control" value="Generate MSDB"></td>
             </tr>
@@ -58,28 +55,31 @@
     <br>
     <h4>Select Files to add to MSDB:</h4>
 
-    {% for dataset_id in msdb_form.dataset_ids %}
+    <div class="container" span=6>
 
-      <div class="checkbox" class="pull-right" style="padding-left: 4px">
-        <label>
-            {{ dataset_id( class=dataset_id.data ) }}
-            <b>{{dataset_id.label}}</b>
-        </label>
-      </div>
-      <div id="collapse" class="collapse {{dataset_id.data}}" style="margin-left: 40px;">
-        {% for file_id in msdb_form.file_ids %}
-          {% if file_id.data in dataset_file_dict[dataset_id.data] %}
-            <div class="checkbox" class="pull-right" style="padding-left: 4px">
-              <label >
-                  {{ file_id }}
-                  <b>{{file_id.label}}</b>
-              </label>
-            </div>
-          {% endif %}
-        {% endfor %}
-      </div>
+      {% for dataset_id in msdb_form.dataset_ids %}
 
-    {% endfor %}
+        <div class="checkbox" class="pull-right" style="padding-left: 4px">
+          <label>
+              {{ dataset_id( class=dataset_id.data ) }}
+              <b>{{dataset_id.label}}</b>
+          </label>
+        </div>
+        <div id="collapse" class="collapse {{dataset_id.data}}" style="margin-left: 40px;">
+          {% for file_id in msdb_form.file_ids %}
+            {% if file_id.data in dataset_file_dict[dataset_id.data] %}
+              <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                <label >
+                    {{ file_id }}
+                    <b>{{file_id.label}}</b>
+                </label>
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+
+      {% endfor %}
+    </div>
 
   </form>
 

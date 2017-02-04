@@ -62,6 +62,10 @@ from forms import *
 from functions import * 
 from models import * 
 
+from utils.standardization import * 
+from utils.clustering import * 
+from utils.pairing import * 
+
 #####
 #
 # Add IGREP binaries to system path
@@ -1407,13 +1411,14 @@ def standardize_output_files(self, user_id=None, analysis_id=None, file_ids=None
         logger.info('Standardizing {} files: {}'.format(str(len(files_to_standardize)), ','.join(map(lambda f: f.name, files_to_standardize))))
         standardized_file_ids = [] 
         for file in files_to_standardize: 
-            logger.info('Standardizing file {} and adding to Dataset id {}'.format(str(file.name), str(file.dataset_id)))
+            logger.info('Standardizing file {} and adding to Dataset id {}, Analysis '.format(str(file.name), str(file.dataset_id), str(file.analysis_id)))
             if 'IGFFT' in file.file_type: 
                 df = build_annotation_dataframe_from_igfft_file(file.path, rmindels=rmindels, append_ms_peptides=append_ms_peptides, require_annotations=require_annotations)
             if 'MIXCR' in file.file_type: 
                 df = build_annotation_dataframe_from_mixcr_file(file.path, rmindels=rmindels, append_ms_peptides=append_ms_peptides, require_annotations=require_annotations)
             def add_bigg_txt(string): return string.replace('.txt', '', 99) + '.bigg.txt'
             new_file = File(name = add_bigg_txt(file.name), directory = file.directory, path = add_bigg_txt(file.path), file_type = 'BIGG_ANNOTATION', dataset_id = file.dataset_id, analysis_id = file.analysis_id, user_id=user_id, parent_id=file.id, check_name = False)
+            logger.info('Writing standardized file to path: {}'.format(new_file.path))
             df.to_csv(new_file.path, sep='\t', index=False)
             session.add(new_file)
             session.commit()
@@ -1934,7 +1939,7 @@ def run_quality_filtering_with_dataset_id(self, dataset_id, analysis_id=None, an
 def run_msdb_with_dataset_id(self, user_id=6, dataset_id = None, analysis_id = None, file_ids = [], analysis_name='', analysis_description='', cluster_percent = 0.9, must_be_present = ['CDR3']):
 
     logger = self.logger
-    logger.info('Preparing for IGREP MSDB algorithm...')
+    logger.info('Preparing to run MSDB algorithm...')
 
     annotated_files = []
     annotated_file_formats = []
@@ -2130,6 +2135,154 @@ def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id =
         # Outputs
         # -------
         # Path of the FASTA db file created    
+
+
+
+
+
+
+
+
+# Returns a ReturnValue with field file_ids which reflects only the new files added during the analysis
+@celery.task(base = LogTask, bind = True)
+def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_id=None, analysis_name=None, analysis_description=None, append_cterm_peptides=False, cluster_percent = 0.9, cluster_on = 'aaSeqCDR3', read_cutoff=1, require_annotations = ['aaSeqCDR3']):
+    logger = self.logger
+
+
+    with session_scope() as session:
+
+        # Get the DB objects
+        user = session.query(User).get(user_id)
+        file_paths = [db.session.query(File).get(id).path for id in file_ids]
+        logger.info('Preparing new MSDB with these annotations: {}'.format(','.join(file_paths)))
+
+        # TODO: build inside dataset folder if requested or just one dataset is used 
+
+
+        # Determine if a new analysis is needed
+        if analysis_id != None:
+            analysis = session.query(Analysis).get(analysis_id)
+            output_directory = analysis.directory
+        else: # no analysis provided, so we have to create a new analysis
+            analysis = generate_new_analysis(user = user, directory = None, directory_prefix = 'MSDB_Analysis_', name=analysis_name, description=analysis_description, program='MSDB', session = session)
+
+        self.set_analysis_id(analysis.id)
+        output_directory = analysis.directory
+
+        # Set analysis database values
+        analysis.started = 'now'
+        analysis.files_to_analyze = map(lambda i: int(i), file_ids)
+        analysis.params = {}
+        analysis.status = 'QUEUED'
+        analysis.responses = []
+        analysis.available = False
+        analysis.inserted_into_db = False
+        session.add(analysis)
+        session.commit()
+
+
+        logger.info('Clustering at {}%  on {}, requiring at least {} reads per cluster and all of these annotated: {}'.format(cluster_percent, cluster_on, read_cutoff, ','.join(require_annotations)))
+        df = pd.concat(map(read_annotation_file, file_paths))
+        df = cluster_dataframe(df, cluster_cutoff=cluster_percent, on=cluster_on, readCutoff=read_cutoff)
+        df.dropna(subset=require_annotations, how='any', inplace=True)
+        if append_cterm_peptides: 
+            logger.info('Appending C-terminal constant region peptides to end of sequences')
+            df = append_cterm_peptides_for_mass_spec(df)
+        
+        #write output files
+        new_file = File(name = "{}/{}_MSDB.fasta".format(analysis.directory, analysis.name).replace(' ','_'), directory = analysis.directory, path = "{}/{}_MSDB.fasta".format(analysis.directory, analysis.name).replace(' ','_'), file_type = 'MSDB_FASTA', analysis_id = analysis.id, user_id=user_id, check_name = False)
+        logger.info('Writing MSDB Fasta file to path: {}'.format(new_file.path))
+        with open(new_file.path, 'w') as file: 
+            for i, row in df.iterrows(): 
+                file.write('>{}_{}_{}_{}\n'.format(i, row['aaSeqCDR3'], row['clusterSize'], row['collapsedCount']))
+                file.write(row['aaFullSeq'])
+                file.write('\n')
+        session.add(new_file)
+        new_file = File(name = "{}/{}_MSDB.txt".format(analysis.directory, analysis.name).replace(' ','_'), directory = analysis.directory, path = "{}/{}_MSDB.txt".format(analysis.directory, analysis.name).replace(' ','_'), file_type = 'MSDB_TXT', analysis_id = analysis.id, user_id=user_id, check_name = False)
+        logger.info('Writing MSDB Tabbed file to path: {}'.format(new_file.path))
+        df.to_csv(new_file.path, sep='\t', index=True)
+        session.add(new_file)
+
+        logger.info( 'MSDB analysis complete. {} sequences were written.'.format(len(df)) )
+        return ReturnValue('MSDB analysis complete for analysis {}.'.format(analysis.id), file_ids = [] )
+
+
+
+
+
+# Standalone celery task to run MSDB analysis on a dataset. 
+# This adds a new analysis if analysis = 'new' is passed or analysis_id == None
+# Calls run_msdb_with_analysis_id
+@celery.task(base = LogTask, bind = True)
+def run_msdb_with_dataset_id(self, user_id=6, dataset_id = None, analysis_id = None, file_ids = [], analysis_name='', analysis_description='', cluster_percent = 0.9, must_be_present = ['CDR3']):
+
+    logger = self.logger
+    logger.info('Preparing to run MSDB algorithm...')
+
+    annotated_files = []
+    annotated_file_formats = []
+    file_paths_to_analyze = []
+
+    with session_scope() as session:
+
+        # Get the DB objects
+        user = session.query(User).get(user_id)
+        if dataset_id != None: dataset = session.query(Dataset).get(dataset_id)
+        else: dataset = None
+
+        # Determine if a new analysis is needed
+        if analysis_id and analysis_id != 'new':
+            analysis = session.query(Analysis).get(analysis_id)
+            output_directory = analysis.directory
+        else: # no analysis provided, so we have to create a new analysis
+
+            # determine the analysis directory
+            if dataset_id != None and dataset:
+                directory = dataset.directory
+            else: #create a new directory
+                directory = user.path
+
+            analysis = generate_new_analysis(user = user, dataset = dataset, directory = directory, directory_prefix = 'MSDB_Analysis_', session = session, async_task_id = self.task.request_id)
+
+            # Set analysis database values
+            if analysis_description != '': analysis.description = analysis_description
+            else: analysis.description = 'MSDB Analysis Results'
+            if analysis_name != '': analysis.name = analysis_name
+            else: analysis.name = 'Pairing Analysis {}'.format( str(analysis.id) )
+
+            analysis.program = 'IGREP MSDB'
+
+        # Set local values
+        analysis_id = analysis.id
+        self.set_analysis_id(analysis_id)
+        output_directory = analysis.directory
+
+        # Set analysis database values
+        analysis.started = 'now'
+        analysis.files_to_analyze = map(lambda i: int(i), file_ids)
+        analysis.params = {}
+        analysis.status = 'QUEUED'
+        analysis.responses = []
+        analysis.available = False
+        analysis.inserted_into_db = False
+        session.add(analysis)
+        session.commit()
+
+
+        prefix_output_files = analysis.name.replace(' ', '_')
+        self.set_analysis_id(analysis_id)
+
+        if file_ids:
+            files = map(lambda x: session.query(File).filter(File.id==x).first(), file_ids)
+        elif dataset_id != None and dataset:
+            files = dataset.files
+            file_ids = [file.id for file in files]
+
+    return_value = run_msdb_with_analysis_id(analysis_id = analysis_id, file_ids = file_ids, user_id= user_id, cluster_percent = cluster_percent, must_be_present = must_be_present, parent_task = self.task)
+    file_ids = return_value.file_ids
+
+    return return_value
+
 
 # Celery task to run VH/VL pairing analysis on a dataset or multiple datasets.
 # If dataset_id == None, add files to user.path/Pairing_Analysis_#
@@ -3080,6 +3233,7 @@ def create_analysis_zip_file(self, analysis_id, user_id):
 
     return 'Completed compression of {} analysis files. Saved result as {} in file {}'.format( len(files_to_zip), analysis_tarfile_path, zip_file_id )
 
+
 @celery.task(base = LogTask, bind = True)
 def run_analysis_pipeline(self, *args,  **kwargs):
 
@@ -3236,7 +3390,8 @@ def run_analysis_pipeline(self, *args,  **kwargs):
             analysis_json_path = '{}/{}_settings.json'.format( analysis.directory.rstrip('/'), analysis_file_name_prefix )
 
             with open(analysis_json_path, 'w') as json_file:
-                json.dump( (args, kwargs) , json_file)
+                #json.dump( (args, kwargs) , json_file)
+                json.dump( kwargs , json_file)
 
             if os.path.isfile( analysis_json_path ):
                 analysis.settings_file = File( path = analysis_json_path, file_type = 'JSON', dataset_id = analysis.dataset_id, analysis_id = analysis.id, user_id = analysis.user_id )

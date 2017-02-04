@@ -469,3 +469,19 @@ def read_annotation_dataframe_file(file_path):
     df['readName'] = df['readName'].apply(lambda n: n.split(' ')[0])
     return df
 
+
+def read_annotation_file(file_path): 
+  if 'bigg' in file_path.lower(): 
+    df = pd.read_table(file_path, dtype=annotation_dataframe_dtypes)
+    df['readName'] = df['readName'].apply(lambda n: n.split(' ')[0])
+    return df
+  elif 'mixcr' in file_path.lower(): 
+    df = build_annotation_dataframe_from_mixcr_file(file_path, rmindels=True, append_ms_peptides=False, require_annotations=['aaSeqCDR3'])
+    return df 
+  elif 'igfft' in file_path.lower():
+    df = build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_ms_peptides=False, require_annotations=['aaSeqCDR3'])
+    return df 
+
+
+
+

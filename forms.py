@@ -71,6 +71,8 @@ class CreatePandaseqAnalysisForm(Form):
     file_ids = SelectMultipleField(u'Files To Collapse')
     algorithm = SelectField(u'Algorithm', choices=(['ea_util', 'ea_util'], ['flash', 'flash'], ['pear', 'pear'], ['rdp_mle', 'rdp_mle'],  ['simple_bayesian', 'simple_bayesian'], ['stitch', 'stitch'], ['uparse', 'uparse']), validators=[validators.input_required()])
 
+
+
 class CreateMSDBAnalysisForm(Form): 
     dataset_ids = MultiCheckboxField('Datasets', choices=[])
     file_ids = MultiCheckboxField('Datasets', choices=[])
@@ -78,9 +80,12 @@ class CreateMSDBAnalysisForm(Form):
     name = TextField(u'Name', )
     description = TextField(u'Description')
     msdb_cluster_percent = DecimalField(places=2, rounding=None, default = 0.90)
-    require_cdr1 = BooleanField()
-    require_cdr2 = BooleanField()
-    require_cdr3 = BooleanField()
+    require_annotations = MultiCheckboxField('Require Annotations', choices=[('aaSeqFR1', 'FR1'),('aaSeqCDR1', 'CDR1'),('aaSeqFR2', 'FR2'),('aaSeqCDR2', 'CDR2'),('aaSeqFR3', 'FR3'),('aaSeqCDR3', 'CDR3'),('aaSeqFR4', 'FR4')], default = ['aaSeqCDR3'])
+    read_cutoff = IntegerField(default=1)
+    cluster_on = MultiCheckboxField('Require Annotations', choices=[('nSeqCDR3', 'CDR3 NT'),('aaSeqCDR3', 'CDR3 AA'),('aaFullSeq', 'Full AA'), ('nFullSeq', 'Full NT')], default = ['aaFullSeq'])
+    append_cterm_peptides = BooleanField(default=False)
+
+
 
 class CreateVHVLPairingAnalysisForm(Form): 
     dataset_ids = MultiCheckboxField('Datasets', choices=[])

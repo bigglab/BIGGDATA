@@ -1511,14 +1511,15 @@ def generate_new_project(user = None, datasets = None, name=None, description=No
     return new_project
 
 # Adds a new analysis with a path formatted as: /directory/directory_prefix# where number is analysis.id
-def generate_new_analysis(user = None, dataset = None, directory = None, name = None, description = None, directory_prefix = None, session = db.session, async_task_id = None):
+def generate_new_analysis(user = None, dataset = None, directory = None, name = None, description = None, program=None, directory_prefix = None, session = db.session, async_task_id = None):
     analysis = Analysis()
 
     analysis.started = 'now'
     analysis.name = name
     analysis.description = description
     analysis.async_task_id = async_task_id
-
+    analysis.program = program 
+    
     if dataset: analysis.dataset_id = dataset.id
     if user: analysis.user_id = user.id
 
