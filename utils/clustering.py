@@ -41,7 +41,7 @@ def cluster_dataframe(df, cluster_cutoff=0.94, on='aaSeqCDR3', readCutoff=1, rem
 	print 'writing clustering output to temporary file {}'.format(temp_clustered_output_file)
 	print '********************** Clustering **********************'
 	#perform clustering
-	os.system("/Users/red/tools/usearch7.0.1090_i86osx32 -cluster_smallmem {} -minhsp 10 -minseqlength 10 -usersort -id {} -centroids {} -uc {}".format(temp_fasta_file.name, cluster_cutoff, temp_centroids_file, temp_clustered_output_file))
+	os.system("/data/resources/software/usearch -cluster_smallmem {} -minhsp 10 -minseqlength 10 -usersort -id {} -centroids {} -uc {}".format(temp_fasta_file.name, cluster_cutoff, temp_centroids_file, temp_clustered_output_file))
 	print '***************** Clustering Complete *****************'
 	clust_cols=['SeedorHit','clusterId','Length','Match', 'Blank1', 'Blank2','Blank3','Blank4','index_row','CDR_matchseq']
 	clust_types={'SeedorHit':str,'clusterId':int,'Length':int,'Match':str, 'Blank1':str, 'Blank2':str,'Blank3':str,'Blank4':str,'readName':str,'CDR_matchseq':str}
