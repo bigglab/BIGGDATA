@@ -1564,7 +1564,7 @@ def json_celery_log():
     interval = 60000
     tasks = Set(current_user.celery_tasks)
     tasks.discard(None)
-    tasks = sorted(tasks, key=lambda x: x.id, reverse=True)
+    tasks = sorted(tasks, key=lambda x: x.id, reverse=True)[0:10]
 
     tasks_pending = False
 
@@ -1594,7 +1594,7 @@ def json_celery_log():
 
             log_entries = ''
 
-            logfile = '{}/{}.log'.format( current_user.path.rstrip('/') , task.async_task_id )
+            logfile = '{}/{}.log'.format( current_user.log_path.rstrip('/') , task.async_task_id )
 
             async_task_progress = ''
 

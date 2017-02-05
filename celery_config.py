@@ -4,8 +4,6 @@ import logging
 from kombu import Exchange, Queue
 #from kombu.common import Broadcast
 
-# @Dave - to see all configuration options, see http://docs.celeryproject.org/en/latest/configuration.html
-
 
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
