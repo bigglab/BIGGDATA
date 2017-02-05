@@ -3393,8 +3393,8 @@ def run_analysis_pipeline(self, *args,  **kwargs):
 
             with open(analysis_json_path, 'w') as json_file:
                 #json.dump( (args, kwargs) , json_file)
-                json.dump( kwargs , json_file)
-
+                json.dump( kwargs , json_file, indent=4, sort_keys=True)
+                
             if os.path.isfile( analysis_json_path ):
                 analysis.settings_file = File( path = analysis_json_path, file_type = 'JSON', dataset_id = analysis.dataset_id, analysis_id = analysis.id, user_id = analysis.user_id )
 
