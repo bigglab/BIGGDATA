@@ -1811,73 +1811,6 @@ def pipeline(selected_dataset=None):
     build_pipeline_form = BuildPipelineForm(request.form)
     selected_dataset = request.args.get('dataset_id')
 
-
-    # get a list of user projects - relational includes those they own and those shared with them
-    projects = current_user.get_ordered_projects()
-
-    # get datasets from owned and shared projects
-    datasets = current_user.get_ordered_datasets()
-
-    project_tuples = []
-    dataset_tuples = []
-    new_tuples = []
-
-    dataset_file_dict = {}
-    dataset_project_dict = {}
-
-
-    # Create form choices for datasets and files
-    if len(datasets) > 0:
-        for dataset in datasets:
-            dataset_tuples.append( (str(dataset.id), dataset.name))
-            new_tuples.append( (str(dataset.id), dataset.name))
-
-            # build a dictionary indicating a project to which each dataset belongs
-            if len(dataset.projects) > 0 and dataset.projects[0] != None:
-                dataset_project_dict[str(dataset.id)] = str(dataset.projects[0].id)
-            else:
-                dataset_project_dict[str(dataset.id)] = 'new'
-
-            # build a dictionary entry indicating the files in each dataset ('dataset_id':{'file_id':'file_name'})
-            file_id_dict = {}
-            for file in [file for file in dataset.files if 'FASTQ' in file.file_type or 'FASTA' in file.file_type]:
-                file_id_dict[ str(file.id) ] = file.name 
-
-            dataset_file_dict[ str(dataset.id) ] = file_id_dict
-
-        # This form does not need a new dataset option
-        build_pipeline_form.dataset.choices = dataset_tuples
-
-        # Other forms have the option to insert a new dataset
-        if len(dataset_tuples) > 0:
-            #dataset_tuples.append(('new', 'New Dataset'))
-            #new_tuples = dataset_tuples
-            new_tuples.insert(0,('new', 'New Dataset'))
-            build_pipeline_form.output_dataset.choices = new_tuples
-    else:
-        build_pipeline_form.output_dataset.choices = [ ('new', 'New Dataset') ]
-
-    # Create form choices for projects
-    if len(projects) > 0:
-        for project in projects:
-            if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
-                project_tuples.append( (str(project.id), project.project_name))
-        if len(project_tuples) > 0:
-            project_tuples.insert(0, ('new', 'New Project'))
-            build_pipeline_form.output_project.choices = project_tuples
-    else:
-        build_pipeline_form.output_project.choices = [ ('new', 'New Project') ]
-
-    # list of tuples to set arbitrary HTML tag attributes
-    # passed to JQUERY to set attributes
-    # ('selector' , 'attribute' , 'attribute value')
-    runtime_attributes = []
-    form_warning_style = 'border: 2px solid #d66; border-radius: 7px; box-shadow: 0 0 10px #d66;'
-
-    # used to scroll carousel to first error on form
-    first_error_item = None
-
-
     if request.method == 'POST':
 
         ##### Validate the Form #####
@@ -2111,7 +2044,7 @@ def pipeline(selected_dataset=None):
             else: # check if the user has selected a project which they have access to
                 output_dataset = db.session.query(Dataset).get(int(build_pipeline_form.output_dataset.data))
                 if output_dataset.user_has_write_access(current_user):
-                    output_file_dataset = dataset
+                    output_file_dataset = output_dataset
                 else:
                     flash('Error: you do not have permission to add a file to that dataset.','warning')
                     if first_error_item == None : first_error_item = 3
@@ -2210,8 +2143,8 @@ def pipeline(selected_dataset=None):
                 'file_source' : build_pipeline_form.file_source.data,
                 'dataset' : build_pipeline_form.dataset.data,
                 'dataset_files' : build_pipeline_form.dataset_files.data,
-                'description' : build_pipeline_form.description.data,
                 'name' : build_pipeline_form.name.data,
+                'description' : build_pipeline_form.description.data,
                 'output_dataset' : build_pipeline_form.output_dataset.data,
                 'output_project' : build_pipeline_form.output_project.data,
                 'ncbi_accession' : build_pipeline_form.ncbi_accession.data,
@@ -2229,9 +2162,10 @@ def pipeline(selected_dataset=None):
                 'filter_quality' : build_pipeline_form.filter_quality.data, 
                 'filter_percentage' : build_pipeline_form.filter_percentage.data, 
                 'pandaseq' : build_pipeline_form.pandaseq.data,
-                'analysis_type' : build_pipeline_form.analysis_type.data,
-                'description' : build_pipeline_form.description.data,
                 'pandaseq_algorithm' : build_pipeline_form.pandaseq_algorithm.data,
+                'pandaseq_minimum_overlap' : build_pipeline_form.pandaseq_minimum_overlap.data, 
+                'pandaseq_minimum_length': build_pipeline_form.pandaseq_minimum_length.data, 
+                'analysis_type' : build_pipeline_form.analysis_type.data,
                 'cluster' : build_pipeline_form.cluster.data,
                 'species' : build_pipeline_form.species.data,
                 'loci': build_pipeline_form.loci.data,
@@ -2252,14 +2186,73 @@ def pipeline(selected_dataset=None):
 
         ##### End Form Validation #####
 
-    else: # request.method == 'GET'
-        build_pipeline_form.trim_slidingwindow.data = True
-        build_pipeline_form.trim_illumina_adapters.data = True
-        build_pipeline_form.trim_slidingwindow_size.data = 4
-        build_pipeline_form.trim_slidingwindow_quality.data = 15
-        # build_pipeline_form.loci = ["IGH", "IGL", "IGK"]
+    else: # If request is a GET
 
-    return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes, first_error_item = first_error_item, selected_dataset=selected_dataset )
+        # get a list of user projects - relational includes those they own and those shared with them
+        projects = current_user.get_ordered_projects()
+
+        # get datasets from owned and shared projects
+        datasets = current_user.get_ordered_datasets()
+
+        project_tuples = []
+        dataset_tuples = []
+
+        dataset_file_dict = {}
+        dataset_project_dict = {}
+
+
+        # Create form choices for datasets and files
+        if len(datasets) > 0:
+            for dataset in datasets:
+                dataset_tuples.append( (str(dataset.id), dataset.name))
+
+                # build a dictionary indicating a project to which each dataset belongs
+                if len(dataset.projects) > 0 and dataset.projects[0] != None:
+                    dataset_project_dict[str(dataset.id)] = str(dataset.projects[0].id)
+                else:
+                    dataset_project_dict[str(dataset.id)] = 'new'
+
+                # build a dictionary entry indicating the files in each dataset ('dataset_id':{'file_id':'file_name'})
+                file_id_dict = {}
+                for file in [file for file in dataset.files if 'FASTQ' in file.file_type or 'FASTA' in file.file_type]:
+                    #only show files on local system
+                    if os.path.isfile(file.path):
+                        file_id_dict[ str(file.id) ] = file.name 
+                dataset_file_dict[ str(dataset.id) ] = file_id_dict
+
+            dataset_file_dict = {k:v for k, v in dataset_file_dict.items() if v != {}}
+
+            # This form does not need a new dataset option
+            build_pipeline_form.dataset.choices = [tup for tup in dataset_tuples if tup[0] in dataset_file_dict.keys()]
+
+            dataset_tuples.insert(0,('new', 'New Dataset'))
+            build_pipeline_form.output_dataset.choices = dataset_tuples
+
+        else:
+            build_pipeline_form.output_dataset.choices = [ ('new', 'New Dataset') ]
+
+        # Create form choices for projects
+        if len(projects) > 0:
+            for project in projects:
+                if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
+                    project_tuples.append( (str(project.id), project.project_name))
+            if len(project_tuples) > 0:
+                project_tuples.insert(0, ('new', 'New Project'))
+                build_pipeline_form.output_project.choices = project_tuples
+        else:
+            build_pipeline_form.output_project.choices = [ ('new', 'New Project') ]
+
+        # list of tuples to set arbitrary HTML tag attributes
+        # passed to JQUERY to set attributes
+        # ('selector' , 'attribute' , 'attribute value')
+        runtime_attributes = []
+        form_warning_style = 'border: 2px solid #d66; border-radius: 7px; box-shadow: 0 0 10px #d66;'
+
+        # used to scroll carousel to first error on form
+        first_error_item = None
+
+
+        return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes, first_error_item = first_error_item, selected_dataset=selected_dataset )
 
 
  

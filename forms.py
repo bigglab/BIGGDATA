@@ -296,10 +296,10 @@ class BuildPipelineForm(Form):
     gsaf_chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
 
     trim = BooleanField(u'Trim Illumina Adapters')
-    trim_slidingwindow = BooleanField(u'Use Sliding Window Trimming') # Perform a sliding window trimming, cutting once the average quality within the window falls below a threshold.
-    trim_slidingwindow_size = IntegerField(u'Window Size (Integer)') # windowSize: specifies the number of bases to average across
-    trim_slidingwindow_quality = IntegerField(u'Required Quality (Integer)') # requiredQuality: specifies the average quality required.
-    trim_illumina_adapters = BooleanField(u'Trim Illumina Adapters')
+    trim_slidingwindow = BooleanField(u'Use Sliding Window Trimming', default=False) # Perform a sliding window trimming, cutting once the average quality within the window falls below a threshold.
+    trim_slidingwindow_size = IntegerField(u'Window Size (Integer)', default=4) # windowSize: specifies the number of bases to average across
+    trim_slidingwindow_quality = IntegerField(u'Required Quality (Integer)', default=15) # requiredQuality: specifies the average quality required.
+    trim_illumina_adapters = BooleanField(u'Trim Illumina Adapters', default=True)
 
     filter = BooleanField(u'Quality Filter Reads', default='checked')
     filter_quality = IntegerField(u'Minimum Quality', default=20)
@@ -307,8 +307,11 @@ class BuildPipelineForm(Form):
 
     pandaseq = BooleanField('PANDAseq')
     pandaseq_algorithm = SelectField(u'PANDAseq Algorithm', choices=(['ea_util', 'ea_util'], ['flash', 'flash'], ['pear', 'pear'], ['rdp_mle', 'rdp_mle'],  ['simple_bayesian', 'simple_bayesian'], ['stitch', 'stitch'], ['uparse', 'uparse']), validators=[validators.input_required()])
+    pandaseq_minimum_overlap = IntegerField(u'Minimum Overlap', default=10)
+    pandaseq_minimum_length = IntegerField(u'Minimum Consensus Length', default=100)
 
     analysis_type = RadioField('Select a File Source', choices=[ ('igrep' , 'IGREP/IGFFT'), ('mixcr' , 'MixCR'), ('abstar' , 'ABStar')])
+
 
     loci = MultiCheckboxField('Loci', choices=[('IGH', 'IGH'), ('IGL', 'IGL'), ('IGK', 'IGK'), ('TCRA', 'TCRA'), ('TCRB', 'TCRB') ,('TCRG', 'TCRG'), ('TCRD', 'TCRD')], default = ['IGH', 'IGK', 'IGL'])
     species = SelectField( 'Species', choices=[('H. sapiens', 'H. sapiens'), ('M. musculus', 'M. musculus')] )

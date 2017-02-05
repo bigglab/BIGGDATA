@@ -1828,10 +1828,10 @@ def run_quality_filtering_with_dataset_id(self, dataset_id, analysis_id=None, an
         filtered_file.user_id = dataset.user_id
         filtered_file.path = '{}.filtered_q{}p{}.fastq'.format(basepath, minimum_quality, minimum_percentage)
         filtered_file.name = '{}.filtered_q{}p{}.fastq'.format(basename, minimum_quality, minimum_percentage)
-        if file.file_type == 'FASTQ': 
-            filtered_file.command = 'fastq_quality_filter -q {} -p {} -i {} -o {} -Q 33 '.format(minimum_quality, minimum_percentage,  file.path, filtered_file.path) #-Q 33 for more recent Illumina quality outputs
-        elif file.file_type == 'GZIPPED_FASTQ': 
+        if 'GZIPPED' in file.file_type: 
             filtered_file.command = ' gunzip -c {} | fastq_quality_filter -q {} -p {} -i - -o {} -Q 33 '.format(file.path, minimum_quality, minimum_percentage, filtered_file.path) #-Q 33 for more recent Illumina quality outputs
+        else: # file.file_type == 'FASTQ' or 'PANDASEQ_ALIGNED_FASTQ'
+            filtered_file.command = 'fastq_quality_filter -q {} -p {} -i {} -o {} -Q 33 '.format(minimum_quality, minimum_percentage,  file.path, filtered_file.path) #-Q 33 for more recent Illumina quality outputs
         filtered_file.file_type = 'FASTQ'
         files_to_execute.append(filtered_file)
         analysis.status = 'EXECUTING'
@@ -3269,9 +3269,11 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     filter_percentage = kwargs['filter_percentage']
     filter_quality = kwargs['filter_quality']
     pandaseq = kwargs['pandaseq']
+    pandaseq_algorithm = kwargs['pandaseq_algorithm']
+    pandaseq_minimum_overlap = kwargs['pandaseq_minimum_overlap']
+    pandaseq_minimum_length = kwargs['pandaseq_minimum_length']
     analysis_type = kwargs['analysis_type']
     description = kwargs['description']
-    pandaseq_algorithm = kwargs['pandaseq_algorithm']
     cluster = kwargs['cluster']
     species = kwargs['species']
     loci = kwargs['loci']
@@ -3413,7 +3415,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         logger.info (return_value)
 
     if pandaseq:
-        return_value = run_pandaseq_with_dataset_id(dataset_id, analysis_id = analysis_id, file_ids = file_ids_to_analyze, algorithm = pandaseq_algorithm, parent_task = task)
+        return_value = run_pandaseq_with_dataset_id(dataset_id, analysis_id = analysis_id, file_ids = file_ids_to_analyze, algorithm = pandaseq_algorithm, minimum_overlap = pandaseq_minimum_overlap, minimum_length=pandaseq_minimum_length, parent_task = task)
         file_ids_to_analyze = return_value.file_ids
         logger.info (return_value)
 

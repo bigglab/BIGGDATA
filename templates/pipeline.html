@@ -339,13 +339,17 @@
                                         <thead>
                                             <tr>
                                                 <th>{{ build_pipeline_form.pandaseq_algorithm.label }}</th>
+                                                <th>{{ build_pipeline_form.pandaseq_minimum_overlap.label }}</th>
+                                                <th>{{ build_pipeline_form.pandaseq_minimum_length.label }}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <tr>
                                                 <td>{{ build_pipeline_form.pandaseq_algorithm( class="form-control") }}</td>
+                                                <td>{{ build_pipeline_form.pandaseq_minimum_overlap( class="form-control") }}</td>
+                                                <td>{{ build_pipeline_form.pandaseq_minimum_length( class="form-control") }}</td>
                                             </tr>
-                                        </tbody>
+                                        </tbody>            
                                     </table>
                                   </div> <!-- /collapse -->
                                 </td>
