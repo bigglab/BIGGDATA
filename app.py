@@ -586,7 +586,7 @@ def parse_name_for_chain_type(name):
         chain = '' 
     return chain 
 
-def link_file_to_user(path, user_id, name):
+def link_file_to_user(path, user_id, name, dataset_id=None):
     file = File()
     file.name = name 
     file.path = path 
@@ -595,6 +595,7 @@ def link_file_to_user(path, user_id, name):
     file.file_type = parse_file_ext(file.path)
     file.available = True 
     file.chain = parse_name_for_chain_type(name)
+    file.dataset_id = dataset_id 
     db.session.add(file)
     db.session.commit()
     return True
@@ -1011,6 +1012,8 @@ def run_mixcr_with_dataset_id(self, dataset_id, analysis_name='', analysis_descr
                 result = run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9)
     return  'MiXCR analysis completed successfully.'
 
+
+
 @celery.task(base = LogTask, bind = True)
 def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None, loci=None):
 
@@ -1045,73 +1048,89 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
     files_to_execute = []
     logger.info( 'Running MiXCR on these files: {}'.format(files) )
     
-    path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
-    path = path.replace('///','/')
-    path = path.replace('//','/')
+    for i, file in enumerate(files): 
+        # if multiple files names  XXXX.R1.fastq and XXXX.R2.fastq are given, this will fail: 
+        basename = file.path.split('/')[-1].split('.')[0]
+        basepath = '{0}/{1}'.format(analysis.directory.rstrip('/'), basename)
+        logger.info( 'Writing output files to base name: {}'.format(basepath) )
+        print 'Base Path: {}'.format(basepath)
+        print 'Base Name: {}'.format(basename)
 
-    basename = parse_basename(map(lambda file: file.path, files))
-    # basename = files[0].path.split('/')[-1].split('.')[0]
-    # basename = analysis_name
-    basepath = '{0}/{1}'.format(analysis.directory, basename)
-    logger.info( 'Writing output files to base name: {}'.format(basepath) )
-    output_files = []
+        # Instantiate Produt Files
+        output_files = [] 
+        alignment_file = File()
+        alignment_file.user_id = dataset.user_id
+        alignment_file.path = '{}.mixcr'.format(basepath)
+        alignment_file.name = "{}.mixcr".format(basename)
+        # MIGHT NEED TO ADD THIS ARGUMENT to align (from costas)   -OjParameters.parameters.mapperMaxSeedsDistance=5 
+        alignment_file.command = '{} align -t 6 -OjParameters.parameters.mapperMaxSeedsDistance=5 --chains {} --species {} --save-description -f {} {}'.format(app.config['MIXCR'], loci, species, file.path, alignment_file.path)
+        alignment_file.file_type = 'MIXCR_ALIGNMENTS'
+        output_files.append(alignment_file)    
+        # clone_index_file = File()
+        # clone_index_file.user_id = dataset.user_id
+        # clone_index_file.file_type = 'MIXCR_CLONE_INDEX'
+        # clone_index_file.path = '{}.aln.clns.index'.format(basepath)
+        # clone_index_file.name = '{}.aln.clns.index'.format(basename)
+        # clone_index_file.command = 'echo "Indexing Done On Clone Assemble Step"'
+        clone_file = File()
+        clone_file.user_id = dataset.user_id
+        clone_file.file_type = 'MIXCR_CLONES'
+        clone_file.path = '{}.clns.mixcr'.format(basepath)
+        clone_file.name = '{}.clns.mixcr'.format(basename)
+        clone_file.command = '{} assemble  -OassemblingFeatures=VDJRegion -f {} {}'.format(app.config['MIXCR'], alignment_file.path, clone_file.path)
+        output_files.append(clone_file)
+        # output_files.append(clone_index_file)
+        db.session.add(alignment_file)
+        db.session.add(clone_file)
+        db.session.commit()
+        # Commit To Get Parent IDs
+        clone_output_file = File()
+        clone_output_file.user_id = dataset.user_id    
+        clone_output_file.parent_id = clone_file.id 
+        clone_output_file.path = '{}.txt'.format(clone_file.path)
+        clone_output_file.file_type = 'MIXCR_CLONES_TEXT'
+        clone_output_file.name = '{}.txt'.format(clone_file.name)
+        clone_output_file.command = '{} exportClones -sequence -quality -s --preset full {} {}'.format(app.config['MIXCR'], clone_file.path, clone_output_file.path)
+        output_files.append(clone_output_file)
+        alignment_output_file = File()
+        alignment_output_file.user_id = dataset.user_id    
+        alignment_output_file.parent_id = alignment_file.id
+        alignment_output_file.path = '{}.txt'.format(alignment_file.path)
+        alignment_output_file.file_type = 'MIXCR_ALIGNMENT_TEXT'
+        alignment_output_file.name = '{}.txt'.format(alignment_file.name)
+        alignment_output_file.command = '{} exportAlignments  -s --preset-file /data/resources/software/BIGGDATA/utils/mixcr_output_presets.txt {} {}'.format(app.config['MIXCR'], alignment_file.path, alignment_output_file.path)
+        output_files.append(alignment_output_file)
+        # pretty_alignment_file = File()
+        # pretty_alignment_file.user_id = dataset.user_id    
+        # pretty_alignment_file.parent_id = alignment_file.id 
+        # pretty_alignment_file.path = '{}.pretty.txt'.format(alignment_file.path)
+        # pretty_alignment_file.file_type = 'MIXCR_PRETTY_ALIGNMENT_TEXT'
+        # pretty_alignment_file.name =  '{}.pretty.txt'.format(alignment_file.name)
+        # pretty_alignment_file.command = 'mixcr exportAlignmentsPretty {} {}'.format(alignment_file.path, pretty_alignment_file.path)
+        # output_files.append(pretty_alignment_file)
 
-    print 'Path: {}'.format(path)
-    print 'Base Path: {}'.format(basepath)
-    print 'Base Name: {}'.format(basename)
+        for f in output_files: 
+            f.dataset_id = file.dataset_id 
+            f.analysis_id = analysis.id 
+            f.chain = file.chain
+            files_to_execute.append(f)
 
-    # Instantiate Source Files
-    alignment_file = File()
-    alignment_file.user_id = dataset.user_id
-    alignment_file.path = '{}.mixcr'.format(basepath)
-    alignment_file.name = "{}.mixcr".format(basename)
-    # MIGHT NEED TO ADD THIS ARGUMENT to align (from costas)   -OjParameters.parameters.mapperMaxSeedsDistance=5 
-    alignment_file.command = '{} align -t 6 -OjParameters.parameters.mapperMaxSeedsDistance=5 --chains {} --species {} --save-description -f {} {}'.format(app.config['MIXCR'], loci, species, ' '.join([f.path for f in files]), alignment_file.path)
+    #make sure we dont overwrite similarly named files (those with .R1. and .R2. instead of _R1 _R2)
+    duplicate_paths = set([path for path in map(lambda f: f.path, files_to_execute) if map(lambda f: f.path, files_to_execute).count(path) > 1])
+    if len(duplicate_paths) > 0: 
+        new_files = [] 
+        duplicate_files = [] 
+        for file in files_to_execute: 
+            if file.path in duplicate_paths: 
+                duplicate_files.append(file)
+            else: 
+                new_files.append(file)
+        for i, file in enumerate(duplicate_files): 
+            file.path = "{}.mixcr".format(i).join(file.path.split('mixcr'))
+            file.name = "{}.mixcr".format(i).join(file.name.split('mixcr'))
+            new_files.append(file)
+        files_to_execute = new_files 
 
-    alignment_file.file_type = 'MIXCR_ALIGNMENTS'
-    files_to_execute.append(alignment_file)    
-    # clone_index_file = File()
-    # clone_index_file.user_id = dataset.user_id
-    # clone_index_file.file_type = 'MIXCR_CLONE_INDEX'
-    # clone_index_file.path = '{}.aln.clns.index'.format(basepath)
-    # clone_index_file.name = '{}.aln.clns.index'.format(basename)
-    # clone_index_file.command = 'echo "Indexing Done On Clone Assemble Step"'
-    clone_file = File()
-    clone_file.user_id = dataset.user_id
-    clone_file.file_type = 'MIXCR_CLONES'
-    clone_file.path = '{}.clns.mixcr'.format(basepath)
-    clone_file.name = '{}.clns.mixcr'.format(basename)
-    clone_file.command = '{} assemble  -OassemblingFeatures=VDJRegion -f {} {}'.format(app.config['MIXCR'], alignment_file.path, clone_file.path)
-    files_to_execute.append(clone_file)
-    # files_to_execute.append(clone_index_file)
-    db.session.add(alignment_file)
-    db.session.add(clone_file)
-    db.session.commit()
-    # Commit To Get Parent IDs
-    clone_output_file = File()
-    clone_output_file.user_id = dataset.user_id    
-    clone_output_file.parent_id = clone_file.id 
-    clone_output_file.path = '{}.txt'.format(clone_file.path)
-    clone_output_file.file_type = 'MIXCR_CLONES_TEXT'
-    clone_output_file.name = '{}.txt'.format(clone_file.name)
-    clone_output_file.command = '{} exportClones -sequence -quality -s --preset full {} {}'.format(app.config['MIXCR'], clone_file.path, clone_output_file.path)
-    files_to_execute.append(clone_output_file)
-    alignment_output_file = File()
-    alignment_output_file.user_id = dataset.user_id    
-    alignment_output_file.parent_id = alignment_file.id
-    alignment_output_file.path = '{}.txt'.format(alignment_file.path)
-    alignment_output_file.file_type = 'MIXCR_ALIGNMENT_TEXT'
-    alignment_output_file.name = '{}.txt'.format(alignment_file.name)
-    alignment_output_file.command = '{} exportAlignments  -s --preset-file /data/resources/software/BIGGDATA/utils/mixcr_output_presets.txt {} {}'.format(app.config['MIXCR'], alignment_file.path, alignment_output_file.path)
-    files_to_execute.append(alignment_output_file)
-    # pretty_alignment_file = File()
-    # pretty_alignment_file.user_id = dataset.user_id    
-    # pretty_alignment_file.parent_id = alignment_file.id 
-    # pretty_alignment_file.path = '{}.pretty.txt'.format(alignment_file.path)
-    # pretty_alignment_file.file_type = 'MIXCR_PRETTY_ALIGNMENT_TEXT'
-    # pretty_alignment_file.name =  '{}.pretty.txt'.format(alignment_file.name)
-    # pretty_alignment_file.command = 'mixcr exportAlignmentsPretty {} {}'.format(alignment_file.path, pretty_alignment_file.path)
-    # files_to_execute.append(pretty_alignment_file)
     analysis.status = 'EXECUTING'
     db.session.commit()
 
@@ -1120,9 +1139,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
 
     for f in files_to_execute:
         f.command = f.command.encode('ascii')
-        f.dataset_id = analysis.dataset_id 
-        f.analysis_id = analysis.id 
-        f.chain = files[0].chain
+
         logger.info( 'Executing: {}'.format(f.command) )
         analysis.active_command = f.command
         f.in_use = True 
@@ -1410,7 +1427,7 @@ def standardize_output_files(self, user_id=None, analysis_id=None, file_ids=None
         logger.info('Standardizing {} files: {}'.format(str(len(files_to_standardize)), ','.join(map(lambda f: f.name, files_to_standardize))))
         standardized_file_ids = [] 
         for file in files_to_standardize: 
-            logger.info('Standardizing file {} and adding to Dataset id {}, Analysis '.format(str(file.name), str(file.dataset_id), str(file.analysis_id)))
+            logger.info('Standardizing file {} and adding to Dataset id {}, Analysis {}'.format(str(file.name), str(file.dataset_id), str(file.analysis_id)))
             if 'IGFFT' in file.file_type: 
                 df = build_annotation_dataframe_from_igfft_file(file.path, rmindels=rmindels, append_ms_peptides=append_ms_peptides, require_annotations=require_annotations)
             if 'MIXCR' in file.file_type: 
@@ -1658,19 +1675,7 @@ def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = c
         raise Exception( 'Analysis with ID {} not found.'.format(analysis_id) )
     analysis_name = 'Analysis_{}'.format(analysis.id)
 
-    dataset = analysis.dataset
-    files_to_execute = []
     logger.info( 'Running Trimmomatic on files {}.'.format( ', '.join( [str(file.id) for file in files] ) ) )
-    path = '/{}'.format('/'.join(files[0].path.split('/')[:-1]))
-    path = path.replace('//', '/')
-
-    basename = files[0].path.split('/')[-1].split('.')[0]
-    basepath = '{0}/{1}'.format(analysis.directory, analysis_name)
-    logger.info( 'Writing output files to base name: {}'.format(basepath) )
-    output_file_ids = []
-
-    if len(files) == 0 or len(files) > 2:
-        raise Exception('Can only run Trimmomatic on 1 or 2 files, not on {} files.'.format( str(len(files) ) ) )
 
     illumina_command = ''
     if trim_illumina_adapters:
@@ -1681,45 +1686,38 @@ def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = c
         sliding_window_command = 'SLIDINGWINDOW:{}:{} '.format(trim_slidingwindow_size, trim_slidingwindow_quality)
 
 
-    # Instantiate Source Files
-    if len(files) == 1: 
+    # if len(files) == 0 or len(files) > 2:
+    #     raise Exception('Can only run Trimmomatic on 1 or 2 files, not on {} files.'.format( str(len(files) ) ) )
+
+    files_to_execute = []
+
+    for file in files: 
+
+        # path = '/{}'.format('/'.join(file.path.split('/')[:-1])).replace('//', '/')
+        basename = file.path.split('/')[-1].split('.')[0]
+        basepath = '{0}/{1}'.format(analysis.directory, basename)
+        logger.info( 'Writing trimmed file to: {}'.format(basepath) )
+
         output_file = File()
-        output_file.user_id = dataset.user_id
         output_file.path = '{}.trimmed.fastq'.format(basepath)
         output_file.name = "{}.trimmed.fastq".format(basename)
+        output_file.dataset_id = analysis.dataset_id 
+        output_file.user_id = analysis.user_id
+        output_file.analysis_id = analysis.id 
+        output_file.chain = file.chain
 
-        # #3 is the illumina clip command
-        output_file.command = '{0} SE -phred33 -threads 4 {1} {2} {3}LEADING:3 TRAILING:3 {4}MINLEN:50'.format(app.config['TRIMMOMATIC'], files[0].path, output_file.path, illumina_command, sliding_window_command)
+        output_file.command = '{0} SE -phred33 -threads 4 {1} {2} {3} LEADING:3 TRAILING:3 {4}MINLEN:50'.format(app.config['TRIMMOMATIC'], file.path, output_file.path, illumina_command, sliding_window_command)
         output_file.file_type = 'TRIMMED_FASTQ'
         files_to_execute.append(output_file)
 
-        paired = False
-
-    if len(files) == 2: 
-        r1_output_file = File()
-        r1_output_file.user_id = dataset.user_id
-        r1_output_file.path = '{}.R1.trimmed.fastq'.format(basepath)
-        r1_output_file.name = "{}.R1.trimmed.fastq".format(basename)
-        r1_output_file.file_type = 'TRIMMED_FASTQ'
-        r2_output_file = File()
-        r2_output_file.user_id = dataset.user_id
-        r2_output_file.path = '{}.R2.trimmed.fastq'.format(basepath)
-        r2_output_file.name = "{}.R2.trimmed.fastq".format(basename)
-        r2_output_file.file_type = 'TRIMMED_FASTQ'
-        r1_output_file.command = '{0} PE -phred33 -threads 4 {1} {2} {3} {4} {5} {6} {7}LEADING:3 TRAILING:3 {8}MINLEN:50'.format(app.config['TRIMMOMATIC'], files[0].path, files[1].path, r1_output_file.path, '/dev/null', r2_output_file.path, '/dev/null', illumina_command, sliding_window_command)
-        r2_output_file.command = ''
-        files_to_execute.append(r1_output_file)
-        files_to_execute.append(r2_output_file)
-
-        paired = True
 
     analysis.status = 'EXECUTING TRIM'
     db.session.commit()
+
+
+    output_file_ids = []
     for f in files_to_execute:
         f.command = f.command.encode('ascii')
-        f.dataset_id = analysis.dataset_id 
-        f.analysis_id = analysis.id 
-        f.chain = files[0].chain
         logger.info( 'Executing: {}'.format(f.command) )
         analysis.active_command = f.command
         f.in_use = True 
@@ -1758,29 +1756,23 @@ def run_trim_analysis_with_files(analysis_id = None, file_ids = None, logger = c
                 f.in_use = False 
                 analysis.status = 'FAILED'
                 db.session.commit()
-                logger.error( 'Error trimming file {}: {}'.format(file.path, error) )
+                logger.error( 'Error writing trimmed file {}: {}'.format(f.path, error) )
 
-    if paired:
-        db.session.refresh(r1_output_file)
-        output_file_ids.append(r1_output_file.id)
-        db.session.refresh(r2_output_file)
-        output_file_ids.append(r2_output_file.id)
-    else:
-        db.session.refresh(output_file)
-        output_file_ids.append(output_file.id)
-
+ 
+        db.session.refresh(f)
+        output_file_ids.append(f.id)
 
     logger.info( 'Trim job for analysis {} has been executed.'.format(analysis) )
     return ReturnValue( 'Success', file_ids = output_file_ids)
 
 
+
 # Quality filtering with fastx_toolkit on  % of read above certain PHRED threshold
 @celery.task(base = LogTask, bind = True)
-def run_quality_filtering_with_dataset_id(self, dataset_id, analysis_id=None, analysis_name='', analysis_description='Fastq Quality Filter', file_ids=[], minimum_percentage=50, minimum_quality=20):
+def run_quality_filtering_with_analysis_id(self, analysis_id=None, analysis_name='', analysis_description='Fastq Quality Filter', file_ids=[], minimum_percentage=50, minimum_quality=20):
     logger = self.logger
-    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
     files = [db.session.query(File).get(file_id) for file_id in file_ids]
-    logger.info( 'Running Quality Filter on Dataset {}.'.format( dataset_id ) )
+    logger.info( 'Running Quality Filtering on Files {}.'.format( ",".join(map(lambda f: f.path, files)) ) )
 
     if analysis_id: 
         analysis = db.session.query(Analysis).filter(Analysis.id==analysis_id).first()
@@ -1792,7 +1784,7 @@ def run_quality_filtering_with_dataset_id(self, dataset_id, analysis_id=None, an
         analysis.name = analysis_name
         analysis.description = analysis_description
         analysis.user_id = user_id
-        analysis.dataset_id = dataset.id
+        analysis.dataset_id = files[0].id
         analysis.program = 'quality_filter'
         analysis.started = 'now'
         analysis.params = {}
@@ -1803,7 +1795,7 @@ def run_quality_filtering_with_dataset_id(self, dataset_id, analysis_id=None, an
         db.session.add(analysis)
         db.session.commit()
         db.session.refresh(analysis)
-        analysis.directory = '{}/Analysis_{}/'.format( dataset.directory.rstrip('/'), analysis.id )
+        analysis.directory = '{}/Analysis_{}/'.format( files[0].dataset.directory.rstrip('/'), analysis.id )
         if not os.path.isdir(analysis.directory):
             os.mkdir(analysis.directory)
 
@@ -1811,20 +1803,15 @@ def run_quality_filtering_with_dataset_id(self, dataset_id, analysis_id=None, an
     logger.info( 'Running Quality Filtering with {}% bases above PHRED {} on these files: {}'.format(minimum_percentage, minimum_quality, ', '.join( [file.name for file in files] ) ))
 
     files_to_execute = []
-    output_file_ids = [] 
-    for file in files: 
-        path = '/{}'.format('/'.join(file.path.split('/')[:-1]))
-        path = path.replace('//','/')
+    for i, file in enumerate(files): 
+        path = '/{}'.format('/'.join(file.path.split('/')[:-1])).replace('//','/')
         basename = file.path.split('/')[-1].split('.')[0]
-        # basepath = '{0}/{1}'.format(analysis.directory, analysis_name)
-        if basename == '' or basename == None: 
-            basename = 'Analysis_{}'.format(analysis.id)
         basepath = '{0}/{1}'.format(analysis.directory.rstrip('/'), basename)
-        logger.info( 'Writing output files to base name: {}'.format(basepath) )
+        logger.info( 'Writing filtered output file to base: {}'.format(basepath) )
 
         # Instantiate Output Files
         filtered_file = File()
-        filtered_file.user_id = dataset.user_id
+        filtered_file.user_id = analysis.user_id
         filtered_file.path = '{}.filtered_q{}p{}.fastq'.format(basepath, minimum_quality, minimum_percentage)
         filtered_file.name = '{}.filtered_q{}p{}.fastq'.format(basename, minimum_quality, minimum_percentage)
         if 'GZIPPED' in file.file_type: 
@@ -1832,16 +1819,26 @@ def run_quality_filtering_with_dataset_id(self, dataset_id, analysis_id=None, an
         else: # file.file_type == 'FASTQ' or 'PANDASEQ_ALIGNED_FASTQ'
             filtered_file.command = 'fastq_quality_filter -q {} -p {} -i {} -o {} -Q 33 '.format(minimum_quality, minimum_percentage,  file.path, filtered_file.path) #-Q 33 for more recent Illumina quality outputs
         filtered_file.file_type = 'FASTQ'
+        filtered_file.dataset_id = file.dataset_id 
+        filtered_file.analysis_id = analysis.id 
+        filtered_file.chain = file.chain 
         files_to_execute.append(filtered_file)
-        analysis.status = 'EXECUTING'
-        db.session.commit()
+    #make sure we dont overwrite similarly named files 
+    if len(set(map(lambda f: f.name, files_to_execute)))==1: 
+        new_files = [] 
+        for i, file in enumerate(files_to_execute): 
+            file.path = "{}.filtered".format(i).join(file.path.split('filtered'))
+            file.name = "{}.filtered".format(i).join(file.name.split('filtered'))
+            new_files.append(file)
+        files_to_execute = new_files 
 
+    analysis.status = 'EXECUTING'
+    db.session.commit()
+
+
+    output_file_ids = [] 
     for f in files_to_execute:
         f.command = f.command.encode('ascii')
-        # if type(f.command) == list: f.command = [command.encode('ascii') for command in f.command]
-        f.dataset_id = analysis.dataset_id 
-        f.analysis_id = analysis.id 
-        # f.chain = files[0].chain
         logger.info( 'Executing: {}'.format(f.command) )
         analysis.active_command = f.command
         f.in_use = True 
@@ -1869,25 +1866,6 @@ def run_quality_filtering_with_dataset_id(self, dataset_id, analysis_id=None, an
             for line in iter(command_line_process.stdout.readline, b''):
                 line = line.strip()
                 logger.info(line)
-                # if 'ERR' in line or '* * *' in line:
-                #     if 'LOWQ' in line: 
-                #         lowq_errors += 1 
-                #     else: 
-                #         logger.error(line)
-                # elif 'STAT' in line:
-                #     try:
-                #         if 'READS' in line:
-                #             current = dt.datetime.now()
-                #             elapsed = (current - start).seconds
-                #             line_parts = line.split('READS', 1)
-                #             reads = line_parts[1].strip()
-                #             status = 'Time Elapsed: {} - Number of Reads: {}'.format(elapsed, reads)
-                #             self.update_state(state='STATUS', meta={'status': status })
-                #     except:
-                #         pass
-
-            # self.update_state(state='SUCCESS',
-            #     meta={'status': 'PANDAseq complete.' })
 
             response, error = command_line_process.communicate()
             command_line_process.stdout.close()
@@ -1899,12 +1877,12 @@ def run_quality_filtering_with_dataset_id(self, dataset_id, analysis_id=None, an
             if os.path.isfile(f.path): 
                 f.available = True 
                 f.file_size = os.path.getsize(f.path)
-                dataset.primary_data_files_ids = [f.id]
                 db.session.commit()
                 db.session.refresh(f)
                 output_file_ids.append(f.id)
             else:
                 f.available = False
+                f.in_use = False 
                 analysis.status = 'FAILED'
                 db.session.commit()
                 logger.error('Quality Filtering Error: unable to create file {}'.format(f.path) )
@@ -3419,7 +3397,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         logger.info (return_value)
 
     if filter: 
-        return_value = run_quality_filtering_with_dataset_id(dataset_id, analysis_id=analysis_id, file_ids=file_ids_to_analyze, minimum_percentage=filter_percentage, minimum_quality=filter_quality, parent_task = task)
+        return_value = run_quality_filtering_with_analysis_id(analysis_id=analysis_id, file_ids=file_ids_to_analyze, minimum_percentage=filter_percentage, minimum_quality=filter_quality, parent_task = task)
         file_ids_to_analyze = return_value.file_ids 
         logger.info (return_value)
 
