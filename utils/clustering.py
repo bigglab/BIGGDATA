@@ -29,19 +29,27 @@ def collapse_annotation_dataframe(df, on='aaFullSeq'):
 
 def cluster_dataframe(df, cluster_cutoff=0.94, on='aaSeqCDR3', readCutoff=1, remove_temp_files=True): 
 	df = collapse_annotation_dataframe(df, on=on)
+	print '********************** Writing Fasta {} **********************'.format(on)
 	temp_fasta_file = tempfile.NamedTemporaryFile(delete=False)
 	for index, row in df.iterrows(): 
 		temp_fasta_file.write('>{}\n'.format(index))
 		temp_fasta_file.write('{}\n'.format(''.join(row[on])))
 	temp_fasta_file.close()
 	print 'fasta sequences for clustering written to temp file {}'.format(temp_fasta_file.name)
+	print '********************** Sorting Fasta **********************'
+	print 'Sorting fasta sequences by decreasing length (increases clustering accuracy)'
+	temp_sorted_file = tempfile.mktemp()
+	print 'writing sorted fasta file to {}'.format(temp_sorted_file)
+	usearch_sort_command = "/data/resources/software/usearch -sortbylength {} -fastaout {} ".format(temp_fasta_file.name, temp_sorted_file)
+	print usearch_sort_command
+	os.system(usearch_sort_command)
+	print '********************** Clustering **********************'
 	temp_centroids_file = tempfile.mktemp()
 	temp_clustered_output_file = tempfile.mktemp()
 	print 'writing centroids to temporary file {}'.format(temp_centroids_file)
 	print 'writing clustering output to temporary file {}'.format(temp_clustered_output_file)
-	print '********************** Clustering **********************'
-	#perform clustering
-	usearch_command = "/data/resources/software/usearch -cluster_smallmem {} -minhsp 10 -minseqlength 10 -sortedby other -id {} -centroids {} -uc {}".format(temp_fasta_file.name, cluster_cutoff, temp_centroids_file, temp_clustered_output_file)
+	#perform clustering - usearch8 
+	usearch_command = "/data/resources/software/usearch -cluster_smallmem {} -minhsp 10 -sortedby other -id {} -centroids {} -uc {}".format(temp_fasta_file.name, cluster_cutoff, temp_centroids_file, temp_clustered_output_file)
 	print usearch_command
 	os.system(usearch_command)
 	print '***************** Clustering Complete *****************'
@@ -50,7 +58,7 @@ def cluster_dataframe(df, cluster_cutoff=0.94, on='aaSeqCDR3', readCutoff=1, rem
 	print '\nParsing clustering information.\n'
 	cluster_results=pd.read_csv(temp_clustered_output_file, sep='\t', names=clust_cols)
 	if remove_temp_files: 
-		for filename in temp_fasta_file.name, temp_clustered_output_file, temp_centroids_file: 
+		for filename in temp_fasta_file.name, temp_clustered_output_file, temp_centroids_file, temp_sorted_file: 
 			os.remove(filename)
 	cluster_results=cluster_results[['SeedorHit','clusterId','index_row']]
 	cluster_results=cluster_results[cluster_results.SeedorHit != 'C']
