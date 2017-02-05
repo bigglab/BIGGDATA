@@ -356,14 +356,13 @@ class LogTask(Task):
                     celery_logger.debug( 'User Id: {}'.format( user_id ) )
                     
                     try:
-                        user = session.query(User).filter_by( id = user_id ).first()
+                        user = session.query(User).get(user_id)
                     except:
                         time.sleep(1)
-                        user = session.query(User).filter_by( id = user_id ).first()
-
+                        user = session.query(User).get(user_id)
                     if user:
                         self.user_found = True
-                        logfile = '{}/{}.log'.format( user.path.rstrip('/') , logger_id )
+                        logfile = '{}/{}.log'.format( user.log_path.rstrip('/') , logger_id )
                         celery_logger.debug( 'Starting log file at {}'.format( logfile ) )
                     else:
                         user_found = False

@@ -155,6 +155,10 @@ class User(db.Model):
             return self.root_path.rstrip('/') + '/dropbox'
 
         @hybrid_property
+        def log_path(self):
+            return self.root_path.rstrip('/') + '/logs'
+
+        @hybrid_property
         def path(self):
             return self.root_path
 
@@ -162,7 +166,7 @@ class User(db.Model):
         # intended for use in instantiating user directories
         @hybrid_property
         def all_paths(self):
-            paths = [ self.root_path, self.dropbox_path ]
+            paths = [ self.root_path, self.dropbox_path, self.log_path ]
             return paths
 
         @hybrid_property
