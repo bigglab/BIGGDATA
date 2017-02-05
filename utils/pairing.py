@@ -9,9 +9,10 @@ from utils.standardization import *
 
 
 
+
 def pair_annotation_files(file1, file2): 
-	df1 = read_annotation_dataframe(file1)
-	df2 = read_annotation_dataframe(file2)
+	df1 = read_annotation_dataframe_file(file1)
+	df2 = read_annotation_dataframe_file(file2)
 	return pair_annotation_dataframes(df1, df2)
 
 def pair_annotation_dataframes(df1, df2): 
@@ -40,24 +41,26 @@ def pair_annotation_dataframes(df1, df2):
 	#combine CDR3 nt sequences..? 
 	df['aaSeqCDR3_combined']=df['nSeqCDR3_h'].map(str)+":"+df['nSeqCDR3_l'].map(str)
 
-	# #find any isotypes missed by MixCR - that many to justify this routine?? 
-	# print 'Analyzing for additional heavy chain isotyping.\n'
-	# iso_nulls_before=df['c_top_hit_h'].isnull().sum()
-	# df['c_top_hit_h']=df.apply(find_isotype, seq_index='nFullSeq_h', isotype_index='c_top_hit_h', axis=1)
-	# iso_nulls_after=df['c_top_hit_h'].isnull().sum()
-	# df['c_top_hit_locus_h'] = df.apply(lambda r: r['c_top_hit_h'] if pd.isnull(r['c_top_hit_locus_h']) else r['c_top_hit_locus_h'], axis=1)
-	# print 'Additional isotypes defined: %s\n' %(iso_null_before-iso_nulls_after)
+	#find any isotypes missed by MixCR - still that many missed to justify this routine?? 
+	print 'Analyzing for additional heavy chain isotyping.\n'
+	iso_nulls_before=df['c_top_hit_h'].isnull().sum()
+	df['c_top_hit_h']=df.apply(find_isotype, seq_index='nFullSeq_h', isotype_index='c_top_hit_h', axis=1)
+	iso_nulls_after=df['c_top_hit_h'].isnull().sum()
+	df['c_top_hit_locus_h'] = df.apply(lambda r: r['c_top_hit_h'] if pd.isnull(r['c_top_hit_locus_h']) else r['c_top_hit_locus_h'], axis=1)
+	print 'Additional isotypes defined: %s\n' %(iso_nulls_before-iso_nulls_after)
 
 	dfg = df.groupby(['nSeqCDR3_h','nSeqCDR3_l'])
-	df['readCount']=dfg['readCount_h'].transform('sum')
+	df['collapsedCount']=dfg['collapsedCount_h'].transform('sum')
 	df['v_region_shm_h']=dfg['v_region_shm_h'].transform('mean').apply(round, args=[1,])
 	df['v_region_shm_l']=dfg['v_region_shm_l'].transform('mean').apply(round, args=[1,])
 	df['j_region_shm_h']=dfg['j_region_shm_h'].transform('mean').apply(round, args=[1,])
 	df['j_region_shm_l']=dfg['j_region_shm_l'].transform('mean').apply(round, args=[1,])
-	df_collapsed = df.sort_values(['readCount', 'aaSeqCDR3_h'], ascending=[False, True]).drop_duplicates(['nSeqCDR3_h','nSeqCDR3_l'])
+	df_collapsed = df.sort_values(['collapsedCount', 'aaSeqCDR3_h'], ascending=[False, True]).drop_duplicates(['nSeqCDR3_h','nSeqCDR3_l'])
 
 	print 'Number of collapsed pairs: %s\n' %len(df_collapsed.index)
 	return df_collapsed 
+
+
 
 
 # # sometimes MiXCR missed isotypes? 
@@ -76,6 +79,30 @@ def find_isotype(row, seq_index='nFullSeq', isotype_index='c_top_hit'):
 			return 'IGHG'
 		else:
 			return np.nan  
+
+
+
+
+
+# take only the most commonly paired stable key to each promiscuous key 
+def filter_promiscuous(df, promiscuous_key='CDRL3 AA', stable_key='CDRH3 AA', count_key=None): 
+	if not count_key==None: 
+		max_sums = df.groupby([promiscuous_key, stable_key])[count_key].sum().sort_index().reset_index().groupby(promiscuous_key).max()
+		chaste_combos = max_sums.reset_index()[[promiscuous_key, stable_key]]
+		chaste_tuples = [tuple(x) for x in chaste_combos.values]
+		df_multiindexed = df.set_index([promiscuous_key, stable_key]).sort_index()
+		df_clean = df_multiindexed.loc[chaste_tuples].reset_index()
+		return df_clean
+	else:
+		chaste_combos = df.groupby(promiscuous_key)[stable_key].agg(lambda x: pd.value_counts(x).index[0]).reset_index()
+		chaste_tuples = [tuple(x) for x in chaste_combos.values]
+		df_multiindexed = df.set_index([promiscuous_key, stable_key]).sort_index()
+		df_clean = df_multiindexed.loc[chaste_tuples].reset_index()
+		return df_clean 
+
+
+
+
 
 
 
