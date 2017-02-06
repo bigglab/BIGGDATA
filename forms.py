@@ -269,8 +269,8 @@ class ImportFilesForm(Form):
     local_file_1 = FileField(u'Local File Path')
     local_file_2 = FileField(u'Local File Path')
     
-    server_file_1 = FileField(u'Server File Path')
-    server_file_2 = FileField(u'Server File Path')
+    server_file_1 = TextField(u'File Path', validators=[validators.input_required()], widget=TextInput())
+    server_file_2 = TextField(u'File Path', validators=[validators.input_required()], widget=TextInput())
 
     file_pairing = SelectField(u'File Pairing (2 files required)', choices = [ ('none','None'), ('vhvl','Heavy/Light Chain Pairing'), ('forev','Forward/Reverse Pairing') ] )
 

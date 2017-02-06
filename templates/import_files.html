@@ -161,13 +161,41 @@
                   </td>
                 </tr>
 
+
+
+                <tr>
+                  <td width="15px"></td>
+                  <td>                              
+                    <label class="radio">
+                      <input id="file_source-5" name="file_source" type="radio" value="file_server" class="file_server">Files On Server
+                    </label>
+                    <div id="collapse" class="collapse file_server radio">
+                    <br><p>This will copy files to new Dataset directory. Be sure file permissions are set to allow copying from the 'russ' user.</p>
+                      <table class='table table-striped'> 
+                        <thead>
+                            <tr>
+                                <th>{{ form.server_file_1.label }}:</th>
+                                <th>Pairing:</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                          <tr >
+                            <td>{{ form.server_file_1(size=30, class="form-control") }}</td>
+                            <td >{{ form.file_pairing(class="form-control file_pairing") }}</td>
+                          </tr>
+                          <tr id="collapse" class="collapse file_pairing">
+                            <td>{{ form.server_file_2(size=30, class="form-control") }}</td>
+                            <td width=30%></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </td>
+                </tr>
             </table>
 
           </div> <!-- /accordian -->
-
-
         </div> <!-- /file_source panel -->
-
       </div> <!-- /panel --> 
 
     </div>
@@ -176,6 +204,7 @@
 
 
 <br>
+
 
 
 

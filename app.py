@@ -830,7 +830,7 @@ def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_
         raise Exception( 'fastq-dump command failed:'.format(error) )
 
 @celery.task( base = LogTask, bind = True ) 
-def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, chain=None, name=None, dataset = None ):
+def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, chain=None, name=None, dataset = None, remove_original=False ):
     logger = self.logger
 
     current_user = db.session.query(User).filter(User.id==user_id).first()
@@ -968,6 +968,7 @@ def download_file(self, url, path, file_id, checksum=None, user_id = None):
 
     db.session.commit()
     return 'File download complete.'
+
 
 @celery.task ( base = LogTask , bind = True )
 def run_mixcr_with_dataset_id(self, dataset_id, analysis_name='', analysis_description='', user_id=6, trim=False, cluster=False):
@@ -2856,7 +2857,7 @@ def flash_errors( form, category="warning" ):
             flash("{0} - {1}".format( getattr( form, field ).label.text, error ), category )
 
 @celery.task(base= LogTask, bind = True)
-def parse_gsaf_response_into_datasets(self, url, user_id=2, celery_queue='default'):
+def parse_gsaf_response_into_datasets(self, url, user_id=2, project_id=None, celery_queue='default'):
     if self.parent_task:
         task = self.parent_task
     else:
@@ -2872,6 +2873,8 @@ def parse_gsaf_response_into_datasets(self, url, user_id=2, celery_queue='defaul
     file_arrays_by_sample_name = itertools.groupby(file_arrays, lambda x: x[1].split('_')[0])
     with session_scope() as session:
         user=session.query(User).filter(User.id==user_id).all()[0]
+        if project_id: 
+            project=session.query(Project).get(project_id)
         new_file_ids=[]
         for sample_name, file_arrays in file_arrays_by_sample_name:
             logger.info('Collecting Info On Sample {}'.format(sample_name))
@@ -2917,9 +2920,13 @@ def parse_gsaf_response_into_datasets(self, url, user_id=2, celery_queue='defaul
                     dataset.files.append(new_file)
 
                     download_file( url = new_file.url, checksum=file_checksum, path = new_file.path, file_id = new_file.id, user_id = user_id, parent_task = task)
+        if project_id: 
+            pd = ProjectDatasets(dataset = dataset, project = project)
+            session.add(pd)
+            session.commit()
 
     # call create_datasets_from_JSON_string(json_string, project)
-    return ReturnValue('import finished', file_ids=new_file_ids)
+    return ReturnValue('GSAF import finished: {} files ingested.'.format(len(new_file_ids)), file_ids=new_file_ids)
 
 # @Dave - function to create datasets from a JSON file
 # If the project is give, the datasets are added to the project
@@ -3310,7 +3317,6 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     pandaseq_minimum_overlap = kwargs['pandaseq_minimum_overlap']
     pandaseq_minimum_length = kwargs['pandaseq_minimum_length']
     analysis_type = kwargs['analysis_type']
-    description = kwargs['description']
     cluster = kwargs['cluster']
     species = kwargs['species']
     loci = kwargs['loci']
@@ -3399,7 +3405,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
 
             download_file( url = new_file.url, path = new_file.path, file_id = new_file.id, user_id = user_id, parent_task = task)
         else: # file_source =='file_ncbi':
-            return_value = import_from_sra(accession = ncbi_accession, name=ncbi_accession, user_id = user_id, chain = ncbi_chain, project_selection = str(output_project), dataset_selection = str(output_dataset), parent_task = task)
+            return_value = import_from_sra(ncbi_accession, name=ncbi_accession, user_id = user_id, chain = ncbi_chain, project_selection = str(output_project), dataset_selection = str(output_dataset), parent_task = task)
             file_ids_to_analyze = return_value.file_ids
 
         if file_ids_to_analyze == []:

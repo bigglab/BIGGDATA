@@ -1471,7 +1471,7 @@ def generate_new_dataset(user = None, session = db.session, name=None, descripti
     session.add(new_dataset)
     session.flush()
 
-    if name or name=='': 
+    if name or name!='': 
         if name == '__default__':
             flash('Error: cannot create a dataset with that name.', 'warning')
             return redirect(url_for('.datasets'))

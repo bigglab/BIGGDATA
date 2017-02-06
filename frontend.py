@@ -589,7 +589,6 @@ def import_files():
                 if add_to_project==True: 
                     project.datasets.append(dataset)
 
-
             new_files = []
             try:
                 request_file_1 = request.files['local_file_1']
@@ -615,7 +614,6 @@ def import_files():
 
 
             if form.file_pairing.data != 'none': # more than one file expected 
-
                 try:
                     request_file_2 = request.files['local_file_2']
                 except:
@@ -649,19 +647,137 @@ def import_files():
                 flash('New files {} & {} uploaded and saved to Dataset {}.'.format( file_1.id, file_2.id, dataset.id ), 'success' )
             else: 
                 flash('New file {} uploaded and saved to Dataset {}.'.format( file_1.id, dataset.id ), 'success' )
+                
+            return redirect(url_for('frontend.datasets'))
+
+
+        elif form.file_source.data == 'file_gsaf': 
+            url = form.gsaf_url.data
+            req = urllib2.Request(url)
+            try:
+                response = urllib2.urlopen(req)
+                # response successful? 
+            except urllib2.HTTPError as err:
+                flash('Supplied GSAF URL is unreachable...', 'error')
+                dropbox_files = get_dropbox_files(current_user)
+                form.output_dataset.choices = get_dataset_choices(current_user, new = True)
+                form.output_project.choices = get_project_choices(current_user, new = True)
+                return render_template('import_files.html', form=form)
+            else: 
+                if form.output_project.data == 'new':
+                    project = generate_new_project(user = current_user, name=form.project_name.data, description=form.project_description.data, session = db.session)
+                else: 
+                    project = db.session.query(Project).get(int(form.output_project.data))
+
+                parse_gsaf_response_into_datasets.apply_async((url,), {'user_id':current_user.id, 'project_id':project.id}, queue=celery_queue)
+                return redirect(url_for('frontend.dashboard'))
+                 # render_template('sra_import.html', status=status, form=form, result=result, current_user=current_user)
+
+
+        elif form.file_source.data == 'file_ncbi':
+            return_value = import_from_sra.apply_async((form.ncbi_accession.data), {'name':form.ncbi_accession.data, 'user_id':current_user.id, 'project_selection': str(form.output_project.data), 'dataset_selection': str(form.output_dataset.data)}, queue=celery_queue)
+            return redirect(url_for('frontend.dashboard'))
+
+        elif form.file_source.data =='file_url':
+
+            add_to_project=False
+            if form.output_dataset.data == 'new': 
+                dataset = generate_new_dataset(user = current_user, name=form.dataset_name.data, description=form.dataset_description.data, session=db.session)
+                add_to_project=True
+            else: 
+                dataset = db.session.query(Dataset).get(int(form.output_dataset.data))
+
+            if form.output_project.data == 'new':
+                project = generate_new_project(user = current_user, datasets = dataset, name=form.project_name.data, description=form.project_description.data, session = db.session)
+            else: 
+                project = db.session.query(Project).get(int(form.output_project.data))
+                if add_to_project==True: 
+                    project.datasets.append(dataset)
+
+            new_file_ids = []
+            for download_url in [url for url in [form.download_url_1.data, form.download_url_2.data] if url != None and url != '']: 
+                # first create a new db file to place the download in
+                new_file = File()
+                new_file.url = download_url.rstrip()
+                new_file.name = new_file.url.split('/')[-1].split('?')[0]
+                new_file.file_type = parse_file_ext(new_file.name)
+                new_file.dataset_id = dataset.id
+                new_file.path = '{}/{}'.format(dataset.directory.rstrip('/'), new_file.name)
+                new_file.user_id = current_user.id 
+                new_file.available = False 
+                new_file.status = ''
+
+                if 'gz' in new_file.file_type.lower():
+                    new_file.file_type = 'GZIPPED_FASTQ'
+
+                db.session.add(new_file)
+                db.session.commit()
+                db.session.refresh( new_file )
+                new_file_ids.append( new_file.id )
+                # add the new file to the dataset
+                dataset.files.append(new_file)
+
+                download_file.apply_async((new_file.url, new_file.path, new_file.id), {'user_id' : current_user.id})
+
+            flash('File(s) {} being downloaded and saved to Dataset {}'.format(','.join([str(i) for i in new_file_ids]), dataset.name), 'success')
+            return redirect( url_for('frontend.dashboard') )
+
+
+        elif form.file_source.data =='file_server':
+
+            add_to_project=False
+            if form.output_dataset.data == 'new': 
+                dataset = generate_new_dataset(user = current_user, name=form.dataset_name.data, description=form.dataset_description.data, session=db.session)
+                add_to_project=True
+            else: 
+                dataset = db.session.query(Dataset).get(int(form.output_dataset.data))
+
+            if form.output_project.data == 'new':
+                project = generate_new_project(user = current_user, datasets = dataset, name=form.project_name.data, description=form.project_description.data, session = db.session)
+            else: 
+                project = db.session.query(Project).get(int(form.output_project.data))
+                if add_to_project==True: 
+                    project.datasets.append(dataset)
+
+            new_file_ids = [] 
+            for path in [path for path in [form.server_file_1.data, form.server_file_2.data] if path != None and path != '']: 
+                if os.path.isfile(path):
+                    print 'Importing file {} and linking to dataset {}'.format(path, dataset.name)
+                    file_name = path.split('/')[-1]
+                    new_path = dataset.directory + '/' + file_name
+                    file = File(name = file_name, path = new_path, user_id = current_user.id, dataset_id=dataset.id, check_name = False)
+                    file.validate()
+                    db.session.add(file)
+                    print 'Copying file {} to new dataset path: {}'.format(file.name, file.path)
+                    from shutil import copyfile
+                    copyfile(path, new_path)
+                    # os.rename(path, new_path) # would move file, removing old path
+                    file.validate()
+                    db.session.commit()
+                    new_file_ids.append(file.id)
+                    flash('File {} Successfully Imported, Linked to Dataset {}'.format(file.name, dataset.name), 'success')
+                else: 
+                    flash("File path {} doesn't seem to exist. Make sure it's right and permissions are open".format(path), 'warning')
+
+            if len(new_file_ids)>0: 
+                return redirect(url_for('frontend.datasets'))
+            else: 
+                dropbox_files = get_dropbox_files(current_user)
+                form.output_dataset.choices = get_dataset_choices(current_user, new = True)
+                form.output_project.choices = get_project_choices(current_user, new = True)
+                return render_template("import_files.html", form=form, current_user=current_user, dropbox_files=dropbox_files)
+
 
         else: 
-            create_async = '' 
-            #GSAF Routine 
-            #URL DOWNLOADS
-            #SRA DOWNLOAD 
-            #create async celery dict and send to import_files.apply_async()
-            # return redirect( url_for('frontend.dashboard') )
-        dropbox_files = get_dropbox_files(current_user)
+            flash('Did not understand POST request file_source....', 'warning')
 
-        return render_template("import_files.html", form=form, current_user=current_user, dropbox_files=dropbox_files)
+            dropbox_files = get_dropbox_files(current_user)
+            form.output_dataset.choices = get_dataset_choices(current_user, new = True)
+            form.output_project.choices = get_project_choices(current_user, new = True)
 
-    else: # GET : 
+            return render_template("import_files.html", form=form, current_user=current_user, dropbox_files=dropbox_files)
+
+    else: # Finish GET : 
         
         dropbox_files = get_dropbox_files(current_user)
         form.output_dataset.choices = get_dataset_choices(current_user, new = True)
