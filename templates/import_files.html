@@ -227,13 +227,13 @@
               </thead>
               <tbody>
                 <tr>
-                  <td>{{ form.output_dataset(class="form-control") }}</td>
-                  <td>{{ form.output_project(class="form-control") }}</td>
+                  <td >{{ form.output_dataset(class="form-control", id="dataset_select", onchange="hide_dataset(this)") }}</td>
+                  <td >{{ form.output_project(class="form-control", id="project_select", onchange="hide_project(this)") }}</td>
                 </tr>
               </tbody>
             </table>
             <br>
-            <table class="table table-striped">
+            <table class="table table-striped" id='dataset_descriptors'>
               <thead>
                 <tr>
                   <th>New Dataset Name</th>
@@ -247,7 +247,7 @@
                 </tr>
               </tbody>
             </table>
-            <table class="table table-striped">
+            <table class="table table-striped" id='project_descriptors'>
               <thead>
                 <tr>
                   <th>New Project Name</th>
@@ -321,20 +321,39 @@ $('input[type=radio][name="file_source"]').on('change', function () {
 
     selected_class = $(this).attr('class');
 
-    //console.log(selected_class);
-
-    // if (selected_class != 'file_dataset') {
-
-    //   $('#output_dataset').val('new');
-    //   $('#output_project').val('new');
-    // }
-
     $("#dataset option").each( function( index ) {
       $(this).triggerHandler('click'); 
     });        
 
 
 });
+
+
+
+function hide_dataset() {
+    var selectBox = document.getElementById("dataset_select");
+    var selected = selectBox.options[selectBox.selectedIndex].value;
+
+    if(selected === 'new'){
+        $('#dataset_descriptors').show();
+    }
+    else{
+        $('#dataset_descriptors').hide();
+    }
+}
+
+
+function hide_project() {
+    var selectBox = document.getElementById("project_select");
+    var selected = selectBox.options[selectBox.selectedIndex].value;
+
+    if(selected === 'new'){
+        $('#project_descriptors').show();
+    }
+    else{
+        $('#project_descriptors').hide();
+    }
+}
 
 
 $('input[type=checkbox]').on('change', function () {
