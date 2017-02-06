@@ -272,21 +272,19 @@ igfft_dtypes = {"Header": str,
 "JGENE: Alignment_Sequence_Query": str, 
 "JGENE: Alignment_Sequence_Germline": str,
 "Isotype": str, 
-"Isotype mismatches": np.float64, 
-"Isotype percent similarity": np.float64, 
+"Isotype mismatches": str, 
+"Isotype percent similarity": str, 
 "Isotype barcode direction": str} 
 
 igfft_usecols = {"Header": str, 
 "Sequence": str, 
 "Quality_Score": str, 
-"Document_Header": str, 
 "Recombination_Type": str, 
 "Percent_Identity": np.float64, 
 "Alignment_Length": np.float64, 
 "Direction": str, 
 "Locus": str, 
 "Chain": str, 
-"CDR3_Junction_In_Frame": bool, 
 "Full_Length": bool, 
 "Productive": str, 
 "Full_Length_Sequence.NT": str, 
@@ -320,13 +318,11 @@ igfft_usecols = {"Header": str,
 "JGENE: Total_Mismatches": np.float64, 
 "JGENE: Total_Indel": np.float64, 
 "Isotype": str, 
-"Isotype mismatches": np.float64, 
-"Isotype percent similarity": np.float64, 
-"Isotype barcode direction": str}.keys()
+"Isotype percent similarity": str }.keys()
 
 
 def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_ms_peptides=False, require_annotations=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
-    df = pd.read_table(file_path, dtype=igfft_dtypes, error_bad_lines=False,  usecols=igfft_usecols, nrows=100) #, low_memory=False)
+    df = pd.read_table(file_path, dtype=igfft_dtypes, error_bad_lines=False,  usecols=igfft_usecols,) # nrows=100) #, low_memory=False)
     column_reindex = {
           'Header' : 'readName',
           'Sequence' : 'readSequence',
@@ -344,13 +340,13 @@ def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_
           'FR3_Sequence.AA' : 'aaSeqFR3',
           'CDR3_Sequence.AA' : 'aaSeqCDR3',
           'FR4_Sequence.AA' : 'aaSeqFR4',
-          'Isotype' : 'c_top_hit',
-          'Isotype percent similarity' : 'cBestIdentityPercent',
     }
     df = df.rename(str, columns=column_reindex)
     if require_annotations != False: df = df.dropna(subset=require_annotations, how='any')
     df = df.dropna(subset=['Top_V-Gene_Hits', 'Top_J-Gene_Hits'], how='any')
+    df['c_top_hit'] = df.apply(split_on_comma_and_take_first, col='Isotype', axis=1)
     df['c_top_hit_locus'] = df['c_top_hit'] 
+    df['cBestIdentityPercent'] = df.apply(split_on_comma_and_take_first_float, col='Isotype percent similarity', axis=1)
     df['allVHitsWithScore'] = df.apply(parse_v_alignments_from_IGFFT_dataframe, axis=1)
     df['allJHitsWithScore'] = df.apply(parse_j_alignments_from_IGFFT_dataframe, axis=1)
     df['allDHitsWithScore'] = ''
@@ -379,6 +375,12 @@ def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_
     df = collapse_annotation_dataframe(df)
     df = df[clean_annotation_dataframe_columns]
     return df 
+
+def split_on_comma_and_take_first(row, col='Isotype'): 
+  return str(row[col]).split(',')[0]
+
+def split_on_comma_and_take_first_float(row, col='Isotype percent similarity'): 
+  return float(split_on_comma_and_take_first(row, col=col))
 
 
 mixcr_dtypes = {"descrR1" : str, 
