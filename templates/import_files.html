@@ -78,7 +78,7 @@
                   <td width="15px"></td>
                   <td>                              
                     <label class="radio">
-                      <input id="file_source-2" name="file_source" type="radio" value="file_gsaf" class="file_gsaf">Files from a GSAF URL
+                      <input id="file_source-2" name="file_source" type="radio" value="file_gsaf" class="file_gsaf"">Files from a GSAF URL
                     </label>
                     <div id="collapse" class="collapse file_gsaf radio">
                     <br>
@@ -218,49 +218,69 @@
         <div class="panel-body" width="60%">
           <center>
             <br>
-            <table class="table table-striped" >
-              <thead>
-                <tr>
-                  <th>Output Dataset</th>
-                  <th>Output Project</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td >{{ form.output_dataset(class="form-control", id="dataset_select", onchange="hide_dataset(this)") }}</td>
-                  <td >{{ form.output_project(class="form-control", id="project_select", onchange="hide_project(this)") }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="panel panel-default" id='dataset_select_table'>
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Output Dataset</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td >{{ form.output_dataset(class="form-control", id="dataset_select", onchange="hide_dataset(this)") }}</td>
+                  </tr>
+                  <tr>
+                    <table class="table table-striped" id='dataset_descriptors'>
+                      <thead>
+                        <tr>
+                          <th>New Dataset Name</th>
+                          <th>Description</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>{{ form.dataset_name(size=20, class="form-control") }}</td>
+                          <td>{{ form.dataset_description(size=40, rows=1, class="form-control") }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
             <br>
-            <table class="table table-striped" id='dataset_descriptors'>
-              <thead>
-                <tr>
-                  <th>New Dataset Name</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>{{ form.dataset_name(size=20, class="form-control") }}</td>
-                  <td>{{ form.dataset_description(size=40, rows=1, class="form-control") }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <table class="table table-striped" id='project_descriptors'>
-              <thead>
-                <tr>
-                  <th>New Project Name</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>{{ form.project_name(size=20, class="form-control") }}</td>
-                  <td>{{ form.project_description(size=40, rows=1, class="form-control") }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="panel panel-default" id='project_select_table'>
+              <table class="table table-striped" id='project_select_table' >
+                <thead>
+                  <tr>
+                    <th>Output Project</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td >{{ form.output_project(class="form-control", id="project_select", onchange="hide_project(this)") }}</td>
+                  </tr>
+                  <tr>
+                    <table class="table table-striped" id='project_descriptors'>
+                      <thead>
+                        <tr>
+                          <th>New Project Name</th>
+                          <th>Description</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>{{ form.project_name(size=20, class="form-control") }}</td>
+                          <td>{{ form.project_description(size=40, rows=1, class="form-control") }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
           </center>
         </div>
       </div>
@@ -315,6 +335,13 @@ $(document).ready( function() {
 
 // Expand/collapse accordians based on file source
 $('input[type=radio][name="file_source"]').on('change', function () {
+
+    if ( ($(this).attr('class') == 'file_gsaf') && (this.checked) ){
+        $('#dataset_select_table').hide();
+    } else {
+        $('#dataset_select_table').show();
+    }
+
     if (!this.checked) return
     $('.radio.collapse').not($('div.' + $(this).attr('class'))).slideUp();
     $('.radio.collapse.' + $(this).attr('class')).slideDown();
@@ -323,7 +350,9 @@ $('input[type=radio][name="file_source"]').on('change', function () {
 
     $("#dataset option").each( function( index ) {
       $(this).triggerHandler('click'); 
-    });        
+    });
+
+
 
 
 });
