@@ -262,6 +262,38 @@ class MultiCheckboxField(SelectMultipleField):
     option_widget = wtforms.widgets.CheckboxInput()
 
 
+class ImportFilesForm(Form): 
+
+    file_source = RadioField('Select a File Source', choices=[ ('file_dataset' , 'Files from Dataset'), ('file_gsaf' , 'Files from GSAF URL'), ('file_upload' , 'Upload Files'), ('file_url' , 'File from URL'), ('file_ncbi' , 'Files from NCBI') ])
+
+    local_file_1 = FileField(u'Local File Path')
+    local_file_2 = FileField(u'Local File Path')
+    
+    server_file_1 = FileField(u'Server File Path')
+    server_file_2 = FileField(u'Server File Path')
+
+    file_pairing = SelectField(u'File Pairing (2 files required)', choices = [ ('none','None'), ('vhvl','Heavy/Light Chain Pairing'), ('forev','Forward/Reverse Pairing') ] )
+
+    ncbi_accession = TextField()
+
+    download_url_1  = TextField(u'File URL', validators=[validators.input_required()], widget=TextInput())
+    download_url_2  = TextField(u'File URL', validators=[validators.input_required()], widget=TextInput())
+
+    gsaf_url  = TextField(u'GSAF URL', validators=[validators.input_required()], widget=TextInput())
+
+    output_dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
+    output_project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
+    
+    dataset_name = TextField(u'Dataset Name', )
+    dataset_description = TextField(u'Dataset Description')
+    project_name = TextField(u'Project Name', )
+    project_description = TextField(u'Project Description')
+
+    chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
+
+
+
+
 
 class BuildPipelineForm(Form):
     file_source = RadioField('Select a File Source', choices=[ ('file_dataset' , 'Files from Dataset'), ('file_gsaf' , 'Files from GSAF URL'), ('file_upload' , 'Upload Files'), ('file_url' , 'File from URL'), ('file_ncbi' , 'Files from NCBI') ])

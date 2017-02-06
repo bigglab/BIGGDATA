@@ -556,6 +556,121 @@ def file_download(status=[], bucket='', key=''):
     return render_template("file_download.html", download_form=form, upload_form = upload_form, current_user=current_user, dropbox_files=dropbox_files)
 
 
+
+
+@frontend.route('/import_files', methods=['GET', 'POST'])
+@login_required
+def import_files():
+
+    print '######### request values #########'
+    print request.values 
+    print '#############'
+    form = ImportFilesForm()
+
+    if request.method == 'POST':
+        # file_upload has to be handled by the request processor - cant send to celery as async task 
+        if form.file_source.data == 'file_upload': 
+            print 'attempt to upload files from local computer detected'
+            print '######### request files #########'
+            print request.files 
+            print '#############'
+
+            add_to_project=False
+            if form.output_dataset.data == 'new': 
+                dataset = generate_new_dataset(user = current_user, name=form.dataset_name.data, description=form.dataset_description.data, session=db.session)
+                add_to_project=True
+            else: 
+                dataset = db.session.query(Dataset).get(int(form.output_dataset.data))
+
+            if form.output_project.data == 'new':
+                project = generate_new_project(user = current_user, datasets = dataset, name=form.project_name.data, description=form.project_description.data, session = db.session)
+            else: 
+                project = db.session.query(Project).get(int(form.output_project.data))
+                if add_to_project==True: 
+                    project.datasets.append(dataset)
+
+
+            new_files = []
+            try:
+                request_file_1 = request.files['local_file_1']
+            except:
+                flash('Error: unable to upload even the first file.','warning')
+                form_valid = False
+            else:
+                # First Download File
+                file_1 = File(user_id = current_user.id)
+                file_1.name = cmd_quote(request_file_1.filename)
+                file_1.file_type = parse_file_ext(file_1.name)
+                file_1.path = '{}/{}'.format(dataset.directory.rstrip('/'), file_1.name).replace('//', '') 
+                file_1.dataset_id = dataset.id
+
+                print 'Saving uploaded file to {}'.format(file_1.path)
+                request_file_1.save(file_1.path)
+                file_1.available = True
+                db.session.add(file_1)
+                file_1.validate()
+                db.session.commit()
+                db.session.refresh(file_1)
+                new_files.append(file_1)
+
+
+            if form.file_pairing.data != 'none': # more than one file expected 
+
+                try:
+                    request_file_2 = request.files['local_file_2']
+                except:
+                    flash('Error: unable to upload second file. Expected two files since pairing was set.','warning')
+                    form_valid = False
+                else:
+
+                    # Second Download File
+                    file_2 = File(user_id = current_user.id)
+                    file_2.name = cmd_quote(request_file_2.filename)
+                    file_2.file_type = parse_file_ext(file_2.name)
+                    file_2.path = '{}/{}'.format(dataset.directory.rstrip('/'), file_2.name).replace('//', '') 
+                    file_2.dataset_id = dataset.id 
+             
+                    print 'Saving uploaded file to {}'.format(file_2.path)
+                    request_file_2.save(file_2.path)
+                    file_2.available = True 
+
+                    db.session.add(file_2)
+                    file_2.validate()
+                    db.session.commit()
+                    db.session.refresh(file_2)
+                    new_files.append(file_2)
+
+                vhvl_paired = False
+                if form.file_pairing.data == 'vhvl': vhvl_paired = True
+
+                if not file_1.pair(file_2, vhvl_paired = vhvl_paired):
+                    flash('Unable to pair different file types. Submitted files had types "{}" and "{}".'.format(file_1.file_type, file_2.file_type), 'warning' )
+
+                flash('New files {} & {} uploaded and saved to Dataset {}.'.format( file_1.id, file_2.id, dataset.id ), 'success' )
+            else: 
+                flash('New file {} uploaded and saved to Dataset {}.'.format( file_1.id, dataset.id ), 'success' )
+
+        else: 
+            create_async = '' 
+            #GSAF Routine 
+            #URL DOWNLOADS
+            #SRA DOWNLOAD 
+            #create async celery dict and send to import_files.apply_async()
+            # return redirect( url_for('frontend.dashboard') )
+        dropbox_files = get_dropbox_files(current_user)
+
+        return render_template("import_files.html", form=form, current_user=current_user, dropbox_files=dropbox_files)
+
+    else: # GET : 
+        
+        dropbox_files = get_dropbox_files(current_user)
+        form.output_dataset.choices = get_dataset_choices(current_user, new = True)
+        form.output_project.choices = get_project_choices(current_user, new = True)
+
+        return render_template("import_files.html", form=form, current_user=current_user, dropbox_files=dropbox_files)
+
+
+
 ##### Download the file here #####
 @frontend.route('/download/<int:file_id>', methods=['GET', 'POST'])
 def download(file_id):

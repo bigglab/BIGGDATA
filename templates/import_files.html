@@ -1,0 +1,342 @@
+{% extends '_base.html' %}
+
+{% block wide_content %}
+
+<div class="container">
+  <h3 align="center">BIGG Data - Import Files</h3>
+  <br>
+</div>
+
+
+<form role="form" method="POST" action="{{url_for('frontend.import_files')}}" enctype="multipart/form-data">
+{{ form.csrf_token }}
+
+<div class="container">
+
+  <div class="row" id="console-container">
+    <div class="col-md-12">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <center><b>Select Files to Import</b></center>
+        </div>
+        <div class="item active" name='file_source'>
+          <div id="accordion" class="panel-body" style="padding: 10px;"">
+            <table class="table" width="80%" ">
+              <tbody>
+                <tr>
+                  <td width="15px"></td>
+                  <td>
+                    <label class="radio">
+                      <input id="file_source-1" name="file_source" type="radio" value="file_upload" class="file_upload">Upload Files From Local Computer
+                    </label>
+                    <div id="collapse" class="collapse file_upload radio" style="margin-right: 5px; ">
+                      <table class='table'> 
+                        <thead>
+                          <tr>
+                            <th width=75%><label>Choose the file:</label></th>
+                            <th width=25%>{{form.file_pairing.label}} </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                            <tr >
+                              <td>
+                                <div class="input-group">
+                                  <span class="input-group-btn">
+                                    <span class="btn btn-default btn-file">
+                                      Browse...<input id="local_file_1" name="local_file_1" type="file"> 
+                                    </span>
+                                  </span>
+                                  <input type="text" class="form-control" readonly>
+                                </div>
+                                <!-- <input type="file" name="file" value="" class="form-control"/> -->
+                              </td>
+                              <td >
+                                {{ form.file_pairing(class="form-control file_pairing") }}
+                              </td>
+                            </tr>
+                            <tr id="collapse" class="collapse file_pairing">
+                              <td width=75%>
+                                  <div class="input-group">
+                                      <span class="input-group-btn">
+                                          <span class="btn btn-default btn-file">
+                                              Browse...<input id="local_file_2" name="local_file_2" type="file"> 
+                                          </span>
+                                      </span>
+                                      <input type="text" class="form-control" readonly>
+                                  </div>
+                              </td>
+                              <td></td>
+                            </tr>
+                        </tbody>
+                      </table> 
+                    </div>
+                  </td>
+                </tr>
+
+
+                <tr>
+                  <td width="15px"></td>
+                  <td>                              
+                    <label class="radio">
+                      <input id="file_source-2" name="file_source" type="radio" value="file_gsaf" class="file_gsaf">Files from a GSAF URL
+                    </label>
+                    <div id="collapse" class="collapse file_gsaf radio">
+                    <br>
+                      <h5>Automatically import all files on a GSAF link and build datasets based on name identity</h5>
+                      <table class='table table-striped'> 
+                          <thead>
+                              <tr>
+                                  <th>{{ form.gsaf_url.label }}:</th>
+                                  <th></th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              <tr>
+                                  <td>{{ form.gsaf_url(class="form-control") }}</td>
+                                  <td></td>
+                              </tr>
+                          </tbody>
+                      </table>
+
+                    </div>
+
+                  </td>
+                </tr>
+
+              
+                <tr>
+                  <td width="15px"></td>
+                  <td>                              
+                    <label class="radio">
+                      <input id="file_source-3" name="file_source" type="radio" value="file_url" class="file_url">File from URL
+                    </label>
+                    <div id="collapse" class="collapse file_url radio">
+
+                      <table class='table table-striped'> 
+                        <thead>
+                            <tr>
+                                <th>{{ form.download_url_1.label }}:</th>
+                                <th>Pairing:</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                          <tr >
+                            <td>{{ form.download_url_1(size=30, class="form-control") }}</td>
+                            <td >{{ form.file_pairing(class="form-control file_pairing") }}</td>
+                          </tr>
+                          <tr id="collapse" class="collapse file_pairing">
+                            <td>{{ form.download_url_2(size=30, class="form-control") }}</td>
+                            <td width=30%></td>
+                          </tr>
+                        </tbody>
+                      </table>
+
+                    </div>
+                  </td>
+                </tr>
+              
+                <tr>
+                  <td width="15px"></td>
+                  <td>                              
+                    <label class="radio">
+                      <input id="file_source-4" name="file_source" type="radio" value="file_ncbi" class="file_ncbi">Files from NCBI SRA
+                    </label>
+                    <div id="collapse" class="collapse file_ncbi radio">
+                      <table class='table table-striped'> 
+                          <thead>
+                              <tr>
+                                  <th><label>Accession (begins with 'SRR', SRR1525443 for instance)</label>:</th>
+                                  <th></th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              <tr>
+                                  <td>{{ form.ncbi_accession(size=20, class="form-control") }}</td>
+                                  <td></td>
+                              </tr>
+                          </tbody>
+                      </table>
+
+                    </div>
+                  </td>
+                </tr>
+
+            </table>
+
+          </div> <!-- /accordian -->
+
+
+        </div> <!-- /file_source panel -->
+
+      </div> <!-- /panel --> 
+
+    </div>
+  </div>
+</div>
+
+
+<br>
+
+
+
+<div class="container">
+  <div class="row" id="console-container">
+    <div class="col-md-12">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <center><b>Select Destination Dataset and Project</b></center>
+        </div>
+        <div class="panel-body" width="60%">
+          <center>
+            <br>
+            <table class="table table-striped" >
+              <thead>
+                <tr>
+                  <th>Output Dataset</th>
+                  <th>Output Project</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{ form.output_dataset(class="form-control") }}</td>
+                  <td>{{ form.output_project(class="form-control") }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <br>
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>New Dataset Name</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{ form.dataset_name(size=20, class="form-control") }}</td>
+                  <td>{{ form.dataset_description(size=40, rows=1, class="form-control") }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>New Project Name</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{ form.project_name(size=20, class="form-control") }}</td>
+                  <td>{{ form.project_description(size=40, rows=1, class="form-control") }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </center>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+<br>
+<br>
+<center>
+  <span><input class="btn btn-default form-control" type="submit" value="Begin File Import" style="max-width: 15em;"></span> 
+</center>
+
+
+
+
+</form>
+
+
+<h1>ToDo Note - need to add files / server files</h1>
+<br>
+
+<script>
+
+
+// Controls for file inputes
+$(document).on('change', '.btn-file :file', function() {
+    var input = $(this),
+        numFiles = input.get(0).files ? input.get(0).files.length : 1,
+        label = input.val().replace(/\\/g, '/').replace(/.*\//, '');
+        //label = input.val();
+    input.trigger('fileselect', [numFiles, label]);
+});
+
+$(document).ready( function() {
+  
+    $('.btn-file :file').on('fileselect', function(event, numFiles, label) {
+        var parent_input_group = $(this).closest('div');
+        var child_input = parent_input_group.children('input');
+        child_input.val(label);
+
+        $( '#' + $(this).attr('id') + '_name' ).val(label);
+
+    });
+});
+
+
+// Expand/collapse accordians based on file source
+$('input[type=radio][name="file_source"]').on('change', function () {
+    if (!this.checked) return
+    $('.radio.collapse').not($('div.' + $(this).attr('class'))).slideUp();
+    $('.radio.collapse.' + $(this).attr('class')).slideDown();
+
+    selected_class = $(this).attr('class');
+
+    //console.log(selected_class);
+
+    // if (selected_class != 'file_dataset') {
+
+    //   $('#output_dataset').val('new');
+    //   $('#output_project').val('new');
+    // }
+
+    $("#dataset option").each( function( index ) {
+      $(this).triggerHandler('click'); 
+    });        
+
+
+});
+
+
+$('input[type=checkbox]').on('change', function () {
+    
+    if (!this.checked){
+      $('.collapse.' + $(this).attr('class')).slideUp();
+    }else{
+      $('.collapse.' + $(this).attr('class')).slideDown();
+    }
+});
+
+$('select[name=file_pairing]').on('change', function () {
+    if ($(this).val() == 'none'){
+      $('.collapse.file_pairing').slideUp();  
+    }else{
+      $('.collapse.file_pairing').slideDown();
+    }
+});
+
+$('.mightOverflow').bind('mouseenter', function(){
+  var $this = $(this);
+
+  if(this.offsetWidth < this.scrollWidth && !$this.attr('title')){
+    $this.attr('title', $this.text());
+  }
+});
+
+</script>
+
+
+
+
+{% endblock wide_content %}
+
