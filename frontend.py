@@ -1678,12 +1678,15 @@ def json_celery_log():
                     except:
                         percent = 0
 
-                    async_task_progress = """
-                        <div class="progress" style="position: relative;">
-                            <div class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="{0}" aria-valuemin="0" aria-valuemax="{1}" style="width:{2}%;"></div>
-                           <span class = "progress-value" style="position:absolute; right:0; left:0; width:100%; text-align:center; z-index:2; color:black;">{3}</span>
-                        </div>
-                    """.format(  async_task_current, async_task_total, percent, progress_message)
+                    if percent != 100: 
+                        async_task_progress = """
+                            <div class="progress" style="position: relative;">
+                                <div class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="{0}" aria-valuemin="0" aria-valuemax="{1}" style="width:{2}%;"></div>
+                               <span class = "progress-value" style="position:absolute; right:0; left:0; width:100%; text-align:center; z-index:2; color:black;">{3}</span>
+                            </div>
+                        """.format(  async_task_current, async_task_total, percent, progress_message)
+                    else: 
+                        async_task_progress = '' 
 
             if async_task_progress == '' and task.status != 'DOWNLOADING' and task.status != 'SUCCESS' and task.status != 'FAILURE' and async_task_result.state == 'STATUS':
                 try:
