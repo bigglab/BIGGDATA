@@ -325,7 +325,7 @@ class BuildPipelineForm(Form):
 
     cluster = BooleanField(u'Cluster Sequences')
     generate_msdb = BooleanField(u'Generate Mass Spec Database')
-    pair_vhvl = BooleanField(u'Run VHVL Pairing on IGFFT Annotation Files')
+    pair_vhvl = BooleanField(u'VH/VL Paired Data', default=False)
 
     msdb_cluster_percent = DecimalField('Cluster Percent (MSDB)', places=2, rounding=None, default = 0.9)
 

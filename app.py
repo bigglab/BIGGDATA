@@ -1444,6 +1444,52 @@ def standardize_output_files(self, user_id=None, analysis_id=None, file_ids=None
     return return_value
 
 
+
+
+
+
+@celery.task(base=LogTask, bind=True)
+def pair_annotation_files_with_analysis_id(self, user_id=None, analysis_id=None, file_ids=None,  *args, **kwargs):
+
+    if self.parent_task:
+        task = self.parent_task
+    else:
+        task = self
+    logger = self.logger
+
+    ##### Obtain Files for Analysis #####
+    if not file_ids:
+        logger.warning('No File Ids To Pair?')
+    if len(file_ids)!=2: 
+        logger.warning('Something other than two files supplied. Can only pair 2 files...')
+        return ReturnValue("Must supply two annotation files for pairing", file_ids=None)
+
+    with session_scope() as session:
+
+        files_to_pair = []
+        for file_id in file_ids: 
+            files_to_pair.append(session.query(File).get(file_id))
+        file = files_to_pair[0]
+        logger.info('Pairing these {} files for Dataset {} and Analysis {}: {}'.format(str(len(files_to_pair)), str(files_to_pair[0].dataset_id), str(analysis_id),  ','.join(map(lambda f: f.name, files_to_pair))))
+        # Briefly redirect stdout to logger to capture function output
+        saved_stdout = sys.stdout
+        sys.stdout = VHVLPairingLoggerWriter( logger, task = self )
+        paired_df = pair_annotation_files(files_to_pair[0].path, files_to_pair[1].path) 
+        # Restore STDOUT to the console
+        sys.stdout = saved_stdout
+        def add_paired_txt(string): return string.replace('_R1', '').replace('_R2', '').replace('R1', '').replace('R2', '').replace('.R1.','.').replace('.R2.','.').replace('.txt', '', 99) + '.paired.txt'
+        new_file = File(name = add_paired_txt(file.name), directory = file.directory, path = add_paired_txt(file.path), file_type = 'BIGG_ANNOTATION', dataset_id = file.dataset_id, analysis_id = file.analysis_id, user_id=user_id, parent_id=file.id, check_name = False)
+        logger.info('Writing paired file to path: {}'.format(new_file.path))
+        paired_df.to_csv(new_file.path, sep='\t', index=False)
+        session.add(new_file)
+        session.commit()
+        return_value = ReturnValue('Paired Annotation File Produced: {}'.format(new_file.path), file_ids=[new_file.id])
+    
+    return return_value
+
+
+
+
 @celery.task(base = LogTask, bind = True)
 def parse_and_insert_mixcr_annotations_from_file_path(self, file_path, dataset_id=None, analysis_id=None):
     logger = self.logger
@@ -1802,9 +1848,14 @@ def run_quality_filtering_with_analysis_id(self, analysis_id=None, analysis_name
 
     logger.info( 'Running Quality Filtering with {}% bases above PHRED {} on these files: {}'.format(minimum_percentage, minimum_quality, ', '.join( [file.name for file in files] ) ))
 
+    #make sure we dont overwrite similarly named files 
+    if len(files)>1 and len(set(map(lambda f: f.path.split('/')[-1].split('.')[0], files)))==1: 
+        ii = True 
+    else: 
+        ii = False 
+
     files_to_execute = []
     for i, file in enumerate(files): 
-        path = '/{}'.format('/'.join(file.path.split('/')[:-1])).replace('//','/')
         basename = file.path.split('/')[-1].split('.')[0]
         basepath = '{0}/{1}'.format(analysis.directory.rstrip('/'), basename)
         logger.info( 'Writing filtered output file to base: {}'.format(basepath) )
@@ -1812,8 +1863,8 @@ def run_quality_filtering_with_analysis_id(self, analysis_id=None, analysis_name
         # Instantiate Output Files
         filtered_file = File()
         filtered_file.user_id = analysis.user_id
-        filtered_file.path = '{}.filtered_q{}p{}.fastq'.format(basepath, minimum_quality, minimum_percentage)
-        filtered_file.name = '{}.filtered_q{}p{}.fastq'.format(basename, minimum_quality, minimum_percentage)
+        filtered_file.path = '{}{}.filtered_q{}p{}.fastq'.format(basepath, '_R{}'.format(i+1) if ii else '', minimum_quality, minimum_percentage)
+        filtered_file.name = '{}{}.filtered_q{}p{}.fastq'.format(basename, '_R{}'.format(i+1) if ii else '', minimum_quality, minimum_percentage)
         if 'GZIPPED' in file.file_type: 
             filtered_file.command = ' gunzip -c {} | fastq_quality_filter -q {} -p {} -i - -o {} -Q 33 '.format(file.path, minimum_quality, minimum_percentage, filtered_file.path) #-Q 33 for more recent Illumina quality outputs
         else: # file.file_type == 'FASTQ' or 'PANDASEQ_ALIGNED_FASTQ'
@@ -1823,14 +1874,6 @@ def run_quality_filtering_with_analysis_id(self, analysis_id=None, analysis_name
         filtered_file.analysis_id = analysis.id 
         filtered_file.chain = file.chain 
         files_to_execute.append(filtered_file)
-    #make sure we dont overwrite similarly named files 
-    if len(set(map(lambda f: f.name, files_to_execute)))==1: 
-        new_files = [] 
-        for i, file in enumerate(files_to_execute): 
-            file.path = "{}.filtered".format(i).join(file.path.split('filtered'))
-            file.name = "{}.filtered".format(i).join(file.name.split('filtered'))
-            new_files.append(file)
-        files_to_execute = new_files 
 
     analysis.status = 'EXECUTING'
     db.session.commit()
@@ -1874,6 +1917,7 @@ def run_quality_filtering_with_analysis_id(self, analysis_id=None, analysis_name
             error = error.output
             logger.error(error)
         if error == None:
+            time.sleep(1)
             if os.path.isfile(f.path): 
                 f.available = True 
                 f.file_size = os.path.getsize(f.path)
@@ -3221,12 +3265,28 @@ def run_analysis_pipeline(self, *args,  **kwargs):
 
     logger = self.logger
 
+    # for name, value in kwargs.items():
+    # if name in ('a', 'list', 'of', 'valid', 'keywords'):
+    #     exec "%s = %s" % (name, value)
+    # else:
+    #     raise ValueError, "Unrecognized keyword " + name
+
+    #don't construct kwargs all again...:
+    # for name, value in kwargs.items():
+    #     if not value == None: 
+    #         if type(value)==str:
+    #             exec (str(name) + " = " + str(value)) #"%s = '%s'" % (name, value)
+    #         elif type(value)==float or type(value)==int: 
+    #             exec "%s = %s" % (name, value)
+    #         else: 
+    #             exec "%s = %s" % (name, value)
+    #     elif value == '': 
+    #         exec "%s = ''" % name 
+
     user_id = kwargs['user_id']
     file_source = kwargs['file_source']
     dataset = kwargs['dataset']
-    if dataset and dataset != []: dataset = dataset[0]
     dataset_files = kwargs['dataset_files']
-
     name = kwargs['name']
     description = kwargs['description']
     output_dataset = kwargs['output_dataset']
@@ -3264,6 +3324,9 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     vhvl_min = float( kwargs['vhvl_min'] )
     vhvl_max = float( kwargs['vhvl_max'] )
     vhvl_step = float( kwargs['vhvl_step'] )
+
+
+    if dataset and dataset != []: dataset = dataset[0]
 
     ##### Obtain Files for Analysis #####
     file_ids_to_analyze = []
@@ -3455,6 +3518,12 @@ def run_analysis_pipeline(self, *args,  **kwargs):
             append_ms_peptides=False 
             print 'Not Appending MS Peptides'
         return_value = standardize_output_files(user_id=user_id, analysis_id = analysis_id, file_ids = annotation_files, append_ms_peptides=append_ms_peptides, rmindels=rmindels, require_annotations=require_annotations, parent_task = task)
+        logger.info (return_value)
+        file_ids_to_analyze = return_value.file_ids
+
+
+    if pair_vhvl == True: 
+        return_value = pair_annotation_files_with_analysis_id(user_id=user_id, analysis_id=analysis_id, file_ids=file_ids_to_analyze, parent_task = task)
         logger.info (return_value)
         file_ids_to_analyze = return_value.file_ids
 

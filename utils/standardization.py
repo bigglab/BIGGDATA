@@ -513,11 +513,6 @@ annotation_dataframe_dtypes = {
     "j_region_shm": np.float64}
 
 
-def read_annotation_dataframe_file(file_path): 
-    df = pd.read_table(file_path, dtype=annotation_dataframe_dtypes)
-    df['readName'] = df['readName'].apply(lambda n: n.split(' ')[0])
-    return df
-
 
 def read_annotation_file(file_path): 
   if 'bigg' in file_path.lower(): 
@@ -529,6 +524,9 @@ def read_annotation_file(file_path):
     return df 
   elif 'igfft' in file_path.lower():
     df = build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_ms_peptides=False, require_annotations=['aaSeqCDR3'])
+    return df 
+  else: 
+    df = pd.read_table(file_path)
     return df 
 
 

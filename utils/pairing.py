@@ -11,8 +11,8 @@ from utils.standardization import *
 
 
 def pair_annotation_files(file1, file2): 
-	df1 = read_annotation_dataframe_file(file1)
-	df2 = read_annotation_dataframe_file(file2)
+	df1 = read_annotation_file(file1)
+	df2 = read_annotation_file(file2)
 	return pair_annotation_dataframes(df1, df2)
 
 def pair_annotation_dataframes(df1, df2): 
@@ -29,6 +29,7 @@ def pair_annotation_dataframes(df1, df2):
 	df = pd.merge(df_h, df_l, on='readName', suffixes=['_h', '_l'], how='inner').set_index('readName')
 	print '{} annotations after merging IGH to IGL/K on key readName'.format(len(df))
 
+	if len(df) == 0: return df 
 	#remove empty sequences
 	df = df.dropna(subset=['aaFullSeq_h', 'aaFullSeq_l', 'aaSeqCDR3_h', 'aaSeqCDR3_l', 'nSeqCDR3_h', 'nSeqCDR3_l'], how='any')
 
