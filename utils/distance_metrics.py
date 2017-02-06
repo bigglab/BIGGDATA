@@ -8,6 +8,28 @@ import random
 #they can be used without counts
 
 
+
+# get number of common sequences in both samples
+def common_sequences(df1, df2, keys=['CDRH3 AA'], counts=None): 
+		if counts==None: # calculate sizes from numbers of rows instead of counts column - 1 each for pre-clustered data
+				x = df1.groupby(keys).size()
+				y = df2.groupby(keys).size()
+				z = x.to_frame().join(y.to_frame(), rsuffix='x', how='outer')
+				z.columns = ['x', 'y']
+				union = z.dropna(how='any')
+				common = len(union)
+		else: # calculate sizes from sums of counts per species 
+				x = df1.groupby(keys)[counts].sum()
+				y = df2.groupby(keys)[counts].sum()
+				z = x.to_frame().join(y.to_frame(), rsuffix='x', how='outer')
+				z.columns = ['x', 'y']
+				union = z.dropna(how='any')
+				common = union.sum().sum()
+		return common
+
+
+
+
 # Jaccard Similarity - species in common / total species. Can weigh by counts if counts column is given
 def jaccard_df_similarity(df1, df2, keys=['CDRH3 AA'], downsample=None, counts=None): 
 	dfx = downsample_df(df1, downsample)
