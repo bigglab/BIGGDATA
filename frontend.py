@@ -92,18 +92,14 @@ nav.register_element('frontend_top', Navbar(
 nav.register_element('frontend_user', Navbar(
     View('BIGG DATA', 'frontend.index'),
     View('Dashboard', 'frontend.dashboard'),
-    Subgroup(
-        'Files', 
-        View('My Files', 'frontend.files'), 
-        View('Import File', 'frontend.file_download'),
-        View('Import From NCBI', 'frontend.import_sra'), 
-        View('Import From GSAF', 'frontend.import_gsaf')
-        ),
+
     Subgroup(
         'Manage Data',
-        View('My Projects', 'projects.manage_projects'),
-        View('My Datasets', 'frontend.datasets'),
-        View('New Project', 'projects.create_project'),
+        View('Import Files', 'frontend.import_files'), 
+        View('All My Files', 'frontend.files'), 
+        View('All My Projects', 'projects.manage_projects'),
+        View('All My Datasets', 'frontend.datasets'),
+        View('Create Project', 'projects.create_project'),
         ),
     Subgroup(
         'Run Analysis', 
@@ -562,9 +558,9 @@ def file_download(status=[], bucket='', key=''):
 @login_required
 def import_files():
 
-    print '######### request values #########'
-    print request.values 
-    print '#############'
+    # print '######### request values #########'
+    # print request.values 
+    # print '#############'
     form = ImportFilesForm()
 
     if request.method == 'POST':
