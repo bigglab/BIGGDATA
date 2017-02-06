@@ -2202,7 +2202,6 @@ def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_
         session.add(analysis)
         session.commit()
 
-
         logger.info('Clustering at {}%  on {}, requiring at least {} reads per cluster and all of these annotated: {}'.format(cluster_percent, cluster_on, read_cutoff, ','.join(require_annotations)))
         df = pd.concat(map(read_annotation_file, file_paths))
         df = cluster_dataframe(df, cluster_cutoff=cluster_percent, on=cluster_on, readCutoff=read_cutoff)
@@ -2864,7 +2863,6 @@ def parse_gsaf_response_into_datasets(self, url, user_id=2, project_id=None, cel
         task = self
     logger = self.logger
     logger.info('Beginning import of files from GSAF URL.')
-
     request = urllib2.Request(url)
     logger.info('Retrieving HTML from URL {}'.format(url))
     response = urllib2.urlopen(request)
@@ -2881,14 +2879,17 @@ def parse_gsaf_response_into_datasets(self, url, user_id=2, project_id=None, cel
             dataset = Dataset()
             dataset.user_id = user_id
             dataset.name = sample_name
-            session.add(dataset)
-            session.flush()
-            session.refresh(dataset)
             dataset.directory = "{}/Dataset_{}_{}".format(user.path.rstrip('/') , dataset.name, dataset.id)
             if not os.path.isdir(dataset.directory):
                 os.mkdir(dataset.directory)
+            if project_id: 
+                pd = ProjectDatasets(dataset = dataset, project = project)
+                session.add(pd)
+                session.commit()
+            session.add(dataset)
+            session.flush()
+            session.refresh(dataset)
             for file_array in file_arrays: 
-                            # first create a new db file to place the download in
                 file_name = file_array[1]
                 file_url = file_array[-1].replace('-->','')
                 file_checksum = file_array[4]
@@ -2897,6 +2898,9 @@ def parse_gsaf_response_into_datasets(self, url, user_id=2, project_id=None, cel
                 except urllib2.HTTPError as err:
                     logger.error(err)
                     logger.error('The GSAF URLs may be stale. Try to download one file directly...')
+                    self.update_state(state='FAILED', meta={'status': 'Failed import - GSAF link likely forbidden' })
+                    logger.error('The GSAF URLs may be stale. Try to download one file directly...')
+                    return ReturnValue('GSAF import finished: {} files ingested.'.format(len(new_file_ids)), file_ids=new_file_ids)
                 else: 
                     new_file = File()
                     new_file.url = file_url
@@ -2907,23 +2911,13 @@ def parse_gsaf_response_into_datasets(self, url, user_id=2, project_id=None, cel
                     new_file.user_id = user_id
                     new_file.available = False 
                     new_file.status = ''
-
-                    # if 'gz' in new_file.file_type.lower():
-                    #     new_file.file_type = 'GZIPPED_FASTQ'
-
                     session.add(new_file)
+                    dataset.files.append(new_file)
                     session.commit()
                     session.refresh( new_file )
                     new_file_ids.append( new_file.id )
-
-                    # add the new file to the dataset
-                    dataset.files.append(new_file)
-
                     download_file( url = new_file.url, checksum=file_checksum, path = new_file.path, file_id = new_file.id, user_id = user_id, parent_task = task)
-        if project_id: 
-            pd = ProjectDatasets(dataset = dataset, project = project)
-            session.add(pd)
-            session.commit()
+
 
     # call create_datasets_from_JSON_string(json_string, project)
     return ReturnValue('GSAF import finished: {} files ingested.'.format(len(new_file_ids)), file_ids=new_file_ids)
