@@ -49,7 +49,7 @@ def cluster_dataframe(df, cluster_cutoff=0.94, on='aaSeqCDR3', readCutoff=1, rem
 	print 'writing centroids to temporary file {}'.format(temp_centroids_file)
 	print 'writing clustering output to temporary file {}'.format(temp_clustered_output_file)
 	#perform clustering - usearch8 
-	usearch_command = "/data/resources/software/usearch -cluster_smallmem {} -minhsp 10 -sortedby other -id {} -centroids {} -uc {}".format(temp_fasta_file.name, cluster_cutoff, temp_centroids_file, temp_clustered_output_file)
+	usearch_command = "/data/resources/software/usearch -cluster_smallmem {} -minhsp 10 -sortedby length -id {} -centroids {} -uc {}".format(temp_sorted_file, cluster_cutoff, temp_centroids_file, temp_clustered_output_file)
 	print usearch_command
 	os.system(usearch_command)
 	print '***************** Clustering Complete *****************'
