@@ -786,15 +786,12 @@ def import_files():
 ##### Download the file here #####
 @frontend.route('/download/<int:file_id>', methods=['GET', 'POST'])
 def download(file_id):
-
     file = db.session.query(File).get(file_id)
-
     if file:
-
         return send_from_directory(directory=file.directory, filename=file.name)
-
     else:
         return redirect( request.referrer )
+
 
 @frontend.route('/files', methods=['GET', 'POST'])
 @login_required
@@ -1601,13 +1598,16 @@ def msdb(status=[]):
 
         # build choices for the file_ids and dataset_ids
         # only include files which are annotation files
-        for dataset in current_user.get_ordered_datasets():
+
+        datadict = get_user_dataset_dict(current_user)
+
+        for dataset, files in datadict.items():
 
             dataset_added = False
 
             for file in dataset.files:
 
-                if file.file_type in  ['IGFFT_ANNOTATION', 'MIXCR_ANNOTATION', 'BIGG_ANNOTATION']:
+                if file.file_type in  ['IGFFT_ANNOTATION', 'MIXCR_ANNOTATION', 'BIGG_ANNOTATION'] and os.path.exists(file.path):
 
                     if dataset_added == False:
                         # Add the dataset as an option
