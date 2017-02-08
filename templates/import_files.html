@@ -342,6 +342,18 @@ $('input[type=radio][name="file_source"]').on('change', function () {
         $('#dataset_select_table').show();
     }
 
+    if ( ($(this).attr('class') == 'file_ncbi') && (this.checked) ){
+        $('#dataset_descriptors').hide();
+        $('#dataset_select').val('new');
+        $('#dataset_select').prop('disabled', true);
+
+    } else {
+        $('#dataset_descriptors').show();
+        $('#dataset_select').prop('disabled', false);
+
+    }
+
+
     if (!this.checked) return
     $('.radio.collapse').not($('div.' + $(this).attr('class'))).slideUp();
     $('.radio.collapse.' + $(this).attr('class')).slideDown();
@@ -352,10 +364,9 @@ $('input[type=radio][name="file_source"]').on('change', function () {
       $(this).triggerHandler('click'); 
     });
 
-
-
-
 });
+
+
 
 
 

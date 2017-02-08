@@ -1498,6 +1498,7 @@ def generate_new_project(user = None, datasets = None, name=None, description=No
     new_project.user_id = user.id
     if name: 
         new_project.project_name = name 
+        new_project.description = description 
         session.add(new_project)
         session.flush()
     else: 

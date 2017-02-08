@@ -351,7 +351,6 @@ def import_files():
                 # response successful? 
             except urllib2.HTTPError as err:
                 flash('Supplied GSAF URL is unreachable...', 'error')
-                dropbox_files = get_dropbox_files(current_user)
                 form.output_dataset.choices = get_dataset_choices(current_user, new = True)
                 form.output_project.choices = get_project_choices(current_user, new = True)
                 return render_template('import_files.html', form=form)
@@ -367,8 +366,10 @@ def import_files():
 
 
         elif form.file_source.data == 'file_ncbi':
-            return_value = import_from_sra.apply_async((), {'accession': form.ncbi_accession.data, 'name':form.ncbi_accession.data, 'user_id':current_user.id, 'project_selection': str(form.output_project.data), 'dataset_selection': str(form.output_dataset.data)}, queue=celery_queue)
+
+            return_value = import_from_sra.apply_async((), {'accession': form.ncbi_accession.data, 'name':form.ncbi_accession.data, 'user_id':current_user.id, 'project_selection': form.output_project.data, 'project_name': form.project_name.data, 'project_description':form.project_description.data, 'dataset_selection': form.output_dataset.data}, queue=celery_queue)
             return redirect(url_for('frontend.dashboard'))
+
 
         elif form.file_source.data =='file_url':
 

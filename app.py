@@ -656,82 +656,38 @@ def get_user_dataset_dict(user):
     return datadict
 
 @celery.task(base= LogTask, bind = True)
-def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, project_selection = None, dataset_selection = None):
+def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, project_selection = None, project_name=None, project_description=None, dataset_selection = None):
     logger = self.logger
     user = db.session.query(User).filter(User.id==user_id).first()
 
     if not user:
         raise Exception( "Unable to find user with id {}.".format(user_id) )
 
-    # load projects and datasets
-    # set the dataset options
-    # datasets = Set(user.datasets)
-    # datasets.discard(None)
-    # datasets.discard(user.default_dataset)
-    # datasets = sorted(datasets, key=lambda x: x.id, reverse=True)
-
-    # # get a list of user projects for the form
-    # projects = Set(user.projects)
-    # projects.discard(None)
-    # projects = sorted(projects, key=lambda x: x.id, reverse=True)
-
-    # check if the user has selected the default project (i.e., the user has no projects)
     file_dataset = None
-    if dataset_selection == 'new':
-        # create a new project here with the name default, add the user and dataset to the new project
-        new_dataset = Dataset()
-        new_dataset.user_id = user.id
-        new_dataset.populate_with_defaults(user)
-        new_dataset.name = 'Dataset'
-        db.session.add(new_dataset)
-        db.session.flush()
-        new_dataset.name = accession + '_' + str(new_dataset.id)
-        new_dataset.directory = "{}/Dataset_{}".format(user.path.rstrip('/') , new_dataset.id)
-        file_dataset = new_dataset
-        logger.info( 'New file will be added to dataset "{}".'.format(new_dataset.name) )
-        db.session.commit()
-
-    else: # check if the user has selected a project which they have access to
+    if dataset_selection == 'new' or dataset_selection == None or dataset_selection=='None':
+        dataset = generate_new_dataset(user = user, session = db.session, name=accession, description="NCBI SRA Accession {}".format(accession))
+        file_dataset = dataset
+        logger.info( 'SRA Downloads will be added to dataset "{}".'.format(dataset.name) )
+    else: # check if the user has selected a dataset which they have access to
         dataset = db.session.query(Dataset).get(int(dataset_selection))
         if dataset.user_has_write_access(user):
             file_dataset = dataset
         else: 
             logger.error( 'You do not have permission to add a file to dataset ({}).'.format(dataset_selection) )
-    db.session.commit()
 
     # now do the same with projects, with the qualification that we add the dataset to the project if it's not there already
     # check if the user has selected the default project (i.e., the user has no projects)
     if file_dataset:
-        if project_selection == 'new':
-            # create a new project here with the name default, add the user and dataset to the new project
-            new_project = Project()
-            new_project.user_id = user.id
-            new_project.project_name = 'Project'
-            db.session.add(new_project)
-            db.session.flush()
-            new_project.project_name = 'Project ' + str(new_project.id)
-            new_project.users = [user]
-            new_project.datasets = [file_dataset]
-            new_project.cell_types_sequenced = [str(file_dataset.cell_types_sequenced)]
-            new_project.species = file_dataset.species
-
-            db.session.commit()
-        else: # check if the user has selected a project which they have access to
+        if project_selection == 'new' or project_selection==None or project_selection=='None':
+            output_project = generate_new_project(user = user, datasets = dataset, name=project_name, description=project_description, session = db.session)
+        else: 
             output_project = db.session.query(Project).get(int(project_selection))
-
-            if output_project.user_has_write_access(current_user): 
-                if file_dataset not in project.datasets:
-                    project.datasets.append(file_dataset)
-
-                if user.default_dataset == None:
-                    file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
-                    file_dataset.species = project.species
-
-                db.session.commit()
-
+            if output_project.user_has_write_access(user): 
+                if file_dataset not in output_project.datasets:
+                    output_project.datasets.append(file_dataset)
+                    db.session.commit()
             else:
                 logger.error( 'Error: you do not have permission to add a dataset to that project ({}).'.format( project_selection ) )
-            db.session.commit()        
 
     if not name: 
         name = accession 
@@ -2099,59 +2055,6 @@ def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id =
         logger.info( 'MSDB analysis complete. {} files were produced.'.format(len(file_ids)) )
 
         return ReturnValue('MSDB analysis complete. {} files were produced.'.format(len(file_ids)), file_ids = [] )
-
-
-        # immunogrep_msdb.generate_msdb_file('SRR1525444.R1.igfft.annotation', 'TAB', translate_fields=igfft_msdb_fields, output_folder_path='/data/russ/scratch/SRR1525444_14/Analysis_99', must_be_present=['CDR3'])
-
-        # Main function for generating a FASTA mass spec db file using annotation. User passes in a list of input files generated from an annotation program,
-        # and this function will output a FASTA file that can be used as a reference db for identifying peptides from mass spec. It will also generate a summary file
-        # describing which filters were passed.
-
-        # Parameters
-        # ----------
-        # input_files : list of strings
-        #     corresponding to filepaths for each annotated file.
-        #     .. note::IMGT filepath format
-        #         If the input files come from IMGT analyses, then input_files can either be a list of lists (i.e. 11 files per experiment) or a single list of all experiment filenames
-        #         (i.e. program will split files into proper experiments)
-        # filetype : string, default None
-        #     Describes the filetype of the input files. file type can be either TAB, CSV, FASTA, FASTQ, IMGT
-        # output_folder_path : string
-        #     Filepath for returning results. If not defined, will make a new folder
-        # dbidentifier : string, default None
-        #     A string identifier to label the mass spec database file
-        # dataset_tags : list of strings; default None
-        #     If defined, then this will be used as the identifier for each file/dataset. If Not defined (dataset_tags is None) then the experiment identifier will be equal to the filepath
-        #     names defined by input_files.
-        #     .. important::
-        #         If defined, the length of the string must be equal to the length of the input files/each unique dataset provided
-        #     .. note::
-        #         The following characters are replaced from the tags: '_', ' ',':', '|' and ',' are replaced by '-'
-        # translate_fields : dict, default {}
-        #     This defines which fields in the file corresponds to fields we need for the analysis.
-        #     key = field we use in the program, value = field name in the provided file(s)
-        #     If empty, then this variable will assume the field names are the exact same as the fields we use in this program (see default_fields)
-        # cluster_id : float, default 0.9 - INPUT default 0.9
-        #     The percent identity required for clonotyping
-        # must_be_present : list of strings, default ['CDR1','CDR2','CDR3']
-        #     This will define which CDR fields MUST be present in the sequence to be considered for analysis.
-        #     .. note::Fields
-        #         Only CDR1, CDR2, and CDR3 can be defined in this list
-        #     .. note::CDR3
-        #         CDR3 will ALWAYS be required for this analysis
-        # use_vl_sequences : boolean, default False
-        #     If True, then any VL sequences detected in the provided experiments will be appended to the database file.
-        #     If False, then the program will append a default VL sequence list generated by Sebastian and stored in the database
-        # low_read_count : int, default 1     
-        #     filter for >= read count
-
-        # Outputs
-        # -------
-        # Path of the FASTA db file created    
-
-
-
-
 
 
 
