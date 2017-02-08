@@ -287,7 +287,7 @@ class LoggerWriter:
             self.logger.log(self.level, message)
 
 # Used to redirect stdout to the logger
-class VHVLPairingLoggerWriter(LoggerWriter):
+class LoggerWriterRedirect(LoggerWriter):
     def __init__(self, logger, level = logging.INFO, task = None):
         self.logger = logger
         self.level = level
@@ -295,27 +295,8 @@ class VHVLPairingLoggerWriter(LoggerWriter):
         self.tracking_status = False
 
     def write(self, message):
-
         if self.task:
-            # progress_pattern = re.compile('Processed (\d+) sequences')
-            # pattern_match =  progress_pattern.match(message)
-            # if pattern_match:
-
-            #     progress = pattern_match.group(1)
-
-            #     self.logger.info( "Pattern matched: {}".format(message) )
-
-            #     if not self.tracking_status:
-            #         self.tracking_status = True
-            #     self.task.update_state(state='STATUS', meta={'status': message.strip() })
-
-
-            # else:
-            #     if self.tracking_status:
-            #         self.tracking_status = False
-            #         self.task.update_state(state='ANALYZING')
             LoggerWriter.write(self, message)
-
         else:
             LoggerWriter.write(self, message)
 
@@ -324,7 +305,6 @@ class VHVLPairingLoggerWriter(LoggerWriter):
 # Base Class used to log celery tasks to the database
 class LogTask(Task):
     abstract = True
-
     user_found = False
     user_id = None
     celery_task = None
@@ -1485,7 +1465,7 @@ def pair_annotation_files_with_analysis_id(self, user_id=None, analysis_id=None,
         logger.info('Pairing these {} files for Dataset {} and Analysis {}: {}'.format(str(len(files_to_pair)), str(files_to_pair[0].dataset_id), str(analysis_id),  ','.join(map(lambda f: f.name, files_to_pair))))
         # Briefly redirect stdout to logger to capture function output
         saved_stdout = sys.stdout
-        sys.stdout = VHVLPairingLoggerWriter( logger, task = self )
+        sys.stdout = LoggerWriterRedirect( logger, task = self )
         paired_df = pair_annotation_files(files_to_pair[0].path, files_to_pair[1].path) 
         # Restore STDOUT to the console
         sys.stdout = saved_stdout
@@ -2104,7 +2084,7 @@ def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id =
 
         # Briefly pass all STDOUT to the logger
         saved_stdout = sys.stdout
-        sys.stdout = VHVLPairingLoggerWriter( logger, task = self )
+        sys.stdout = LoggerWriterRedirect( logger, task = self )
 
         immunogrep_msdb.generate_msdb_file(input_files = file_paths_to_analyze, filetype = 'TAB', translate_fields=igfft_msdb_fields, output_folder_path= analysis_directory, cluster_id = cluster_percent, must_be_present=['CDR3'])
 
@@ -2222,12 +2202,12 @@ def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_
 
         #redirect logger to capture function output
         saved_stdout = sys.stdout
-        sys.stdout = VHVLPairingLoggerWriter( logger, task = self )
+        sys.stdout = LoggerWriterRedirect( logger, task = self )
         df = cluster_dataframe(df, identity=cluster_percent, on=cluster_on, read_cutoff=read_cutoff, group_tag='group')
         # Restore STDOUT to the console
         sys.stdout = saved_stdout
         logger.info("{} Clusters Generated".format(len(df)))
-        
+
         if append_cterm_peptides: 
             logger.info('Appending C-terminal constant region peptides to end of sequences')
             df = append_cterm_peptides_for_mass_spec(df)
