@@ -96,9 +96,9 @@ nav.register_element('frontend_user', Navbar(
     Subgroup(
         'Manage Data',
         View('Import Files', 'frontend.import_files'), 
-        View('All My Files', 'frontend.files'), 
-        View('All My Projects', 'projects.manage_projects'),
-        View('All My Datasets', 'frontend.datasets'),
+        View('My Files', 'frontend.files'), 
+        View('My Datasets', 'frontend.datasets'),
+        View('My Projects', 'projects.manage_projects'),
         View('Create Project', 'projects.create_project'),
         ),
     Subgroup(
