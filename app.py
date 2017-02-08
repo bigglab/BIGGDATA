@@ -2175,10 +2175,8 @@ def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_
 
         # Get the DB objects
         user = session.query(User).get(user_id)
-        file_paths = [db.session.query(File).get(id).path for id in file_ids]
-        logger.info('Preparing new MSDB with these annotations: {}'.format(','.join(file_paths)))
-
-        # TODO: build inside dataset folder if requested or just one dataset is used 
+        files = [db.session.query(File).get(id) for id in file_ids]
+        logger.info('Preparing new MSDB with these annotations: {}'.format(','.join([f.path for f in files])))
 
 
         # Determine if a new analysis is needed
@@ -2203,9 +2201,15 @@ def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_
         session.commit()
 
         logger.info('Clustering at {}%  on {}, requiring at least {} reads per cluster and all of these annotated: {}'.format(cluster_percent, cluster_on, read_cutoff, ','.join(require_annotations)))
-        df = pd.concat(map(read_annotation_file, file_paths))
-        df = cluster_dataframe(df, cluster_cutoff=cluster_percent, on=cluster_on, readCutoff=read_cutoff)
-        df.dropna(subset=require_annotations, how='any', inplace=True)
+        dfs = [] 
+        for file in files: 
+            df = read_annotation_file(file.path)
+            df['group'] = file.dataset.name 
+            dfs.append(df)
+        df = pd.concat(dfs)
+        df = df.dropna(subset=require_annotations, how='any')
+        df = cluster_dataframe(df, identity=cluster_percent, on=cluster_on, read_cutoff=read_cutoff, group_tag='group')
+
         if append_cterm_peptides: 
             logger.info('Appending C-terminal constant region peptides to end of sequences')
             df = append_cterm_peptides_for_mass_spec(df)
@@ -2389,7 +2393,7 @@ def run_pair_vhvl_with_dataset_id(self, user_id=6, dataset_id = None, analysis_i
         sys.stdout = VHVLPairingLoggerWriter( logger, task = self )
 
         cluster_setting = [vhvl_min, vhvl_max, vhvl_step]
-        pairing.RunPairing(annotated_files, annotated_file_formats= annotated_file_formats, analysis_method='GEORGIOU_INHOUSE', output_folder_path=output_directory, prefix_output_files= prefix_output_files, cluster_cutoff=cluster_setting, annotation_cluster_setting= 0.9)
+        pairing.RunPairing(annotated_files, annotated_file_formats= annotated_file_formats, analysis_method='GEORGIOU_INHOUSE', output_folder_path=output_directory, prefix_output_files= prefix_output_files, identity=cluster_setting, annotation_cluster_setting= 0.9)
 
         # Restore STDOUT to the console
         sys.stdout = saved_stdout
@@ -2442,7 +2446,7 @@ def run_pair_vhvl_with_analysis_id(self, analysis_id = None, file_ids = [], user
         sys.stdout = VHVLPairingLoggerWriter( logger, task = self )
 
         cluster_setting = [vhvl_min, vhvl_max, vhvl_step]
-        pairing.RunPairing(annotated_files, annotated_file_formats= annotated_file_formats, analysis_method='GEORGIOU_INHOUSE', output_folder_path=output_directory, prefix_output_files= prefix_output_files, cluster_cutoff=cluster_setting, annotation_cluster_setting= 0.9)
+        pairing.RunPairing(annotated_files, annotated_file_formats= annotated_file_formats, analysis_method='GEORGIOU_INHOUSE', output_folder_path=output_directory, prefix_output_files= prefix_output_files, identity=cluster_setting, annotation_cluster_setting= 0.9)
 
         # Restore STDOUT to the console
         sys.stdout = saved_stdout
