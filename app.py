@@ -2226,7 +2226,8 @@ def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_
         df = cluster_dataframe(df, identity=cluster_percent, on=cluster_on, read_cutoff=read_cutoff, group_tag='group')
         # Restore STDOUT to the console
         sys.stdout = saved_stdout
-
+        logger.info("{} Clusters Generated".format(len(df)))
+        
         if append_cterm_peptides: 
             logger.info('Appending C-terminal constant region peptides to end of sequences')
             df = append_cterm_peptides_for_mass_spec(df)
