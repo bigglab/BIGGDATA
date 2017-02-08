@@ -460,98 +460,6 @@ def file_upload():
 
     return redirect( url_for('frontend.dashboard') )
 
-@frontend.route('/file_download', methods=['GET', 'POST'])
-@login_required
-def file_download(status=[], bucket='', key=''):
-
-    dropbox_files = get_dropbox_files(current_user)
-    form = FileDownloadForm()
-    upload_form = FileUploadForm()
-
-    form.dataset.choices = get_dataset_choices(current_user, new = True)
-    form.project.choices = get_project_choices(current_user, new = True)
-    upload_form.dataset.choices = form.dataset.choices
-    upload_form.project.choices = form.project.choices
-
-    # get a list of user projects for user later
-    projects = Set(current_user.projects)
-    projects.discard(None)
-    projects = sorted(projects, key=lambda x: x.id, reverse=True)
-
-    if request.method == 'POST':
-        file = File()
-        file.url = form.url.data.rstrip()
-        file.name = file.url.split('/')[-1].split('?')[0]
-        file.file_type = parse_file_ext(file.name)
-        file.description = form.description.data
-        file.chain = form.chain.data
-        file.paired_partner = form.paired_partner.data 
-        file.dataset_id = form.dataset_id.data
-        file.path = '{}/{}'.format(current_user.path.rstrip('/'), file.name)
-        file.user_id = current_user.id
-        file.available = False 
-        file.status = ''
-        print 'Saving File Metadata to Postgres: {}'.format(file.__dict__)
-        db.session.add(file)
-        db.session.commit()
-
-        #######
-        # check if the user has selected the default project (i.e., the user has no projects)
-        file_dataset = None
-        if form.dataset.data == 'new':
-            # create a new dataset here with the name default, add the user and dataset to the new project
-            file_dataset = generate_new_dataset(current_user)
-            flash('New file will be added to dataset "{}".'.format(file_dataset.name), 'success')
-        else: # check if the user has selected a project which they have access to
-            dataset = db.session.query(Dataset).get(int(form.dataset_id.data))
-            if dataset.user_has_write_access(current_user):
-                    dataset.files.append(file)
-                    file_dataset = dataset
-            else:
-                flash('Error: you do not have permission to add a file to that dataset.','warning')
-        db.session.commit()
-
-
-        # now do the same with projects, with the qualification that we add the dataset to the project if it's not there already
-        # check if the user has selected the default project (i.e., the user has no projects)
-        if file_dataset:
-            if form.project.data == 'new':
-                new_project = generate_new_project(user = current_user, datasets = file_dataset)
-            else: # check if the user has selected a project which they have access to
-                project = db.session.query(Project).get(int(form.project.data))
-                if project.user_has_write_access(current_user):
-                    if file_dataset not in project.datasets:
-                        project.datasets.append(file_dataset)
-
-                    if current_user.default_dataset == None:
-                        file_dataset.cell_types_sequenced = [str(project.cell_types_sequenced)]
-                        file_dataset.species = project.species
-
-                    db.session.commit()
-                else:
-                    flash('Error: you do not have permission to add a dataset to that project.','warning')
-                db.session.commit()        
-
-        # modify the path with the new style, the new hotness if you will
-        if file_dataset:
-            file.path = '{}/{}/{}'.format(
-                current_user.path.rstrip('/'),
-                'Dataset_' + str(file_dataset.id), 
-                file.name)
-
-        # check if the file path we settled on is available.
-        if os.path.isfile(file.path):
-            file.path = os.path.splitext(file.path)[0] + '_1' + os.path.splitext(file.path)[1]
-        #######
-
-        db.session.commit()
-        download_file.apply_async((file.url, file.path, file.id), {'user_id' : current_user.id})
-
-        return redirect( url_for('frontend.dashboard') )
-
-    return render_template("file_download.html", download_form=form, upload_form = upload_form, current_user=current_user, dropbox_files=dropbox_files)
-
-
 
 
 @frontend.route('/import_files', methods=['GET', 'POST'])
@@ -1029,6 +937,7 @@ def dataset(id):
         return render_template("dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, current_user=current_user)
     else: 
         return render_template("dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, current_user=current_user)
+
 
 @frontend.route('/edit_dataset/<int:id>', methods=['GET', 'POST'])
 @login_required

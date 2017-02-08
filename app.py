@@ -2217,8 +2217,6 @@ def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_
         # Restore STDOUT to the console
         sys.stdout = saved_stdout
 
-
-
         if append_cterm_peptides: 
             logger.info('Appending C-terminal constant region peptides to end of sequences')
             df = append_cterm_peptides_for_mass_spec(df)

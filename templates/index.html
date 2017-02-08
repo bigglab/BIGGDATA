@@ -12,7 +12,7 @@
 			{% if current_user.is_authenticated() %}
 				<p>Good to see you here, {{current_user.first_name}}. 
 				{% if current_user.files.all() == [] -%}
-					To get started running some analyses, you must import some files. You can <a href="{{url_for('.import_sra')}}">import a sample set from NCBI</a> or <a href="{{url_for('.file_download')}}">upload a file from your computer or url</a>. </p>
+					To get started running some analyses, you must import some files. You can <a href="{{url_for('.import_files')}}">import a sample set from NCBI, upload a file from your computer, download from web urls, copy from a path on the server or import from a GSAF URL</a>. </p>
 				{% elif current_user.datasets.all() == [] -%}
 					You've got <a href="{{url_for('.files')}}">some files</a>, but no datasets! 
 					<a href="{{url_for('.datasets')}}">Create a Dataset</a> and add some files to run an analysis. </p>

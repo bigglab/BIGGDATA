@@ -311,7 +311,7 @@
 	<h4>Files Associated With This Dataset:</h4>
 	
 	{% if dataset.files.count() == 0 %}
-		<em>There are no files associated with this dataset. You may add some by <a href="{{ url_for( 'frontend.file_download' ) }}" >clicking here</a>.</em>
+		<em>There are no files associated with this dataset. You may add some by <a href="{{ url_for( 'frontend.import_files' ) }}" >clicking here</a>.</em>
 	{% else %}
 		{% set files = dataset.files %}
 		{% include "partials/files.html" with context %}
