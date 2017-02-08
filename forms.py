@@ -70,19 +70,15 @@ class AssociateFilesToDatasetForm(Form):
 class CreateDatasetForm(Form):
     use_as_default = BooleanField('Use These Values as Defaults')
 
-
     dataset_id = IntegerField()
-
     name = TextField()
     description = TextField()
     paired = BooleanField()
     ig_type = TextField()
     project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
-
     cell_types_sequenced = TextField('Cell Types Sequenced (Array)')
     chain_types_sequenced = TextField('Chain Types Sequenced (Array)')
     primary_data_files_ids = TextField('Primary Data Files Ids (Array)')
-
     lab_notebook_source = TextField()
     sequencing_submission_number = TextField()
     contains_rna_seq_data = TextField()
@@ -108,6 +104,7 @@ class CreateDatasetForm(Form):
     person_who_prepared_library = TextField()
     pairing_technique = TextField()
     json_id = TextField()
+
 
 class EditDatasetForm(Form):
     use_as_default = BooleanField('Use These Values as Defaults')

@@ -187,6 +187,17 @@ def round_to_two(flt):
     return out
 app.jinja_env.globals['round_to_two'] = round_to_two
 
+
+def format_datetime(value, format='just_day'):
+    d = datetime.datetime(value) # .fromordinal(730920) # 730920th day after 1. 1. 0001
+    if format == 'just_day':
+        out = d.strftime("%d/%m/%y")
+    else: 
+        out = d.strftime("%d/%m/%y %H:%M")
+    return out
+app.jinja_env.filters['datetime'] = format_datetime
+
+
 # os.environ['http_proxy'] = app.config['QUOTAGUARD_URL']
 proxy = urllib2.ProxyHandler()
 opener = urllib2.build_opener(proxy)

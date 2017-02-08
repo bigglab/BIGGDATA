@@ -6,45 +6,12 @@
 {% endblock head %}
 
 {% block content %}
-	<div class="container">
-		    <form method="POST" action="/datasets">
-		    <table class='table table-striped'> 
-			    <thead>
-				    <h4>Create A New Dataset:</h4>
-				    <tr>
-					    <!-- <th>{{ form.csrf_token }}</th> -->
-				    	<th>{{ form.name.label }}:</th>
-				    	<th>Description:</th>
-				    	<th><label>Add to Project:</label></th>
-				    	<!-- <th><label>Pairing:</label></th> -->
-				    	<th></th>
-					</tr>
-			    </thead>
-				<tbody>
-				    <tr>
-    			        <!-- <th></th> -->
-    			        <th>{{ form.name(size=15, class="form-control") }}</th>
-    			        <th>{{ form.description(size=15, class="form-control") }}</th>
-    			        <!-- <th>Ig Type: {{ form.ig_type(size=10) }}</th> -->
-    			        <th>{{ form.project(class="form-control") }}</th>
-    			        <th>
-<!-- 							<div class="checkbox" class="pull-right">
-                                        <label>
-										{{ form.paired }}
-                                        Expect VH/VL Paired Data?
-                                        </label><br/>
-                            </div>
- -->    			        </th>
-    			        <th><input class="btn btn-default form-control" type="submit" value="Submit"></th>
-    		        </tr>
-		        </tbody>
-	            </table>
-		    </form>
+	<div class="container" align="center">
+	<h5>To Create A New Dataset, Use The <a href="{{url_for('.import_files')}}">Import Files</a> Page</h5>
 	</div>
 
 <br>
 <div class="container">
-    <h4>Existing Datasets:</h4>
 	<table id="datasets" class="display table-striped table table-bordered" cellspacing="0" width="100%">
 		<thead>
 			<tr>

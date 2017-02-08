@@ -2,35 +2,23 @@
 
 {% block content %}
 
-<!-- Datatable for all files !-->
 <div class="container">
-	<h4>Files Associated Directly With Your User:  <button class="btn" data-toggle="collapse" data-target="#directfiles"><span class="glyphicon glyphicon-list"></span></button>
-	</h4>
-	<br>
-	<div id="directfiles" class="collapse in" aria-expanded="true">
-		<!-- tabs !-->
-		<ul class="nav nav-tabs" role="tablist">
-			<li class="active all-tab">
-				<a data-toggle="tab" role="tab" data-target="#allfilesdiv">All Files</a>
-			</li>
-			<li class="orphan-tab">
-				<a data-toggle="tab" role="tab" data-target="#orphanfilesdiv">Orphan Files</a>
-			</li>
-		</ul>
-		<div class="tab-content">
-		<!-- Table 1 !-->
-		<div id="allfilesdiv" class="tab-pane fade in active table-responsive" role="tab-panel">
-			<table id="allfiles" class="table table-striped table-bordered dt-reponsive" width="100%" cellspacing="0">
+	<div style="margin-left: 20px; margin-right: 20px;"  class="panel panel-default">
+		<div class="panel-heading" align="center">
+			<h5>Files Associated Directly With Your User</h5>
+		</div>
+		<div class='panel-body'>
+			<table class="table table-striped" style="table-layout:fixed; width: 100%;">
 				<thead>
 					<tr>
-						<th>File ID</th>
+						<th width="5%">File ID</th>
 						<th>Name</th>
-						<th>File Type</th>
-						<th>Available</th>
-						<th>File Size</th>
-						<th>File Created</th>
-						<th>Download</th>
-						<th>Delete</th>
+						<th width="12%">File Type</th>
+						<th width="8%">Available</th>
+						<th width="8%">File Size</th>
+						<th width="12%">File Created</th>
+						<th width="8%">Download</th>
+						<th width="6%">Delete</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -49,7 +37,7 @@
 							{%- else -%}
 								<th></th>
 							{%- endif -%}
-								<th>{{file.created}}</th>
+								<th>{{file.created.strftime("%m/%d/%y %H:%M")}}</th>
 							{% if file.available and file.file_size != None and file.file_size != 0%}
 								<td align=center>
 									<a href="{{ url_for( 'frontend.download', file_id=file.id) }}" onclick="document.someForm.submit();" style="color: inherit; text-decoration: none" download="{{file.name}}">
@@ -65,217 +53,26 @@
 				</tbody>
 			</table>
 		</div>
-		<!-- Table 2 !-->
-		<div id="orphanfilesdiv" class="tab-pane fade" role="tab-panel">
-			<table id="orphanfiles" class="table table-striped table-bordered dt-responsive" width="100%" cellspacing="0">
-				<thead>
-					<tr>
-						<th>File ID</th>
-						<th>Name</th>
-						<th>Chain</th>
-						<th>File Type</th>
-						<th>Available</th>
-						<th>File Size</th>
-						<th>File Created</th>
-						<th>Downloadable</th>
-					</tr>
-				</thead>
-				<tbody>
-					{% for file in files if file.dataset_id == [] %}
-						<tr>
-							<th><a href="{{url_for('.file', id=file.id)}}">{{file.id}}</a></th>
-							<th>{{file.name}}</th>
-							<th>{{file.chain}}</th>
-							<th>{{file.file_type}}</th>
-						{%- if file.available -%}
-							<th>YES</th>
-						{%- else -%}
-							<th>NO</th>
-						{%- endif -%}
-						{%- if file.file_size -%}
-							<th>{{file.file_size|filesizeformat}}</th>
-						{%- else -%}
-							<th></th>
-						{%- endif -%}
-							<th>{{file.created}}</th>
-						{% if file.available and file.file_size != None and file.file_size != 0%}
-							<th align=center>
-								<a href="{{ url_for( 'frontend.download', file_id=file.id) }}" onclick="document.someForm.submit();" style="color: inherit; text-decoration: none" download="{{file.name}}">
-									<span class="glyphicon glyphicon-download fa-lg" aria-hidden="true" style="color:black; "></span>
-								</a>
-
-							</th>
-						{% else %}
-							<th></th>
-						{% endif %}
-						</tr>
-					{% endfor %}
-				</tbody>
-			</table>
-		</div>
-		</div>
 	</div>
 </div>
+
+{% endblock %}
+
+
+
+
 <!-- Datatable Script for all files !-->
 <script>
 $(document).ready(function() {
-	$('a[data-toggle="tab"]').on( 'shown.bs.tab', function (e) {
-        $.fn.dataTable.tables( {visible: true, api: true} ).columns.adjust();
-
-        var $newtab=$(e.target);
-    } );
-    $('#allfiles').DataTable({"order":[[0, 'desc']]});
-    $('#orphanfiles').DataTable();
 } );
 
 
 </script>
-<!-- Datatable script end !-->
-<!-- Datatable for allfiles end !-->
+
 
 <br>
 <br>
-
-<div class="container">
-<!-- Project search bar !-->
-	<div class="row">
-		<div class="col-md-6">
-			<div class="input-group">
-				<span class="input-group-btn">
-				<!-- Button -->
-						<button class="btn btn-default dropdown-toggle dropdown" type="button" data-toggle="dropdown">Projects<span class="caret"></span></button>
-							<ul class="dropdown-menu">
-								{% for project in current_user.projects %}
-									{% if project.datasets != [] %}
-										<li data-toggle="collapse" data-target="#{{project.id}}"><a href="#">{{project.id}}: {{project.project_name}}</a></li>
-									{% endif %}
-								{% endfor %}
-							</ul>
-				<!-- Button End -->
-				</span>
-				<!-- Input Bar -->
-				<div id="projectsearch">
-					<input id="projects" class="typeahead form-control" type="text" name='projects' autocomplete="off" value="" placeholder="Search for project" aria-describedby="sizing-addon1"/>
-				</div>
-				<script>
-						var projectnames = {{ projectnames|safe }};
-						console.log(projectnames);
-						for (var i = 0; i < projectnames.length; i++){
-							projectnames[i] = projectnames[i].replace(/"/g, '')
-						};
-						var projects = new Bloodhound({
-							datumTokenizer: function(d) { return Bloodhound.tokenizers.whitespace(d); },
-  							queryTokenizer: Bloodhound.tokenizers.whitespace,
-  							local: projectnames,
-		  					});
-
-						projects.initialize();
-
-						$('#projectsearch .typeahead').typeahead({
-							highlight: true,
-							minLength: 1,
-						},
-						{
-							name: 'projects',
-							limit: 10,
-							source: projects.ttAdapter(),
-						});
-				</script>
-				<span class ="input-group-btn">
-					<button id="go" class="btn btn-default" type="button" onclick="clickgo()">Go</button>
-				<script>
-					function clickgo(){
-						var value = $('#projects').val();
-						var n = value.lastIndexOf(' ');
-						var substr = value.substring(n + 1);
-						console.log(substr);
-						var project = '#'.concat( substr );
-						$(project).collapse('toggle');
-					}
-				</script>		
-				</span>	
-			</div>
-		</div>
-	</div>
-<!-- Project search bar end !-->
-	<br>
-	<br>
-<!-- Datatables for Projects !-->
-	{% for project in current_user.projects %}
-		{% if project.datasets != [] %}
-		<div id="{{project.id}}" class="collapse table-responsive">
-			{% set datasets = project.datasets %}
-			{#% include "partials/DatasetsDT.html" with context %#}
-			<script>
-				var table{{project.id}}= $('#{{project.id}}dataset').DataTable({
-					columnDefs: [
-			  		{ targets: 'no-sort', orderable: false }
-			  		],
-			  		order: [[ 1, 'asc' ]]
-				});
-			 
-				var table_data{{project.id}} = [
-				{%- for dataset in project.datasets -%}
-					{%- if dataset.files.all() == [] -%}
-						`<a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
-					{%- else -%}
-						{%- set files = dataset.files -%}
-						`{%- include "partials/files.html" with context %}`,
-					{%- endif -%}
-				{%- endfor -%}
-					''
-				];
-
-				table{{project.id}}.rows().every( function () {
-				    this.child( table_data{{project.id}}[this.index()] );
-				} );
-
-				$('#{{project.id}}dataset tbody').on( 'click', 'td.details-control', function () {
-					var child = table{{project.id}}.row( this ).child;
-					var tr = $(this).closest('tr');
-				    
-				    if ( child.isShown() ) {
-				        child.hide();
-				        tr.removeClass('shown');
-				    }
-				    else {
-				        child.show();
-				        tr.addClass('shown')
-
-				    }
-				} );
-			</script>
-		</div>
-		{% endif %}
-	{% endfor %}
-<!-- Datatables for Projects end !-->
-</div>
-
-<div class="container">
 <br>
-{% if dropbox_files %}
-	<h4>Or click to link any of these from your dropbox to your user:</h4>
-  <h5>You may have to enable read permissions for the 'russ' user running BIGGDATA. Execute 'chmod 777 file_path' to do this</h5>
 
-
-	<table class="table table-striped">
-		<thead>
-			<tr>
-				<th></th>
-			</tr>
-		</thead>
-		<tbody>
-			{% for file in dropbox_files %}
-				<tr>
-					<form role='form' method='POST' action='/files'>
-					<th><input type='submit' name='submit' value={{file}}></th>
-					</form>
-				</tr>
-			{% endfor %}
-		</tbody>
-	</table>
-{% endif %}
-</div>
-{%endblock content %}
 
 
