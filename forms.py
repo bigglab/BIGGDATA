@@ -37,30 +37,7 @@ class RegistrationForm(Form):
     email = StringField('Email', validators=[validators.input_required()])
     password = PasswordField('Password', validators=[validators.input_required()])
 
-class CreateMixcrAnalysisForm(Form): 
-    dataset_id = IntegerField()
-    name = TextField(u'Name')
-    description = TextField(u'Description')
-    trim = BooleanField(u'Trim Illumina Adapters')
-    pair_overlaps = BooleanField(u'Pair Overlaps')
-    pair_interchain = BooleanField(u'Pair Interchain')
-    insert_into_db = BooleanField(u'Insert Into DB')
-    cluster = BooleanField(u'Cluster Sequences')
 
-class CreateAnalysisForm(Form): 
-    dataset_id = IntegerField()
-    name = TextField(u'Name')
-    analysis_type = TextField(u'Name', default='IGFFT')
-    description = TextField(u'Description')
-    file_ids = SelectMultipleField(u'Files To Analyze')
-    trim = BooleanField(u'Trim Illumina Adapters')
-    overlap = BooleanField(u'Pair Overlaps')
-    paired = BooleanField(u'Pair Interchain')
-    insert_into_db = BooleanField(u'Insert Into DB')
-    cluster = BooleanField(u'Cluster Sequences')
-
-class GsafDownloadForm(Form):
-    url = TextField(u'GSAF Access URL')
 
 class CreatePandaseqAnalysisForm(Form): 
     dataset_id = IntegerField()
@@ -70,7 +47,6 @@ class CreatePandaseqAnalysisForm(Form):
     minimum_length = IntegerField(u'Minimum Consensus Length', default=100)
     file_ids = SelectMultipleField(u'Files To Collapse')
     algorithm = SelectField(u'Algorithm', choices=(['ea_util', 'ea_util'], ['flash', 'flash'], ['pear', 'pear'], ['rdp_mle', 'rdp_mle'],  ['simple_bayesian', 'simple_bayesian'], ['stitch', 'stitch'], ['uparse', 'uparse']), validators=[validators.input_required()])
-
 
 
 class CreateMSDBAnalysisForm(Form): 
@@ -84,49 +60,6 @@ class CreateMSDBAnalysisForm(Form):
     read_cutoff = IntegerField(default=1)
     cluster_on = MultiCheckboxField('Require Annotations', choices=[('nSeqCDR3', 'CDR3 NT'),('aaSeqCDR3', 'CDR3 AA'),('aaFullSeq', 'Full AA'), ('nFullSeq', 'Full NT')], default = ['aaFullSeq'])
     append_cterm_peptides = BooleanField(default=False)
-
-
-
-class CreateVHVLPairingAnalysisForm(Form): 
-    dataset_ids = MultiCheckboxField('Datasets', choices=[])
-    file_ids = MultiCheckboxField('Datasets', choices=[])
-    name = TextField(u'Name', )
-    description = TextField(u'Description')
-    require_cdr1 = BooleanField()
-    require_cdr2 = BooleanField()
-    require_cdr3 = BooleanField()
-    vhvl_min = DecimalField('VH/VL Min', places=2, rounding=None, default = 0.96)
-    vhvl_max = DecimalField('VH/VL Max', places=2, rounding=None, default = 0.96)
-    vhvl_step = DecimalField('VH/VL Step', places=2, rounding=None, default = 0.0 )
-
-    output_dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
-    output_project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
-
-
-class FileDownloadForm(Form):
-    url     = TextField(u'File URL', validators=[validators.input_required()], widget=TextInput())
-    description  = TextAreaField(u'File Description')
-    chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
-    paired_partner  = IntegerField()
-    dataset_id = IntegerField()
-    dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
-    project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
-
-# @Dave - rewriting this for the new form
-class FileUploadForm(Form):
-
-    file_1 = FileField(u'File Path')
-    file_1_name = FileField(u'File Name')
-    file_2 = FileField(u'File Path')
-    file_2_name = FileField(u'File Name')
-    file_pairing = SelectField(u'File Pairing (2 files required)', choices = [ ('none','None'), ('vhvl','Heavy/Light Chain Pairing'), ('forev','Forward/Reverse Pairing') ] )
-
-
-    # file     = FileField(u'File Path', validators=[validators.input_required()])
-    description  = TextAreaField(u'File Description')
-    chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB']), validators=[validators.input_required()])
-    dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
-    project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
 
 
 class AssociateFilesToDatasetForm(Form):
@@ -219,12 +152,6 @@ class EditDatasetForm(Form):
     pairing_technique = TextField()
     json_id = TextField()
 
-class ImportSraAsDatasetForm(Form):
-    accession = TextField()
-    description = TextField()
-    chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
-    dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
-    project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
 
 class FileEditForm(Form):
     name = TextField('File Name', [validators.length(max=256)])
