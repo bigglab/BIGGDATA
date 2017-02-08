@@ -2223,7 +2223,7 @@ def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_
                 file.write(row['aaFullSeq'])
                 file.write('\n')
         session.add(new_file)
-        new_file = File(name = "{}/{}_MSDB.txt".format(analysis.directory, analysis.name).replace(' ','_'), directory = analysis.directory, path = "{}/{}_MSDB.txt".format(analysis.directory, analysis.name).replace(' ','_'), file_type = 'MSDB_TXT', analysis_id = analysis.id, user_id=user_id, check_name = False)
+        new_file = File(name = "{}_MSDB.txt".format(analysis.name).replace(' ','_'), directory = analysis.directory, path = "{}/{}_MSDB.txt".format(analysis.directory, analysis.name).replace(' ','_'), file_type = 'MSDB_TXT', analysis_id = analysis.id, user_id=user_id, check_name = False)
         logger.info('Writing MSDB Tabbed file to path: {}'.format(new_file.path))
         df.to_csv(new_file.path, sep='\t', index=True)
         session.add(new_file)
