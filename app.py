@@ -656,7 +656,7 @@ def get_user_dataset_dict(user):
     return datadict
 
 @celery.task(base= LogTask, bind = True)
-def import_from_sra(self, accession, name=None, user_id=57, chain=None, project_selection = None, dataset_selection = None):
+def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, project_selection = None, dataset_selection = None):
     logger = self.logger
     user = db.session.query(User).filter(User.id==user_id).first()
 
@@ -3244,7 +3244,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
 
             download_file( url = new_file.url, path = new_file.path, file_id = new_file.id, user_id = user_id, parent_task = task)
         else: # file_source =='file_ncbi':
-            return_value = import_from_sra(ncbi_accession, name=ncbi_accession, user_id = user_id, chain = ncbi_chain, project_selection = str(output_project), dataset_selection = str(output_dataset), parent_task = task)
+            return_value = import_from_sra(accession=ncbi_accession, name=ncbi_accession, user_id = user_id, chain = ncbi_chain, project_selection = str(output_project), dataset_selection = str(output_dataset), parent_task = task)
             file_ids_to_analyze = return_value.file_ids
 
         if file_ids_to_analyze == []:

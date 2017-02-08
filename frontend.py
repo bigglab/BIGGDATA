@@ -367,7 +367,7 @@ def import_files():
 
 
         elif form.file_source.data == 'file_ncbi':
-            return_value = import_from_sra.apply_async((form.ncbi_accession.data), {'name':form.ncbi_accession.data, 'user_id':current_user.id, 'project_selection': str(form.output_project.data), 'dataset_selection': str(form.output_dataset.data)}, queue=celery_queue)
+            return_value = import_from_sra.apply_async((), {'accession': form.ncbi_accession.data, 'name':form.ncbi_accession.data, 'user_id':current_user.id, 'project_selection': str(form.output_project.data), 'dataset_selection': str(form.output_dataset.data)}, queue=celery_queue)
             return redirect(url_for('frontend.dashboard'))
 
         elif form.file_source.data =='file_url':
@@ -1154,95 +1154,6 @@ def vdj_visualizer():
     return render_template("vdjviz.html", vdjviz_url=vdjviz_url, current_user=current_user)
 
 
-
-@frontend.route('/add1/<num>')
-# @oauth.oauth_required
-def add_page(num):
-    num = int(num)
-    result = add.delay(1,num)
-    time.sleep(3)
-    async_result = add.AsyncResult(result.id)
-    r = async_result.info
-    template = templateEnv.get_template('add1.html')
-    return template.render(input=num, result=r, current_user=current_user)
-
-    # return make_response(render_template('index.html'))
-    # return '<h4>Hi</h4>'
-
-
-@frontend.route('/example', methods=['GET', 'POST'])
-def example_index():
-    if request.method == 'GET':
-        return render_template('example_index.html', email=session.get('email', 'example'), current_user=current_user)
-    email = request.form['email']
-    session['email'] = email
-
-    # send the email
-    msg = Message('Hello from Flask',
-                  recipients=[request.form['email']])
-    msg.body = 'This is a test email sent from a background Celery task.'
-    if request.form['submit'] == 'Send':
-        # send right away
-        send_async_email.delay(msg)
-        flash('Sending email to {0}'.format(email))
-    else:
-        # send in one minute
-        # send_async_email.apply_async(args=[msg], countdown=60)
-        flash('An email will be sent to {0} in one minute'.format(email))
-
-    return redirect(url_for('example_index'))
-
-
-@frontend.route('/longtask', methods=['GET', 'POST'])
-def longtask():
-    task = long_task.apply_async()
-    return jsonify({}), 202, {'Location': url_for('taskstatus',
-                                                  task_id=task.id)}
-
-@frontend.route('/files/import_sra', methods=['GET', 'POST'])
-@login_required
-def import_sra():
-    form = ImportSraAsDatasetForm()
-    form.dataset.choices = get_dataset_choices(current_user, new = True)
-    form.project.choices = get_project_choices(current_user, new = True)
-
-    result = None
-    status = []
-    if request.method == 'POST':
-        if 'SRR' in form.accession.data: 
-            status.append('Import SRA Started for Accession {}'.format(form.accession.data))
-            status.append('Once complete, a dataset named {} will automatically be created containing these single or paired-end read files'.format(form.accession.data))
-            result = import_from_sra.apply_async((form.accession.data,), {'name': form.accession.data, 'user_id': current_user.id, 'chain':form.chain.data, 'project_selection':form.project.data , 'dataset_selection':form.dataset.data}, queue=celery_queue)
-            return redirect( url_for('frontend.dashboard') )
-        else: 
-            status.append('Accession does not start with SRR or ERR?')
-            return render_template('sra_import.html', status=status, form=form, result=result, current_user=current_user)
-
-    return render_template('sra_import.html', status=status, form=form, result=result, current_user=current_user)
-
-
-@frontend.route('/files/import_gsaf', methods=['GET', 'POST'])
-@login_required
-def import_gsaf():
-    form = GsafDownloadForm()
-    if request.method == 'POST':
-        url = form.url.data
-        req = urllib2.Request(url)
-        try:
-            response = urllib2.urlopen(req)
-            # do stuff...
-        except urllib2.HTTPError as err:
-            error = ['URL Unreachable...', err]
-            flash('URL is unreachable...', 'error')
-            flash(err, 'error')
-            return render_template('import_gsaf.html', form=form)
-        else: 
-            error = None
-            parse_gsaf_response_into_datasets.apply_async((url,), {'user_id':current_user.id}, queue=celery_queue)
-            return redirect(url_for('frontend.dashboard'))
-             # render_template('sra_import.html', status=status, form=form, result=result, current_user=current_user)
-
-    return render_template('import_gsaf.html', form=form)
 
 
 @frontend.route('/delete_task/<task_id>', methods=['GET', 'POST'])
