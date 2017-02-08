@@ -713,7 +713,7 @@ def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, pro
         path = os.path.splitext(path)[0] + '_1' + os.path.splitext(path)[1]
 
     logger.info( 'Fetching SRA data from NCBI {}'.format(accession) )
-    command = "fastq-dump -I --gzip --defline-qual '+' --split-files -T --outdir {} {}".format(directory, accession)
+    command = "/data/resources/software/sratoolkit.2.8.1-2/bin/fastq-dump -I --gzip --defline-qual '+' --split-files -T --outdir {} {}".format(directory, accession)
     
     logger.info( command ) 
 
