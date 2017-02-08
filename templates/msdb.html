@@ -3,7 +3,7 @@
 {% block content %}
 
 <div class="container">
-<h3>Generate Mass Spec Database From Multiple Files:</h3>
+<h3 align="center">Generate Mass Spec Database From Annotation Files</h3>
 </div>
 <br>
 
@@ -12,78 +12,107 @@
 	<form method="POST" action="{{ url_for( 'frontend.msdb' ) }}">
     {{ msdb_form.csrf_token }}
 
-  	<div style="margin-left: 25px; margin-right: 5px;" >
-      <table class='table table-striped' width=100%> 
-        <thead>
-            <tr>
-                <th >MSDB Analysis Name</th>
-                <th >MSDB Description</th>
-                <!-- <th width=18%><label>Add to Dataset/Project:</label></th> -->
-                <th >Append C-term Peptides</th>
-                <th >Read Cutoff</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-              <td>{{ msdb_form.name(class = 'form-control') }}</td>
-              <td>{{ msdb_form.description(class = 'form-control') }}</td>
-              <td>{{ msdb_form.append_cterm_peptides(class = 'form-control') }}</td>
-              <td>{{ msdb_form.read_cutoff(class = 'form-control') }}</td>
-              <!-- <td><input type='submit' class="btn btn-default form-control" value="Generate MSDB"></td> -->
-            </tr>
-        </tbody>
-      </table>
-      <table class='table table-striped' width=100%> 
-        <thead>
-            <tr>
-                <th width=25%>Required Annotated</th>
-                <th width=25%>Cluster On</th>
-                <th width=15%>Cluster %</th>
-                <!-- <th width=18%><label>Add to Dataset/Project:</label></th> -->
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-              <td>{{ msdb_form.require_annotations() }}</td>
-              <td>{{ msdb_form.cluster_on() }}</td>
-              <td>{{ msdb_form.msdb_cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
-              <td><input type='submit' class="btn btn-default form-control" value="Generate MSDB"></td>
-            </tr>
-        </tbody>
-      </table>
+  	<div style="margin-left: 20px; margin-right: 20px;" class="panel panel-default">
+      <div class="panel-heading" align="center">
+        <b>Select Analysis Options</b>
+      </div>
+      <div class='panel-body'>
+        <table class='table table-striped' width=100%> 
+          <thead>
+              <tr>
+                  <th>MSDB Analysis Name</th>
+                  <th>MSDB Description</th>
+                  <th>Append C-term Peptides</th>
+                  <th>Minimum # Reads</th>
+              </tr>
+          </thead>
+          <tbody>
+              <tr>
+                <td>{{ msdb_form.name(class = 'form-control') }}</td>
+                <td>{{ msdb_form.description(class = 'form-control') }}</td>
+                <td>{{ msdb_form.append_cterm_peptides(class = 'form-control') }}</td>
+                <td>{{ msdb_form.read_cutoff(class = 'form-control') }}</td>
+                <!-- <td><input type='submit' class="btn btn-default form-control" value="Generate MSDB"></td> -->
+              </tr>
+          </tbody>
+        </table>
+        <table class='table table-striped' width=100%> 
+          <thead>
+              <tr>
+                  <th width=25%>Required Annotated</th>
+                  <th width=25%>Cluster On</th>
+                  <th width=15%>Cluster %</th>
+              </tr>
+          </thead>
+          <tbody>
+              <tr>
+                <td>{{ msdb_form.require_annotations() }}</td>
+                <td>{{ msdb_form.cluster_on() }}</td>
+                <td>{{ msdb_form.msdb_cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
+              </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
+
+
+
+
+
+
     <br>
-    <h4>Select Files to add to MSDB:</h4>
-
-    <div class="container" span=6>
-
-      {% for dataset_id in msdb_form.dataset_ids %}
-
-        <div class="checkbox" class="pull-right" style="padding-left: 4px">
-          <label>
-              {{ dataset_id( class=dataset_id.data ) }}
-              <b>{{dataset_id.label}}</b>
-          </label>
-        </div>
-        <div id="collapse" class="collapse {{dataset_id.data}}" style="margin-left: 40px;">
-          {% for file_id in msdb_form.file_ids %}
-            {% if file_id.data in dataset_file_dict[dataset_id.data] %}
-              <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                <label >
-                    {{ file_id }}
-                    <b>{{file_id.label}}</b>
-                </label>
-              </div>
-            {% endif %}
-          {% endfor %}
-        </div>
-
-      {% endfor %}
+    <div style="margin-left: 20px; margin-right: 20px;" class="panel panel-default">
+      <div class="panel-heading" align="center">
+        <b>Select Compatible Annotation Files</b>
+      </div>
+      <div class='panel-body'>
+        <table id="datasets" class="display table-striped table table-bordered" cellspacing="0" width="100%">
+          <thead>
+            <tr>
+              <th class='no-sort' style="width:20px;""> </th>
+              <th>Dataset #</th>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Projects</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for dataset, files in dataset_file_dict.iteritems() %}
+              <tr>
+                <td {% if files != [] -%}class='details-control'{%- endif -%}></td>
+                <td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.id}}</a></td>
+                <td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
+                <td>{{dataset.description}}</td>
+                <td>{{dataset.projects|map(attribute='project_name')|join(',')}}</td>
+              </tr>
+            {% endfor %}
+            
+          </tbody>
+        </table>
+      </div>
     </div>
+
+
+<br>
+
+
+    <div style="margin-left: 20px; margin-right: 20px;" class="panel panel-default">
+      <div class="panel-heading" align="center">
+        <input type='submit' class="btn btn-default form-control" value="Generate MSDB"></td>
+      </div>
+    </div>
+
+
 
   </form>
-
 </div>
+
+
+
+<br>
+<br>
+<br>
+
 
 <script>
 
@@ -96,9 +125,90 @@ $('input[type=checkbox]').on('change', function () {
     }
 });
 
+
+  var table = $('#datasets').DataTable({
+    columnDefs: [
+      { targets: 'no-sort', orderable: false }
+      ],
+      order: [[ 1, 'desc' ]], 
+      pageLength:100
+  });
+
+
+  var table_data = [
+  {%- for dataset, files in dataset_file_dict.iteritems() -%}
+      `
+      <!-- HTML to write -->
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th></th>
+            <th>File ID</th>
+            <th>Name</th>
+            <th>File Type</th>
+            <th>Available</th>
+            <th>File Size</th>
+            <th>Lines</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {%- for file in files|sort(attribute='id', reverse=True) -%}
+            <tr>
+              <td><input name="file_ids" type="checkbox" value="{{file.id}}"</td>
+              <td><a href="{{url_for('frontend.file', id=file.id)}}" >{{file.id}}</a> </td>
+              <td>{{file.name}}</td>
+              <td>{{file.file_type}}</td>
+              {%- if file.available -%}
+                <td>YES</td>
+              {%- else -%}
+                <td>NO</td>
+              {%- endif -%}
+              {%- if file.file_size -%}
+                <td>{{file.file_size|filesizeformat}}</td>
+              {%- elif file.available -%}
+                <td>0 bytes</td>
+              {%- else -%}
+                <td></td>
+              {%- endif -%}
+              {%- if file.line_count -%}
+                <td>{{file.line_count_string}}</td>
+              {%- elif file.available -%}
+                <td>0</td>
+              {%- else -%}
+                <td></td>
+              {%- endif -%}
+              <td>{{file.created}}</td>
+            </tr>
+          {%- endfor -%}
+        </tbody>
+      </table>`,
+  {%- endfor -%}
+    ''
+  ]
+  table.rows().every( function () {
+      this.child( table_data[this.index()] );
+  } );
+
+  $('#datasets tbody').on( 'click', 'td.details-control', function () {
+      var child = table.row( this ).child;
+    var tr = $(this).closest('tr');
+      
+      if ( child.isShown() ) {
+          child.hide();
+          tr.removeClass('shown');
+      }
+      else {
+          child.show();
+          tr.addClass('shown')
+      }
+  } );
+
+
 </script>
 
 {%endblock content %}
+
 
 
 

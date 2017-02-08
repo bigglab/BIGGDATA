@@ -2208,7 +2208,16 @@ def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_
             dfs.append(df)
         df = pd.concat(dfs)
         df = df.dropna(subset=require_annotations, how='any')
+        logger.info("{} Total Annotations Being Clustered".format(len(df)))
+
+        #redirect logger to capture function output
+        saved_stdout = sys.stdout
+        sys.stdout = VHVLPairingLoggerWriter( logger, task = self )
         df = cluster_dataframe(df, identity=cluster_percent, on=cluster_on, read_cutoff=read_cutoff, group_tag='group')
+        # Restore STDOUT to the console
+        sys.stdout = saved_stdout
+
+
 
         if append_cterm_peptides: 
             logger.info('Appending C-terminal constant region peptides to end of sequences')

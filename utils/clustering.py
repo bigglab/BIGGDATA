@@ -15,12 +15,10 @@ def collapse_annotation_dataframe(df, on='aaFullSeq', keep_group_tag=None):
 		if keep_group_tag==None: 
 			grouped = df.groupby(by=on, as_index=False, sort=False)
 		else: 
-			print 'on type: {}'.format(type(on))
 			if type(on)==type([]): 
 				on.append(keep_group_tag) 
 			else:
 				on = [on, keep_group_tag]
-			print "grouping by {}".format(on)
 			grouped = df.groupby(by=on, as_index=False, sort=False)
 		df_collapsed = grouped.first()
 		#if already collapsed by standardization routine, readCount will be annotated
@@ -39,10 +37,10 @@ def collapse_annotation_dataframe(df, on='aaFullSeq', keep_group_tag=None):
 
 #legacy clustering method - greedy clustering seeds with first few rows and clusters on top of them
 def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', read_cutoff=1, group_tag=None, remove_temp_files=True): 
-	print 'No group_tag specified....' if group_tag==None else 'Keeping and tagging read counts by groups tagged {}'.format(group_tag)
+	print 'No group_tag specified....' if group_tag==None else 'Keeping and tagging read counts by groups tagged "{}"'.format(group_tag)
 	df = collapse_annotation_dataframe(df, on=on, keep_group_tag=group_tag)
 	first_on = on if type(on)==str else on[0]
-	print 'Sorting annotations based on length of {} (leads to more accurate clustering'.format(first_on)
+	print 'Sorting annotations based on length of {} (leads to more accurate clustering with greedy algorithm)'.format(first_on)
 	df['tmp_on_length'] = df[first_on].str.len()
 	df = df.sort_values('tmp_on_length', ascending=False).reset_index(drop=True).drop('tmp_on_length', axis=1)
 	print '********************** Writing Fasta {} **********************'.format(on)
@@ -64,7 +62,6 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', read_cutoff=1, group_ta
 	print '***************** Clustering Complete *****************'
 	clust_cols=['SeedorHit','clusterId','Length','Match', 'Blank1', 'Blank2','Blank3','Blank4','index_row','CDR_matchseq']
 	# clust_types={'SeedorHit':str,'clusterId':int,'Length':int,'Match':str, 'Blank1':str, 'Blank2':str,'Blank3':str,'Blank4':str,'readName':str,'CDR_matchseq':str}
-	print '\nParsing clustering information.\n'
 	cluster_results=pd.read_csv(temp_clustered_output_file, sep='\t', names=clust_cols)
 	if remove_temp_files: 
 		for filename in temp_fasta_file.name, temp_clustered_output_file, temp_centroids_file: 
@@ -83,7 +80,7 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', read_cutoff=1, group_ta
 	else: 
 		size_key='collapsedCount'
 	df['clusterSize'] = df[~df.clusterId.isnull()].groupby(['clusterId'])[size_key].transform(sum)  #.drop_duplicates(['Comboseq','ClusterID']) before goupby...
-	print 'Generating dataframes for output.\n'
+	print 'Generating clustered dataframe for output.'
 	if group_tag==None: 
 		if 'group' not in df.columns:
 			df['group'] = ''
@@ -100,7 +97,7 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', read_cutoff=1, group_ta
 	ordered_cols = ['clusterId', 'clusterSize', 'collapsedCount'] 
 	output_cols = ordered_cols + [c for c in clustered_df.columns if c not in ordered_cols]
 	clustered_df = clustered_df[output_cols]
-	print 'Processing complete.\n'
+	print 'Clustering and processing complete.'
 	return clustered_df
 
 

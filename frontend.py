@@ -1534,6 +1534,8 @@ def pair_vhvl(status=[]):
 
     return render_template("pair_vhvl.html", dataset=dataset, pair_vhvl_form=pair_vhvl_form, status=status, current_user=current_user, dataset_file_dict = dataset_file_dict) 
 
+
+
 @frontend.route('/analysis/msdb/', methods=['GET', 'POST'])
 @login_required
 def msdb(status=[]):
@@ -1541,18 +1543,9 @@ def msdb(status=[]):
     msdb_form = CreateMSDBAnalysisForm()
 
     if request.method == 'POST':
+        print request.__dict__
 
-
-        file_ids_to_use = [] 
-        for dataset in current_user.datasets:
-            if str(dataset.id) in msdb_form.dataset_ids.data:
-                for file in dataset.files:
-                    if str(file.id) in msdb_form.file_ids.data:
-                        file_ids_to_use.append(file.id)
-
-        if file_ids_to_use != []:
-
-
+        if msdb_form.file_ids.data != []:
             result = run_new_msdb.apply_async( ( ), 
                     { 
                         'user_id' : current_user.id, 
@@ -1560,7 +1553,7 @@ def msdb(status=[]):
                         'analysis_id' : None, 
                         'analysis_name' : msdb_form.name.data,
                         'analysis_description' : msdb_form.description.data,
-                        'file_ids' : file_ids_to_use, 
+                        'file_ids' : msdb_form.file_ids.data, 
                         'cluster_percent' : float(msdb_form.msdb_cluster_percent.data), 
                         'require_annotations' : msdb_form.require_annotations.data, 
                         'read_cutoff': msdb_form.read_cutoff.data, 
@@ -1575,12 +1568,6 @@ def msdb(status=[]):
 
     else: # request.method == 'GET'
 
-        # # get a list of datasets and projects
-        # datasets = 
-        # projects = current_user.get_ordered_projects()
-        # project_tuples = []
-
-        # dataset = None
 
         current_analysis_id = db.session.query(func.max(File.id)).first()[0]
         if current_analysis_id:
@@ -1590,44 +1577,23 @@ def msdb(status=[]):
 
         msdb_form.name.data = 'MSDB Analysis {}'.format( str(next_analysis_id) )
 
-
-
-        dataset_choices = []
-        file_choices = []
         dataset_file_dict = {}
-
-        # build choices for the file_ids and dataset_ids
-        # only include files which are annotation files
 
         datadict = get_user_dataset_dict(current_user)
 
-        for dataset, files in datadict.items():
-
+        for dataset, files in datadict.iteritems():
             dataset_added = False
-
             for file in dataset.files:
-
                 if file.file_type in  ['IGFFT_ANNOTATION', 'MIXCR_ANNOTATION', 'BIGG_ANNOTATION'] and os.path.exists(file.path):
-
                     if dataset_added == False:
                         # Add the dataset as an option
                         dataset_added = True
-                        dataset_choices.append( (str(dataset.id), dataset.name) )
-                        dataset_file_dict[str(dataset.id)] = []
-
+                        dataset_file_dict[dataset] = []
                     # Add the file to the list of options
-                    file_choices.append( (str(file.id), file.name) )
-                    dataset_file_dict[str(dataset.id)].append( str(file.id) )
+                    dataset_file_dict[dataset].append(file)
 
-                    # Use description to associate datasets/files
+        return render_template("msdb.html", msdb_form=msdb_form, status=status, current_user=current_user, dataset_file_dict = dataset_file_dict) 
 
-        msdb_form.dataset_ids.choices = dataset_choices
-        msdb_form.file_ids.choices = file_choices
-
-        if not dataset:
-            dataset = None
-
-        return render_template("msdb.html", dataset=dataset, msdb_form=msdb_form, status=status, current_user=current_user, dataset_file_dict = dataset_file_dict) 
 
 
 @frontend.route('/browse_sequences', methods=['GET', 'POST'])
