@@ -1475,13 +1475,13 @@ def generate_new_dataset(user = None, session = db.session, name=None, descripti
         if name == '__default__':
             flash('Error: cannot create a dataset with that name.', 'warning')
             return redirect(url_for('.datasets'))
-        new_dataset.name = name 
+        new_dataset.name = name.replace(' ', '_', 99)
         new_dataset.directory = "{}/{}_{}".format(user.path.rstrip('/') , new_dataset.name, new_dataset.id)
         if not os.path.isdir(new_dataset.directory):
             os.makedirs(new_dataset.directory)
             print 'Created directory for dataset {} at {}'.format(new_dataset.name, new_dataset.directory)
     else: 
-        new_dataset.name = 'Dataset ' + str(new_dataset.id)
+        new_dataset.name = 'Dataset_' + str(new_dataset.id)
         new_dataset.directory = "{}/Dataset_{}".format(user.path.rstrip('/') , new_dataset.id)
         if not os.path.isdir(new_dataset.directory):
             os.makedirs(new_dataset.directory)
