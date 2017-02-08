@@ -92,7 +92,6 @@ nav.register_element('frontend_top', Navbar(
 nav.register_element('frontend_user', Navbar(
     View('BIGG DATA', 'frontend.index'),
     View('Dashboard', 'frontend.dashboard'),
-
     Subgroup(
         'Manage Data',
         View('Import Files', 'frontend.import_files'), 

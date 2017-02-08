@@ -2189,7 +2189,6 @@ def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_
         files = [db.session.query(File).get(id) for id in file_ids]
         logger.info('Preparing new MSDB with these annotations: {}'.format(','.join([f.path for f in files])))
 
-
         # Determine if a new analysis is needed
         if analysis_id != None:
             analysis = session.query(Analysis).get(analysis_id)
@@ -2233,7 +2232,7 @@ def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_
             df = append_cterm_peptides_for_mass_spec(df)
         
         #write output files
-        new_file = File(name = "{}/{}_MSDB.fasta".format(analysis.directory, analysis.name).replace(' ','_'), directory = analysis.directory, path = "{}/{}_MSDB.fasta".format(analysis.directory, analysis.name).replace(' ','_'), file_type = 'MSDB_FASTA', analysis_id = analysis.id, user_id=user_id, check_name = False)
+        new_file = File(name = "{}_MSDB.fasta".format(analysis.name).replace(' ','_'), directory = analysis.directory, path = "{}/{}_MSDB.fasta".format(analysis.directory, analysis.name).replace(' ','_'), file_type = 'MSDB_FASTA', analysis_id = analysis.id, user_id=user_id, check_name = False)
         logger.info('Writing MSDB Fasta file to path: {}'.format(new_file.path))
         with open(new_file.path, 'w') as file: 
             for i, row in df.iterrows(): 
