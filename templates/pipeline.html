@@ -13,478 +13,419 @@
   <div class="row" id="console-container">
     <div class="col-md-12">
       <div class="panel panel-default">
-        <div class="panel-heading">
-          <table width="100%">
-            <tbody>
-              <tr>
-                <td><b> 
-                <span id="slide0" style="color:black">
-                  <a data-target="#myCarousel" data-slide-to="0" class="active" href="#" style="color: inherit; text-decoration: none">Select Files</a> </span> 
-                <span style="color:gray"> > </span> 
-                <span id="slide1" style="color:gray">
-                  <a data-target="#myCarousel" data-slide-to="1" class="active" href="#" style="color: inherit; text-decoration: none">Choose Pre-Processing</a> </span>
-                <span style="color:gray"> > </span> 
-                <span id="slide2" style="color:gray">
-                  <a data-target="#myCarousel" data-slide-to="2" class="active" href="#" style="color: inherit; text-decoration: none">Select Analysis</a> </span>
-                <span style="color:gray"> > </span> 
-                <span id="slide3" style="color:gray">
-                  <a data-target="#myCarousel" data-slide-to="3" class="active" href="#" style="color: inherit; text-decoration: none">Select Post-Processing</a> </span>
-                <span style="color:gray"> > </span> 
-                <span id="slide4" style="color:gray">
-                  <a data-target="#myCarousel" data-slide-to="4" class="active" href="#" style="color: inherit; text-decoration: none">Select Output</a> </span>
-                </b></td>
-                <td align="right"></td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="panel-heading" align="center">
+        <b>Build VDJ Annotation Analysis</b>
         </div>
 
         <div class="panel-body">
 
-          <div id="myCarousel" class="carousel" data-ride="carousel" data-interval="false" data-wrap="false">
-            <!-- Indicators -->
-            <table height="400px" width="100%">
-              <tbody>
-                <tr>
-                  
-                  <td width="12%"> &nbsp; </td>
-                  <td height="100%" valign="top">
-                    <!-- Wrapper for slides -->
-                    <form role="form" method="POST" action="{{url_for('frontend.pipeline')}}" enctype="multipart/form-data">
-                      {{ build_pipeline_form.csrf_token }}
-                      <div class="carousel-inner" role="listbox">
-                        
-                        <div class="item active" name='file_source'>
-                          <center><b>Select Files to Analyze</b></center>
-                          <!-- <center><b>Selected Dataset: {{selected_dataset}}</b></center> -->
-
-                            <div id="accordion">
-
-                              <table width="100%" style="margin-left: 10px">
-                                <tr>
-                                  <td width="15px"></td>
-                                  <td>                              
-                                    <label class="radio">
-                                      <input checked id="file_source-0" name="file_source" type="radio" value="file_dataset" class="file_dataset">Files from Dataset
-                                    </label>
-                                    <div id="collapse" class="file_dataset radio">
-                                      <table>
-                                        <tr>
-                                          <td>
-                                            {{ build_pipeline_form.dataset.label }}
-                                          </td>
-                                          <td>
-                                          </td>
-                                          <td>
-                                            {{ build_pipeline_form.dataset_files.label }}
-                                          </td>
-                                        </tr>
-
-                                        <tr>
-                                          <td>
-                                            {{ build_pipeline_form.dataset(default=[selected_dataset], style="min-width: 10em; ", size="7", class="form-control") }}
-                                          </td>
-                                          <td>
-                                            <span class="glyphicon glyphicon-chevron-right" aria-hidden="true" style="color:gray; margin: 10px;"></span>
-                                          </td>
-                                          <td>
-                                            {{ build_pipeline_form.dataset_files( style="min-width: 10em;", size="7", class="form-control"  ) }}
-                                          </td>
-                                        </tr>
-                                      </table>
-                                    </div>
-                                  </td>
-                                </tr>
-
-                              </table>
-
-                            </div> <!-- /accordian -->
-
-                        </div>
+          <form role="form" method="POST" action="{{url_for('frontend.pipeline')}}" enctype="multipart/form-data">
+            {{ build_pipeline_form.csrf_token }}
+              
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <center><b>Select Files to Analyze</b></center>
+              </div>
+              <div class="panel-body">
+                <div class="file_dataset panel-body panel-default" style="padding: 20px;">
+                  <table align="center" width="80%">
+                    <tr>
+                      <td>
+                        {{ build_pipeline_form.dataset.label }}
+                      </td>
+                      <td>
+                      </td>
+                      <td>
+                        {{ build_pipeline_form.dataset_files.label }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        {{ build_pipeline_form.dataset(default=[selected_dataset], style="min-width: 10em; ", size="12", class="form-control") }}
+                      </td>
+                      <td>
+                        <span class="glyphicon glyphicon-chevron-right" aria-hidden="true" style="color:gray; margin: 10px; align-content: true;"></span>
+                      </td>
+                      <td>
+                        {{ build_pipeline_form.dataset_files( style="min-width: 10em;", size="12", class="form-control"  ) }}
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+            </div>  <!-- /file select panel  -->
 
 
-                        <div class="item">
-                          <div id="accordion">
+            <br>
+            <br>
 
-                            <center><b>Choose Preprocessing Options</b></center>
-                            <table >
-                              <tr>
-                                <td>
-                                  <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                                    <label>
-                                        {{ build_pipeline_form.trim(class='trim') }}
-                                        <b>Trimmomatic:</b> Trim FASTQ data
-                                    </label>
-                                  </div> <!-- /checkbox -->
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <center><b>Choose Preprocessing Options</b></center>
+              </div>
+              <div class="panel-body" align="center">
 
-                                  <div id="collapse" class="collapse trim">
-                                    <div style="margin-left: 25px">
+                <div id="accordion">
 
-                                      <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                                        <label>
-                                            {{ build_pipeline_form.trim_slidingwindow(class='trim_slidingwindow') }}
-                                            <b>Use Sliding Window:</b> Perform a sliding window trimming, cutting once the average quality within the window falls below a threshold. Default is a window of size 4 which trims reads under Q15.
-                                        </label>
-                                      </div>
+                  <table >
+                    <tr>
+                      <td>
+                        <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                          <label>
+                              {{ build_pipeline_form.trim(class='trim') }}
+                              <b>Trimmomatic:</b> Trim FASTQ data
+                          </label>
+                        </div> <!-- /checkbox -->
 
-                                      <div id="collapse" class="collapse trim_slidingwindow">
-                                        <table class='table table-striped'> 
-                                            <thead>
-                                                <tr>
-                                                    <th>{{ build_pipeline_form.trim_slidingwindow_size.label }}</th>
-                                                    <th>{{ build_pipeline_form.trim_slidingwindow_quality.label }}</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td>{{ build_pipeline_form.trim_slidingwindow_size(type="number", maxlength=5, size=3, class="form-control") }}</td>
-                                                    <td>{{ build_pipeline_form.trim_slidingwindow_quality(type="number", maxlength=5,size=3, class="form-control") }}</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                      </div> <!-- /trim_slidingwindow collapse -->
+                        <div id="collapse" class="collapse trim">
+                          <div style="margin-left: 25px">
 
-                                      <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                                        <label>
-                                          {{ build_pipeline_form.trim_illumina_adapters(class='trim_illumina_adapters') }}
-                                            <b>Trim Illumina Adapters</b>
-                                        </label>
-                                      </div>                                      
+                            <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                              <label>
+                                  {{ build_pipeline_form.trim_slidingwindow(class='trim_slidingwindow') }}
+                                  <b>Use Sliding Window:</b> Perform a sliding window trimming, cutting once the average quality within the window falls below a threshold. Default is a window of size 4 which trims reads under Q15.
+                              </label>
+                            </div>
 
-                                    </div>
-                                  </div> <!-- /trim collapse -->
-
-                                </td>
-                              </tr>
-                              <tr>
-                                <td>
-                                  <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                                    <label >
-                                        {{ build_pipeline_form.pandaseq(class='pandaseq') }}
-                                        <b>PANDAseq:</b> Assemble overlapping pair-end reads
-                                    </label>
-                                  </div> <!-- /checkbox -->
-
-                                  <div id="collapse" class="collapse pandaseq in">
-                                      <table class='table table-striped '> 
-                                        <thead>
-                                            <tr>
-                                                <th>{{ build_pipeline_form.pandaseq_algorithm.label }}</th>
-                                                <th>{{ build_pipeline_form.pandaseq_minimum_overlap.label }}</th>
-                                                <th>{{ build_pipeline_form.pandaseq_minimum_length.label }}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>{{ build_pipeline_form.pandaseq_algorithm( class="form-control") }}</td>
-                                                <td>{{ build_pipeline_form.pandaseq_minimum_overlap( class="form-control") }}</td>
-                                                <td>{{ build_pipeline_form.pandaseq_minimum_length( class="form-control") }}</td>
-                                            </tr>
-                                        </tbody>            
-                                    </table>
-                                  </div> <!-- /collapse -->
-                                </td>
-                              </tr>
-                              <tr>
-                                <td>
-                                  <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                                    <label >
-                                        {{ build_pipeline_form.filter(class='quality_filter') }}
-                                        <b>Quality Filter:</b> Filter out reads with certain % of read below given PHRED quality
-                                    </label>
-                                  </div> <!-- /checkbox -->
-
-                                  <div id="collapse" class="collapse quality_filter in">
-                                        <table class='table table-striped'> 
-                                            <thead>
-                                                <tr>
-                                                    <th>{{ build_pipeline_form.filter_quality.label }}</th>
-                                                    <th>{{ build_pipeline_form.filter_percentage.label }}</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td>{{ build_pipeline_form.filter_quality(type="number", maxlength=3, size=3, class="form-control") }}</td>
-                                                    <td>{{ build_pipeline_form.filter_percentage(type="number", maxlength=3,size=3, class="form-control") }}</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                  </div> <!-- /collapse -->
-                                </td>
-                              </tr>
-                            </table>
-
-                          </div> <!-- /accordian  -->
-                        </div>
-
-                        <div class="item" name="analysis_type">
-                          <center><b>Select Analysis Type</b></center>
-                            <div id="accordion">
-
-                              <table width="100%" style="margin-left: 10px">
-                                <tr>
-                                  <td width="15px"></td>
-                                  <td>                              
-                                    <label class="radio">
-                                      <input id="analysis_type-0" name="analysis_type" type="radio" value="igrep" class="igrep">IGFFT (and To Generate MS DB)
-                                    </label>
-                                    <div id="collapse" class="collapse igrep radio1">
-
-                                      <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                                        <label >
-                                            {{ build_pipeline_form.generate_msdb( class="generate_msdb" ) }}
-                                            <b>Generate MS DB:</b> Generate Mass Spec database using IGREP tools (currently for IGREP analysis only).
-                                        </label>
-                                      </div> <!-- /checkbox -->
-
-                                      <div id="collapse" class="collapse generate_msdb">
-                                        <div style="margin-left: 25px">
-
-                                          <table class='table table-striped' width=100%> 
-                                            <thead>
-                                                <tr>
-                                                    <th width=25%>{{ build_pipeline_form.msdb_cluster_percent.label }}:</th>
-                                                    <th width=60%></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td>{{ build_pipeline_form.msdb_cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
-                                                    <td></td>
-                                                </tr>
-                                            </tbody>
-                                          </table>
-                                        </div>
-                                      </div>
-                                      
-
-                                      {#{ build_pipeline_form.msdb_cluster_percent.label }#}
-                                      {#{ build_pipeline_form.msdb_cluster_percent(class = 'form-control') }#}
-
-                                    </div> <!-- /igrep collapse -->
-                                  </td>
-                                </tr>
-                              
-                                <tr>
-                                  <td width="15px"></td>
-                                  <td>                              
-                                    <label class="radio">
-                                      <input id="analysis_type-1" name="analysis_type" type="radio" value="mixcr"  checked="yep" class="mixcr">MixCR
-                                    </label>
-                                  </td>
-                                </tr>
-                              
-                                <tr>
-                                  <td width="15px"></td>
-                                  <td>                              
-                                    <label class="radio">
-                                      <input id="analysis_type-2" name="analysis_type" type="radio" value="abstar" class="abstar">ABStar
-                                    </label>
-                                    <div id="collapse" class="collapse abstar radio1">
-
-                                      <!-- <table class='table table-striped'> 
-                                          <thead>
-                                              <tr>
-                                                  <th>{#{ build_pipeline_form.download_url.label }#}:</th>
-                                                  <th><label>Chain:</label></th>
-                                                  <th></th>
-                                              </tr>
-                                          </thead>
-                                          <tbody>
-                                              <tr>
-                                                  <td>{#{ build_pipeline_form.download_url(size=30, class="form-control") }#}</td>
-                                                  <td>{#{ build_pipeline_form.download_chain(class="form-control") }#}</td>
-                                                  <td></td>
-                                              </tr>
-                                          </tbody>
-                                      </table> -->
-
-                                    </div>
-
-                                  </td>
-                                </tr>
-                              </table>
-
-                            </div> <!-- /accordian -->
-
-                            <div id="settings">
-                              <br>
+                            <div id="collapse" class="collapse trim_slidingwindow">
                               <table class='table table-striped'> 
                                   <thead>
                                       <tr>
-                                        <th>Species</th>
-                                        <th>Loci</th>
+                                          <th>{{ build_pipeline_form.trim_slidingwindow_size.label }}</th>
+                                          <th>{{ build_pipeline_form.trim_slidingwindow_quality.label }}</th>
                                       </tr>
                                   </thead>
                                   <tbody>
                                       <tr>
-                                        <td>{{ build_pipeline_form.species(class="form-control") }}</td>
-                                        <td>{{ build_pipeline_form.loci() }}</td>
+                                          <td>{{ build_pipeline_form.trim_slidingwindow_size(type="number", maxlength=5, size=3, class="form-control") }}</td>
+                                          <td>{{ build_pipeline_form.trim_slidingwindow_quality(type="number", maxlength=5,size=3, class="form-control") }}</td>
                                       </tr>
                                   </tbody>
                               </table>
+                            </div> <!-- /trim_slidingwindow collapse -->
+
+                            <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                              <label>
+                                {{ build_pipeline_form.trim_illumina_adapters(class='trim_illumina_adapters') }}
+                                  <b>Trim Illumina Adapters</b>
+                              </label>
+                            </div>                                      
+
+                          </div>
+                        </div> <!-- /trim collapse -->
+
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                          <label >
+                              {{ build_pipeline_form.pandaseq(class='pandaseq') }}
+                              <b>PANDAseq:</b> Assemble overlapping pair-end reads
+                          </label>
+                        </div> <!-- /checkbox -->
+
+                        <div id="collapse" class="collapse pandaseq in">
+                            <table class='table table-striped '> 
+                              <thead>
+                                  <tr>
+                                      <th>{{ build_pipeline_form.pandaseq_algorithm.label }}</th>
+                                      <th>{{ build_pipeline_form.pandaseq_minimum_overlap.label }}</th>
+                                      <th>{{ build_pipeline_form.pandaseq_minimum_length.label }}</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  <tr>
+                                      <td>{{ build_pipeline_form.pandaseq_algorithm( class="form-control") }}</td>
+                                      <td>{{ build_pipeline_form.pandaseq_minimum_overlap( class="form-control") }}</td>
+                                      <td>{{ build_pipeline_form.pandaseq_minimum_length( class="form-control") }}</td>
+                                  </tr>
+                              </tbody>            
+                          </table>
+                        </div> <!-- /collapse -->
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                          <label >
+                              {{ build_pipeline_form.filter(class='quality_filter') }}
+                              <b>Quality Filter:</b> Filter out reads with certain % of read below given PHRED quality
+                          </label>
+                        </div> <!-- /checkbox -->
+
+                        <div id="collapse" class="collapse quality_filter in">
+                              <table class='table table-striped'> 
+                                  <thead>
+                                      <tr>
+                                          <th>{{ build_pipeline_form.filter_quality.label }}</th>
+                                          <th>{{ build_pipeline_form.filter_percentage.label }}</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      <tr>
+                                          <td>{{ build_pipeline_form.filter_quality(type="number", maxlength=3, size=3, class="form-control") }}</td>
+                                          <td>{{ build_pipeline_form.filter_percentage(type="number", maxlength=3,size=3, class="form-control") }}</td>
+                                      </tr>
+                                  </tbody>
+                              </table>
+                        </div> <!-- /collapse -->
+                      </td>
+                    </tr>
+                  </table>
+
+                </div> <!-- /accordian  -->
+              </div>
+            </div> <!-- panel end -->
 
 
+
+            <br>
+            <br>
+
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <center><b>Select Analysis Type</b></center>
+              </div>
+              <div class="panel-body" align="center">
+
+                <div id="accordion">
+
+                  <table width="100%" style="margin-left: 10px">
+                    <tr>
+                      <td width="15px"></td>
+                      <td>                              
+                        <label class="radio">
+                          <input id="analysis_type-0" name="analysis_type" type="radio" value="igrep" class="igrep">IGFFT (and To Generate MS DB)
+                        </label>
+                        <div id="collapse" class="collapse igrep radio1">
+
+                          <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                            <label >
+                                {{ build_pipeline_form.generate_msdb( class="generate_msdb" ) }}
+                                <b>Generate MS DB:</b> Generate Mass Spec database using IGREP tools (currently for IGREP analysis only).
+                            </label>
+                          </div> <!-- /checkbox -->
+
+                          <div id="collapse" class="collapse generate_msdb">
+                            <div style="margin-left: 25px">
+
+                              <table class='table table-striped' width=100%> 
+                                <thead>
+                                    <tr>
+                                        <th width=25%>{{ build_pipeline_form.msdb_cluster_percent.label }}:</th>
+                                        <th width=60%></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>{{ build_pipeline_form.msdb_cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                          
+
+                          {#{ build_pipeline_form.msdb_cluster_percent.label }#}
+                          {#{ build_pipeline_form.msdb_cluster_percent(class = 'form-control') }#}
+
+                        </div> <!-- /igrep collapse -->
+                      </td>
+                    </tr>
+                  
+                    <tr>
+                      <td width="15px"></td>
+                      <td>                              
+                        <label class="radio">
+                          <input id="analysis_type-1" name="analysis_type" type="radio" value="mixcr"  checked="yep" class="mixcr">MixCR
+                        </label>
+                      </td>
+                    </tr>
+                  
+                    <tr>
+                      <td width="15px"></td>
+                      <td>                              
+                        <label class="radio">
+                          <input id="analysis_type-2" name="analysis_type" type="radio" value="abstar" class="abstar">ABStar
+                        </label>
+                        <div id="collapse" class="collapse abstar radio1">
+
+                          <!-- <table class='table table-striped'> 
+                              <thead>
+                                  <tr>
+                                      <th>{#{ build_pipeline_form.download_url.label }#}:</th>
+                                      <th><label>Chain:</label></th>
+                                      <th></th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  <tr>
+                                      <td>{#{ build_pipeline_form.download_url(size=30, class="form-control") }#}</td>
+                                      <td>{#{ build_pipeline_form.download_chain(class="form-control") }#}</td>
+                                      <td></td>
+                                  </tr>
+                              </tbody>
+                          </table> -->
+
+                        </div>
+
+                      </td>
+                    </tr>
+                  </table>
+
+                </div> <!-- /accordian -->
+              </div>
+            </div>
+
+
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <center><b>Settings</b></center>
+              </div>
+              <div class="panel-body" align="center">
+
+                <div id="settings">
+                  <br>
+                  <table class='table table-striped'> 
+                      <thead>
+                          <tr>
+                            <th>Species</th>
+                            <th>Loci</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          <tr>
+                            <td>{{ build_pipeline_form.species(class="form-control") }}</td>
+                            <td>{{ build_pipeline_form.loci() }}</td>
+                          </tr>
+                      </tbody>
+                  </table>
+
+                </div>
+              </div>
+            </div>
+
+
+
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <center><b>Choose Postprocessing Options</b></center>
+              </div>
+              <div class="panel-body" align="center">
+
+                <div id="accordion">
+
+                  <table >
+                    <tr>
+                      <td>
+
+                        <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                          <label>
+                              {{ build_pipeline_form.pair_vhvl}}
+                              <b>Paired VH::VL Data - Collapse to single data file</b> 
+                          </label>
+                        </div> <!-- /checkbox -->
+
+
+
+                        <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                          <label>
+                              {{ build_pipeline_form.standardize_outputs(class='standardize_outputs') }}
+                              <b>Stardize Output To BIGG-compatible Format</b> 
+                          </label>
+                        </div> <!-- /checkbox -->
+
+                        <div id="collapse" class="collapse standardize_outputs in">
+                          <div style="margin-left: 25px">
+
+                            <div style="padding-left: 4px">
+                              <label>
+                                  <b>This will route the raw annotation file through our standardization, which will reformat columns to be identical regardless of alignment program.</b>
+                              </label>
+                            </div>
+
+                            <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                              <label>
+                                  <b>Filter out any annotations without these peptide sequences annotated:</b>
+                                  {{ build_pipeline_form.require_annotations(class='require_annotations') }}
+                              </label>
+                            </div>
+
+                            <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                              <label>
+                                  {{ build_pipeline_form.remove_seqs_with_indels(class='remove_seqs_with_indels') }}
+                                  <b>Remove all AA sequences with insertions or deletions (annotated "*" or "_").</b>
+                              </label>
                             </div>
 
 
-                        </div>  <!-- /item analysis -->
+                            <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                              <label>
+                                  {{ build_pipeline_form.append_cterm_peptides(class='append_cterm_peptides') }}
+                                  <b>Append C-Terminal Tryptic Peptides.</b>
+                              </label>
+                            </div>
 
+                            <div id="collapse" class="collapse append_cterm_peptides in">
+                              <div style="margin-left: 25px">
 
-
-
-                        <div class="item" name='postprocessing'>
-                            <center><b>Choose Postprocessing Options</b></center>
-                          <div id="accordion">
-
-                            <table >
-                              <tr>
-                                <td>
-<!--                                   <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                                    <label>
-                                    </label>
-                                  </div> -->
-
-
-
-                                  <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                                    <label>
-                                        {{ build_pipeline_form.pair_vhvl}}
-                                        <b>Paired VH::VL Data - Collapse to single data file</b> 
-                                    </label>
-                                  </div> <!-- /checkbox -->
-
-
-
-                                  <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                                    <label>
-                                        {{ build_pipeline_form.standardize_outputs(class='standardize_outputs') }}
-                                        <b>Stardize Output To BIGG-compatible Format</b> 
-                                    </label>
-                                  </div> <!-- /checkbox -->
-
-                                  <div id="collapse" class="collapse standardize_outputs in">
-                                    <div style="margin-left: 25px">
-
-                                      <div style="padding-left: 4px">
-                                        <label>
-                                            <b>This will route the raw annotation file through our standardization, which will reformat columns to be identical regardless of alignment program.</b>
-                                        </label>
-                                      </div>
-
-                                      <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                                        <label>
-                                            <b>Filter out any annotations without these peptide sequences annotated:</b>
-                                            {{ build_pipeline_form.require_annotations(class='require_annotations') }}
-                                        </label>
-                                      </div>
-
-                                      <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                                        <label>
-                                            {{ build_pipeline_form.remove_seqs_with_indels(class='remove_seqs_with_indels') }}
-                                            <b>Remove all AA sequences with insertions or deletions (annotated "*" or "_").</b>
-                                        </label>
-                                      </div>
-
-
-                                      <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                                        <label>
-                                            {{ build_pipeline_form.append_cterm_peptides(class='append_cterm_peptides') }}
-                                            <b>Append C-Terminal Tryptic Peptides.</b>
-                                        </label>
-                                      </div>
-
-                                      <div id="collapse" class="collapse append_cterm_peptides in">
-                                        <div style="margin-left: 25px">
-
-                                          <div style="padding-left: 4px">
-                                            <label>
-                                                <b>This should only be used if constructing a Mass Spec DB from the resulting full-length AA sequences.</b>
-                                                <p>To the end of IgL seqs, 'GQPK' will be added.</p>
-                                                <p>To the end of IgK seqs, 'R'.</p>
-                                                <p>To the end of IgH seqs, 'ASTK'.</p>
-                                                <p>#Eventually this will be rewritten to snag tryptic peptides from 3' of raw reads.</p>
-                                            </label>
-                                          </div>
-                                        </div>
-                                      </div>
-                     
-                                    </div>
-                                  </div> 
-                                </td>
-                              </tr>
-                            </table>
-
-                          </div> <!-- /accordian  -->
-                        </div>
-
-
-                        <div class="item">
-                          <center><b>Select where you would like to output your files.</b></center>
-                          <br>
-                          <table class="table table-striped">
-                            <thead>
-                              <tr>
-                                <th>Analysis Name</th>
-                                <th>Analysis Description</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <td>{{ build_pipeline_form.name(size=25, class="form-control") }}</td>
-                                <td>{{ build_pipeline_form.description(size=25, rows=1, class="form-control") }}</td>
-                              </tr>
-                            </tbody>
-                          </table>
-
-                          <!-- <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                            <label >
-                                {{ build_pipeline_form.cluster(disabled=True) }}
-                                <b>Cluster:</b> Perform USEARCH clustering on results.
-                            </label>
+                                <div style="padding-left: 4px">
+                                  <label>
+                                      <b>This should only be used if constructing a Mass Spec DB from the resulting full-length AA sequences.</b>
+                                      <p>To the end of IgL seqs, 'GQPK' will be added.</p>
+                                      <p>To the end of IgK seqs, 'R'.</p>
+                                      <p>To the end of IgH seqs, 'ASTK'.</p>
+                                      <p>#Eventually this will be rewritten to snag tryptic peptides from 3' of raw reads.</p>
+                                  </label>
+                                </div>
+                              </div>
+                            </div>
+           
                           </div>
-                          -->
+                        </div> 
+                      </td>
+                    </tr>
+                  </table>
 
-                          <br>
-                          <br>
-                          <center>
-                            <span><input class="btn btn-default form-control" type="submit" value="Run Analysis Pipeline" style="max-width: 15em;"></span> 
-                          </center>
-                        </div> <!-- /item -->
-                      </div>
-                    </form>
-                  </td>
-                  <td width="12%"> &nbsp; </td>
-                </tr>
-                <tr>
-                  <td></td>
-                  <td>
-                    
-                  </td>
-                  <td></td>
-                </tr>
-              </tbody>
-            </table>
+                </div> <!-- /accordian  -->
+              </div>
+            </div>
 
-            <ol class="carousel-indicators">
-              <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
-              <li data-target="#myCarousel" data-slide-to="1"></li>
-              <li data-target="#myCarousel" data-slide-to="2"></li>
-              <li data-target="#myCarousel" data-slide-to="3"></li>
-              <li data-target="#myCarousel" data-slide-to="4"></li>
-            </ol>
 
-            <!-- Left and right controls -->
-            <a class="left carousel-control" href="#myCarousel" role="button" data-slide="prev">
-              <span class="glyphicon glyphicon-chevron-left" aria-hidden="true" style="color:gray"></span>
-              <span class="sr-only">Previous</span>
-            </a>
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <center><b>Name This Analysis</b></center>
+              </div>
+              <div class="panel-body" align="center">
+                <br>
+                <table class="table table-striped">
+                  <thead>
+                    <tr>
+                      <th>Analysis Name</th>
+                      <th>Analysis Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>{{ build_pipeline_form.name(size=25, class="form-control") }}</td>
+                      <td>{{ build_pipeline_form.description(size=25, rows=1, class="form-control") }}</td>
+                    </tr>
+                  </tbody>
+                </table>
 
-            <a class="right carousel-control" href="#myCarousel" role="button" data-slide="next">
-              <span class="glyphicon glyphicon-chevron-right" aria-hidden="true" style="color:gray"></span>
-              <span class="sr-only">Next</span>
-            </a>
-          </div>
+                <br>
+                <br>
+                <center>
+                  <span><input class="btn btn-default form-control" type="submit" value="Run Analysis Pipeline" style="max-width: 40em;"></span> 
+                </center>
+
+              </div> <!-- /item -->
+            </div>
+
+
+          </form>
 
         </div>
       </div>
@@ -492,63 +433,17 @@
   </div>
 </div>
 
+
+<br>
+<br>
+<br>
+<br>
+
+
+
+
 <script>
 
-$('.carousel').on('slide.bs.carousel',function(e){
-    var slideFrom = $(this).find('.active').index();
-    var slideTo = $(e.relatedTarget).index();
-
-    switch(slideTo) {
-        case 0:
-            $('#slide0').css( "color", "black" );
-            $('#slide1').css( "color", "gray" );
-            $('#slide2').css( "color", "gray" );
-            $('#slide3').css( "color", "gray" );
-            $('#slide4').css( "color", "gray" );
-            $('.left.carousel-control').hide();
-            $('.right.carousel-control').show();
-            break;
-        case 1:
-            $('#slide0').css( "color", "gray" );
-            $('#slide1').css( "color", "black" );
-            $('#slide2').css( "color", "gray" );
-            $('#slide3').css( "color", "gray" );
-            $('#slide4').css( "color", "gray" );
-            $('.left.carousel-control').show();
-            $('.right.carousel-control').show();
-            break;
-        case 2:
-            $('#slide0').css( "color", "gray" );
-            $('#slide1').css( "color", "gray" );
-            $('#slide2').css( "color", "black" );
-            $('#slide3').css( "color", "gray" );
-            $('#slide4').css( "color", "gray" );
-            $('.left.carousel-control').show();
-            $('.right.carousel-control').show();
-            break;
-
-        case 3:
-            $('#slide0').css( "color", "gray" );
-            $('#slide1').css( "color", "gray" );
-            $('#slide2').css( "color", "gray" );
-            $('#slide3').css( "color", "black" );
-            $('#slide4').css( "color", "gray" );
-            $('.left.carousel-control').show();
-            $('.right.carousel-control').show();
-            break;
-
-        case 4:
-            $('#slide0').css( "color", "gray" );
-            $('#slide1').css( "color", "gray" );
-            $('#slide2').css( "color", "gray" );
-            $('#slide3').css( "color", "gray" );
-            $('#slide4').css( "color", "black" );
-            $('.left.carousel-control').show();
-            $('.right.carousel-control').hide();
-
-    }
-
-});
 
 // Following code creates a dictionary for selecting files from datasets
 {% if dataset_file_dict != {} %}
@@ -631,10 +526,6 @@ $(document).ready(function(){
     }
   }
 
-  {% if first_error_item == None -%}
-    $('.left.carousel-control').hide();
-  {% endif%}
-
   $("#dataset option").each( function( index ) {
     $(this).triggerHandler('click'); 
   });
@@ -652,9 +543,6 @@ $(document).ready(function(){
     $(this).triggerHandler('change'); 
   });
 
-  {% if first_error_item != None -%}
-    $('#myCarousel').carousel({{first_error_item}});
-  {%- endif %}
 
   {% if build_pipeline_form.dataset_files.default and build_pipeline_form.dataset_files.default != [] -%}
     $('#dataset_files').val( [{%- for default in build_pipeline_form.dataset_files.default %} '{{default}}', {% endfor -%}]);
@@ -698,29 +586,6 @@ $("#dataset option").click(function() {
         .remove()
         .end();      
     }
-
-});
-
-// Expand/collapse accordians based on file source
-$('input[type=radio][name="file_source"]').on('change', function () {
-    if (!this.checked) return
-    $('.radio.collapse').not($('div.' + $(this).attr('class'))).slideUp();
-    $('.radio.collapse.' + $(this).attr('class')).slideDown();
-
-    selected_class = $(this).attr('class');
-
-    //console.log(selected_class);
-
-    if (selected_class != 'file_dataset') {
-
-      $('#output_dataset').val('new');
-      $('#output_project').val('new');
-    }
-
-    $("#dataset option").each( function( index ) {
-      $(this).triggerHandler('click'); 
-    });        
-
 
 });
 
