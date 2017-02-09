@@ -1069,7 +1069,7 @@ def msdb(status=[]):
     if request.method == 'POST':
         print request.__dict__
 
-        if msdb_form.file_ids.data != []:
+        if msdb_form.file_ids.data != [] and msdb_form.file_ids.data != '':
             result = run_new_msdb.apply_async( ( ), 
                     { 
                         'user_id' : current_user.id, 
