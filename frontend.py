@@ -1284,18 +1284,16 @@ def json_celery_log():
             # Check for any ongoing progress from a task via the AMPQ server
             # If there is progress, add a progress bar! If there is a status, post a status message
 
-            if async_task_progress == '' and task.status != 'DOWNLOADING' and task.status != 'SUCCESS' and task.status != 'FAILURE' and async_task_result.state == 'PROGRESS':
+            if async_task_progress == ''  and async_task_result.state == 'PROGRESS' and task.status not in ['DOWNLOADING', 'SUCCESS', 'FAILURE']:
                 try:
                     async_task_state = async_task_result.state
                     async_task_current = async_task_result.info.get('current')
                     async_task_total = async_task_result.info.get('total')
                     async_task_status = async_task_result.info.get('status')
                     async_task_units = async_task_result.info.get('units')
-
                 except Exception, exception: 
                     print 'There was an error in getting the task progress: {}'.format(exception)
                 else:
-                    #async_task_progress = """[{}] {}: {}/{} {}<br>\n""".format( async_task_state, async_task_status, async_task_current, async_task_total, async_task_units)
                     if async_task_units == '%':
                         progress_message = '{} {} %'.format(async_task_status, async_task_current)
                     else:
@@ -1316,16 +1314,14 @@ def json_celery_log():
                     else: 
                         async_task_progress = '' 
 
-            if async_task_progress == '' and task.status != 'DOWNLOADING' and task.status != 'SUCCESS' and task.status != 'FAILURE' and async_task_result.state == 'STATUS':
+            if async_task_progress == '' and async_task_result.state == 'RUNNING' and task.status not in ['DOWNLOADING', 'SUCCESS', 'FAILURE']:
                 try:
                     async_task_state = async_task_result.state
                     async_task_status = async_task_result.info.get('status')
                 except Exception, exception: 
                     print 'There was an error in getting the task progress: {}'.format(exception)
                 else:
-                    async_task_progress = """
-                    {}<br>
-                    """.format(  async_task_status )
+                    async_task_progress = '<div align="center"><b>{}...</b></div><br>'.format(  async_task_status )
 
             ##### Set task heading here #####
             if task.status == 'SUCCESS': 
@@ -1335,13 +1331,13 @@ def json_celery_log():
 
 
             task_analysis_link = ''
+
             if task.status == 'SUCCESS' or task.status == 'FAILURE' or task.status == 'COMPLETE':    
                 if task.analysis_id:
                     task_analysis_link = ' <a href="{1}">Click Here</a><font color="{0}"> to view the analysis results.</color>'.format(task_heading_color, url_for('frontend.analysis', id = task.analysis_id))
                 elif task.name == 'create_analysis_zip_file':
                     pattern = re.compile('(.+)file (\d+)')
                     pattern_match =  pattern.match(task.result)
-
 
                     if pattern_match:
                         file_id = int(pattern_match.group(2))

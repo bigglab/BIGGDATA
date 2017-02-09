@@ -605,48 +605,6 @@ def instantiate_user_with_directories(new_user_id):
         except ValueError, error:
             return 'Failed to create directory {}: {}'.format(path, error)
     
-    # COPY SOME EXAMPLE FILES TO PLAY WITH
-    # try:
-        # share_root = app.config['SHARE_ROOT'] 
-        # if os.path.isdir(share_root):
-        #     files = os.listdir(share_root)
-        # else:
-        #     return 'Warning: share root path "{}"" not found'.format(share_root)
-    #     print 'copying these files to new users dropbox: {}'.format(','.join(files))
-    #     for f in files: 
-    #         fullfilepath = '{}/{}'.format(new_user.path, f)
-    #         copyfile('{}/{}'.format(share_root, f), '{}/{}'.format(new_user.path, f))
-    #         link_file_to_user(fullfilepath, new_user.id, f)
-    #     return False 
-    # except ValueError, error:
-    #     return 'Warning: unable to copy sample files into user\'s dropbox: {}'.format(error)
-
-# @celery.task(base= LogTask, bind = True)
-# def transfer_file_to_s3(self, file_id, user_id = None):
-#     logger = self.logger
-#     f = db.session.query(File).filter(File.id==file_id).first()
-#     if not f: 
-#         raise Exception( "File with ID ({}) not found.".format(file_id) )
-#     else: 
-#         if f.path:
-#             if f.s3_path: 
-#                 logger.info ('Transferring file from {} to {}'.format(f.path, f.s3_path) )
-#             else: 
-#                 f.s3_path = '{}'.format(f.path)
-#                 logger.info( 'Transferring file from {} to s3://{}/{}'.format(f.path, app.config['S3_BUCKET'], f.s3_path) ) 
-#                 f.s3_status = 'Staging'
-#                 db.session.commit()
-#         file_size = os.stat(f.path).st_size
-#         logger.info ( 'starting transfer of {} byte file'.format(file_size) )
-#         def cb(complete, total): 
-#             f.s3_status = 'Transferred {} of {} bytes'.format(complete, total)
-#             db.session.commit()
-#         key = s3_bucket.new_key(f.s3_path)
-#         result = key.set_contents_from_filename(f.path, cb=cb, num_cb=10)
-#         key.set_canned_acl('public-read')
-#         f.s3_status = "AVAILABLE"
-#         db.session.commit()
-#         return "Transfer complete. {} bytes transferred from {}  to  {}".format(result, f.path, f.s3_path)
 
 def get_user_dataset_dict(user): 
     datadict = OrderedDict()
@@ -890,10 +848,10 @@ def download_file(self, url, path, file_id, checksum=None, user_id = None):
             bytes_so_far += len( chunk )
 
             # Send a progress message with the number of bytes downloaded.
-            # self.update_state(state='PROGRESS', meta={'status': 'Downloading', 'current' : str(bytes_so_far), 'total' : str(total_size), 'units' : 'bytes' })
+            self.update_state(state='PROGRESS', meta={'status': 'Downloading', 'current' : str(bytes_so_far), 'total' : str(total_size), 'units' : 'bytes' })
 
     # This status will take down the progress bar and show that the download is complete.
-    # self.update_state(state='SUCCESS', meta={'status': 'Download complete.'} )
+    self.update_state(state='SUCCESS', meta={'status': 'Download complete.'} )
 
     f = db.session.query(File).filter(File.id==file_id).first()
 
@@ -1112,7 +1070,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
                 elif 'Error' in line:
                     logger.error( line )
                     execution_error = True
-                elif ('Alignment:' in line) & ('%' in line):
+                elif ('Alignment:' in line or 'Exporting alignments:' in line or 'Assembling initial clonotypes:' in line or 'Exporting clones:' in line) & ('%' in line):
                     tracking_percent = True
                     tracking_status, line = line.split(':', 1)
                     if line.endswith('%'):
@@ -1123,15 +1081,11 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
                         eta = ' ({})'.format( eta.strip() )
                     self.update_state(state='PROGRESS',
                             meta={'status': '{}{}'.format( tracking_status , eta ) , 'current' : float(percent), 'total' : 100, 'units' : '%' })
-
                     print '{} ({}): {}/{}'.format( tracking_status , eta, percent, 100 )
                 else:
-                    if tracking_percent:
-                        tracking_percent = False
-                        self.update_state(state='ANALYZING',
-                                meta={'status': tracking_status, 'current' : 100, 'total' : 100, 'units' : '%' })
-                        logger.info( '{} complete.'.format( tracking_status ) )
-
+                    tracking_percent = False
+                    self.update_state(state='RUNNING',
+                            meta={'status': 'Executing MiXCR' })
                     logger.info( line )
 
             response, error = command_line_process.communicate()
@@ -1143,8 +1097,8 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
 
         if tracking_percent:
             tracking_percent = False
-            self.update_state(state='ANALYZING',
-                    meta={'status': tracking_status, 'current' : 100, 'total' : 100, 'units' : '%' })
+            self.update_state(state='RUNNING',
+                    meta={'status': 'Executing MiXCR'})
             logger.info( '{} complete.'.format( tracking_status ) )
 
         if error == None and os.path.isfile(f.path): 
@@ -1187,7 +1141,6 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species = None
 @celery.task(base = LogTask, bind = True)
 def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, file_ids = [], species = None):
     logger = self.logger
-    self.set_analysis_id(analysis_id)
 
     with session_scope() as session:
         analysis = session.query(Analysis).filter(Analysis.id==analysis_id).first()
@@ -1287,7 +1240,7 @@ def run_abstar_analysis_id_with_files(self, user_id = None, analysis_id = None, 
                 else:
                     if char == '\n':
                         vdj_finished = True
-                        self.update_state(state='ANALYZING')
+                        self.update_state(state='RUNNING')
                         logger.info(line.rstrip())
                         line = ''
 
@@ -1609,11 +1562,11 @@ def run_pandaseq_with_dataset_id(self, dataset_id, analysis_id=None, analysis_na
                                 line_parts = line.split('READS', 1)
                                 reads = line_parts[1].strip()
                                 status = 'Time Elapsed: {} - Number of Reads: {}'.format(elapsed, reads)
-                                self.update_state(state='STATUS', meta={'status': status })
+                                self.update_state(state='RUNNING', meta={'status': status })
                         except:
                             pass
 
-                self.update_state(state='SUCCESS',
+                self.update_state(state='RUNNING',
                     meta={'status': 'PANDAseq complete.' })
 
                 response, error = command_line_process.communicate()
@@ -2477,7 +2430,7 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysi
                         #parent_task.update_state(state='STATUS', meta={'status': status })
 
                         status = 'Time Elapsed: {} - {}({})'.format(elapsed, line, current_status_number)
-                        task.update_state(state='STATUS', meta={'status': status })
+                        task.update_state(state='RUNNING', meta={'status': status })
 
                     elif ('% percent done' in line):
 
@@ -2505,7 +2458,7 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysi
                             meta={'status': '{} ({}Time Elapsed: {})'.format( last_state , pid_str, elapsed ) , 'current' : percent, 'total' : 100, 'units' : '%' })
 
             if counting:
-                task.update_state(state='ANALYZING')
+                task.update_state(state='RUNNING')
                 counting = False
 
             response, error = command_line_process.communicate()
@@ -2575,26 +2528,6 @@ def send_async_email(msg):
     with app.app_context():
         mail.send(msg)
 
-@celery.task(bind=True)
-def long_task(self):
-    """Background task that runs a long function with progress reports."""
-    verb = ['Starting up', 'Booting', 'Repairing', 'Loading', 'Checking']
-    adjective = ['master', 'radiant', 'silent', 'harmonic', 'fast']
-    noun = ['solar array', 'particle reshaper', 'cosmic ray', 'orbiter', 'bit']
-    message = ''
-    total = random.randint(10, 50)
-    for i in range(total):
-        if not message or random.random() < 0.25:
-            message = '{0} {1} {2}...'.format(random.choice(verb),
-                                              random.choice(adjective),
-                                              random.choice(noun))
-
-        self.update_state(state='PROGRESS',
-                          meta={'current': i, 'total': total,
-                                'status': message})
-        time.sleep(1)
-    return {'current': 100, 'total': 100, 'status': 'Task completed!',
-            'result': 42}
 
 # function to flash error messages from forms automatically
 def flash_errors( form, category="warning" ):
@@ -3014,23 +2947,6 @@ def run_analysis_pipeline(self, *args,  **kwargs):
 
     logger = self.logger
 
-    # for name, value in kwargs.items():
-    # if name in ('a', 'list', 'of', 'valid', 'keywords'):
-    #     exec "%s = %s" % (name, value)
-    # else:
-    #     raise ValueError, "Unrecognized keyword " + name
-
-    #don't construct kwargs all again...:
-    # for name, value in kwargs.items():
-    #     if not value == None: 
-    #         if type(value)==str:
-    #             exec (str(name) + " = " + str(value)) #"%s = '%s'" % (name, value)
-    #         elif type(value)==float or type(value)==int: 
-    #             exec "%s = %s" % (name, value)
-    #         else: 
-    #             exec "%s = %s" % (name, value)
-    #     elif value == '': 
-    #         exec "%s = ''" % name 
 
     user_id = kwargs['user_id']
     file_source = kwargs['file_source']
@@ -3192,7 +3108,11 @@ def run_analysis_pipeline(self, *args,  **kwargs):
             analysis_name = analysis.name
             analysis_directory = analysis.directory
 
+
+
+
     ##### Perform Pre-processing #####
+    self.update_state(state='RUNNING', meta={ 'status': 'Pre-processing reads' })
     if trim:
 
         if trim_slidingwindow_size == '': trim_slidingwindow_size = 4
@@ -3212,7 +3132,12 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         file_ids_to_analyze = return_value.file_ids 
         logger.info (return_value)
 
+
+
+
     ##### Perform Annotation Generation #####
+    self.update_state(state='RUNNING', meta={ 'status': 'Running VDJ-Annotation' })
+
     if analysis_type == 'igrep':
 
         return_value = unzip_files( user_id = user_id, file_ids = file_ids_to_analyze, destination_directory = analysis_directory, logger = logger)
@@ -3252,6 +3177,8 @@ def run_analysis_pipeline(self, *args,  **kwargs):
 
     # Coerce Annotations into Standard Format: 
     if standardize_outputs: 
+        self.update_state(state='RUNNING', meta={ 'status': 'Standardizing VDJ-Annotations To Our Format' })
+
         annotation_files = return_value.file_ids
         if remove_seqs_with_indels == True: 
             rmindels=True 
@@ -3271,6 +3198,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
 
 
     if pair_vhvl == True: 
+        self.update_state(state='RUNNING', meta={ 'status': 'Pairing VH/VL Annotations' })
         return_value = pair_annotation_files_with_analysis_id(user_id=user_id, analysis_id=analysis_id, file_ids=file_ids_to_analyze, parent_task = task)
         logger.info (return_value)
         file_ids_to_analyze = return_value.file_ids
