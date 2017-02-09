@@ -3168,11 +3168,10 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         file_ids_to_analyze = return_value.file_ids
 
 
-    ##### Add files to Appropriate Dataset/Project #####
-
     analysis.status = 'COMPLETE'
     session.commit()
 
+    logger.info('<a href="/analysis/{}" >Analysis pipeline {}</a> finished successfully.'.format(analysis_id, analysis_id))
     return ReturnValue( 'All analyses and processing completed.', file_ids = file_ids_to_analyze)
 
 
