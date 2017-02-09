@@ -182,7 +182,7 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 	df['group_tag'] = df.groupby('clusterId')['groupClusterSizeTag'].transform(concat_sizes)
 	clustered_df = df[df.clusterSize>=read_cutoff].sort_values(['clusterSize', 'collapsedCount', 'clusterId'],ascending=[False,False,True]).groupby(['clusterId']).head(1).reset_index() #     df[['clusterSize','collapsed','clusterId','CDRH3_AA','CDRL3_AA','CDRH3_NT','CDRL3_NT','VH','DH','JH','VL','JL','VH_AvgSHM','VL_AvgSHM','VHIso','VLIso']]   .to_csv(clustered_nt_output, index=None, sep='\t')
 	for x in ['groupClusterSize', 'groupClusterSizeTag', 'index_row', 'index', '']: 
-		if x in cluster_df.columns: clustered_df.drop(x, axis=1, inplace=True)
+		if x in clustered_df.columns: clustered_df.drop(x, axis=1, inplace=True)
 	# raw_clustered_nt_output = df[df.clusterSize>=1].sort_values(['clusterSize','clusterId','collapsed',on],ascending=[False,True,False,True]) # .drop_duplicates(['CDRH3_NT','CDRL3_NT','ClusterID']) #   df[['clusterSize','readCount','clusterId','CDRH3_AA','CDRL3_AA','CDRH3_NT','CDRL3_NT','VH','DH','JH','VL','JL','VH_AvgSHM','VL_AvgSHM','VHIso','VLIso']]      .to_csv(raw_clustered_nt_output, index=None, sep='\t')
 	ordered_cols = ['clusterId', 'clusterSize', 'collapsedCount'] 
 	output_cols = ordered_cols + [c for c in clustered_df.columns if c not in ordered_cols]
