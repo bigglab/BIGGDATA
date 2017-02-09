@@ -1094,7 +1094,6 @@ def msdb(status=[]):
 
     else: # request.method == 'GET'
 
-
         current_analysis_id = db.session.query(func.max(File.id)).first()[0]
         if current_analysis_id:
             next_analysis_id = int(current_analysis_id) + 1
@@ -1103,20 +1102,25 @@ def msdb(status=[]):
 
         msdb_form.name.data = 'MSDB Analysis {}'.format( str(next_analysis_id) )
 
+        datasets = current_user.get_ordered_datasets()
         dataset_file_dict = {}
 
-        datadict = get_user_dataset_dict(current_user)
-
-        for dataset, files in datadict.iteritems():
-            dataset_added = False
-            for file in dataset.files:
-                if file.file_type in ['IGFFT_ANNOTATION', 'MIXCR_ANNOTATION', 'BIGG_ANNOTATION'] and os.path.exists(file.path) and file.available:
-                    if dataset_added == False:
-                        # Add the dataset as an option
-                        dataset_added = True
-                        dataset_file_dict[dataset] = []
-                    # Add the file to the list of options
+        dataset_ids = tuple(map(lambda d: d.id, datasets))
+        files = db.session.query(File).filter(File.dataset_id.in_(dataset_ids)).filter(File.file_type.in_(('ANNOTATION', 'BIGG_ANNOTATION', 'MIXCR_ANNOTATION', 'IGREP_ANNOTATION', 'IGFFT_ANNOTATION'))).filter(File.available==True).all()
+        sorted_files = sorted(files, key=lambda f: f.dataset_id, reverse=True)
+        grouped_files = itertools.groupby(sorted_files, key=lambda f: f.dataset_id)
+        for dataset_id, files in grouped_files: 
+            dataset = [dataset for dataset in datasets if dataset.id==dataset_id][0]
+            dataset_file_dict[dataset] = [] 
+            for file in files: 
+                #only show files on local system
+                if os.path.isfile(file.path):
                     dataset_file_dict[dataset].append(file)
+
+        dataset_file_dict = {k:v for k, v in dataset_file_dict.items() if v != []}
+
+        if len(datasets) == 0: 
+            flash('You have no datasets with annotation files available for analysis', 'warning')
 
         return render_template("msdb.html", msdb_form=msdb_form, status=status, current_user=current_user, dataset_file_dict = dataset_file_dict) 
 
@@ -1492,16 +1496,12 @@ def pipeline(selected_dataset=None):
 
     else: # If request is a GET
 
-        print '{} seconds so far -t1'.format(time.time()-g.request_response_start)
 
         # get a list of user projects - relational includes those they own and those shared with them
         projects = current_user.get_ordered_projects()
-        print 'projects: {} {}'.format(type(projects), len(projects))
         # get datasets from owned and shared projects
         datasets = current_user.get_ordered_datasets()
-        print 'datasets: {} {}'.format(type(datasets), len(datasets))
 
-        print '{} seconds so far -t2'.format(time.time()-g.request_response_start)
 
         if len(datasets) > 0: 
 
@@ -1526,8 +1526,6 @@ def pipeline(selected_dataset=None):
 
             dataset_file_dict = {k:v for k, v in files_by_dataset_id.items() if v != {}}
 
-            print '{} seconds so far -t3'.format(time.time()-g.request_response_start)
-            print '{} datasets: {}'.format(len(dataset_file_dict), dataset_file_dict.keys())
             # This form does not need a new dataset option
             build_pipeline_form.dataset.choices = [tup for tup in dataset_tuples if tup[0] in dataset_file_dict.keys()]
 
