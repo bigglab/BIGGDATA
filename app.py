@@ -30,7 +30,7 @@ from collections import defaultdict, OrderedDict
 import collections
 #Flask Imports
 from werkzeug import secure_filename
-from flask import Blueprint, render_template, flash, redirect, url_for
+from flask import Blueprint, render_template, flash, redirect, url_for, g
 from flask import Flask, Blueprint, make_response, render_template, render_template_string, request, session, flash, redirect, url_for, jsonify, get_flashed_messages, send_from_directory
 from flask.ext.bcrypt import Bcrypt
 from flask.ext.login import LoginManager, UserMixin, current_user, login_user, logout_user, login_required
@@ -91,6 +91,8 @@ db.app = app
 
 mail = Mail(app)
 
+
+
 #####
 #
 # Information about the Flask-SQLAlchemy API here: http://flask-sqlalchemy.pocoo.org/2.1/api/
@@ -146,6 +148,7 @@ def run_my_program():
 #run_my_program()
 
 #####
+
 
 
 # Celery configured for local RabbitMQ 
@@ -214,6 +217,20 @@ def include_external_html(url):
     return response  
 
 app.jinja_env.globals['include_external_html'] = include_external_html
+
+
+
+
+### Time responses
+
+@app.before_request
+def before_request():
+  g.request_response_start = time.time()
+
+@app.teardown_request
+def teardown_request(exception=None):
+    diff = time.time() - g.request_response_start
+    print '{} seconds to resolve request: '.format(str(diff) )
 
 # Flask-Login use this to reload the user object from the user ID stored in the session
 @login_manager.user_loader

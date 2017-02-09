@@ -104,7 +104,9 @@ class User(db.Model):
 
 
         def get_ordered_datasets(self):
-            projects_datasets = [dataset for dataset_list in map(lambda p: p.datasets, self.get_ordered_projects()) for dataset in dataset_list]
+            projects = self.get_ordered_projects()
+            projects_datasets = db.session.query(Dataset).join(ProjectDatasets).filter(ProjectDatasets.project_id.in_(map(lambda p: p.id, projects))).all() 
+            # projects_datasets = [dataset for dataset_list in map(lambda p: p.datasets, self.get_ordered_projects()) for dataset in dataset_list]
             owned_datasets = self.datasets.all()
             # datasets = Set(self.datasets) #only returns owned datasets - need to include shared datasets through user_projects table 
             datasets = Set(projects_datasets + owned_datasets) # THIS DOES ONE QUERY PER PROJECT - NOT EFFICIENT ENOUGH 

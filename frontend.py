@@ -1438,7 +1438,6 @@ def zip_file_status_json():
 def pipeline(selected_dataset=None):
 
     build_pipeline_form = BuildPipelineForm(request.form)
-    selected_dataset = request.args.get('dataset_id')
 
     if request.method == 'POST':
 
@@ -1817,51 +1816,54 @@ def pipeline(selected_dataset=None):
 
     else: # If request is a GET
 
+        print '{} seconds so far -t1'.format(time.time()-g.request_response_start)
+
         # get a list of user projects - relational includes those they own and those shared with them
         projects = current_user.get_ordered_projects()
-
+        print 'projects: {} {}'.format(type(projects), len(projects))
         # get datasets from owned and shared projects
         datasets = current_user.get_ordered_datasets()
+        print 'datasets: {} {}'.format(type(datasets), len(datasets))
 
-        project_tuples = []
-        dataset_tuples = []
+        print '{} seconds so far -t2'.format(time.time()-g.request_response_start)
 
-        dataset_file_dict = {}
-        dataset_project_dict = {}
+        if len(datasets) > 0: 
 
+            dataset_tuples = []
+            for dataset in datasets: 
+                dataset_tuples.append((str(dataset.id), str(dataset.name)))
+            dataset_file_dict = {}
+            dataset_project_dict = {}
 
-        # Create form choices for datasets and files
-        if len(datasets) > 0:
-            for dataset in datasets:
-                dataset_tuples.append( (str(dataset.id), dataset.name))
-
-                # build a dictionary indicating a project to which each dataset belongs
-                if len(dataset.projects) > 0 and dataset.projects[0] != None:
-                    dataset_project_dict[str(dataset.id)] = str(dataset.projects[0].id)
-                else:
-                    dataset_project_dict[str(dataset.id)] = 'new'
-
-                # build a dictionary entry indicating the files in each dataset ('dataset_id':{'file_id':'file_name'})
-                file_id_dict = {}
-                for file in [file for file in dataset.files if 'FASTQ' in file.file_type or 'FASTA' in file.file_type]:
+            dataset_ids = tuple(map(lambda d: d.id, datasets))
+            files = db.session.query(File).filter(File.dataset_id.in_(dataset_ids)).filter(File.file_type.in_(('FASTQ', 'GZIPPED_FASTQ', 'FASTA', 'GZIPPED_FASTA'))).all()
+            sorted_files = sorted(files, key=lambda f: f.dataset_id, reverse=True)
+            grouped_files = itertools.groupby(sorted_files, key=lambda f: f.dataset_id)
+            files_by_dataset_id = OrderedDict()
+            for dataset_id, files in grouped_files: 
+                files_by_dataset_id[str(dataset_id)] = {}
+                file_names_by_id = {}
+                for file in files: 
                     #only show files on local system
                     if os.path.isfile(file.path):
-                        file_id_dict[ str(file.id) ] = file.name 
-                dataset_file_dict[ str(dataset.id) ] = file_id_dict
+                        files_by_dataset_id[str(dataset_id)][str(file.id)] = str(file.name)
 
-            dataset_file_dict = {k:v for k, v in dataset_file_dict.items() if v != {}}
+            dataset_file_dict = {k:v for k, v in files_by_dataset_id.items() if v != {}}
 
+            print '{} seconds so far -t3'.format(time.time()-g.request_response_start)
+            print '{} datasets: {}'.format(len(dataset_file_dict), dataset_file_dict.keys())
             # This form does not need a new dataset option
             build_pipeline_form.dataset.choices = [tup for tup in dataset_tuples if tup[0] in dataset_file_dict.keys()]
-
             dataset_tuples.insert(0,('new', 'New Dataset'))
             build_pipeline_form.output_dataset.choices = dataset_tuples
 
         else:
+
             build_pipeline_form.output_dataset.choices = [ ('new', 'New Dataset') ]
 
         # Create form choices for projects
         if len(projects) > 0:
+            project_tuples = []
             for project in projects:
                 if project.role(current_user) == 'Owner' or project.role(current_user) == 'Editor':
                     project_tuples.append( (str(project.id), project.project_name))
