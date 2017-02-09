@@ -224,34 +224,13 @@ class ImportFilesForm(Form):
 class BuildPipelineForm(Form):
     file_source = RadioField('Select a File Source', choices=[ ('file_dataset' , 'Files from Dataset'), ('file_gsaf' , 'Files from GSAF URL'), ('file_upload' , 'Upload Files'), ('file_url' , 'File from URL'), ('file_ncbi' , 'Files from NCBI') ])
 
-    file_1 = FileField(u'File Path')
-    file_1_name = FileField(u'File Name')
-    file_2 = FileField(u'File Path')
-    file_2_name = FileField(u'File Name')
     file_pairing = SelectField(u'File Pairing (2 files required)', choices = [ ('none','None'), ('vhvl','Heavy/Light Chain Pairing'), ('forev','Forward/Reverse Pairing') ] )
-
 
     name = TextField(u'Name', )
     description = TextField(u'Description')
 
-
-
     dataset = SelectMultipleField(u'Select Dataset', choices = [ ('','') ] )
     dataset_files = SelectMultipleField(u'Select Files', choices = [ ('','') ])
-
-    output_dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
-    output_project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
-
-    ncbi_accession = TextField()
-    ncbi_chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
-
-    download_url     = TextField(u'File URL', validators=[validators.input_required()], widget=TextInput())
-    download_chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
-    #download_dataset  = SelectField(u'Add to Dataset', choices=[('new', 'New Dataset')], validators=[validators.input_required()])
-    #download_project  = SelectField(u'Project', choices=[('new', 'New Project')], validators=[validators.input_required()])
-
-    gsaf_url     = TextField(u'GSAF URL', validators=[validators.input_required()], widget=TextInput())
-    gsaf_chain  = SelectField(u'Chain', choices=(['HEAVY', 'HEAVY'], ['LIGHT', 'LIGHT'], ['HEAVY/LIGHT', 'HEAVY/LIGHT'], ['TCRA', 'TCRA'], ['TCRB', 'TCRB'], ['TCRA/B', 'TCRA/B']), validators=[validators.input_required()])
 
     trim = BooleanField(u'Trim Illumina Adapters')
     trim_slidingwindow = BooleanField(u'Use Sliding Window Trimming', default=False) # Perform a sliding window trimming, cutting once the average quality within the window falls below a threshold.
@@ -270,7 +249,6 @@ class BuildPipelineForm(Form):
 
     analysis_type = RadioField('Select a File Source', choices=[ ('igrep' , 'IGREP/IGFFT'), ('mixcr' , 'MixCR'), ('abstar' , 'ABStar')])
 
-
     loci = MultiCheckboxField('Loci', choices=[('IGH', 'IGH'), ('IGL', 'IGL'), ('IGK', 'IGK'), ('TCRA', 'TCRA'), ('TCRB', 'TCRB') ,('TCRG', 'TCRG'), ('TCRD', 'TCRD')], default = ['IGH', 'IGK', 'IGL'])
     species = SelectField( 'Species', choices=[('H. sapiens', 'H. sapiens'), ('M. musculus', 'M. musculus')] )
 
@@ -279,7 +257,6 @@ class BuildPipelineForm(Form):
 
     remove_seqs_with_indels = BooleanField('Remove Sequences With Indels', default='checked')
     append_cterm_peptides = BooleanField('Append Peptides to C-Term for Mass Spec') # , default='checked')
-
 
     cluster = BooleanField(u'Cluster Sequences')
     generate_msdb = BooleanField(u'Generate Mass Spec Database')

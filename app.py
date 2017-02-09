@@ -2964,6 +2964,8 @@ def run_analysis_pipeline(self, *args,  **kwargs):
 
     logger = self.logger
 
+    print 'args: {}'.format(args)
+    print 'kwargs: {}'.format(kwargs) 
 
     user_id = kwargs['user_id']
     file_source = kwargs['file_source']
@@ -2971,14 +2973,6 @@ def run_analysis_pipeline(self, *args,  **kwargs):
     dataset_files = kwargs['dataset_files']
     name = kwargs['name']
     description = kwargs['description']
-    output_dataset = kwargs['output_dataset']
-    output_project = kwargs['output_project']
-    ncbi_accession = kwargs['ncbi_accession']
-    ncbi_chain = kwargs['ncbi_chain']
-    download_url = kwargs['download_url']
-    download_chain = kwargs['download_chain']
-    gsaf_url = kwargs['gsaf_url']
-    gsaf_chain = kwargs['gsaf_chain']
     trim = kwargs['trim']
     trim_slidingwindow = kwargs['trim_slidingwindow']
     trim_slidingwindow_size = kwargs['trim_slidingwindow_size']
@@ -3020,68 +3014,18 @@ def run_analysis_pipeline(self, *args,  **kwargs):
         if not current_user:
             raise Exception('User with id {} not found.'.format(user_id))
 
-        # get the target dataset
-        if output_dataset and output_dataset.isdigit():
-            output_dataset = int(output_dataset)
+        dataset = None
+        if dataset_files and dataset_files != []:
+            for file_id in dataset_files:
+                if type(file_id) == str and file_id.isdigit(): file_id = int(file_id)
+                file = session.query(File).get(file_id)
+                if not file:
+                    raise Exception( 'File with id {} not found.'.format(file_id) )
+                else:
+                    file_ids_to_analyze.append(file_id)
+                    dataset = file.dataset
         else:
-            logger.info( str( type(output_dataset) ) )
-            logger.info( output_dataset )
-            raise Exception( 'Invalid format for output dataset: {}'.format(output_dataset) )
-
-        dataset = session.query(Dataset).get(output_dataset)
-        if not dataset:
-            raise Exception( 'Could not find dataset {}.'.format(output_dataset) )
-        # not going to check dataset permission, was checked in frontend after form submission
-
-        if file_source =='file_dataset':
-            if dataset_files and dataset_files != []:
-                for file_id in dataset_files:
-                    if type(file_id) == str and file_id.isdigit(): file_id = int(file_id)
-                    file = session.query(File).get(file_id)
-                    if not file:
-                        raise Exception( 'File with id {} not found.'.format(file_id) )
-                    else:
-                        file_ids_to_analyze.append(file_id)
-
-                    # add file to the output dataset if it's not in there already
-                    if file not in dataset.files:
-                        dataset.files.append(file)
-            else:
-                raise Exception('No files given for analysis.')
-
-        elif file_source =='file_gsaf':
-            raise Exception ('Upload from GSAF URL not currently supported.')
-            pass # call GSAF script here
-        elif file_source =='file_url':
-
-            # first create a new db file to place the download in
-            new_file = File()
-            new_file.url = download_url.rstrip()
-            new_file.name = new_file.url.split('/')[-1].split('?')[0]
-            new_file.file_type = parse_file_ext(new_file.name)
-            new_file.description = description
-            new_file.chain = download_chain
-            new_file.dataset_id = output_dataset
-            new_file.path = '{}/{}'.format(current_user.path.rstrip('/'), new_file.name)
-            new_file.user_id = user_id
-            new_file.available = False 
-            new_file.status = ''
-
-            if 'gz' in new_file.file_type.lower():
-                new_file.file_type = 'GZIPPED_FASTQ'
-
-            session.add(new_file)
-            session.commit()
-            session.refresh( new_file )
-            file_ids_to_analyze.append( new_file.id )
-
-            # add the new file to the dataset
-            dataset.files.append(new_file)
-
-            download_file( url = new_file.url, path = new_file.path, file_id = new_file.id, user_id = user_id, parent_task = task)
-        else: # file_source =='file_ncbi':
-            return_value = import_from_sra(accession=ncbi_accession, name=ncbi_accession, user_id = user_id, chain = ncbi_chain, project_selection = str(output_project), dataset_selection = str(output_dataset), parent_task = task)
-            file_ids_to_analyze = return_value.file_ids
+            raise Exception('No files given for analysis.')
 
         if file_ids_to_analyze == []:
             raise Exception('Unable to load files for analysis.')
@@ -3170,7 +3114,7 @@ def run_analysis_pipeline(self, *args,  **kwargs):
 
         if pair_vhvl:
             #return_value = run_pair_vhvl_with_dataset_id( analysis_id = analysis_id, file_ids = file_ids_to_analyze, user_id = user_id, parent_task = self)
-            return_value = run_pair_vhvl_with_dataset_id( user_id= user_id, dataset_id = output_dataset, analysis_id = analysis_id, file_ids = file_ids_to_analyze, vhvl_min = vhvl_min, vhvl_max = vhvl_max, vhvl_step = vhvl_step, parent_task = self)
+            return_value = run_pair_vhvl_with_dataset_id( user_id= user_id, dataset_id = dataset.id, analysis_id = analysis_id, file_ids = file_ids_to_analyze, vhvl_min = vhvl_min, vhvl_max = vhvl_max, vhvl_step = vhvl_step, parent_task = self)
 
     elif analysis_type == 'mixcr':
         return_value = run_mixcr_analysis_id_with_files(analysis_id = analysis_id, file_ids = file_ids_to_analyze, species = species, loci=loci, parent_task = task)
