@@ -92,7 +92,7 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		print 'writing centroids to temporary file {}'.format(temp_centroids_file)
 		print 'writing clustering output to temporary file {}'.format(temp_clustered_output_file)
 		#perform clustering - uses usearch8 
-		usearch_command = "/data/resources/software/usearch -cluster_smallmem {} -minhsp 10 -sortedby length -id {} -centroids {} -uc {} 2>&1".format(temp_fasta_file.name, identity, temp_centroids_file, temp_clustered_output_file)
+		usearch_command = "/data/resources/software/usearch -cluster_smallmem {} -minhsp 10 -sortedby length -id {} -centroids {} -uc {} ".format(temp_fasta_file.name, identity, temp_centroids_file, temp_clustered_output_file)
 		print usearch_command
 		# os.system(usearch_command)
 		# proc = subprocess.Popen(usearch_command.split(' '), stdout=subprocess.PIPE, shell=True)
