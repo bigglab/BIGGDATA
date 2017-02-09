@@ -2072,7 +2072,10 @@ def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_
         df = pd.concat(dfs)
         df = df.dropna(subset=require_annotations, how='any')
         logger.info("{} Total Annotations Being Clustered".format(len(df)))
-
+        if len(df)==0: 
+            logger.error("No annotations contained all required CDR/FR sequences")
+            self.update_state(state='FAILED', meta={'status':'No Annotations Resulted After Filtering On Required CDR/FR Sequences'})
+            return ReturnValue("MSDB Construction Failed - No Sequences Remaining After Filtering", file_ids=[])
         #redirect logger to capture function output
         saved_stdout = sys.stdout
         sys.stdout = LoggerWriterRedirect( logger, task = self )
