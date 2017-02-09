@@ -45,16 +45,16 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 	df['tmp_on_length'] = df[on].str.len()
 	df = df[df['tmp_on_length']>1] 
 	df = df.sort_values('tmp_on_length', ascending=False).reset_index(drop=True).drop('tmp_on_length', axis=1)
-	print '********************** Writing Fasta {} **********************'.format(on)
-	temp_fasta_file = tempfile.NamedTemporaryFile(delete=False)
-	for index, row in df.iterrows(): 
-		temp_fasta_file.write('>{}\n'.format(index))
-		temp_fasta_file.write('{}\n'.format(''.join(row[on])))
-		last_index = index
-	temp_fasta_file.close()
-	print '{} fasta sequences for clustering written to temp file {}'.format(last_index+1, temp_fasta_file.name)
 
 	if how=='agglomerative': 
+		print '********************** Writing Fasta {} **********************'.format(on)
+		temp_fasta_file = tempfile.NamedTemporaryFile(delete=False)
+		for index, row in df.iterrows(): 
+			temp_fasta_file.write('>{}\n'.format(index))
+			temp_fasta_file.write('{}\n'.format(''.join(row[on])))
+			last_index = index
+		temp_fasta_file.close()
+		print '{} fasta sequences for clustering written to temp file {}'.format(last_index+1, temp_fasta_file.name)
 		print '**************** Clustering With Agglomerative Algorithm ***************'
 		temp_distmatrix_file = tempfile.mktemp()
 		temp_clustered_output_file = tempfile.mktemp()
@@ -63,11 +63,6 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		#perform clustering - uses usearch8 
 		usearch_command = "/data/resources/software/usearch -cluster_agg {} -id {} -linkage {} -distmxout {} -clusterout {} ".format(temp_fasta_file.name, identity, linkage, temp_distmatrix_file, temp_clustered_output_file)
 		print usearch_command
-		# os.system(usearch_command)
-		# proc = subprocess.Popen(usearch_command.split(' '), stdout=subprocess.PIPE, shell=True)
-		# (out, err) = proc.communicate()
-		# print out 
-		# print err 
 		command_line_args = shlex.split(usearch_command)
 		command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
 		for line in iter(command_line_process.stdout.readline, b''):
@@ -80,12 +75,26 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		clust_cols=['clusterId', 'index_row']
 		clust_types={'clusterId':int, 'index_row':int}
 		cluster_results=pd.read_csv(temp_clustered_output_file, sep='\t', names=clust_cols, dtype=clust_types)
-		# if remove_temp_files: 
-		# 	for filename in temp_fasta_file.name, temp_clustered_output_file, temp_distmatrix_file: 
-		# 		os.remove(filename)
+		if remove_temp_files: 
+			for filename in temp_fasta_file.name, temp_clustered_output_file, temp_distmatrix_file: 
+				os.remove(filename)
 		cluster_results.set_index('index_row', inplace=True)
+		#redefine clusterID so it runs 1...x instead of 0...x
+		cluster_results['clusterId']=cluster_results['clusterId'].astype(int)+1
+		#drop previous clustering columns: 
+		if 'clusterId' in df.columns: df.drop('clusterId', axis=1,inplace=True)
+		#maps cluster_results onto df 
+		df = cluster_results.join(df)
 
 	elif how=='greedy': 
+		print '********************** Writing Fasta {} **********************'.format(on)
+		temp_fasta_file = tempfile.NamedTemporaryFile(delete=False)
+		for index, row in df.iterrows(): 
+			temp_fasta_file.write('>{}\n'.format(index))
+			temp_fasta_file.write('{}\n'.format(''.join(row[on])))
+			last_index = index
+		temp_fasta_file.close()
+		print '{} fasta sequences for clustering written to temp file {}'.format(last_index+1, temp_fasta_file.name)
 		print '**************** Clustering With Greedy Algorithm **********************'
 		temp_centroids_file = tempfile.mktemp()
 		temp_clustered_output_file = tempfile.mktemp()
@@ -94,11 +103,6 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		#perform clustering - uses usearch8 
 		usearch_command = "/data/resources/software/usearch -cluster_smallmem {} -minhsp 10 -sortedby length -id {} -centroids {} -uc {} ".format(temp_fasta_file.name, identity, temp_centroids_file, temp_clustered_output_file)
 		print usearch_command
-		# os.system(usearch_command)
-		# proc = subprocess.Popen(usearch_command.split(' '), stdout=subprocess.PIPE, shell=True)
-		# (out, err) = proc.communicate()
-		# print out 
-		# print err 
 		command_line_args = shlex.split(usearch_command)
 		command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
 		for line in iter(command_line_process.stdout.readline, b''):
@@ -111,23 +115,95 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		clust_cols=['SeedorHit','clusterId','Length','Match', 'Blank1', 'Blank2','Blank3','Blank4','index_row','CDR_matchseq']
 		# clust_types={'SeedorHit':str,'clusterId':int,'Length':int,'Match':str, 'Blank1':str, 'Blank2':str,'Blank3':str,'Blank4':str,'readName':str,'CDR_matchseq':str}
 		cluster_results=pd.read_csv(temp_clustered_output_file, sep='\t', names=clust_cols)
-		# if remove_temp_files: 
-		# 	for filename in temp_fasta_file.name, temp_clustered_output_file, temp_centroids_file: 
-		# 		os.remove(filename)
+		if remove_temp_files: 
+			for filename in temp_fasta_file.name, temp_clustered_output_file, temp_centroids_file: 
+				os.remove(filename)
 		cluster_results=cluster_results[['SeedorHit','clusterId','index_row']]
 		cluster_results=cluster_results[cluster_results.SeedorHit != 'C'].drop('SeedorHit', 1)
 		cluster_results.set_index('index_row', inplace=True)
+		#redefine clusterID so it runs 1...x instead of 0...x
+		cluster_results['clusterId']=cluster_results['clusterId'].astype(int)+1
+		#drop previous clustering columns: 
+		if 'clusterId' in df.columns: df.drop('clusterId', axis=1,inplace=True)
+		#maps cluster_results onto df 
+		df = cluster_results.join(df)
+
+	elif how=='D': 
+		print '********************** Writing {} Sequences **********************'.format(on)
+		temp_seq_file = tempfile.NamedTemporaryFile(delete=False)
+		for index, row in df.iterrows(): 
+			temp_seq_file.write('{}\n'.format(''.join(row[on])))
+			last_index = index
+		temp_seq_file.close()
+		print '{} sequences for clustering written to temp file {}'.format(last_index+1, temp_seq_file.name)
+		print '**************** Clustering With D Algorithm ***************'
+		temp_clustered_output_file = tempfile.mktemp()
+		print 'writing clustering output to temporary file {}'.format(temp_clustered_output_file)
+		clonotype_location = "/data/resources/software/CDR3_Clonotyping"
+		run_clonotype_command = '{} --file {} --thresh {} --output {}'.format(clonotype_location, temp_seq_file.name, str(1 - float(identity)), temp_clustered_output_file)
+		command_line_args = shlex.split(usearch_command)
+		command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+		for line in iter(command_line_process.stdout.readline, b''):
+			line = line.rstrip()
+			print line
+		response, error = command_line_process.communicate()
+		command_line_process.stdout.close()
+		command_line_process.wait()		
+		print '***************** Clustering Complete *****************'
+		clonoDict = pd.read_csv(temp_clustered_output_file, sep='\t', skip_blank_lines=True, header=None, names=[on, 'clusterId'], dtype={on: str, 'clusterId':int})
+		# if remove_temp_files: 
+		# 	for filename in temp_seq_file.name, temp_clustered_output_file, temp_distmatrix_file: 
+		# 		os.remove(filename)
+		print('Appending clonotypes to dataframe')
+		if 'clusterId' in df.columns: df.drop('clusterId', 1)
+		df = pd.merge(df, clonoDict, on=on, how='left')
+		# df.fillna('', inplace=True)
 
 	else: 
-		print "MUST SPECIFY 'agglomerative' OR 'greedy' IN HOW ARGUMENT TO cluster_dataframe()"
+		print "MUST SPECIFY 'agglomerative' OR 'greedy' OR 'D' IN HOW ARGUMENT TO cluster_dataframe()"
 		return None 
 
-	#redefine clusterID so it runs 1...x instead of 0...x
-	cluster_results['clusterId']=cluster_results['clusterId'].astype(int)+1
-	#drop previous clustering columns: 
-	if 'clusterId' in df.columns: df.drop('clusterId', axis=1,inplace=True)
-	#maps cluster_results onto df 
-	df = cluster_results.join(df)
+	# to allow for re-clustering: 
+	if 'clusterSize' in df.columns: 
+		size_key='clusterSize' 
+	else: 
+		size_key='collapsedCount'
+	df['clusterSize'] = df[~df.clusterId.isnull()].groupby(['clusterId'])[size_key].transform(sum)
+	print 'Generating clustered dataframe for output.'
+	if group_tag==None: 
+		if 'group' not in df.columns:
+			df['group'] = 'Group1'
+			group_tag='group'
+		else: 
+			group_tag='group'
+	df['groupClusterSize'] = df.groupby([group_tag, 'clusterId'])[size_key].transform(sum)
+	df['groupClusterSizeTag'] = df[group_tag] + ":" + df['groupClusterSize'].astype(str) + "reads"
+	concat_sizes = lambda sizes: "%s" % '|'.join(set(sizes))
+	df['group_tag'] = df.groupby('clusterId')['groupClusterSizeTag'].transform(concat_sizes)
+	clustered_df = df[df.clusterSize>=read_cutoff].sort_values(['clusterSize', 'collapsedCount', 'clusterId'],ascending=[False,False,True]).groupby(['clusterId']).head(1).reset_index() #     df[['clusterSize','collapsed','clusterId','CDRH3_AA','CDRL3_AA','CDRH3_NT','CDRL3_NT','VH','DH','JH','VL','JL','VH_AvgSHM','VL_AvgSHM','VHIso','VLIso']]   .to_csv(clustered_nt_output, index=None, sep='\t')
+	for x in ['groupClusterSize', 'groupClusterSizeTag', 'index_row', 'index', '']: 
+		if x in cluster_df.columns: clustered_df.drop(x, axis=1, inplace=True)
+	# raw_clustered_nt_output = df[df.clusterSize>=1].sort_values(['clusterSize','clusterId','collapsed',on],ascending=[False,True,False,True]) # .drop_duplicates(['CDRH3_NT','CDRL3_NT','ClusterID']) #   df[['clusterSize','readCount','clusterId','CDRH3_AA','CDRL3_AA','CDRH3_NT','CDRL3_NT','VH','DH','JH','VL','JL','VH_AvgSHM','VL_AvgSHM','VHIso','VLIso']]      .to_csv(raw_clustered_nt_output, index=None, sep='\t')
+	ordered_cols = ['clusterId', 'clusterSize', 'collapsedCount'] 
+	output_cols = ordered_cols + [c for c in clustered_df.columns if c not in ordered_cols]
+	clustered_df = clustered_df[output_cols]
+	print 'Clustering and processing complete.'
+	return clustered_df
+
+
+
+
+
+# filter min reads? 
+
+def cluster_dataframe_d(df, identity=0.94, read_cutoff=1, on='aaSeqCDR3', group_tag=None, remove_temp_files=True):
+	print 'No group_tag specified....' if group_tag==None else 'Keeping and tagging read counts by groups tagged "{}"'.format(group_tag)
+	df = collapse_annotation_dataframe(df, on=on, keep_group_tag=group_tag)
+	print 'Sorting annotations based on length of {} (leads to more accurate clustering with greedy algorithm)'.format(on)
+	df['tmp_on_length'] = df[on].str.len()
+	df = df[df['tmp_on_length']>1] 
+	df = df.sort_values('tmp_on_length', ascending=False).reset_index(drop=True).drop('tmp_on_length', axis=1)
+
 	# to allow for re-clustering: 
 	if 'clusterSize' in df.columns: 
 		size_key='clusterSize' 
@@ -153,7 +229,6 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 	clustered_df = clustered_df[output_cols]
 	print 'Clustering and processing complete.'
 	return clustered_df
-
 
 
 
