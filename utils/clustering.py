@@ -5,7 +5,8 @@ import random
 from collections import OrderedDict
 import json 
 import tempfile
-
+import subprocess
+import shlex
 
 
 def collapse_annotation_dataframe(df, on='aaFullSeq', keep_group_tag=None):
@@ -60,9 +61,21 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		print 'writing centroids to temporary file {}'.format(temp_distmatrix_file)
 		print 'writing clustering output to temporary file {}'.format(temp_clustered_output_file)
 		#perform clustering - uses usearch8 
-		usearch_command = "/data/resources/software/usearch -cluster_agg {} -id {} -linkage {} -distmxout {} -clusterout {}".format(temp_fasta_file.name, identity, linkage, temp_distmatrix_file, temp_clustered_output_file)
+		usearch_command = "/data/resources/software/usearch -cluster_agg {} -id {} -linkage {} -distmxout {} -clusterout {} ".format(temp_fasta_file.name, identity, linkage, temp_distmatrix_file, temp_clustered_output_file)
 		print usearch_command
-		os.system(usearch_command)
+		# os.system(usearch_command)
+		# proc = subprocess.Popen(usearch_command.split(' '), stdout=subprocess.PIPE, shell=True)
+		# (out, err) = proc.communicate()
+		# print out 
+		# print err 
+		command_line_args = shlex.split(usearch_command)
+		command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+		for line in iter(command_line_process.stdout.readline, b''):
+			line = line.strip()
+			print line
+		response, error = command_line_process.communicate()
+		command_line_process.stdout.close()
+		command_line_process.wait()		
 		print '***************** Clustering Complete *****************'
 		clust_cols=['clusterId', 'index_row']
 		clust_types={'clusterId':int, 'index_row':int}
@@ -79,9 +92,21 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		print 'writing centroids to temporary file {}'.format(temp_centroids_file)
 		print 'writing clustering output to temporary file {}'.format(temp_clustered_output_file)
 		#perform clustering - uses usearch8 
-		usearch_command = "/data/resources/software/usearch -cluster_smallmem {} -minhsp 10 -sortedby length -id {} -centroids {} -uc {}".format(temp_fasta_file.name, identity, temp_centroids_file, temp_clustered_output_file)
+		usearch_command = "/data/resources/software/usearch -cluster_smallmem {} -minhsp 10 -sortedby length -id {} -centroids {} -uc {} 2>&1".format(temp_fasta_file.name, identity, temp_centroids_file, temp_clustered_output_file)
 		print usearch_command
-		os.system(usearch_command)
+		# os.system(usearch_command)
+		# proc = subprocess.Popen(usearch_command.split(' '), stdout=subprocess.PIPE, shell=True)
+		# (out, err) = proc.communicate()
+		# print out 
+		# print err 
+		command_line_args = shlex.split(usearch_command)
+		command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
+		for line in iter(command_line_process.stdout.readline, b''):
+			line = line.strip()
+			print line 
+		response, error = command_line_process.communicate()
+		command_line_process.stdout.close()
+		command_line_process.wait()
 		print '***************** Clustering Complete *****************'
 		clust_cols=['SeedorHit','clusterId','Length','Match', 'Blank1', 'Blank2','Blank3','Blank4','index_row','CDR_matchseq']
 		# clust_types={'SeedorHit':str,'clusterId':int,'Length':int,'Match':str, 'Blank1':str, 'Blank2':str,'Blank3':str,'Blank4':str,'readName':str,'CDR_matchseq':str}
