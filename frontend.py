@@ -1110,7 +1110,7 @@ def msdb(status=[]):
         for dataset, files in datadict.iteritems():
             dataset_added = False
             for file in dataset.files:
-                if file.file_type in  ['IGFFT_ANNOTATION', 'MIXCR_ANNOTATION', 'BIGG_ANNOTATION'] and os.path.exists(file.path):
+                if file.file_type in ['IGFFT_ANNOTATION', 'MIXCR_ANNOTATION', 'BIGG_ANNOTATION'] and os.path.exists(file.path) and file.available:
                     if dataset_added == False:
                         # Add the dataset as an option
                         dataset_added = True

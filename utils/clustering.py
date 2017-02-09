@@ -71,7 +71,6 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		command_line_args = shlex.split(usearch_command)
 		command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
 		for line in iter(command_line_process.stdout.readline, b''):
-			line = line.strip()
 			print line
 		response, error = command_line_process.communicate()
 		command_line_process.stdout.close()
@@ -102,7 +101,6 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		command_line_args = shlex.split(usearch_command)
 		command_line_process = subprocess.Popen( command_line_args , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize = 1 )
 		for line in iter(command_line_process.stdout.readline, b''):
-			line = line.strip()
 			print line 
 		response, error = command_line_process.communicate()
 		command_line_process.stdout.close()
