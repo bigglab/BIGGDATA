@@ -40,17 +40,18 @@ def collapse_annotation_dataframe(df, on='aaFullSeq', keep_group_tag=None):
 def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='min', read_cutoff=1, group_tag=None, remove_temp_files=True): 
 	print 'No group_tag specified....' if group_tag==None else 'Keeping and tagging read counts by groups tagged "{}"'.format(group_tag)
 	df = collapse_annotation_dataframe(df, on=on, keep_group_tag=group_tag)
-	first_on = on if type(on)==str else on[0]
-	print 'Sorting annotations based on length of {} (leads to more accurate clustering with greedy algorithm)'.format(first_on)
-	df['tmp_on_length'] = df[first_on].str.len()
+	print 'Sorting annotations based on length of {} (leads to more accurate clustering with greedy algorithm)'.format(on)
+	df['tmp_on_length'] = df[on].str.len()
+	df = df[df['tmp_on_length']>1] 
 	df = df.sort_values('tmp_on_length', ascending=False).reset_index(drop=True).drop('tmp_on_length', axis=1)
 	print '********************** Writing Fasta {} **********************'.format(on)
 	temp_fasta_file = tempfile.NamedTemporaryFile(delete=False)
 	for index, row in df.iterrows(): 
 		temp_fasta_file.write('>{}\n'.format(index))
 		temp_fasta_file.write('{}\n'.format(''.join(row[on])))
+		last_index = index
 	temp_fasta_file.close()
-	print 'fasta sequences for clustering written to temp file {}'.format(temp_fasta_file.name)
+	print '{} fasta sequences for clustering written to temp file {}'.format(last_index+1, temp_fasta_file.name)
 
 	if how=='agglomerative': 
 		print '**************** Clustering With Agglomerative Algorithm ***************'
@@ -66,9 +67,9 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		clust_cols=['clusterId', 'index_row']
 		clust_types={'clusterId':int, 'index_row':int}
 		cluster_results=pd.read_csv(temp_clustered_output_file, sep='\t', names=clust_cols, dtype=clust_types)
-		if remove_temp_files: 
-			for filename in temp_fasta_file.name, temp_clustered_output_file, temp_distmatrix_file: 
-				os.remove(filename)
+		# if remove_temp_files: 
+		# 	for filename in temp_fasta_file.name, temp_clustered_output_file, temp_distmatrix_file: 
+		# 		os.remove(filename)
 		cluster_results.set_index('index_row', inplace=True)
 
 	elif how=='greedy': 
@@ -85,9 +86,9 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		clust_cols=['SeedorHit','clusterId','Length','Match', 'Blank1', 'Blank2','Blank3','Blank4','index_row','CDR_matchseq']
 		# clust_types={'SeedorHit':str,'clusterId':int,'Length':int,'Match':str, 'Blank1':str, 'Blank2':str,'Blank3':str,'Blank4':str,'readName':str,'CDR_matchseq':str}
 		cluster_results=pd.read_csv(temp_clustered_output_file, sep='\t', names=clust_cols)
-		if remove_temp_files: 
-			for filename in temp_fasta_file.name, temp_clustered_output_file, temp_centroids_file: 
-				os.remove(filename)
+		# if remove_temp_files: 
+		# 	for filename in temp_fasta_file.name, temp_clustered_output_file, temp_centroids_file: 
+		# 		os.remove(filename)
 		cluster_results=cluster_results[['SeedorHit','clusterId','index_row']]
 		cluster_results=cluster_results[cluster_results.SeedorHit != 'C'].drop('SeedorHit', 1)
 		cluster_results.set_index('index_row', inplace=True)

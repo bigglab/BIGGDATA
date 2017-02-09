@@ -22,15 +22,13 @@
               <tr>
                   <th>MSDB Analysis Name</th>
                   <th>MSDB Description</th>
-                  <th>Append C-term Peptides</th>
-                  <th>Minimum # Reads</th>
+                  <th width=15%>Minimum # Reads</th>
               </tr>
           </thead>
           <tbody>
               <tr>
                 <td>{{ msdb_form.name(class = 'form-control') }}</td>
                 <td>{{ msdb_form.description(class = 'form-control') }}</td>
-                <td>{{ msdb_form.append_cterm_peptides(class = 'form-control') }}</td>
                 <td>{{ msdb_form.read_cutoff(class = 'form-control') }}</td>
                 <!-- <td><input type='submit' class="btn btn-default form-control" value="Generate MSDB"></td> -->
               </tr>
@@ -39,16 +37,20 @@
         <table class='table table-striped' width=100%> 
           <thead>
               <tr>
-                  <th width=25%>Required Annotated</th>
-                  <th width=25%>Cluster On</th>
+                  <th width=20%>Required Annotated</th>
+                  <th width=15%>Cluster On</th>
                   <th width=15%>Cluster %</th>
+                  <th width=18%>Cluster Algorithm</th>
+                  <th width=15%>Append C-term Peptides</th>
               </tr>
           </thead>
           <tbody>
               <tr>
                 <td>{{ msdb_form.require_annotations() }}</td>
                 <td>{{ msdb_form.cluster_on() }}</td>
-                <td>{{ msdb_form.msdb_cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
+                <td><br>{{ msdb_form.msdb_cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
+                <td><br><a href="http://drive5.com/usearch/manual/uclust_algo.html">Greedy Info</a><br><a href="http://drive5.com/usearch/manual/agg.html">Agglomerative Info</a><br><br>{{ msdb_form.msdb_cluster_algorithm(id='cluster_algorithm_select', onchange="hide_linkage(this)") }}<br><br><div id="linkage_select">Linkage: {{msdb_form.msdb_cluster_linkage()}}</td>
+                <td>{{ msdb_form.append_cterm_peptides(class = 'form-control') }}</td>
               </tr>
           </tbody>
         </table>
@@ -123,83 +125,102 @@ $('input[type=checkbox]').on('change', function () {
 });
 
 
-  var table = $('#datasets').DataTable({
-    columnDefs: [
-      { targets: 'no-sort', orderable: false }
-      ],
-      order: [[ 1, 'desc' ]], 
-      pageLength:100
-  });
+var table = $('#datasets').DataTable({
+  columnDefs: [
+    { targets: 'no-sort', orderable: false }
+    ],
+    order: [[ 1, 'desc' ]], 
+    pageLength:100
+});
 
 
-  var table_data = [
-  {%- for dataset, files in dataset_file_dict.iteritems() -%}
-      `
-      <!-- HTML to write -->
-      <table class="table table-striped">
-        <thead>
+var table_data = [
+{%- for dataset, files in dataset_file_dict.iteritems() -%}
+    `
+    <!-- HTML to write -->
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th></th>
+          <th>File ID</th>
+          <th>Name</th>
+          <th>File Type</th>
+          <th>Available</th>
+          <th>File Size</th>
+          <th>Lines</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        {%- for file in files|sort(attribute='id', reverse=True) -%}
           <tr>
-            <th></th>
-            <th>File ID</th>
-            <th>Name</th>
-            <th>File Type</th>
-            <th>Available</th>
-            <th>File Size</th>
-            <th>Lines</th>
-            <th>Created</th>
+            <td><input name="file_ids" type="checkbox" value="{{file.id}}"</td>
+            <td><a href="{{url_for('frontend.file', id=file.id)}}" >{{file.id}}</a> </td>
+            <td>{{file.name}}</td>
+            <td>{{file.file_type}}</td>
+            {%- if file.available -%}
+              <td>YES</td>
+            {%- else -%}
+              <td>NO</td>
+            {%- endif -%}
+            {%- if file.file_size -%}
+              <td>{{file.file_size|filesizeformat}}</td>
+            {%- elif file.available -%}
+              <td>0 bytes</td>
+            {%- else -%}
+              <td></td>
+            {%- endif -%}
+            {%- if file.line_count -%}
+              <td>{{file.line_count_string}}</td>
+            {%- elif file.available -%}
+              <td>0</td>
+            {%- else -%}
+              <td></td>
+            {%- endif -%}
+            <td>{{file.created}}</td>
           </tr>
-        </thead>
-        <tbody>
-          {%- for file in files|sort(attribute='id', reverse=True) -%}
-            <tr>
-              <td><input name="file_ids" type="checkbox" value="{{file.id}}"</td>
-              <td><a href="{{url_for('frontend.file', id=file.id)}}" >{{file.id}}</a> </td>
-              <td>{{file.name}}</td>
-              <td>{{file.file_type}}</td>
-              {%- if file.available -%}
-                <td>YES</td>
-              {%- else -%}
-                <td>NO</td>
-              {%- endif -%}
-              {%- if file.file_size -%}
-                <td>{{file.file_size|filesizeformat}}</td>
-              {%- elif file.available -%}
-                <td>0 bytes</td>
-              {%- else -%}
-                <td></td>
-              {%- endif -%}
-              {%- if file.line_count -%}
-                <td>{{file.line_count_string}}</td>
-              {%- elif file.available -%}
-                <td>0</td>
-              {%- else -%}
-                <td></td>
-              {%- endif -%}
-              <td>{{file.created}}</td>
-            </tr>
-          {%- endfor -%}
-        </tbody>
-      </table>`,
-  {%- endfor -%}
-    ''
-  ]
-  table.rows().every( function () {
-      this.child( table_data[this.index()] );
-  } );
+        {%- endfor -%}
+      </tbody>
+    </table>`,
+{%- endfor -%}
+  ''
+]
+table.rows().every( function () {
+    this.child( table_data[this.index()] );
+} );
 
-  $('#datasets tbody').on( 'click', 'td.details-control', function () {
-      var child = table.row( this ).child;
-    var tr = $(this).closest('tr');
-      
-      if ( child.isShown() ) {
-          child.hide();
-          tr.removeClass('shown');
-      }
-      else {
-          child.show();
-          tr.addClass('shown')
-      }
-  } );
+$('#datasets tbody').on( 'click', 'td.details-control', function () {
+    var child = table.row( this ).child;
+  var tr = $(this).closest('tr');
+    
+    if ( child.isShown() ) {
+        child.hide();
+        tr.removeClass('shown');
+    }
+    else {
+        child.show();
+        tr.addClass('shown')
+    }
+} );
+
+
+
+
+function hide_linkage() {
+    var selectBox = document.getElementById("cluster_algorithm_select");
+    var selected = selectBox.options[selectBox.selectedIndex].value;
+
+    if(selected === 'agglomerative'){
+        $('#linkage_select').show();
+    }
+    else{
+        $('#linkage_select').hide();
+    }
+}
+
+$(document).ready( function() {
+  hide_linkage();
+}); 
 
 
 </script>

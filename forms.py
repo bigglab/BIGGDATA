@@ -56,9 +56,11 @@ class CreateMSDBAnalysisForm(Form):
     name = TextField(u'Name', )
     description = TextField(u'Description')
     msdb_cluster_percent = DecimalField(places=2, rounding=None, default = 0.90)
+    msdb_cluster_algorithm = SelectField(u'Cluster Algorithm', choices=[('greedy', 'Greedy'), ('agglomerative', 'Agglomerative')], validators=[validators.input_required()])
+    msdb_cluster_linkage = SelectField(u'Cluster Linkage', choices=[('min', 'min'), ('avg', 'avg'), ('max', 'max')], validators=[validators.input_required()])
     require_annotations = MultiCheckboxField('Require Annotations', choices=[('aaSeqFR1', 'FR1'),('aaSeqCDR1', 'CDR1'),('aaSeqFR2', 'FR2'),('aaSeqCDR2', 'CDR2'),('aaSeqFR3', 'FR3'),('aaSeqCDR3', 'CDR3'),('aaSeqFR4', 'FR4')], default = ['aaSeqCDR3'])
     read_cutoff = IntegerField(default=1)
-    cluster_on = MultiCheckboxField('Require Annotations', choices=[('nSeqCDR3', 'CDR3 NT'),('aaSeqCDR3', 'CDR3 AA'),('aaFullSeq', 'Full AA'), ('nFullSeq', 'Full NT')], default = ['aaFullSeq'])
+    cluster_on = SelectField('Cluster On', choices=[('nSeqCDR3', 'CDR3 NT'),('aaSeqCDR3', 'CDR3 AA'),('aaFullSeq', 'Full AA'), ('nFullSeq', 'Full NT')], default = 'aaSeqCDR3')
     append_cterm_peptides = BooleanField(default=False)
 
 

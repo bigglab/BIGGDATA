@@ -1079,6 +1079,8 @@ def msdb(status=[]):
                         'analysis_description' : msdb_form.description.data,
                         'file_ids' : msdb_form.file_ids.data, 
                         'cluster_percent' : float(msdb_form.msdb_cluster_percent.data), 
+                        'cluster_algorithm': msdb_form.msdb_cluster_algorithm.data, 
+                        'cluster_linkage': msdb_form.msdb_cluster_linkage.data, 
                         'require_annotations' : msdb_form.require_annotations.data, 
                         'read_cutoff': msdb_form.read_cutoff.data, 
                         'cluster_on': msdb_form.cluster_on.data, 

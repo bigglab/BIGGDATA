@@ -2014,7 +2014,7 @@ def run_msdb_with_analysis_id(self, analysis_id = None, file_ids = [], user_id =
 
 # Returns a ReturnValue with field file_ids which reflects only the new files added during the analysis
 @celery.task(base = LogTask, bind = True)
-def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_id=None, analysis_name=None, analysis_description=None, append_cterm_peptides=False, cluster_percent = 0.9, cluster_on = 'aaSeqCDR3', read_cutoff=1, require_annotations = ['aaSeqCDR3']):
+def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_id=None, analysis_name=None, analysis_description=None, append_cterm_peptides=False, cluster_percent = 0.9, cluster_algorithm='greedy', cluster_on = 'aaSeqCDR3', read_cutoff=1, require_annotations = ['aaSeqCDR3'], cluster_linkage='min'):
     logger = self.logger
 
 
@@ -2046,7 +2046,7 @@ def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_
         session.add(analysis)
         session.commit()
 
-        logger.info('Clustering at {}%  on {}, requiring at least {} reads per cluster and all of these annotated: {}'.format(cluster_percent, cluster_on, read_cutoff, ','.join(require_annotations)))
+        logger.info('Clustering at {}%  on {} with the {} method, requiring at least {} reads per cluster and all of these annotated: {}'.format(cluster_percent, cluster_on, cluster_algorithm, read_cutoff, ','.join(require_annotations)))
         dfs = [] 
         for file in files: 
             df = read_annotation_file(file.path)
@@ -2059,7 +2059,7 @@ def run_new_msdb(self, file_ids = [], user_id = None, dataset_id=None, analysis_
         #redirect logger to capture function output
         saved_stdout = sys.stdout
         sys.stdout = LoggerWriterRedirect( logger, task = self )
-        df = cluster_dataframe(df, identity=cluster_percent, on=cluster_on, read_cutoff=read_cutoff, group_tag='group')
+        df = cluster_dataframe(df, identity=cluster_percent, on=cluster_on, how=cluster_algorithm, linkage=cluster_linkage, read_cutoff=read_cutoff, group_tag='group')
         # Restore STDOUT to the console
         sys.stdout = saved_stdout
         logger.info("{} Clusters Generated".format(len(df)))
