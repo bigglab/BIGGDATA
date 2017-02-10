@@ -945,6 +945,7 @@ def edit_default_dataset():
 @login_required
 def projects():
 
+
     # all_projects = current_user.get_ordered_projects()
 
     projects = current_user.projects
@@ -952,6 +953,10 @@ def projects():
     projects = sorted(projects, key=lambda x: x.id, reverse=True)
     print 'projects'
     print projects
+
+    return render_template("datasets.html", datadict=datadict, current_user=current_user)
+
+
     # print 'shared projects'
     # print shared_projects
     # shared_projects = all_projects.remove(projects)
@@ -1251,11 +1256,11 @@ def edit_project(project_id):
 
 
 
-@frontend.route('/view_project/<project_id>', methods=['GET', 'POST'])
+@frontend.route('/project/<project_id>', methods=['GET', 'POST'])
 @login_required
-def view_project(project_id):
+def show_project(project_id):
 
-    view_project_form = CreateProjectForm()
+    show_project_form = CreateProjectForm()
 
     # first, make sure the user has access to the project
     try:
@@ -1274,17 +1279,25 @@ def view_project(project_id):
 
     read_only = current_user in project.read_only_users
 
-    view_project_form.project_name.data = project.project_name
-    view_project_form.description.data = project.description
-    view_project_form.cell_types_sequenced.data = project.cell_types_sequenced
-    view_project_form.publications.data = project.publications
-    view_project_form.species.data = project.species
-    view_project_form.lab.data = project.lab
+    show_project_form.project_name.data = project.project_name
+    show_project_form.description.data = project.description
+    show_project_form.cell_types_sequenced.data = project.cell_types_sequenced
+    show_project_form.publications.data = project.publications
+    show_project_form.species.data = project.species
+    show_project_form.lab.data = project.lab
     creation_date = project.date_string()
 
     owner = project.owner.name
     write_user_list = [user.name for user in sorted(project.editors, key=lambda x: x.last_name, reverse=False)]
     read_only_list = [user.name for user in sorted(project.readers, key=lambda x: x.last_name, reverse=False)]
+
+
+
+    datadict = OrderedDict()
+    for dataset in sorted(project.datasets, key=lambda x: x.id, reverse=True):
+        datadict[dataset] = sorted(dataset.files.all(), key=lambda x: x.id, reverse=True)
+
+
 
     datasets = Set(project.datasets)
     datasets.discard(None)
@@ -1292,19 +1305,15 @@ def view_project(project_id):
 
     dataset_list = [(dataset.name + ' (' + str(dataset.id) + ')', dataset.owner.name, dataset.id) for dataset in datasets]
 
-    return render_template("view_project.html", 
-        view_project_form = view_project_form, 
-        project_id = project_id, 
-        read_only = read_only, 
-        creation_date = creation_date,
-        owner = owner,
+    return render_template("project.html", 
+        show_project_form = show_project_form, 
         read_only_list = read_only_list,
         write_user_list = write_user_list,
-        dataset_list = dataset_list, 
+        datadict = datadict, 
+        dataset_list = dataset_list,
         current_user=current_user,
         datasets = datasets,
         project = project)
-
 
 
 

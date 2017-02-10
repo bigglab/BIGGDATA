@@ -1,0 +1,248 @@
+{% extends '_base.html' %}
+
+{% block head %}
+    {{super()}}
+    <!-- <link rel="stylesheet" href="/static/jquery.dataTables.min.css"> -->
+{% endblock head %}
+
+{% block content %}
+
+    <div class="container" align="center">
+    <h5>To Create A New Dataset, Use The <a href="{{url_for('.import_files')}}">Import Files</a> Page</h5>
+    </div>
+
+<div class="container">
+
+    <h1>View Project</h1>
+    
+    {% if not read_only %}
+        You may edit the information below by <a href='{{url_for("projects.edit_project", project_id = project_id)}}'>clicking here</a>.
+        <br/>
+    {% else %}
+        <p>The information about your project is listed below. </p>
+    {% endif %}
+
+    <br>
+
+    <form method="POST" action="{{url_for('projects.edit_project', project_id = project_id)}}">
+        {{ show_project_form.hidden_tag() }}
+
+        <div class='row'>
+
+            <div class="col-md-4">
+                {{ show_project_form.project_name.label }}<br/>
+                {{ show_project_form.project_name.data }}<br/>
+            </div>
+            <div class="col-md-4">
+                {{ show_project_form.lab.label }}<br/>
+                {{ show_project_form.lab.data }}<br/>
+            </div>
+
+            <div class="col-md-4">
+                {{ show_project_form.publications.label }}<br/>
+                {{ show_project_form.publications.data }}<br/>
+            </div>
+        </div>
+        <br/>
+        <br/>
+        <div class='row'>
+
+            <div class="col-md-4">
+                {{ show_project_form.cell_types_sequenced.label }}<br/>
+                {{ show_project_form.cell_types_sequenced.data }}<br/>
+            </div>
+            <div class="col-md-4">
+                {{ show_project_form.species.label }}<br/>
+                {{ show_project_form.species.data }}<br/>
+            </div>
+            <div class="col-md-4">
+                <label>Creation Date</label><br/>
+                {{ creation_date }}<br/>
+            </div>
+
+            <div class="col-md-4">
+            </div>
+        </div>
+        <br/>
+        <br/>
+        <div class='row'>
+            <div class="col-md-4">
+                <label>Owner</label><br/>
+                {{owner}}<br/>
+                <br/>
+                {{ show_project_form.description.label }}<br/>
+                {{ show_project_form.description.data }} <br/>
+            </div>
+            <div class="col-md-4">
+                {% if dataset_list %}
+                    <label>Datasets</label><br/>
+                    <table>
+                        <tr>
+                            <td>Dataset:</td>
+                            <td style="padding-left:8px">Owner Name:</td>
+                        </tr>
+                        {% for dataset, name, dataset_id in dataset_list %}
+                        <tr>
+                            <td><a href="{{ url_for( 'frontend.dataset', id = dataset_id ) }}">{{dataset}}</a></td>
+                            <td style="padding-left:8px">{{name}}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                    <br/>
+                {% endif %}
+            </div>
+            <div class="col-md-4">
+                {% if write_user_list %}
+                    <label>Users</label><br/>
+                    {% for name in write_user_list %}
+                        {{name}}<br/>
+                    {% endfor %}
+                    <br/>
+                {% endif %}
+                {% if read_only_list %}
+                    <label>Read-Only Access</label><br/>
+                    {% for name in read_only_list %}
+                        {{name}}<br/>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+        </div>
+        <input type='hidden' name='submit' value="Update">
+        
+    </form>
+    <br>
+    <br>
+</div>
+
+
+
+
+
+
+
+<br>
+
+<div class="container">
+    <table id="datasets" class="display table-striped table table-bordered" cellspacing="0" width="100%">
+        <thead>
+            <tr>
+                <th class='no-sort' style="width:20px;""> </th>
+                <th>Dataset #</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Files</th>
+                <th> </th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dataset, files in datadict.iteritems() %}
+                <tr>
+                    <td {% if files != [] -%}class='details-control'{%- endif -%}></td>
+                    <td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.id}}</a></td>
+                    <td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
+                    <td>{{dataset.description}}</td>
+                    <td>{{files|count}}</td>
+                    <td><a href="{{url_for('.delete_dataset', id=dataset.id)}}">Delete</a></td>
+                </tr>
+            {% endfor %}
+            
+        </tbody>
+    </table>
+</div>
+
+
+</div>
+
+
+
+
+<script>
+    
+    var table = $('#datasets').DataTable({
+        columnDefs: [
+        { targets: 'no-sort', orderable: false }
+        ],
+        order: [[ 1, 'desc' ]], 
+        pageLength:100
+    });
+ 
+    var table_data = [
+    {%- for dataset, files in datadict.iteritems() -%}
+        {%- if files == [] -%}
+            `<a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
+        {% else %}
+            {%- set files = files -%}
+            `{%- include "partials/files_no_preview.html" with context %}`,
+        {% endif %}
+    {%- endfor -%}
+        ''
+    ]
+    table.rows().every( function () {
+        this.child( table_data[this.index()] );
+    } );
+
+
+    $('#datasets tbody').on( 'click', 'td.details-control', function () {
+        var child = table.row( this ).child;
+        var tr = $(this).closest('tr');
+        
+        if ( child.isShown() ) {
+            child.hide();
+            tr.removeClass('shown');
+        }
+        else {
+            child.show();
+            tr.addClass('shown')
+        }
+    } );
+
+
+
+
+    // <!-- legacy table -->
+
+
+    // var table = $('#dataset').DataTable({
+    //     columnDefs: [
+    //     { targets: 'no-sort', orderable: false }
+    //     ],
+    //     order: [[ 1, 'asc' ]]
+    // });
+ 
+    // var table_data = [
+    // {%- for dataset in datasets -%}
+    //     {%- if dataset.files.all() == [] -%}
+    //         `<a href="{{url_for('frontend.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
+    //     {%- else -%}
+    //         {%- set files = dataset.files -%}
+    //         `{%- include "partials/files.html" with context %}`,
+    //     {%- endif -%}
+    // {%- endfor -%}
+    //     ''
+    // ];
+
+    // table.rows().every( function () {
+    //     this.child( table_data[this.index()] );
+    // } );
+
+    // $('#dataset tbody').on( 'click', 'td.details-control', function () {
+    //     var child = table.row( this ).child;
+    //     var tr = $(this).closest('tr');
+        
+    //     if ( child.isShown() ) {
+    //         child.hide();
+    //         tr.removeClass('shown');
+    //     }
+    //     else {
+    //         child.show();
+    //         tr.addClass('shown')
+
+    //     }
+    // } );
+
+</script>
+
+{%endblock content %}
+
+
