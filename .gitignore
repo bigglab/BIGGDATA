@@ -9,3 +9,5 @@ credentials.txt
 biggdata.sh
 paringtempfile.txt
 .DS_Store
+node*
+instance/config.py
