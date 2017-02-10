@@ -765,27 +765,35 @@ class Dataset(db.Model):
             self.primary_data_files_ids = []
 
         def primary_data_files(self):
-            all_files = self.files.all()
-            if all_files == None: return []
             dataset = self 
             if len(self.primary_data_files_ids) == 0:
                 print 'No Data Files Associated with Dataset {}'.format(dataset.id)
                 gzipped_fastqs = dataset.files_by_type('GZIPPED_FASTQ')
                 fastqs = dataset.files_by_type('FASTQ')
-                pandaseq_fastqs = dataset.files_by_type('PANDASEQ_ALIGNED_FASTQ')
                 print 'FOUND THESE DATA FILES: GZIPPED_FASTQ: {} {}  FASTQ: {} {}'.format(len(gzipped_fastqs), gzipped_fastqs, len(fastqs), fastqs)
-                if len(pandaseq_fastqs) != 0: 
-                    files = pandaseq_fastqs
                 if len(fastqs) == 0 and len(gzipped_fastqs) == 0:
                     print 'NO FASTQ DATA ASSOCIATED WITH DATASET'
                     files = [] 
-                if len(fastqs) == 0 and len(gzipped_fastqs) != 0:
+                elif len(gzipped_fastqs) != 0:
                     files = gzipped_fastqs
-                if len(fastqs) != 0: 
+                elif len(fastqs) != 0: 
                     files = fastqs 
+                file_names = map(lambda f: f.name, files)
+                out_files = []
+                for file in files:
+                    if 'R1' in file.name and file.name.replace('R1', 'R2') in file_names: 
+                        out_files.append(file)
+                    if 'R2' in file.name and file.name.replace('R2', 'R1') in file_names: 
+                        out_files.append(file)
+                if len(out_files) > 2: 
+                    print "too many predicted primary_data_files!"
+                    return None 
             else: 
-                files = [f for f in all_files if f.id in self.primary_data_files_ids]
-            return files 
+                out_files = []
+                for file_id in self.primary_data_files_ids: 
+                    out_files.append(File.query.get(file_id))
+            return out_files 
+
 
         def role(self, user):
             dataset_role = None
@@ -814,7 +822,7 @@ class Dataset(db.Model):
             if all_files == None: return []
             files =  [f for f in self.files.all() if f.file_type==type_string]
             return files 
-        # primary_data_files = db.relationship('File', primaryjoin="File.dataset_id == Dataset.id")
+
 
         @hybrid_property
         def owner(self):
@@ -1460,11 +1468,10 @@ def get_project_choices(user = None, new = False):
 
     return project_tuples
 
-def generate_new_dataset(user = None, session = db.session, name=None, description=None):
+def generate_new_dataset(user = None, session = db.session, name='New Dataset', description=None):
     '''
     Generates a new, default dataset and returns the dataset object
     '''
-
     if not user:
         return None
 
@@ -1474,14 +1481,14 @@ def generate_new_dataset(user = None, session = db.session, name=None, descripti
     new_dataset.name = 'New Dataset'
     new_dataset.description = description
     session.add(new_dataset)
-    session.flush()
+    session.commit()
 
     if name or name!='': 
         if name == '__default__':
             flash('Error: cannot create a dataset with that name.', 'warning')
             return redirect(url_for('.datasets'))
         new_dataset.name = name.replace(' ', '_', 99)
-        new_dataset.directory = "{}/{}_{}".format(user.path.rstrip('/') , new_dataset.name, new_dataset.id)
+        new_dataset.directory = "{}/Dataset_{}_{}".format(user.path.rstrip('/') , new_dataset.name, new_dataset.id)
         if not os.path.isdir(new_dataset.directory):
             os.makedirs(new_dataset.directory)
             print 'Created directory for dataset {} at {}'.format(new_dataset.name, new_dataset.directory)
