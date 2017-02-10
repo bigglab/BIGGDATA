@@ -1,0 +1,74 @@
+{% extends '_base.html' %}
+
+{% block content %}
+
+<div class="container">
+
+    <h1>Manage Projects</h1>
+    From this page you can add, edit, or browse projects. <a href= "{{ url_for('.create_project') }}">Click here</a> to add a project. Click the name of a project to view details about the project. <br/>
+    <!--<a href= "{# url_for('projects.browse_projects') #}">Browse Existing Projects</a>-->
+    <br/>    
+    {% if shared_projects %}
+        <table id="fixed" class="table table-striped">
+            <thead>
+                <tr>
+                    <th width="15%">Project Name</th>
+                    <th width="30%">Description</th>
+                    <th>Species</th>
+                    <th>Created</th>
+                    <th>Role</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for project in shared_projects %}
+                    <tr>
+                        <th>                                
+                            <a href="{{url_for('.view_project', project_id = project.id)}}">{{project.project_name}}</a>
+                        </th>
+                        <th>{{project.description}}</th>
+                        <th>{{project.species}}</th>
+                        <th>{{project.created}}</th>
+                        <th>{{project.role(current_user)}}</th>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <br>
+        
+    {% endif %}
+
+    {% if projects %}
+
+        <table id="fixed" class="table table-striped">
+            <thead>
+                <tr>
+                    <th width="15%">Project Name</th>
+                    <th width="30%">Description</th>
+                    <th>Species</th>
+                    <th>Created</th>
+                    <th>Role</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for project in projects %}
+                    <tr>
+                        <th>                                
+                            <a href="{{url_for('.view_project', project_id = project.id)}}">{{project.project_name}}</a>
+                        </th>
+                        <th>{{project.description}}</th>
+                        <th>{{project.species}}</th>
+                        <th>{{project.created}}</th>
+                        <th>{{project.role(current_user)}}</th>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <em>You have no projects to view at this time.</em>
+    {% endif %}
+
+</div>
+
+{% endblock content %}
+
+

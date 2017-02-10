@@ -5,6 +5,9 @@ from kombu import Exchange, Queue
 #from kombu.common import Broadcast
 
 
+
+CELERY_ACCEPT_CONTENT = ['json']
+
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT=['json']

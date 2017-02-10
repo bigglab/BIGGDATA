@@ -241,18 +241,19 @@ def load_user(email):
     else:
         return None
 
-def retrieve_golden():
+# def retrieve_golden():
 
-    # @Dave - quick edit b/c I don't have the gifs
+#     # @Dave - quick edit b/c I don't have the gifs
 
-    try:
-        gifs_dir = '{}/static/goldens'.format(app.config['HOME'])
-        gifs = os.listdir(gifs_dir)
-        gif = random.choice(gifs)
-        gif_path = url_for('static', filename='goldens/{}'.format(gif))
-    except:
-        gif_path = None
-    return gif_path
+#     try:
+#         gifs_dir = '{}/static/goldens'.format(app.config['HOME'])
+#         gifs = os.listdir(gifs_dir)
+#         gif = random.choice(gifs)
+#         gif_path = url_for('static', filename='goldens/{}'.format(gif))
+#     except:
+#         gif_path = None
+#     return gif_path
+
 
 @login_manager.unauthorized_handler
 def unauthorized():

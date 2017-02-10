@@ -101,6 +101,7 @@ class User(db.Model):
         celery_tasks = db.relationship('CeleryTask', backref='user', lazy='dynamic', cascade="all, delete-orphan")
 
         projects = association_proxy('user_projects', 'project')
+        shared_projects = association_proxy('user_projects', 'shared')
 
 
         def get_ordered_datasets(self):
@@ -888,6 +889,7 @@ class Project(db.Model):
         # establish a relationship to the association table
         users = association_proxy('project_users', 'user')
         read_only_users = association_proxy('project_users', '_read_only_users')
+        shared_users = association_proxy('project_users', '_shared')
 
 
         def __repr__(self): 
@@ -980,8 +982,9 @@ class UserProjects (db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     read_only = db.Column(db.Boolean, default = False)
+    shared = db.Column(db.Boolean, default = False)
 
-    
+    # _shared = db.relationship(User, primaryjoin="and_(UserProjects.shared=='TRUE', UserProjects.user_id == User.id)")
     user = db.relationship(User, backref = db.backref("user_projects"))
     _read_only_users = db.relationship(User, primaryjoin="and_(UserProjects.read_only=='TRUE', UserProjects.user_id == User.id)")
 
