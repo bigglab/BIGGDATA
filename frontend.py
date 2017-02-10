@@ -97,8 +97,8 @@ nav.register_element('frontend_user', Navbar(
         View('Import Files', 'frontend.import_files'), 
         View('My Files', 'frontend.files'), 
         View('My Datasets', 'frontend.datasets'),
-        View('My Projects', 'projects.manage_projects'),
-        View('Create Project', 'projects.create_project'),
+        View('My Projects', 'frontend.projects'),
+        View('Create Project', 'frontend.create_project'),
         ),
     Subgroup(
         'Run Analysis', 
@@ -120,6 +120,7 @@ nav.register_element('frontend_user', Navbar(
     ),
     View('Logout', 'frontend.logout'),
     ))
+
 
 @frontend.route('/', methods=['GET', 'POST'])
 def index():
@@ -937,6 +938,388 @@ def edit_default_dataset():
         return render_template("edit_default_dataset.html", datadict=datadict, form=form, id=id, dataset=dataset, edit_dataset_form = edit_dataset_form, current_user=current_user)
 
 
+
+
+
+@frontend.route('/projects', methods=['GET', 'POST'])
+@login_required
+def projects():
+
+
+    # all_projects = current_user.get_ordered_projects()
+
+    projects = current_user.projects
+    # shared_projects = current_user.shared_projects
+    projects = sorted(projects, key=lambda x: x.id, reverse=True)
+    print 'projects'
+    print projects
+
+    return render_template("datasets.html", datadict=datadict, current_user=current_user)
+
+
+    # print 'shared projects'
+    # print shared_projects
+    # shared_projects = all_projects.remove(projects)
+    # projects = sorted(projects, key=lambda p: p.role(current_user))
+    # projects = sum([[p for p in projects if p.role(current_user) == 'Editor'],[p for p in projects if p.role(current_user) == 'Owner']])
+    return render_template("projects.html", shared_projects=None, projects = projects, current_user=current_user)
+
+
+
+
+
+@frontend.route('/create_project', methods=['GET', 'POST'])
+@login_required
+def create_project():
+    create_project_form = CreateProjectForm()
+
+    # also need to wrap this with some exception handling in case this query fails
+    users = Set(db.session.query(User).filter(User.id != current_user.id))
+    users.discard(None)
+    users = sorted(users, key=lambda x: x.last_name, reverse=False)
+    user_choices = [(str(user.id), user.name) for user in users]
+    create_project_form.editors.choices = user_choices # choices should be a tuple (str(id), username)
+    create_project_form.viewers.choices = user_choices 
+
+    datasets = Set(current_user.datasets)
+    datasets.discard(None)
+    datasets.discard(current_user.default_dataset)
+    datasets = sorted(datasets, key=lambda x: x.id, reverse=False)
+    dataset_choices = [(str(dataset.id), dataset.name + ' (' + str(dataset.id) + ')' ) for dataset in datasets]
+    create_project_form.datasets.choices = dataset_choices # choices should be a tuple (id, username)
+
+    if create_project_form.validate_on_submit():
+
+        # Still need to test for duplicate names
+        new_project = Project(
+                            user_id = current_user.id,
+                            project_name = create_project_form.project_name.data,
+                            description = create_project_form.description.data,
+                            cell_types_sequenced = create_project_form.cell_types_sequenced.data,
+                            publications = create_project_form.publications.data,
+                            species = create_project_form.species.data,
+                            lab = create_project_form.lab.data
+                        )
+
+        # Get a list of users who can edit
+        user_access_list = []
+        user_read_list = []
+
+        # The current user can of course access their own file
+        user_access_list.append(current_user)
+
+        # Add a list of users who can access the project
+        for user in users:
+            if str(user.id) not in create_project_form.editors.data:
+                user_access_list.append(user)
+            else:
+                if str(user.id) not in create_project_form.viewers.data:
+                    user_access_list.append(user)
+                    user_read_list.append(user)
+
+        # user editor list is now a list of editors and viewers, so set the association proxy accordingly
+        new_project.users = user_access_list
+
+        # add selected datasets to the project
+        dataset_selection = []
+        for dataset in datasets:
+            if str(dataset.id) not in create_project_form.datasets.data:
+                dataset_selection.append(dataset)
+
+        if current_user.default_dataset:
+            dataset_selection.append(current_user.default_dataset) 
+
+        new_project.datasets = dataset_selection
+
+        db.session.add(new_project)
+        db.session.flush()
+        
+        # if the owner set read-only access for users, then we have to update the read-only setting in the association table manually
+        if len(user_read_list) > 0:
+            db.session.refresh(new_project)
+            for user in user_read_list:
+                try: 
+                    read_only_user_project = db.session.query(UserProjects). \
+                        filter(UserProjects.user_id == user.id). \
+                        filter(UserProjects.project_id == new_project.id)
+                    read_only_user_project[0].read_only = True
+                except:
+                    print "Error setting read_only attribute for {}".format(user)
+
+        # determine if a JSON was submitted to be added to the project
+        try:
+            if request.files['file'].filename != '':
+                db.session.refresh(new_project)
+
+                request_file = request.files['file']
+                json_string = request_file.read()
+
+                # if this function returns a string, it describes the error
+                error = create_datasets_from_JSON_string(json_string, new_project)
+                if error:
+                    flash(error, 'warning')            
+        except:
+            flash('There was an error in uploading your JSON file.','warning')
+
+        db.session.commit()
+
+        flash('Your new project has been created.', 'success')
+        return redirect( url_for('frontend.projects') )
+
+    else:
+        flash_errors(create_project_form)
+
+    defaults = [(str(user.id)) for user in users]
+    create_project_form.editors.data = defaults # defaults should be a list [str(id)]
+    create_project_form.viewers.data = defaults 
+    dataset_defaults = [(str(dataset.id)) for dataset in datasets]
+    create_project_form.datasets.data = dataset_defaults 
+
+    return render_template("create_project.html", create_project_form = create_project_form, current_user=current_user)
+
+
+
+
+@frontend.route('/edit_project/<project_id>', methods=['GET','POST'])
+@login_required
+def edit_project(project_id):
+    edit_project_form = CreateProjectForm()
+
+    project = db.session.query(Project).get(project_id)
+        
+    if not project:
+        flash('Error: there was an error attempting to edit that project.', 'warning')
+        return redirect( url_for('.projects') )
+
+    if not project or current_user in project.readers or (current_user != project.owner and current_user not in project.editors):
+        flash('Error: you do not have permission to edit that project.', 'warning')
+        return redirect( url_for('.projects') )        
+
+    editor_defaults = []
+    viewer_defaults = []
+
+    # Set of users, not including current user or project owner
+    users = Set(db.session.query(User). \
+            filter(User.id != current_user.id). \
+            filter(User.id != project.user_id))
+    users.discard(None)
+    users = sorted(users, key=lambda x: x.last_name, reverse=False)
+
+    user_choices = [(str(user.id), user.name) for user in users]
+    edit_project_form.editors.choices = user_choices # choices should be a tuple (id, username)
+    edit_project_form.viewers.choices = user_choices # choices should be a tuple (id, username)
+
+    datasets = Set(current_user.datasets)
+    datasets.discard(None)
+    datasets.discard(current_user.default_dataset)
+    datasets = sorted(datasets, key=lambda x: x.id, reverse=False)
+
+    dataset_choices = [(str(dataset.id), dataset.name + ' (' + str(dataset.id) + ')' ) for dataset in datasets]
+    edit_project_form.datasets.choices = dataset_choices # choices should be a tuple (id, username)
+
+    owner = None
+
+    if project:
+        owner = project.owner.name
+        
+        if request.method == 'GET':
+            for user in users:
+                if user not in project.read_only_users:
+                    viewer_defaults.append(str(user.id))
+                else: # the user is in the read_only list, so they have to be taken off the editor list
+                    editor_defaults.append(str(user.id))
+
+                if user not in project.users:
+                    editor_defaults.append(str(user.id))
+            
+            # this places datasets not attached to the current project on the right side of the multiselect
+            edit_project_form.datasets.data = []
+            for dataset in datasets:
+                if dataset not in project.datasets:
+                    edit_project_form.datasets.data.append(str(dataset.id))
+            print "hey"
+            print edit_project_form.datasets.data
+
+            # populate select fields with user names
+            edit_project_form.editors.data = editor_defaults # default should be a list of ids NOT SELECTED
+            edit_project_form.viewers.data = viewer_defaults # default should be a list of ids NOT SELECTED
+
+            # prepopulate the form with data from the database                
+            edit_project_form.project_name.data = project.project_name
+            edit_project_form.description.data = project.description
+            edit_project_form.cell_types_sequenced.data = project.cell_types_sequenced
+            edit_project_form.publications.data = project.publications
+            edit_project_form.species.data = project.species
+            edit_project_form.lab.data = project.lab 
+            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner, current_user=current_user)
+
+        else:
+            if edit_project_form.validate_on_submit():
+
+                # Get a list of users who can edit
+                user_access_list = []
+                user_read_list = []
+
+                # determine which users are selected as editors or readers (editor selection trumps reader selection)
+                for user in users:
+                    if str(user.id) not in edit_project_form.editors.data:
+                        user_access_list.append(user)
+                    else:
+                        if str(user.id) not in edit_project_form.viewers.data:
+                            user_access_list.append(user)
+                            user_read_list.append(user)
+
+                # user editor list is now a list of editors and viewers, so set the association proxy accordingly, not forgetting current user!
+                user_access_list.append(current_user)
+                if current_user.id != project.user_id:
+                    for user in project.users:
+                        if user.id == project.user_id:
+                            user_access_list.append(user)
+
+                project.users = user_access_list
+
+                # Change the read only setting for selected read only users
+                for user in user_read_list:
+                    try: 
+                        read_only_user_project = db.session.query(UserProjects). \
+                            filter(UserProjects.user_id == user.id). \
+                            filter(UserProjects.project_id == project.id)
+                        read_only_user_project[0].read_only = True
+                    except:
+                        print "Error setting read_only attribute for {}".format(user)
+
+                # Detmine which datasets are selected and add them to the databse
+                dataset_selection = []
+
+                # first, if another user has their datasets in the project, keep them there!
+                project_datasets = Set(project.datasets)
+                project_datasets.discard(None)
+                for dataset in project_datasets:
+                    if dataset.user_id != current_user.id:
+                        dataset_selection.append(dataset)
+
+                # now, add the datasets selected by the user
+                for dataset in datasets:
+                    if str(dataset.id) not in edit_project_form.datasets.data:
+                        dataset_selection.append(dataset)
+                project.datasets = dataset_selection
+
+                # Still need to test for duplicate names
+                # update the database with the data, then redirect
+                project.project_name = edit_project_form.project_name.data
+                project.description = edit_project_form.description.data
+                project.cell_types_sequenced = edit_project_form.cell_types_sequenced.data
+                project.publications = edit_project_form.publications.data
+                project.species = edit_project_form.species.data
+                project.lab = edit_project_form.lab.data
+
+                db.session.commit()
+
+                # determine if a JSON was submitted to be added to the project
+                # try:
+                #     if request.files['file'].filename != '':
+
+                #         request_file = request.files['file']
+                #         json_string = request_file.read()
+
+                #         # if this function returns a string, it describes the error
+                #         error = create_datasets_from_JSON_string(json_string, project)
+                #         if error:
+                #             flash(error, 'warning')    
+                #         else:
+                #             # now, we need to update the list of datasets in the project
+                #             db.session.commit()
+                #             flash('Success!!! Your new project has been updated.', 'success')
+                #             return redirect( url_for('projects.edit_project', project_id = project.id) )
+                # except:
+                #     flash('There was an error in uploading your JSON file.','warning')
+                
+                flash('Success!!! Your new project has been updated.', 'success')
+
+                # painfully redundant, but this will clean up and form issues where there is a double viewer/editor selection:
+                for user in users:
+                    if user not in project.read_only_users:
+                        viewer_defaults.append(str(user.id))
+
+                # populate select fields with user names
+                edit_project_form.viewers.data = viewer_defaults # default should be a list of ids NOT SELECTED
+
+            else:
+                flash_errors(edit_project_form)
+
+            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner, current_user=current_user)
+    else:
+        flash('Error: the project was not found or you do not have permission to edit the project.', 'warning')
+        return redirect( url_for('.projects') )
+
+    return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, current_user=current_user)
+
+
+
+@frontend.route('/project/<project_id>', methods=['GET', 'POST'])
+@login_required
+def show_project(project_id):
+
+    show_project_form = CreateProjectForm()
+
+    # first, make sure the user has access to the project
+    try:
+        project_query = db.session.query(Project). \
+                            filter(Project.id == project_id). \
+                            filter(Project.users.contains(current_user))
+    except:
+        flash('Error: there was an error attempting to view that project.','warning')
+        return redirect( url_for('.projects') )
+
+    if project_query and project_query.count() > 0:
+        project = project_query[0]
+    else:
+        flash('Error: there was an error attempting to view that project.','warning')
+        return redirect( url_for('.projects') )
+
+    read_only = current_user in project.read_only_users
+
+    show_project_form.project_name.data = project.project_name
+    show_project_form.description.data = project.description
+    show_project_form.cell_types_sequenced.data = project.cell_types_sequenced
+    show_project_form.publications.data = project.publications
+    show_project_form.species.data = project.species
+    show_project_form.lab.data = project.lab
+    creation_date = project.date_string()
+
+    owner = project.owner.name
+    write_user_list = [user.name for user in sorted(project.editors, key=lambda x: x.last_name, reverse=False)]
+    read_only_list = [user.name for user in sorted(project.readers, key=lambda x: x.last_name, reverse=False)]
+
+
+
+    datadict = OrderedDict()
+    for dataset in sorted(project.datasets, key=lambda x: x.id, reverse=True):
+        datadict[dataset] = sorted(dataset.files.all(), key=lambda x: x.id, reverse=True)
+
+
+
+    datasets = Set(project.datasets)
+    datasets.discard(None)
+    datasets = sorted(datasets, key=lambda x: x.id, reverse=False)
+
+    dataset_list = [(dataset.name + ' (' + str(dataset.id) + ')', dataset.owner.name, dataset.id) for dataset in datasets]
+
+    return render_template("project.html", 
+        show_project_form = show_project_form, 
+        read_only_list = read_only_list,
+        write_user_list = write_user_list,
+        datadict = datadict, 
+        dataset_list = dataset_list,
+        current_user=current_user,
+        datasets = datasets,
+        project = project)
+
+
+
+
+
+
 @frontend.route('/analysis', methods=['GET', 'POST'])
 @login_required
 def analyses(status=[]):
@@ -1541,4 +1924,52 @@ def pipeline(selected_dataset=None):
 
 
  
+@frontend.route('/test_pipeline', methods=['GET', 'POST'])
+@login_required
+def test_pipeline(selected_dataset=None):
+
+
+
+
+
+    # put the form contents into a format that can be serialized and sent to a celery task
+    form_output_dict = {
+        'user_id' : current_user.id,    
+        'file_source' : build_pipeline_form.file_source.data,
+        'dataset' : build_pipeline_form.dataset.data,
+        'dataset_files' : build_pipeline_form.dataset_files.data,
+        'name' : build_pipeline_form.name.data,
+        'description' : build_pipeline_form.description.data,
+        'trim' : build_pipeline_form.trim.data,
+        'trim_slidingwindow' : build_pipeline_form.trim_slidingwindow.data,
+        'trim_slidingwindow_size' : build_pipeline_form.trim_slidingwindow_size.data,
+        'trim_slidingwindow_quality' : build_pipeline_form.trim_slidingwindow_quality.data,
+        'trim_illumina_adapters' : build_pipeline_form.trim_illumina_adapters.data,
+        'filter' : build_pipeline_form.filter.data, 
+        'filter_quality' : build_pipeline_form.filter_quality.data, 
+        'filter_percentage' : build_pipeline_form.filter_percentage.data, 
+        'pandaseq' : build_pipeline_form.pandaseq.data,
+        'pandaseq_algorithm' : build_pipeline_form.pandaseq_algorithm.data,
+        'pandaseq_minimum_overlap' : build_pipeline_form.pandaseq_minimum_overlap.data, 
+        'pandaseq_minimum_length': build_pipeline_form.pandaseq_minimum_length.data, 
+        'analysis_type' : build_pipeline_form.analysis_type.data,
+        'cluster' : build_pipeline_form.cluster.data,
+        'species' : build_pipeline_form.species.data,
+        'loci': build_pipeline_form.loci.data,
+        'standardize_outputs': build_pipeline_form.standardize_outputs.data,
+        'require_annotations': build_pipeline_form.require_annotations.data,
+        'append_cterm_peptides': build_pipeline_form.append_cterm_peptides.data,
+        'remove_seqs_with_indels': build_pipeline_form.remove_seqs_with_indels.data,
+        'generate_msdb' : build_pipeline_form.generate_msdb.data,
+        'pair_vhvl' : build_pipeline_form.pair_vhvl.data,
+        'msdb_cluster_percent' : str(build_pipeline_form.msdb_cluster_percent.data),
+        'vhvl_min' : str(build_pipeline_form.vhvl_min.data),
+        'vhvl_max' : str(build_pipeline_form.vhvl_max.data),
+        'vhvl_step' : str(build_pipeline_form.vhvl_step.data)
+    }
+
+    result = run_analysis_pipeline.apply_async( (), form_output_dict, queue=celery_queue)
+    return redirect(url_for("frontend.dashboard"))
+
+
 

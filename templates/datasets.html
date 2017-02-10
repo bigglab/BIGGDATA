@@ -49,6 +49,7 @@
   		pageLength:100
 	});
  
+ 
 	var table_data = [
 	{%- for dataset, files in datadict.iteritems() -%}
 		{%- if files == [] -%}
@@ -60,13 +61,15 @@
 	{%- endfor -%}
 		''
 	]
+
+
 	table.rows().every( function () {
 	    this.child( table_data[this.index()] );
 	} );
 
 
 	$('#datasets tbody').on( 'click', 'td.details-control', function () {
-	    var child = table.row( this ).child;
+		var child = table.row( this ).child;
 		var tr = $(this).closest('tr');
 	    
 	    if ( child.isShown() ) {
