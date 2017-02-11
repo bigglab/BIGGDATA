@@ -13,3 +13,5 @@ paringtempfile.txt
 .idea/*
 instance
 instance/*
+node*
+instance/config.py
