@@ -37,6 +37,7 @@ from flask.ext.mail import Mail, Message
 from flask_bootstrap import Bootstrap
 import random
 import jinja2
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
