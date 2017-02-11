@@ -11,7 +11,7 @@
     <h1>Edit Project</h1>
     <p>Please edit the information about your project below. You must press the "Update" button to save changes.
     <br>
-    <form method="POST" action="{{url_for('projects.edit_project', project_id = project_id)}}" enctype="multipart/form-data">
+    <form method="POST" action="{{url_for('frontend.edit_project', project_id = project_id)}}" enctype="multipart/form-data">
         
         {{ edit_project_form.hidden_tag() }}
 

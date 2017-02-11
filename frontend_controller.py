@@ -62,12 +62,13 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from pymongo import MongoClient
 import pymongo
 
-# from app import *
+from app import *
 
 # Local Imports 
 from forms import *
 from functions import * 
 from models import * 
+
 
 
 # blueprint
@@ -238,7 +239,6 @@ def logout():
 
 @frontend.route('/under_construction', methods=['GET', 'POST'])
 def under_construction():
-    gif_path=retrieve_golden()
     return render_template("under_construction.html", gif_path=gif_path)
 
 
@@ -1364,43 +1364,6 @@ def analysis_download(id):
         flash('Analysis {} has no files to compress.'.format(analysis.id) , 'warning')
 
     return redirect( url_for('frontend.analyses') )
-    
-@frontend.route('/analysis/mixcr/<int:dataset_id>', methods=['GET', 'POST'])
-@login_required
-def mixcr(dataset_id, status=[]):
-    dataset = db.session.query(Dataset).filter(Dataset.id==dataset_id).first()
-
-    try:
-        if dataset and dataset.name == "__default__":
-            flash('Error: that dataset cannot be analyzed','warning')
-            return redirect( url_for('frontend.dashboard') )
-    except:
-        flash('Error: that dataset cannot be analyzed','warning')
-        return redirect( url_for('frontend.dashboard') )
-
-    form = CreateMixcrAnalysisForm()
-    status = []
-    if request.method == 'POST' and dataset:
-        status.append('MIXCR Launch Detected')
-        result = run_mixcr_with_dataset_id.apply_async( ( ),  
-            { 'dataset_id': dataset_id,
-            'analysis_name': form.name.data, 
-            'analysis_description': form.description.data, 
-            'user_id': current_user.id, 
-            'trim': form.trim.data, 
-            'cluster': form.cluster.data}, queue=celery_queue)
-        status.append(result.__repr__())
-        status.append('Background Execution Started To Analyze Dataset {}'.format(dataset.id))
-        time.sleep(1)
-        # return render_template("mixcr.html", dataset=dataset, form=form, status=status) 
-        analyses = current_user.analyses.all()
-        analysis_file_dict = OrderedDict()
-        for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
-            analysis_file_dict[analysis] = analysis.files.all()
-
-        return redirect(url_for('frontend.dashboard')) 
-    else: 
-        return render_template("mixcr.html", dataset=dataset, form=form, status=status, current_user=current_user) 
 
 @frontend.route('/analysis/pandaseq/<int:dataset_id>', methods=['GET', 'POST'])
 @login_required
@@ -1430,19 +1393,6 @@ def pandaseq(dataset_id, status=[]):
         return render_template("pandaseq.html", dataset=dataset, form=form, current_user=current_user) 
 
 
-@frontend.route('/test/', methods=['GET', 'POST'])
-@login_required
-def test():
-
-    print db.session.query(func.max(File.id)).first()[0]
-
-
-    message = Markup('<a href="{}">Test Again</a>.'.format( url_for('frontend.test') ) )
-    flash(message , 'success' )
-
-    return redirect( url_for('frontend.dashboard') )
-
-
 
 
 @frontend.route('/analysis/msdb/', methods=['GET', 'POST'])
@@ -1455,7 +1405,7 @@ def msdb(status=[]):
         print request.__dict__
 
         if msdb_form.file_ids.data != [] and msdb_form.file_ids.data != '':
-            result = run_new_msdb.apply_async( ( ), 
+            result = run_msdb.apply_async( ( ),
                     { 
                         'user_id' : current_user.id, 
                         # 'dataset_id' : output_dataset_id, 
@@ -1523,9 +1473,8 @@ def browse_sequences():
     seq_count = db.session.query(Sequence).count()
     ann_count = db.session.query(Annotation).count()
     form = Form()
-    golden = retrieve_golden()
     err = False
-    return render_template("browse_sequences.html", form=form, files=files, datasets=datasets, datadict=datadict, err=err, gif_path=golden, seq_count=seq_count, ann_count=ann_count, current_user=current_user)
+    return render_template("browse_sequences.html", form=form, files=files, datasets=datasets, datadict=datadict, err=err, seq_count=seq_count, ann_count=ann_count, current_user=current_user)
 
 
 @frontend.route('/developers/schema', methods=['GET'])
@@ -1860,19 +1809,17 @@ def pipeline(selected_dataset=None):
                 'pandaseq_minimum_overlap' : build_pipeline_form.pandaseq_minimum_overlap.data, 
                 'pandaseq_minimum_length': build_pipeline_form.pandaseq_minimum_length.data, 
                 'analysis_type' : build_pipeline_form.analysis_type.data,
-                'cluster' : build_pipeline_form.cluster.data,
                 'species' : build_pipeline_form.species.data,
                 'loci': build_pipeline_form.loci.data,
                 'standardize_outputs': build_pipeline_form.standardize_outputs.data,
                 'require_annotations': build_pipeline_form.require_annotations.data,
                 'append_cterm_peptides': build_pipeline_form.append_cterm_peptides.data,
                 'remove_seqs_with_indels': build_pipeline_form.remove_seqs_with_indels.data,
-                'generate_msdb' : build_pipeline_form.generate_msdb.data,
                 'pair_vhvl' : build_pipeline_form.pair_vhvl.data,
-                'msdb_cluster_percent' : str(build_pipeline_form.msdb_cluster_percent.data),
-                'vhvl_min' : str(build_pipeline_form.vhvl_min.data),
-                'vhvl_max' : str(build_pipeline_form.vhvl_max.data),
-                'vhvl_step' : str(build_pipeline_form.vhvl_step.data)
+                'cluster' : build_pipeline_form.cluster.data,
+                'cluster_algorithm' : str(build_pipeline_form.cluster_algorithm.data),
+                'cluster_linkage' : str(build_pipeline_form.cluster_linkage.data),
+                'cluster_percent': str(build_pipeline_form.cluster_percent.data),
             }
 
             result = run_analysis_pipeline.apply_async( (), form_output_dict, queue=celery_queue)

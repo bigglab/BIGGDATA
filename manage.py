@@ -1,11 +1,6 @@
-import os
-import json
-import static
-import time
-import random
+
 from flask.ext.script import Manager
 from flask.ext.migrate import Migrate, MigrateCommand
-from flask_sqlalchemy import SQLAlchemy
 
 from app import app, db
 from models import * 

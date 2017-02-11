@@ -40,6 +40,7 @@ import jinja2
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
+
 # Local Imports - local imports go here to prevent circular imports 
 from forms import *
 from functions import *
@@ -48,16 +49,6 @@ from models import *
 from utils.standardization import *
 from utils.clustering import *
 from utils.pairing import *
-
-#####
-#
-# Add IGREP binaries to system path
-#
-#####
-sys.path.append('/data/resources/software/IGREP/common_tools/')
-import immunogrep_msdb
-import immunogrep_gglab_pairing as pairing
-import immunogrep_ngs_pair_tools as processing
 
 
 # Initialize Application
@@ -118,10 +109,6 @@ def run_my_program():
         session.add(new_file)
     return
 
-
-# run_my_program()
-
-#####
 
 
 
@@ -225,23 +212,10 @@ def load_user(email):
         return None
 
 
-# def retrieve_golden():
-
-#     # @Dave - quick edit b/c I don't have the gifs
-
-#     try:
-#         gifs_dir = '{}/static/goldens'.format(app.config['HOME'])
-#         gifs = os.listdir(gifs_dir)
-#         gif = random.choice(gifs)
-#         gif_path = url_for('static', filename='goldens/{}'.format(gif))
-#     except:
-#         gif_path = None
-#     return gif_path
-
 
 @login_manager.unauthorized_handler
+
 def unauthorized():
-    gif_path = retrieve_golden()
     flash('You must login or register to view that page.', 'success')
     return redirect(url_for('frontend.login'))
 
@@ -907,49 +881,6 @@ def download_file(self, url, path, file_id, checksum=None, user_id=None):
     return 'File download complete.'
 
 
-@celery.task(base=LogTask, bind=True)
-def run_mixcr_with_dataset_id(self, dataset_id, analysis_name='', analysis_description='', user_id=6, trim=False,
-                              cluster=False):
-    logger = self.logger
-
-    dataset = db.session.query(Dataset).filter(Dataset.id == dataset_id).first()
-    logger.info('Running MiXCR on Dataset {}.'.format(dataset_id))
-    analysis = Analysis()
-    analysis.async_task_id = self.task.request_id
-    analysis.name = analysis_name
-    analysis.description = analysis_description
-    analysis.user_id = user_id
-    analysis.dataset_id = dataset.id
-    analysis.program = 'mixcr'
-    analysis.started = 'now'
-    analysis.params = {}
-    analysis.status = 'QUEUED'
-    analysis.responses = []
-    analysis.available = False
-    analysis.inserted_into_db = False
-    analysis.directory = '{}/Analysis_{}/'.format(dataset.directory.rstrip('/'), analysis.id)
-    db.session.add(analysis)
-    db.session.commit()
-    self.set_analysis_id(int(analysis.id))
-
-    data_files_by_chain = {}
-    for key, values in itertools.groupby(dataset.primary_data_files(), lambda x: x.chain):
-        data_files_by_chain[key] = list(values)
-    logger.debug("Running MiXCR in these batches of files (sorted by file.chain): {}".format(data_files_by_chain))
-    for chain, files in data_files_by_chain.items():
-        if trim:
-            logger.info('Running Trim on Files in Analysis {} before executing MiXCR'.format(analysis.id))
-            return_value = run_trim_analysis_with_files(analysis.id, [file.id for file in files], logger)
-            file_ids = return_value.file_ids
-            files = [db.session.query(File).get(file_id) for file_id in file_ids]
-        logger.info('About to run MiXCR analysis {} on files from chain {}.'.format(repr(analysis), chain))
-        run_mixcr_analysis_id_with_files(analysis.id, [file.id for file in files], parent_task=self)
-        if cluster:
-            logger.info('Clustering output files.')
-            for file in files:
-                result = run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9)
-    return 'MiXCR analysis completed successfully.'
-
 
 @celery.task(base=LogTask, bind=True)
 def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species=None, loci=None):
@@ -1160,7 +1091,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species=None, 
             analysis.status = 'FAILED'
             db.session.commit()
     logger.info('All commands in analysis {} have been executed.'.format(analysis))
-    if set(map(lambda f: f.available, files_to_execute)) == (True):
+    if set(map(lambda f: f.available, files_to_execute)) == set([True]) :
         analysis.status = 'SUCCESS'
         analysis.available = True
     if not analysis.status == 'FAILED': analysis.status = 'SUCCESS'
@@ -1334,7 +1265,7 @@ def run_abstar_analysis_id_with_files(self, user_id=None, analysis_id=None, file
             file.available = False
             analysis.status = 'FAILED'
     logger.info('All commands in analysis {} have been executed.'.format(analysis))
-    if set(map(lambda file: file.available, files_to_execute)) == (True):
+    if set(map(lambda file: file.available, files_to_execute)) == set([True]) :
         analysis.status = 'SUCCESS'
         analysis.available = True
     if not analysis.status == 'FAILED': analysis.status = 'SUCCESS'
@@ -1675,7 +1606,7 @@ def run_pandaseq_with_dataset_id(self, dataset_id, analysis_id=None, analysis_na
                 ##### ***** Need to Check Output Files Here ***** #####
 
     logger.info('All commands in analysis {} have been executed.'.format(analysis))
-    if set(map(lambda f: f.available, files_to_execute)) == (True):
+    if set(map(lambda f: f.available, files_to_execute)) == set([True]) :
         analysis.status = 'SUCCESS'
         analysis.available = True
     if not analysis.status == 'FAILED': analysis.status = 'SUCCESS'
@@ -1926,7 +1857,7 @@ def run_quality_filtering_with_analysis_id(self, analysis_id=None, analysis_name
     ##### ***** Need to Check Output Files Here ***** #####
 
     logger.info('Filtering steps for analysis {} have been executed.'.format(analysis))
-    if set(map(lambda f: f.available, files_to_execute)) == set(True):
+    if set(map(lambda f: f.available, files_to_execute)) == set([True]):
         analysis.status = 'SUCCESS'
         analysis.available = True
     if not analysis.status == 'FAILED': analysis.status = 'SUCCESS'
@@ -1937,179 +1868,9 @@ def run_quality_filtering_with_analysis_id(self, analysis_id=None, analysis_name
     return ReturnValue('Quality Filtering complete.', file_ids=output_file_ids)
 
 
-# Standalone celery task to run MSDB analysis on a dataset.
-# This adds a new analysis if analysis = 'new' is passed or analysis_id == None
-# Calls run_msdb_with_analysis_id
-@celery.task(base=LogTask, bind=True)
-def run_msdb_with_dataset_id(self, user_id=6, dataset_id=None, analysis_id=None, file_ids=[], analysis_name='',
-                             analysis_description='', cluster_percent=0.9, must_be_present=['CDR3']):
-    logger = self.logger
-    logger.info('Preparing to run MSDB algorithm...')
-
-    annotated_files = []
-    annotated_file_formats = []
-    file_paths_to_analyze = []
-
-    with session_scope() as session:
-
-        # Get the DB objects
-        user = session.query(User).get(user_id)
-        if dataset_id != None:
-            dataset = session.query(Dataset).get(dataset_id)
-        else:
-            dataset = None
-
-        # Determine if a new analysis is needed
-        if analysis_id and analysis_id != 'new':
-            analysis = session.query(Analysis).get(analysis_id)
-            output_directory = analysis.directory
-        else:  # no analysis provided, so we have to create a new analysis
-
-            # determine the analysis directory
-            if dataset_id != None and dataset:
-                directory = dataset.directory
-            else:  # create a new directory
-                directory = user.path
-
-            analysis = generate_new_analysis(user=user, dataset=dataset, directory=directory,
-                                             directory_prefix='MSDB_Analysis_', session=session,
-                                             async_task_id=self.task.request_id)
-
-            # Set analysis database values
-            if analysis_description != '':
-                analysis.description = analysis_description
-            else:
-                analysis.description = 'MSDB Analysis Results'
-            if analysis_name != '':
-                analysis.name = analysis_name
-            else:
-                analysis.name = 'Pairing Analysis {}'.format(str(analysis.id))
-
-            analysis.program = 'IGREP MSDB'
-
-        # Set local values
-        analysis_id = analysis.id
-        self.set_analysis_id(analysis_id)
-        output_directory = analysis.directory
-
-        # Set analysis database values
-        analysis.started = 'now'
-        analysis.files_to_analyze = map(lambda i: int(i), file_ids)
-        analysis.params = {}
-        analysis.status = 'QUEUED'
-        analysis.responses = []
-        analysis.available = False
-        analysis.inserted_into_db = False
-        session.add(analysis)
-        session.commit()
-
-        prefix_output_files = analysis.name.replace(' ', '_')
-        self.set_analysis_id(analysis_id)
-
-        if file_ids:
-            files = map(lambda x: session.query(File).filter(File.id == x).first(), file_ids)
-        elif dataset_id != None and dataset:
-            files = dataset.files
-            file_ids = [file.id for file in files]
-
-    return_value = run_msdb_with_analysis_id(analysis_id=analysis_id, file_ids=file_ids, user_id=user_id,
-                                             cluster_percent=cluster_percent, must_be_present=must_be_present,
-                                             parent_task=self.task)
-    file_ids = return_value.file_ids
-
-    return return_value
-
-
 # Returns a ReturnValue with field file_ids which reflects only the new files added during the analysis
 @celery.task(base=LogTask, bind=True)
-def run_msdb_with_analysis_id(self, analysis_id=None, file_ids=[], user_id=None, cluster_percent=0.9,
-                              must_be_present=['CDR3']):
-    logger = self.logger
-
-    logger.info('Running MSDB analysis. ')
-
-    igfft_msdb_fields = {
-        'ABSEQ.AA': "Full_Length_Sequence.AA",
-        'CDR3.AA': 'CDR3_Sequence.AA',
-        'VREGION.VGENES': 'Top_V-Gene_Hits',
-        'JREGION.JGENES': 'Top_J-Gene_Hits',
-        'ISOTYPE.GENES': "Isotype",
-        'DREGION.DGENES': '',
-        'RECOMBINATIONTYPE': 'Recombination_Type',  # this is not necessary as the program will guess it if not provided
-        'VREGION.CDR1.AA': "CDR1_Sequence.AA",
-        'VREGION.CDR2.AA': "CDR2_Sequence.AA",
-        'VREGION.SHM.NT_PER': "VRegion.SHM.Per_nt",
-        'JREGION.SHM.NT_PER': "JRegion.SHM.Per_nt",
-    }
-
-    file_paths_to_analyze = []
-    files_in_directory = []
-
-    analysis_directory = None
-
-    with session_scope() as session:
-        analysis = session.query(Analysis).get(analysis_id)
-        user = session.query(User).get(user_id)
-
-        if analysis:
-            dataset_id = analysis.dataset.id
-            dataset = analysis.dataset
-            analysis_directory = analysis.directory
-        else:
-            analysis_directory = user.path
-
-        if file_ids == []:
-            files = dataset.files
-        else:
-            files = session.query(File).filter(File.id.in_(file_ids)).all()
-
-        user = session.query(User).get(user_id)
-
-        for file in files:
-            if file.file_type == 'IGFFT_ANNOTATION':
-                file_paths_to_analyze.append(file.path)
-
-        # prefix for analysis result files
-        prefix = None
-        if analysis:
-            prefix = analysis.name.replace(' ', '_')
-
-    if file_paths_to_analyze == []:
-        logger.warning('No output files from IGREP analysis were found. Skipping mass spec analysis.')
-        return ReturnValue('No MSDB analysis was performed.', file_ids=[])
-    else:
-        # for file_path in file_paths_to_analyze:
-        # immunogrep_msdb.generate_msdb_file(file_path, 'TAB', translate_fields=igfft_msdb_fields, output_folder_path= analysis_directory, cluster_id = cluster_percent, must_be_present=['CDR3'])
-
-        files_in_directory = Set(next(os.walk(analysis_directory))[2])
-
-        # Briefly pass all STDOUT to the logger
-        saved_stdout = sys.stdout
-        sys.stdout = LoggerWriterRedirect(logger, task=self)
-
-        immunogrep_msdb.generate_msdb_file(input_files=file_paths_to_analyze, filetype='TAB',
-                                           translate_fields=igfft_msdb_fields, output_folder_path=analysis_directory,
-                                           cluster_id=cluster_percent, must_be_present=['CDR3'])
-
-        # Restore STDOUT to the console
-        sys.stdout = saved_stdout
-
-        new_files_in_directory = Set(next(os.walk(analysis_directory))[2]) - files_in_directory
-
-        return_value = add_directory_files_to_database(directory=analysis_directory,
-                                                       description='MSDB analysis result.', dataset_id=dataset_id,
-                                                       analysis_id=analysis_id, user_id=user_id,
-                                                       file_names=new_files_in_directory, prefix=prefix, logger=logger)
-        file_ids = return_value.file_ids
-
-        logger.info('MSDB analysis complete. {} files were produced.'.format(len(file_ids)))
-
-        return ReturnValue('MSDB analysis complete. {} files were produced.'.format(len(file_ids)), file_ids=[])
-
-
-# Returns a ReturnValue with field file_ids which reflects only the new files added during the analysis
-@celery.task(base=LogTask, bind=True)
-def run_new_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None, analysis_name=None,
+def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None, analysis_name=None,
                  analysis_description=None, append_cterm_peptides=False, cluster_percent=0.9,
                  cluster_algorithm='greedy', cluster_on='aaSeqCDR3', read_cutoff=1, require_annotations=['aaSeqCDR3'],
                  cluster_linkage='min'):
@@ -2195,88 +1956,6 @@ def run_new_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=N
         logger.info('MSDB analysis complete. {} sequences were written.'.format(len(df)))
         return ReturnValue('MSDB analysis complete for analysis {}.'.format(analysis.id), file_ids=[])
 
-
-# Standalone celery task to run MSDB analysis on a dataset.
-# This adds a new analysis if analysis = 'new' is passed or analysis_id == None
-# Calls run_msdb_with_analysis_id
-@celery.task(base=LogTask, bind=True)
-def run_msdb_with_dataset_id(self, user_id=6, dataset_id=None, analysis_id=None, file_ids=[], analysis_name='',
-                             analysis_description='', cluster_percent=0.9, must_be_present=['CDR3']):
-    logger = self.logger
-    logger.info('Preparing to run MSDB algorithm...')
-
-    annotated_files = []
-    annotated_file_formats = []
-    file_paths_to_analyze = []
-
-    with session_scope() as session:
-
-        # Get the DB objects
-        user = session.query(User).get(user_id)
-        if dataset_id != None:
-            dataset = session.query(Dataset).get(dataset_id)
-        else:
-            dataset = None
-
-        # Determine if a new analysis is needed
-        if analysis_id and analysis_id != 'new':
-            analysis = session.query(Analysis).get(analysis_id)
-            output_directory = analysis.directory
-        else:  # no analysis provided, so we have to create a new analysis
-
-            # determine the analysis directory
-            if dataset_id != None and dataset:
-                directory = dataset.directory
-            else:  # create a new directory
-                directory = user.path
-
-            analysis = generate_new_analysis(user=user, dataset=dataset, directory=directory,
-                                             directory_prefix='MSDB_Analysis_', session=session,
-                                             async_task_id=self.task.request_id)
-
-            # Set analysis database values
-            if analysis_description != '':
-                analysis.description = analysis_description
-            else:
-                analysis.description = 'MSDB Analysis Results'
-            if analysis_name != '':
-                analysis.name = analysis_name
-            else:
-                analysis.name = 'Pairing Analysis {}'.format(str(analysis.id))
-
-            analysis.program = 'IGREP MSDB'
-
-        # Set local values
-        analysis_id = analysis.id
-        self.set_analysis_id(analysis_id)
-        output_directory = analysis.directory
-
-        # Set analysis database values
-        analysis.started = 'now'
-        analysis.files_to_analyze = map(lambda i: int(i), file_ids)
-        analysis.params = {}
-        analysis.status = 'QUEUED'
-        analysis.responses = []
-        analysis.available = False
-        analysis.inserted_into_db = False
-        session.add(analysis)
-        session.commit()
-
-        prefix_output_files = analysis.name.replace(' ', '_')
-        self.set_analysis_id(analysis_id)
-
-        if file_ids:
-            files = map(lambda x: session.query(File).filter(File.id == x).first(), file_ids)
-        elif dataset_id != None and dataset:
-            files = dataset.files
-            file_ids = [file.id for file in files]
-
-    return_value = run_msdb_with_analysis_id(analysis_id=analysis_id, file_ids=file_ids, user_id=user_id,
-                                             cluster_percent=cluster_percent, must_be_present=must_be_present,
-                                             parent_task=self.task)
-    file_ids = return_value.file_ids
-
-    return return_value
 
 
 def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
@@ -3103,19 +2782,18 @@ def run_analysis_pipeline(self, *args, **kwargs):
     pandaseq_minimum_overlap = kwargs['pandaseq_minimum_overlap']
     pandaseq_minimum_length = kwargs['pandaseq_minimum_length']
     analysis_type = kwargs['analysis_type']
-    cluster = kwargs['cluster']
     species = kwargs['species']
     loci = kwargs['loci']
-    generate_msdb = kwargs['generate_msdb']
     standardize_outputs = kwargs['standardize_outputs']
     require_annotations = kwargs['require_annotations']
     append_cterm_peptides = kwargs['append_cterm_peptides']
     remove_seqs_with_indels = kwargs['remove_seqs_with_indels']
     pair_vhvl = kwargs['pair_vhvl']
-    msdb_cluster_percent = float(kwargs['msdb_cluster_percent'])
-    vhvl_min = float(kwargs['vhvl_min'])
-    vhvl_max = float(kwargs['vhvl_max'])
-    vhvl_step = float(kwargs['vhvl_step'])
+    cluster = kwargs['cluster']
+    cluster_algorithm = kwargs['cluster_algorithm']
+    cluster_linkage = kwargs['cluster_linkage']
+    cluster_percent = float(kwargs['cluster_percent'])
+
 
     if dataset and dataset != []: dataset = dataset[0]
 
@@ -3236,17 +2914,6 @@ def run_analysis_pipeline(self, *args, **kwargs):
         file_ids_to_analyze = return_value.file_ids
         logger.info(return_value)
 
-        if generate_msdb:
-            return_value = run_msdb_with_analysis_id(analysis_id=analysis_id, file_ids=file_ids_to_analyze,
-                                                     user_id=user_id, cluster_percent=msdb_cluster_percent,
-                                                     parent_task=self)
-
-        if pair_vhvl:
-            # return_value = run_pair_vhvl_with_dataset_id( analysis_id = analysis_id, file_ids = file_ids_to_analyze, user_id = user_id, parent_task = self)
-            return_value = run_pair_vhvl_with_dataset_id(user_id=user_id, dataset_id=dataset.id,
-                                                         analysis_id=analysis_id, file_ids=file_ids_to_analyze,
-                                                         vhvl_min=vhvl_min, vhvl_max=vhvl_max, vhvl_step=vhvl_step,
-                                                         parent_task=self)
 
     elif analysis_type == 'mixcr':
         return_value = run_mixcr_analysis_id_with_files(analysis_id=analysis_id, file_ids=file_ids_to_analyze,
@@ -3318,7 +2985,7 @@ def run_analysis_pipeline(self, *args, **kwargs):
 ######
 
 # import blueprint routes here
-from frontend import *
+from frontend_controller import *
 
 app.register_blueprint(frontend)
 

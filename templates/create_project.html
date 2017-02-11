@@ -12,7 +12,7 @@
     <h1>Create a New Project</h1>
     <p>Please input information about your project below:</p>
     <br>
-    <form method="POST" action="{{url_for('projects.create_project')}}" enctype="multipart/form-data">
+    <form method="POST" action="{{url_for('frontend.create_project')}}" enctype="multipart/form-data">
         
         {{ create_project_form.hidden_tag() }}
 

@@ -16,7 +16,7 @@
     <h1>View Project</h1>
     
     {% if not read_only %}
-        You may edit the information below by <a href='{{url_for("projects.edit_project", project_id = project_id)}}'>clicking here</a>.
+        You may edit the information below by <a href='{{url_for("frontend.edit_project", project_id = project_id)}}'>clicking here</a>.
         <br/>
     {% else %}
         <p>The information about your project is listed below. </p>
@@ -24,7 +24,7 @@
 
     <br>
 
-    <form method="POST" action="{{url_for('projects.edit_project', project_id = project_id)}}">
+    <form method="POST" action="{{url_for('frontend.edit_project', project_id = project_id)}}">
         {{ show_project_form.hidden_tag() }}
 
         <div class='row'>

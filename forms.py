@@ -254,18 +254,12 @@ class BuildPipelineForm(Form):
 
     standardize_outputs = BooleanField('Standardize Output', default='checked')
     require_annotations = MultiCheckboxField('Require Annotations', choices=[('aaSeqFR1', 'FR1'),('aaSeqCDR1', 'CDR1'),('aaSeqFR2', 'FR2'),('aaSeqCDR2', 'CDR2'),('aaSeqFR3', 'FR3'),('aaSeqCDR3', 'CDR3'),('aaSeqFR4', 'FR4')], default = ['aaSeqCDR3'])
-
     remove_seqs_with_indels = BooleanField('Remove Sequences With Indels', default='checked')
     append_cterm_peptides = BooleanField('Append Peptides to C-Term for Mass Spec') # , default='checked')
 
-    cluster = BooleanField(u'Cluster Sequences')
-    generate_msdb = BooleanField(u'Generate Mass Spec Database')
     pair_vhvl = BooleanField(u'VH/VL Paired Data', default=False)
 
-    msdb_cluster_percent = DecimalField('Cluster Percent (MSDB)', places=2, rounding=None, default = 0.9)
-
-    vhvl_min = DecimalField('VH/VL Min', places=2, rounding=None, default = 0.96)
-    vhvl_max = DecimalField('VH/VL Max', places=2, rounding=None, default = 0.96)
-    vhvl_step = DecimalField('VH/VL Step', places=2, rounding=None, default = 0.0   )
-
-
+    cluster = BooleanField(u'Cluster Sequences')
+    cluster_percent = DecimalField(places=2, rounding=None, default = 0.90)
+    cluster_algorithm = SelectField(u'Cluster Algorithm', choices=[('greedy', 'Greedy'), ('agglomerative', 'Agglomerative'), ('D', 'D Clonotyping')], validators=[validators.input_required()])
+    cluster_linkage = SelectField(u'Cluster Linkage', choices=[('min', 'min'), ('avg', 'avg'), ('max', 'max')], validators=[validators.input_required()])

@@ -200,36 +200,6 @@
                         </label>
                         <div id="collapse" class="collapse igrep radio1">
 
-                          <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                            <label >
-                                {{ build_pipeline_form.generate_msdb( class="generate_msdb" ) }}
-                                <b>Generate MS DB:</b> Generate Mass Spec database using IGREP tools (currently for IGREP analysis only).
-                            </label>
-                          </div> <!-- /checkbox -->
-
-                          <div id="collapse" class="collapse generate_msdb">
-                            <div style="margin-left: 25px">
-
-                              <table class='table table-striped' width=100%> 
-                                <thead>
-                                    <tr>
-                                        <th width=25%>{{ build_pipeline_form.msdb_cluster_percent.label }}:</th>
-                                        <th width=60%></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>{{ build_pipeline_form.msdb_cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
-                                        <td></td>
-                                    </tr>
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                          
-
-                          {#{ build_pipeline_form.msdb_cluster_percent.label }#}
-                          {#{ build_pipeline_form.msdb_cluster_percent(class = 'form-control') }#}
 
                         </div> <!-- /igrep collapse -->
                       </td>
