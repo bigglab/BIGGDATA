@@ -9,3 +9,7 @@ credentials.txt
 biggdata.sh
 paringtempfile.txt
 .DS_Store
+.idea
+.idea/*
+instance
+instance/*
