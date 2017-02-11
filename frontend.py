@@ -62,15 +62,19 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from pymongo import MongoClient
 import pymongo
 
-from app import *
+# from app import *
 
 # Local Imports 
 from forms import *
 from functions import * 
 from models import * 
 
+
 # blueprint
 frontend = Blueprint('frontend', __name__)
+
+
+nav = Nav()
 
 #Nav for Unauthenticated public 
 nav.register_element('frontend_top', Navbar(
@@ -953,8 +957,6 @@ def projects():
     projects = sorted(projects, key=lambda x: x.id, reverse=True)
     print 'projects'
     print projects
-
-    return render_template("datasets.html", datadict=datadict, current_user=current_user)
 
 
     # print 'shared projects'
