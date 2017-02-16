@@ -54,7 +54,7 @@ import jinja2
 from sqlalchemy import create_engine, event
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Boolean
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.dialects.postgresql import JSON, JSONB, ARRAY, BIT, VARCHAR, INTEGER, FLOAT, NUMERIC, OID, REAL, TEXT, TIME, TIMESTAMP, TSRANGE, UUID, NUMRANGE, DATERANGE
+from sqlalchemy.dialects.postgresql import * 
 from sqlalchemy.sql import select
 from sqlalchemy.orm import sessionmaker, scoped_session, validates
 from pymongo import MongoClient
@@ -1285,6 +1285,78 @@ class CeleryTask(db.Model):
             if value and len(value) > max_len:
                 return value[:max_len]
             return value
+
+
+
+
+
+class Source(db.Model):  
+        __tablename__ = 'source'
+        id = Column(Integer(), primary_key=True)
+        name = Column(VARCHAR())
+        release_date = Column(DATE())
+        version = Column(VARCHAR())
+        type = Column(VARCHAR())
+        sample_size = Column(Integer())
+        alleles = db.relationship('Allele', backref='source', lazy='dynamic')
+        def __repr__(self): 
+            return "< Source {}: {} >".format(self.id, self.name)
+
+
+
+
+class Allele(db.Model):  
+        __tablename__ = 'allele'
+        id = Column(Integer(), primary_key=True)
+        name = Column(TEXT())
+        functionality = Column(TEXT())
+        sequence = Column(TEXT())
+        gapped_sequence = Column(TEXT())
+        sequence_gene = Column(TEXT())
+        sequence_nuc = Column(TEXT())
+        sequence_prot = Column(TEXT())
+        imgt_accession = Column(TEXT())
+        labels = Column(TEXT())
+        codon_start = Column(DOUBLE_PRECISION())
+        nucleotide_length = Column(DOUBLE_PRECISION())
+        partial = Column(TEXT())
+        reverse_complementary = Column(TEXT())
+        species = Column(TEXT())
+        coords = Column(TEXT())
+        locus_id = Column(Integer(), ForeignKey('locus.id'))
+        gene_id = Column(Integer(), ForeignKey('gene.id'))
+        source_id = Column(Integer(), ForeignKey('source.id'))
+
+        def __repr__(self): 
+            return "< Allele {}: {} : {} >".format(self.id, self.name, self.functionality)
+
+
+
+class Gene(db.Model):  
+        __tablename__ = 'gene'
+        id = Column(Integer(), primary_key=True)
+        name = Column(TEXT())
+        locus_id = Column(Integer(), ForeignKey('locus.id'))
+        alleles = db.relationship('Allele', backref='gene', lazy='dynamic')
+
+        def __repr__(self): 
+            return "< Gene {}: {} >".format(self.id, self.name)
+
+
+class Locus(db.Model):  
+        __tablename__ = 'locus'
+        id = Column(Integer(), primary_key=True)
+        name = Column(TEXT())
+        type = Column(TEXT())
+        alleles = db.relationship('Allele', backref='locus', lazy='dynamic')
+        genes = db.relationship('Gene', backref='locus', lazy='dynamic')
+
+        def __repr__(self): 
+            return "< Locus {}: {} >".format(self.id, self.name)
+
+
+
+
 
 
 ######### 

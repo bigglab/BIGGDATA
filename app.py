@@ -192,15 +192,15 @@ app.jinja_env.globals['include_external_html'] = include_external_html
 
 ### Time responses
 
-@app.before_request
-def before_request():
-    g.request_response_start = time.time()
+# @app.before_request
+# def before_request():
+#     g.request_response_start = time.time()
 
 
-@app.teardown_request
-def teardown_request(exception=None):
-    diff = time.time() - g.request_response_start
-    print '{} seconds to resolve request: '.format(str(diff))
+# @app.teardown_request
+# def teardown_request(exception=None):
+#     diff = time.time() - g.request_response_start
+#     print '{} seconds to resolve request: '.format(str(diff))
 
 
 # Flask-Login use this to reload the user object from the user ID stored in the session
