@@ -23,8 +23,8 @@ celery -A app.celery worker --loglevel=debug
 production: 
 celery multi restart node1 --verbose -A app.celery --loglevel=info
 
-# Start Celery Admin (if you want) 
-flower --port=8000
+# Start Celery Admin (if you want to monitor task progression) 
+flower --port=8001
 
 # Start Web Service 
 python manage.py runserver -p 8000 -h 0.0.0.0
