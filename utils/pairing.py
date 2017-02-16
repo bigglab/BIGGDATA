@@ -18,16 +18,16 @@ def pair_annotation_files(file1, file2):
 def pair_annotation_dataframes(df1, df2): 
 	print "{} annotations in file 1, {} in file 2".format(len(df1), len(df2))
 
-	df1_h = df1[df1.apply(lambda r: r['v_top_hit'][:3]=='IGH', axis=1)]
-	df2_h = df2[df2.apply(lambda r: r['v_top_hit'][:3]=='IGH', axis=1)]
-	df1_l = df1[df1.apply(lambda r: r['v_top_hit'][:3]=='IGK' or r['v_top_hit'][:3]=='IGL', axis=1)]
-	df2_l = df2[df2.apply(lambda r: r['v_top_hit'][:3]=='IGK' or r['v_top_hit'][:3]=='IGL', axis=1)]
+	df1_h = df1[df1.apply(lambda r: r['v_top_hit'][:3] in ['IGH', 'TRB'], axis=1)]
+	df2_h = df2[df2.apply(lambda r: r['v_top_hit'][:3] in ['IGH', 'TRB'], axis=1)]
+	df1_l = df1[df1.apply(lambda r: r['v_top_hit'][:3] in ['IGK','IGL','TRA'], axis=1)]
+	df2_l = df2[df2.apply(lambda r: r['v_top_hit'][:3] in ['IGK','IGL','TRA'], axis=1)]
 	df_h = df1_h.append(df2_h)
 	df_l = df1_l.append(df2_l)
-	print '{} IGH annotations, {} IGL/L annotations'.format(len(df_h), len(df_l))
+	print '{} IGH or TRB annotations, {} IGL/L or TRA annotations'.format(len(df_h), len(df_l))
 
 	df = pd.merge(df_h, df_l, on='readName', suffixes=['_h', '_l'], how='inner').set_index('readName')
-	print '{} annotations after merging IGH to IGL/K on key readName'.format(len(df))
+	print '{} annotations after merging heavy and light on key readName'.format(len(df))
 
 	if len(df) == 0: return df 
 	#remove empty sequences
@@ -68,7 +68,7 @@ def pair_annotation_dataframes(df1, df2):
 # # are these primer sequences up to date? 
 def find_isotype(row, seq_index='nFullSeq', isotype_index='c_top_hit'):
 	seq,isotype = row[seq_index], row[isotype_index]
-	if type(isotype) == str and 'I' in isotype:
+	if type(isotype) == str:
 		return isotype
 	#these are all reverse complements of isotype specific primers
 	else:
