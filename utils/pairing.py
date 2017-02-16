@@ -43,12 +43,12 @@ def pair_annotation_dataframes(df1, df2):
 	df['aaSeqCDR3_combined']=df['nSeqCDR3_h'].map(str)+":"+df['nSeqCDR3_l'].map(str)
 
 	#find any isotypes missed by MixCR - still that many missed to justify this routine?? 
-	print 'Analyzing for additional heavy chain isotyping.\n'
+	print 'Analyzing for additional heavy chain isotyping.'
 	iso_nulls_before=df['c_top_hit_h'].isnull().sum()
 	df['c_top_hit_h']=df.apply(find_isotype, seq_index='nFullSeq_h', isotype_index='c_top_hit_h', axis=1)
 	iso_nulls_after=df['c_top_hit_h'].isnull().sum()
 	df['c_top_hit_locus_h'] = df.apply(lambda r: r['c_top_hit_h'] if pd.isnull(r['c_top_hit_locus_h']) else r['c_top_hit_locus_h'], axis=1)
-	print 'Additional isotypes defined: %s\n' %(iso_nulls_before-iso_nulls_after)
+	print 'Additional isotypes defined: %s' %(iso_nulls_before-iso_nulls_after)
 
 	dfg = df.groupby(['nSeqCDR3_h','nSeqCDR3_l'])
 	df['collapsedCount']=dfg['collapsedCount_h'].transform('sum')
@@ -58,7 +58,7 @@ def pair_annotation_dataframes(df1, df2):
 	df['j_region_shm_l']=dfg['j_region_shm_l'].transform('mean').apply(round, args=[1,])
 	df_collapsed = df.sort_values(['collapsedCount', 'aaSeqCDR3_h'], ascending=[False, True]).drop_duplicates(['nSeqCDR3_h','nSeqCDR3_l'])
 
-	print 'Number of collapsed pairs: %s\n' %len(df_collapsed.index)
+	print 'Number of collapsed pairs: %s' %len(df_collapsed.index)
 	return df_collapsed 
 
 

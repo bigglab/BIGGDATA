@@ -1875,7 +1875,9 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
                  analysis_description=None, append_cterm_peptides=False, cluster_percent=0.9,
                  cluster_algorithm='greedy', cluster_on='aaSeqCDR3', read_cutoff=1, require_annotations=['aaSeqCDR3'],
                  cluster_linkage='min'):
+
     logger = self.logger
+
 
     with session_scope() as session:
 
@@ -1907,6 +1909,28 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
         session.add(analysis)
         session.commit()
 
+        runtime_parameters = {'file_ids':file_ids, 'user_id':user_id, 'dataset_id':dataset_id, 'analysis_id':analysis.id, 'analysis_name':analysis_name,
+                     'append_cterm_peptides':append_cterm_peptides, 'cluster_percent':cluster_percent,
+                     'cluster_algorithm':cluster_algorithm, 'cluster_on':cluster_on, 'read_cutoff':read_cutoff,
+                     'require_annotations':require_annotations,
+                     'cluster_linkage':cluster_linkage}
+
+
+        analysis_file_name_prefix = analysis.name.replace(' ', '_')
+        analysis_json_path = '{}/{}_settings.json'.format(analysis.directory.rstrip('/'), analysis_file_name_prefix)
+
+        with open(analysis_json_path, 'w') as json_file:
+            # json.dump( (args, kwargs) , json_file)
+            json.dump(runtime_parameters, json_file, indent=4, sort_keys=True)
+
+        if os.path.isfile(analysis_json_path):
+            analysis.settings_file = File(path=analysis_json_path, file_type='JSON', dataset_id=analysis.dataset_id,
+                                          analysis_id=analysis.id, user_id=analysis.user_id)
+
+        session.add(analysis.settings_file)
+        session.commit()
+
+
         logger.info(
             'Clustering at {}%  on {} with the {} method, requiring at least {} reads per cluster and all of these annotated: {}'.format(
                 cluster_percent, cluster_on, cluster_algorithm, read_cutoff, ','.join(require_annotations)))
@@ -1916,8 +1940,9 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
             df['group'] = file.dataset.name
             dfs.append(df)
         df = pd.concat(dfs)
+        logger.info("{} Total Annotations Grouped From Input Files")
         df = df.dropna(subset=require_annotations, how='any')
-        logger.info("{} Total Annotations Being Clustered".format(len(df)))
+        logger.info("{} Total Annotations With {} Annotated Being Clustered".format(len(df), ','.join(require_annotations)))
         if len(df) == 0:
             logger.error("No annotations contained all required CDR/FR sequences")
             self.update_state(state='FAILED',
@@ -2986,7 +3011,7 @@ def run_analysis_pipeline(self, *args, **kwargs):
 ######
 
 # import blueprint routes here
-from frontend_controller import *
+from frontend import *
 
 app.register_blueprint(frontend)
 

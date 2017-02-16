@@ -38,9 +38,11 @@ def collapse_annotation_dataframe(df, on='aaFullSeq', keep_group_tag=None):
 
 #legacy clustering method - greedy clustering seeds with first few rows and clusters on top of them
 # agglomerative non-greedy clustering with minimum identity to one sequence in cluster satisfying linkage. can also run with max or avg linkage...
-def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='min', read_cutoff=1, group_tag=None, remove_temp_files=True): 
+def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='min', read_cutoff=1, group_tag=None, remove_temp_files=True):
+	print "#####  {} Total Annotations Being Clustered  #####".format(len(df))
 	print 'No group_tag specified....' if group_tag==None else 'Keeping and tagging read counts by groups tagged "{}"'.format(group_tag)
 	df = collapse_annotation_dataframe(df, on=on, keep_group_tag=group_tag)
+	print "#####  {} Annotations After Collapsing On Identical {}  #####".format(len(df), on)
 	print 'Sorting annotations based on length of {} (leads to more accurate clustering with greedy algorithm)'.format(on)
 	df['tmp_on_length'] = df[on].str.len()
 	df = df[df['tmp_on_length']>1] 

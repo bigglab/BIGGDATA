@@ -1425,7 +1425,7 @@ def msdb(status=[]):
             return redirect( url_for('frontend.dashboard') )
         else:
             flash('No files selected for analysis.', 'warning')
-            redirect(url_for('frontend.msdb'))
+            return redirect(url_for('frontend.msdb'))
 
     else: # request.method == 'GET'
 
@@ -1442,6 +1442,7 @@ def msdb(status=[]):
 
         dataset_ids = tuple(map(lambda d: d.id, datasets))
         files = db.session.query(File).filter(File.dataset_id.in_(dataset_ids)).filter(File.file_type.in_(('ANNOTATION', 'BIGG_ANNOTATION', 'MIXCR_ANNOTATION', 'IGREP_ANNOTATION', 'IGFFT_ANNOTATION'))).filter(File.available==True).all()
+        files = [file for file in files if 'paired' not in file.name]
         sorted_files = sorted(files, key=lambda f: f.dataset_id, reverse=True)
         grouped_files = itertools.groupby(sorted_files, key=lambda f: f.dataset_id)
         for dataset_id, files in grouped_files: 
