@@ -759,7 +759,7 @@ def import_files_as_dataset(self, filepath_array=[], user_id=2, chain=None, name
     else:
         d = dataset
 
-    print "Working with dataset {}".format(d.__dict__)
+    logger.info("Working with dataset {}".format(d.__dict__))
 
     if paired: d.paired=True
 
@@ -779,14 +779,14 @@ def import_files_as_dataset(self, filepath_array=[], user_id=2, chain=None, name
     new_file_ids = []
     for index, path in enumerate(filepath_array):
         if os.path.isfile(path):
-            print 'Importing file {} and linking to dataset {}'.format(path, d.name)
+            logger.info('Importing file {} and linking to dataset {}'.format(path, d.name))
             file_name = path.split('/')[-1]
             new_path = d.directory + '/' + file_name
             file = File(name=file_name, path=new_path, user_id=current_user.id, dataset_id=d.id, check_name=False)
-            print file.__dict__
+            logger.info(file.__dict__)
             file.validate()
             db.session.add(file)
-            print 'Copying file {} to new dataset path: {}'.format(file.name, file.path)
+            logger.info('Copying file {} to new dataset path: {}'.format(file.name, file.path))
             from shutil import copyfile
             copyfile(path, new_path)
             # os.rename(path, new_path) # would move file, removing old path
