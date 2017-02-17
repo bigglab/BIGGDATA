@@ -753,7 +753,7 @@ def import_files_as_dataset(self, filepath_array=[], user_id=2, chain=None, name
         raise Exception("Filepath array to ingest was empty [].")
 
     if not dataset:
-        d = generate_new_dataset(user=user_id, session=db.session, name=name, description='Dataset Imported From Server Files'):
+        d = generate_new_dataset(user=user_id, session=db.session, name=name, description='Dataset Imported From Server Files')
     elif type(dataset)==int:
         d = Dataset.query.get(d)
     else:
