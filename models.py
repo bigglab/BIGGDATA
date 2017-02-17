@@ -258,10 +258,6 @@ class File(db.Model):
         command = db.Column(db.String(1024))
         created = db.Column(db.DateTime, default=db.func.now())
 
-        # s3_available = db.Column(db.Boolean)
-        # s3_status = db.Column(db.String(50))
-        # s3_path = db.Column(db.String(256))
-
         line_count = db.Column(db.BigInteger)
 
         vhvl_paired = db.Boolean() # If paired_partner is not null, then vhvl = False implies forward/reverse read pairing

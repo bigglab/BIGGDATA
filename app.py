@@ -739,14 +739,15 @@ def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, pro
 
 
 @celery.task(base=LogTask, bind=True)
-def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, chain=None, name=None, dataset=None,
-                            remove_original=False):
+def import_files_as_dataset(self, filepath_array, user_id, chain=None, name=None, dataset=None,
+                            remove_original=False, project=False, paired=False):
     logger = self.logger
 
     current_user = db.session.query(User).filter(User.id == user_id).first()
 
     if not current_user:
         raise Exception("Error: user with id {} not found.".format(user_id))
+
 
     if not dataset:
         d = Dataset()
@@ -757,8 +758,20 @@ def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, 
         db.session.add(d)
         db.session.commit()
         d.directory = current_user.path.rstrip('/') + '/Dataset_' + str(d.id)
+    elif type(d)==int:
+        d = Dataset.query.get(d)
     else:
         d = dataset
+
+    if paired: d.paired=True
+
+    if project:
+        if type(project)==int:
+            p = Project.query.get(project)
+        else:
+            p = project
+        pd = ProjectDatasets(dataset=d, project=p)
+        db.session.add(pd)
 
     if not d.directory:
         d.directory = current_user.path.rstrip('/') + '/Dataset_' + str(d.id)
@@ -771,43 +784,35 @@ def import_files_as_dataset(self, filepath_array, user_id, filename_array=None, 
 
     files = []
     file_ids = []
-    file_str = ''
-    file_count = 0
-    for index, filepath in enumerate(filepath_array):
-        f = File()
-        f.user_id = user_id
-        if filename_array and len(filename_array) == len(filepath_array):
-            f.name = filename_array[index]
-        else:
-            f.name = filepath.split('/')[-1]
-        f.file_type = parse_file_ext(f.name)
-        file_str = file_str + ', ' + f.name
-        f.dataset_id = d.id
-        # description = 
-        f.available = True
-        f.in_use = False
-        f.status = 'AVAILABLE'
-        f.path = filepath
-        f.file_size = os.path.getsize(f.path)
-        f.chain = chain
-        # url = db.Column(db.String(256))
-        f.command = 'metadata created to link existing file'
-        f.created = 'now'
-        # paired_partner = db.Column(db.Integer, db.ForeignKey('file.id'))
-        # parent_id = db.Column(db.Integer, db.ForeignKey('file.id'))
-        # analysis_id = db.Column(db.Integer, db.ForeignKey('analysis.id'))
+    for index, path in enumerate(filepath_array):
+
         files.append(f)
         db.session.add(f)
         db.session.commit()
         db.session.refresh(f)
         file_ids.append(f.id)
 
+        if os.path.isfile(path):
+            print 'Importing file {} and linking to dataset {}'.format(path, dataset.name)
+            file_name = path.split('/')[-1]
+            new_path = dataset.directory + '/' + file_name
+            file = File(name=file_name, path=new_path, user_id=current_user.id, dataset_id=dataset.id, check_name=False)
+            file.validate()
+            db.session.add(file)
+            print 'Copying file {} to new dataset path: {}'.format(file.name, file.path)
+            from shutil import copyfile
+            copyfile(path, new_path)
+            # os.rename(path, new_path) # would move file, removing old path
+            file.validate()
+            db.session.commit()
+            new_file_ids.append(file.id)
+            flash('File {} Successfully Imported, Linked to Dataset {}'.format(file.name, dataset.name), 'success')
+        else:
+            flash("File path {} doesn't seem to exist. Make sure it's right and permissions are open".format(path),
+                  'warning')
+    d.primary_data_files_ids = new_file_ids
     db.session.commit()
-    d.primary_data_files_ids = map(lambda f: f.id, files)
-    db.session.commit()
-    file_str.lstrip(', ')
-    return ReturnValue('{} files were added to Dataset {} (): {}'.format(file_count, d.id, d.directory, file_str),
-                       file_ids=file_ids)
+    return ReturnValue('Files copied and added to Dataset {} (): {}'.format(d.id, d.directory, file_ids=file_ids))
 
 
 def md5(fname):
