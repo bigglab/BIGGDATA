@@ -759,6 +759,8 @@ def import_files_as_dataset(self, filepath_array=[], user_id=2, chain=None, name
     else:
         d = dataset
 
+    print "Working with dataset {}".format(d.__dict__)
+
     if paired: d.paired=True
 
     if project:
