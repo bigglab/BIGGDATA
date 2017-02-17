@@ -743,6 +743,7 @@ def import_files_as_dataset(self, filepath_array=filepath_array, user_id=2, chai
                             remove_original=False, project=False, paired=False):
     logger = self.logger
 
+
     current_user = db.session.query(User).filter(User.id == user_id).first()
 
     if not current_user:
