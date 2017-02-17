@@ -933,29 +933,29 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species=None, 
         # clone_index_file.path = '{}.aln.clns.index'.format(basepath)
         # clone_index_file.name = '{}.aln.clns.index'.format(basename)
         # clone_index_file.command = 'echo "Indexing Done On Clone Assemble Step"'
-        clone_file = File()
-        clone_file.user_id = dataset.user_id
-        clone_file.file_type = 'MIXCR_CLONES'
-        clone_file.path = '{}.clns.mixcr'.format(basepath)
-        clone_file.name = '{}.clns.mixcr'.format(basename)
-        clone_file.command = '{} assemble  -OassemblingFeatures=VDJRegion -f {} {}'.format(app.config['MIXCR'],
-                                                                                           alignment_file.path,
-                                                                                           clone_file.path)
-        output_files.append(clone_file)
+        # clone_file = File()
+        # clone_file.user_id = dataset.user_id
+        # clone_file.file_type = 'MIXCR_CLONES'
+        # clone_file.path = '{}.clns.mixcr'.format(basepath)
+        # clone_file.name = '{}.clns.mixcr'.format(basename)
+        # clone_file.command = '{} assemble  -OassemblingFeatures=VDJRegion -f {} {}'.format(app.config['MIXCR'],
+        #                                                                                    alignment_file.path,
+        #                                                                                    clone_file.path)
+        # output_files.append(clone_file)
         # output_files.append(clone_index_file)
         db.session.add(alignment_file)
-        db.session.add(clone_file)
+        # db.session.add(clone_file)
         db.session.commit()
         # Commit To Get Parent IDs
-        clone_output_file = File()
-        clone_output_file.user_id = dataset.user_id
-        clone_output_file.parent_id = clone_file.id
-        clone_output_file.path = '{}.txt'.format(clone_file.path)
-        clone_output_file.file_type = 'MIXCR_CLONES_TEXT'
-        clone_output_file.name = '{}.txt'.format(clone_file.name)
-        clone_output_file.command = '{} exportClones -sequence -quality -s --preset full {} {}'.format(
-            app.config['MIXCR'], clone_file.path, clone_output_file.path)
-        output_files.append(clone_output_file)
+        # clone_output_file = File()
+        # clone_output_file.user_id = dataset.user_id
+        # clone_output_file.parent_id = clone_file.id
+        # clone_output_file.path = '{}.txt'.format(clone_file.path)
+        # clone_output_file.file_type = 'MIXCR_CLONES_TEXT'
+        # clone_output_file.name = '{}.txt'.format(clone_file.name)
+        # clone_output_file.command = '{} exportClones -sequence -quality -s --preset full {} {}'.format(
+        #     app.config['MIXCR'], clone_file.path, clone_output_file.path)
+        # output_files.append(clone_output_file)
         alignment_output_file = File()
         alignment_output_file.user_id = dataset.user_id
         alignment_output_file.parent_id = alignment_file.id
@@ -1031,9 +1031,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species=None, 
                 elif 'Error' in line:
                     logger.error(line)
                     execution_error = True
-                elif (
-                                'Alignment:' in line or 'Exporting alignments:' in line or 'Assembling initial clonotypes:' in line or 'Exporting clones:' in line) & (
-                    '%' in line):
+                elif ('Alignment:' in line or 'Exporting alignments:' in line or 'Assembling initial clonotypes:' in line or 'Exporting clones:' in line) & ('%' in line):
                     tracking_percent = True
                     tracking_status, line = line.split(':', 1)
                     if line.endswith('%'):

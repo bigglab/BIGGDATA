@@ -284,7 +284,7 @@ class File(db.Model):
         # This allows system operations on the file
         # e.g., if os.path.isfile()file
         def __repr__(self): 
-            return self.path
+            return "<File {} >".format(self.name)
             # if self.paired_partner: 
             #     p = 'Paired To: {}'.format(str(self.paired_partner))
             # else: 
