@@ -769,10 +769,10 @@ def import_files_as_dataset(self, filepath_array=[], user_id=2, chain=None, name
         pd = ProjectDatasets(dataset=d, project=p)
         db.session.add(pd)
 
-    if not os.path.exists(d.directory):
-        logger.info('Making directory {}'.format(d.directory))
-        os.makedirs(d.directory)
-    db.session.commit()
+    # if not os.path.exists(d.directory):
+    #     logger.info('Making directory {}'.format(d.directory))
+    #     os.makedirs(d.directory)
+    # db.session.commit()
 
     new_file_ids = []
     for index, path in enumerate(filepath_array):
@@ -780,8 +780,8 @@ def import_files_as_dataset(self, filepath_array=[], user_id=2, chain=None, name
         if os.path.isfile(path):
             print 'Importing file {} and linking to dataset {}'.format(path, dataset.name)
             file_name = path.split('/')[-1]
-            new_path = dataset.directory + '/' + file_name
-            file = File(name=file_name, path=new_path, user_id=current_user.id, dataset_id=dataset.id, check_name=False)
+            new_path = d.directory + '/' + file_name
+            file = File(name=file_name, path=new_path, user_id=current_user.id, dataset_id=d.id, check_name=False)
             file.validate()
             db.session.add(file)
             print 'Copying file {} to new dataset path: {}'.format(file.name, file.path)
