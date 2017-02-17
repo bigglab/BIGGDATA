@@ -782,15 +782,8 @@ def import_files_as_dataset(self, filepath_array, user_id, chain=None, name=None
         os.makedirs(d.directory)
     db.session.commit()
 
-    files = []
-    file_ids = []
+    new_file_ids = []
     for index, path in enumerate(filepath_array):
-
-        files.append(f)
-        db.session.add(f)
-        db.session.commit()
-        db.session.refresh(f)
-        file_ids.append(f.id)
 
         if os.path.isfile(path):
             print 'Importing file {} and linking to dataset {}'.format(path, dataset.name)
@@ -812,7 +805,7 @@ def import_files_as_dataset(self, filepath_array, user_id, chain=None, name=None
                   'warning')
     d.primary_data_files_ids = new_file_ids
     db.session.commit()
-    return ReturnValue('Files copied and added to Dataset {} (): {}'.format(d.id, d.directory, file_ids=file_ids))
+    return ReturnValue('Files copied and added to Dataset {} (): {}'.format(d.id, d.directory, file_ids=new_file_ids))
 
 
 def md5(fname):
