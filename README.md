@@ -1,21 +1,38 @@
 # BIGGDATA 
 
-BIGGDATA is a web portal for analyzing IG and TCR repertoire data. 
+BIGGDATA is a web portal for analyzing IG and TCR repertoire data, originally built for the Brent Iverson George Georgiou (BIGG) Laboratory. 
 
-Users are able to run a variety of analysis programs (MixCR, IgBlast, etc) to annotate reads from Illumina instruments and generate useful insights into repretoire distribution, loci usage and interchain pairing (given interchain paired reads). 
+The goal of this system is twofold: to curate and provide a central repository for sequencing data collected by the lab, and to standardize analysis of IG and TCR repertoire data. 
 
-The stack consists of python/flask with celery + rabbitMQ to execute and distribute asynchronous jobs. 
+Users are able to import data from local files, server files, NCBI SRA, web URLs or UT Austin GSAF sequencing core directories, preprocess sequencing data (quality & illumina adapter trimming, quality filtering, paired-end overlap consensus) and run a variety of analysis programs (MixCR, IGFFT, Abstar, etc) to annotate reads from IMGT and native databases. Paired VH::VL (or TRB::TRA) sequencing analysis is now supported as well. 
+
+All annotation results are standardized to facilitate downstrem analysis and generate useful insights into repertoire distribution, polarization, and loci & gene usage. Comparative analysis of results between sample datasets includes a variety of repertoire similarity metrics and co-clustering to determine clonal overlap.  
+
+####
+
+The stack consists of python/flask with a postgresql database, as well as celery + rabbitMQ to execute and distribute asynchronous jobs. 
+To start a previous installation: 
 
 # Start Broker 
 rabbitmq-server
 
 # Start Celery
-celery -A app.celery worker --loglevel=info
+testing: 
+celery -A app.celery worker --loglevel=debug
 
-# Start Celery Admin (if you want) 
-flower --port=5555  
+production: 
+celery multi restart node1 --verbose -A app.celery --loglevel=info
+
+# Start Celery Admin (if you want to monitor task progression) 
+flower --port=8001
 
 # Start Web Service 
-python manage.py runserver
+python manage.py runserver -p 8000 -h 0.0.0.0
 
-# Check It Out At 0.0.0.0:5000
+### Check It Out At http://0.0.0.0:8000
+
+
+--------
+
+
+### Installation Instructions To Come
