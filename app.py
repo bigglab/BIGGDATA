@@ -753,15 +753,8 @@ def import_files_as_dataset(self, filepath_array=[], user_id=2, chain=None, name
         raise Exception("Filepath array to ingest was empty [].")
 
     if not dataset:
-        d = Dataset()
-        d.user_id = user_id
-        d.name = name
-        d.description = 'Dataset generated from file import'
-        d.chain_types_sequenced = [chain]
-        db.session.add(d)
-        db.session.commit()
-        d.directory = current_user.path.rstrip('/') + '/Dataset_' + str(d.id)
-    elif type(d)==int:
+        d = generate_new_dataset(user=user_id, session=db.session, name=name, description='Dataset Imported From Server Files'):
+    elif type(dataset)==int:
         d = Dataset.query.get(d)
     else:
         d = dataset
@@ -775,10 +768,6 @@ def import_files_as_dataset(self, filepath_array=[], user_id=2, chain=None, name
             p = project
         pd = ProjectDatasets(dataset=d, project=p)
         db.session.add(pd)
-
-    if not d.directory:
-        d.directory = current_user.path.rstrip('/') + '/Dataset_' + str(d.id)
-        db.session.commit()
 
     if not os.path.exists(d.directory):
         logger.info('Making directory {}'.format(d.directory))
