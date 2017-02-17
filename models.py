@@ -1553,7 +1553,6 @@ def generate_new_dataset(user = None, session = db.session, name='New Dataset', 
 
     if name or name!='': 
         if name == '__default__':
-            flash('Error: cannot create a dataset with that name.', 'warning')
             return redirect(url_for('.datasets'))
         new_dataset.name = name.replace(' ', '_', 99)
         new_dataset.directory = "{}/Dataset_{}_{}".format(user.path.rstrip('/') , new_dataset.name, new_dataset.id)
