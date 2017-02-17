@@ -739,7 +739,7 @@ def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, pro
 
 
 @celery.task(base=LogTask, bind=True)
-def import_files_as_dataset(self, filepath_array=filepath_array, user_id=2, chain=None, name=None, dataset=None,
+def import_files_as_dataset(self, filepath_array=[], user_id=2, chain=None, name=None, dataset=None,
                             remove_original=False, project=False, paired=False):
     logger = self.logger
 
@@ -749,6 +749,8 @@ def import_files_as_dataset(self, filepath_array=filepath_array, user_id=2, chai
     if not current_user:
         raise Exception("Error: user with id {} not found.".format(user_id))
 
+    if filepath_array == []:
+        raise Exception("Filepath array to ingest was empty [].")
 
     if not dataset:
         d = Dataset()
