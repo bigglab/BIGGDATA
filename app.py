@@ -802,10 +802,6 @@ def import_files_as_dataset(self, filepath_array=[], user_id=2, chain=None, name
             file.validate()
             db.session.commit()
             new_file_ids.append(file.id)
-            flash('File {} Successfully Imported, Linked to Dataset {}'.format(file.name, dataset.name), 'success')
-        else:
-            flash("File path {} doesn't seem to exist. Make sure it's right and permissions are open".format(path),
-                  'warning')
     d.primary_data_files_ids = new_file_ids
     db.session.commit()
     return ReturnValue('Files copied and added to Dataset {} (): {}'.format(d.id, d.directory, file_ids=new_file_ids))
