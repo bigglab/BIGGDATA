@@ -796,6 +796,7 @@ def import_files_as_dataset(self, filepath_array=[], user_id=2, chain=None, name
     return ReturnValue('Files copied and added to Dataset {} (): {}'.format(d.id, d.directory, file_ids=new_file_ids))
 
 
+
 def md5(fname):
     hash_md5 = hashlib.md5()
     with open(fname, "rb") as f:

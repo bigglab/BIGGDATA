@@ -1535,6 +1535,8 @@ def get_project_choices(user = None, new = False):
         project_tuples = [ ('new', 'New Project') ]
 
     return project_tuples
+
+def generate_new_dataset(user = None, session = db.session, name='New Dataset', description=None):
     '''
     Generates a new, default dataset and returns the dataset object
     '''
