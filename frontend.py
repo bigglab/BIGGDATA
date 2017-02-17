@@ -107,14 +107,18 @@ nav.register_element('frontend_user', Navbar(
         ),
     Subgroup(
         'Run Analysis', 
-        View('Previous Analyses', 'frontend.analyses'),
         View('VDJ Annotation Pipline', 'frontend.pipeline'),
         View('Create MSDB from Annotations', 'frontend.msdb'),
         View('VDJ VIZualizer', 'frontend.vdj_visualizer'),
         ),
     Subgroup(
+        'Monitor',
+        View('Previous Analyses', 'frontend.analyses'),
+        Link('Celery Task Monitor', 'http://www.biggdata.io:8001/tasks?sort=-received&limit=100'),
+    ),
+        Subgroup(
         'Documentation', 
-        View('BIGG DATA Overview', 'frontend.overview'), 
+        View('BIGG DATA Overview', 'frontend.overview'),
         View('BIGG DB Schema', 'frontend.schema'), 
         # Link('Confluence', 'under_construction'), 
         Separator(),
