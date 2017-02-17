@@ -776,9 +776,8 @@ def import_files_as_dataset(self, filepath_array=[], user_id=2, chain=None, name
 
     new_file_ids = []
     for index, path in enumerate(filepath_array):
-
         if os.path.isfile(path):
-            print 'Importing file {} and linking to dataset {}'.format(path, dataset.name)
+            print 'Importing file {} and linking to dataset {}'.format(path, d.name)
             file_name = path.split('/')[-1]
             new_path = d.directory + '/' + file_name
             file = File(name=file_name, path=new_path, user_id=current_user.id, dataset_id=d.id, check_name=False)
