@@ -113,7 +113,7 @@ nav.register_element('frontend_user', Navbar(
         ),
     Subgroup(
         'Monitor',
-        View('Previous Analyses', 'frontend.analyses'),
+        View('Analyses Dashboard', 'frontend.analyses'),
         Link('Celery Task Monitor', 'http://www.biggdata.io:8001/tasks?sort=-received&limit=100'),
     ),
         Subgroup(
