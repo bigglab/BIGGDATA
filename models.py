@@ -1295,6 +1295,9 @@ class Source(db.Model):
         type = Column(VARCHAR())
         sample_size = Column(Integer())
         alleles = db.relationship('Allele', backref='source', lazy='dynamic')
+        allele_frequencies = db.relationship('AlleleFrequency', backref='source', lazy='dynamic')
+        populations = db.relationship('Population', backref='source', lazy='dynamic')
+
         def __repr__(self): 
             return "< Source {}: {} >".format(self.id, self.name)
 
@@ -1322,9 +1325,11 @@ class Allele(db.Model):
         locus_id = Column(Integer(), ForeignKey('locus.id'))
         gene_id = Column(Integer(), ForeignKey('gene.id'))
         source_id = Column(Integer(), ForeignKey('source.id'))
+        strain_id = Column(Integer(), ForeignKey('strain.id')) # To simplify Mus musculus_BCL6 to Mus
+        allele_frequencies = db.relationship('AlleleFrequency', backref='allele', lazy='dynamic')
 
         def __repr__(self): 
-            return "< Allele {}: {} : {} >".format(self.id, self.name, self.functionality)
+            return "< Allele {}: {} : {}bp >".format(self.id, self.name, len(self.sequence))
 
 
 
@@ -1334,6 +1339,8 @@ class Gene(db.Model):
         name = Column(TEXT())
         locus_id = Column(Integer(), ForeignKey('locus.id'))
         alleles = db.relationship('Allele', backref='gene', lazy='dynamic')
+        locus_name = Column(TEXT())
+        allele_frequencies = db.relationship('AlleleFrequency', backref='gene', lazy='dynamic')
 
         def __repr__(self): 
             return "< Gene {}: {} >".format(self.id, self.name)
@@ -1346,16 +1353,70 @@ class Locus(db.Model):
         type = Column(TEXT())
         alleles = db.relationship('Allele', backref='locus', lazy='dynamic')
         genes = db.relationship('Gene', backref='locus', lazy='dynamic')
+        allele_frequencies = db.relationship('AlleleFrequency', backref='locus', lazy='dynamic')
 
         def __repr__(self): 
-            return "< Locus {}: {} >".format(self.id, self.name)
+            return "< {} Locus {}: {} >".format(self.type, self.id, self.name)
 
 
 
 
 
 
-######### 
+
+
+class Species(db.Model):
+    name = Column(VARCHAR())
+    populations = db.relationship('Population', backref='species', lazy='dynamic')
+    strains = db.relationship('Strain', backref='species', lazy='dynamic')
+
+class Strain(db.Model):
+    name = Column(VARCHAR())
+    species_id = Column(Integer(), ForeignKey('species.id'))
+    alleles = db.relationship('Allele', backref='strain', lazy='dynamic')
+
+class Population(db.Model):
+    name = Column(VARCHAR())
+    species_id = Column(Integer(), ForeignKey('species.id'))
+    allele_frequencies = db.relationship('AlleleFrequency', backref='population', lazy='dynamic')
+    source_id = Column(Intger, ForeignKey('source.id'))
+
+class AlleleFrequency(bp.Model):
+    allele_id = Column(Integer(), ForeignKey('allele.id'))
+    gene_id = Column(Integer(), ForeignKey('gene.id'))
+    locus_id = Column(Integer(), ForeignKey('locus.id'))
+    population_id = Column(Integer(), ForeignKey('population.id'))
+    value = Column(FLOAT)
+    source_id = Column(Integer, ForeignKey('source.id'))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#########
 
 # MODEL FUNCTIONS 
 
