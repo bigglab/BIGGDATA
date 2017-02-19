@@ -58,7 +58,7 @@ from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Boo
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import JSON, JSONB, ARRAY, BIT, VARCHAR, INTEGER, FLOAT, NUMERIC, OID, REAL, TEXT, TIME, TIMESTAMP, TSRANGE, UUID, NUMRANGE, DATERANGE
 from sqlalchemy.sql import select
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import sessionmaker, scoped_session, subqueryload, load_only
 from pymongo import MongoClient
 import pymongo
 
@@ -1733,6 +1733,138 @@ def json_celery_log():
      }  # this is the exception raised
 
     return jsonify( response )
+
+
+
+@frontend.route('/alleledb', methods=['GET','POST'])
+@login_required
+def alleledb():
+    class AlleleForm(Form):
+        locus_type_selector = SelectField(u'Species', choices=())
+        locus_selector = SelectField(u'Locus', choices=())
+        species_selector = SelectField(u'Species', choices=())
+        gene_selector = SelectField(u'Species', choices=())
+        source_selector = SelectField(u'Source', choices=())
+
+
+    form = AlleleForm()
+
+
+    return render_template('alleledb.html', form=form)
+
+
+
+
+@frontend.route('/alleledb_json', methods=['GET', 'POST'])
+@login_required
+def alleledb_json(species=None, locus_type=None, locus=None, gene=None):
+
+    print request.args.__dict__
+
+    source = request.args.get('source', None, type=str)
+    species = request.args.get('species', None, type=str)
+    locus_type = request.args.get('locus_type', None, type=str)
+    locus = request.args.get('locus', None, type=str)
+    gene = request.args.get('gene', None, type=str)
+
+    print "alleledb query: species {} locus_type {} locus {} gene {}".format(species, locus_type, locus, gene)
+
+
+    j = {}
+    allele_query = db.session.query(Allele)
+    if source:
+        allele_query = allele_query.join(Source).filter(Source.name==source)
+    if species:
+        allele_query = allele_query.join(Species).filter(Species.name==species)
+    if gene:
+        allele_query = allele_query.join(Gene).filter(Gene.name==gene)
+    elif locus:
+        allele_query = allele_query.join(Locus).filter(Locus.name==locus)
+    elif locus_type:
+        allele_query = allele_query.join(Locus).filter(Locus.type==locus_type)
+    print allele_query
+    alleles = allele_query.all()
+
+    species_ids = set(map(lambda a: a.species_id, alleles))
+    locus_ids = set(map(lambda a: a.locus_id, alleles))
+    gene_ids = set(map(lambda a: a.gene_id, alleles))
+    # species_ids = set(map(lambda a: a.species_id, alleles))
+
+    j['source_options'] = sorted([x[0] for x in db.session.query(Source.name).distinct().all()])
+    j['species_options'] = sorted([x[0] for x in db.session.query(Species.name).filter(Species.id.in_(species_ids)).distinct().all()])
+    j['locus_type_options'] = sorted([x[0] for x in db.session.query(Locus.type).filter(Locus.id.in_(locus_ids)).distinct().all()])
+    j['locus_options'] = sorted([x[0] for x in db.session.query(Locus.name).filter(Locus.id.in_(locus_ids)).distinct().all()])
+    j['gene_options'] = sorted([x[0] for x in db.session.query(Gene.name).filter(Gene.id.in_(gene_ids)).distinct().all()])
+
+    print j['gene_options']
+
+    j['allele_status'] = "{} Alleles Match".format(len(alleles))
+
+    return jsonify( j )
+
+
+
+@frontend.route('/alleledb_network_json', methods=['GET', 'POST'])
+@login_required
+def alleledb_network_json():
+
+    source = request.args.get('source', None, type=str)
+    species = request.args.get('species', None, type=str)
+    locus_type = request.args.get('locus_type', None, type=str)
+    locus = request.args.get('locus', None, type=str)
+    gene = request.args.get('gene', None, type=str)
+
+    print "alleledb network query: species {} locus_type {} locus {} gene {}".format(species, locus_type, locus, gene)
+
+
+    j = {}
+    allele_query = db.session.query(Allele)
+    if source:
+        allele_query = allele_query.join(Source).filter(Source.name==source)
+    if species:
+        allele_query = allele_query.join(Species).filter(Species.name==species)
+    if gene:
+        allele_query = allele_query.join(Gene).filter(Gene.name==gene)
+    elif locus:
+        allele_query = allele_query.join(Locus).filter(Locus.name==locus)
+    elif locus_type:
+        allele_query = allele_query.join(Locus).filter(Locus.type==locus_type)
+    print allele_query
+    alleles = allele_query.all()
+    print "{} alleles found".format(len(alleles))
+
+    if len(alleles)>10:
+        alleles = alleles[0:50]
+
+    names = set(map(lambda a: a.name, alleles))
+    new_alleles = []
+    for name in names:
+        new_alleles.append([a for a in alleles if a.name == name][0])
+    alleles = new_alleles
+
+    allele_network_dict = {}
+    nodes = []
+    for i, allele in enumerate(alleles):
+        nodes.append({"id": allele.name, "group": allele.gene.name})
+    allele_network_dict['nodes']=nodes
+
+    import jellyfish
+    import random
+    links = []
+    for i, allele_1 in enumerate(alleles):
+        for j, allele_2 in enumerate(alleles):
+            if i < j:
+                distance = random.random()*100
+                if random > 80:
+                    links.append({"source":allele_1.name, "target":allele_2.name, 'value':distance})
+    allele_network_dict['links']=links
+
+    return jsonify ( allele_network_dict )
+
+
+
+
+
 
 @frontend.route('/zip_file_status_json', methods=['GET', 'POST'])
 @login_required

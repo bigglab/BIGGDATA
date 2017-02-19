@@ -1321,11 +1321,11 @@ class Allele(db.Model):
         nucleotide_length = Column(DOUBLE_PRECISION())
         partial = Column(TEXT())
         reverse_complementary = Column(TEXT())
-        species = Column(TEXT())
         coords = Column(TEXT())
         locus_id = Column(Integer(), ForeignKey('locus.id'))
         gene_id = Column(Integer(), ForeignKey('gene.id'))
         source_id = Column(Integer(), ForeignKey('source.id'))
+        species_id = Column(Integer(), ForeignKey('species.id'))
         strain_id = Column(Integer(), ForeignKey('strain.id')) # To simplify Mus musculus_BCL6 to Mus
         allele_frequencies = db.relationship('AlleleFrequency', backref='allele', lazy='dynamic')
 
@@ -1356,6 +1356,36 @@ class Allele(db.Model):
                     counts[kmer] = 0
                 counts[kmer] += 1
             return counts
+
+
+
+
+        @hybrid_property
+        def sequence_safe(self):
+            if self.sequence_nuc != None and len(self.sequence_nuc) > 1:
+                return self.sequence_nuc
+            elif self.sequence_gene != None and len(self.sequence_gene) > 1:
+                return self.sequence_gene
+            elif self.sequence != None and len(self.sequence) > 1:
+                return self.sequence
+            else:
+                return None
+
+
+        @hybrid_property
+        def to_fasta(self, seq_type='nuc'):
+            header = ">{}_{}_{}\n".format(self.name, self.functionality, self.species.name)
+            if seq_type=='nuc':
+                sequence = self.sequence_nuc
+            elif seq_type=='gene':
+                sequence = self.sequence_gene
+            elif seq_type=='prot':
+                sequence = self.sequene_prot
+            else:
+                return None
+            lines = header + sequence + '\n'
+            return lines
+
 
 
         @classmethod
@@ -1423,14 +1453,18 @@ class Locus(db.Model):
 
 
 
-
-
 class Species(db.Model):
     __tablename__ = 'species'
     id = Column(Integer(), primary_key=True)
     name = Column(VARCHAR())
     populations = db.relationship('Population', backref='species', lazy='dynamic')
     strains = db.relationship('Strain', backref='species', lazy='dynamic')
+    alleles = db.relationship('Allele', backref='species', lazy='dynamic')
+
+
+    def __repr__(self):
+        return "< Species {}: {} >".format(self.id, self.name)
+
 
 class Strain(db.Model):
     __tablename__ = 'strain'
@@ -1439,6 +1473,10 @@ class Strain(db.Model):
     species_id = Column(Integer(), ForeignKey('species.id'))
     alleles = db.relationship('Allele', backref='strain', lazy='dynamic')
 
+    def __repr__(self):
+        return "< Strain {}: {} >".format(self.id, self.name)
+
+
 class Population(db.Model):
     __tablename__ = 'population'
     id = Column(Integer(), primary_key=True)
@@ -1446,6 +1484,10 @@ class Population(db.Model):
     species_id = Column(Integer(), ForeignKey('species.id'))
     allele_frequencies = db.relationship('AlleleFrequency', backref='population', lazy='dynamic')
     source_id = Column(Integer, ForeignKey('source.id'))
+
+    def __repr__(self):
+        return "< Population {}: {} >".format(self.id, self.name)
+
 
 class AlleleFrequency(db.Model):
     __tablename__ = 'allele_frequency'
@@ -1457,29 +1499,18 @@ class AlleleFrequency(db.Model):
     value = Column(FLOAT)
     source_id = Column(Integer(), ForeignKey('source.id'))
 
+    def __repr__(self):
+        return "< AlleleFrequency {}: {} >".format(self.id)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+class Distance(db.Model):
+    __tablename__ = 'distance'
+    id = Column(Integer, primary_key=True)
+    allele_id_1 = Column(Integer)
+    allele_id_2 = Column(Integer)
+    type = Column(VARCHAR)
+    value = Column(FLOAT)
 
 
 
