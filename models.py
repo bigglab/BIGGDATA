@@ -44,7 +44,6 @@ from flask_bootstrap import Bootstrap
 from flask_bootstrap import __version__ as FLASK_BOOTSTRAP_VERSION
 from flask_nav import Nav 
 from flask_nav.elements import Navbar, View, Subgroup, Link, Text, Separator
-from flask_sqlalchemy import SQLAlchemy
 from markupsafe import escape
 # from render_utils import make_context, smarty_filter, urlencode_filter
 import wtforms
@@ -57,6 +56,8 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import * 
 from sqlalchemy.sql import select
 from sqlalchemy.orm import sessionmaker, scoped_session, validates
+from flask_sqlalchemy import SQLAlchemy
+
 from pymongo import MongoClient
 import pymongo
  
@@ -1328,8 +1329,54 @@ class Allele(db.Model):
         strain_id = Column(Integer(), ForeignKey('strain.id')) # To simplify Mus musculus_BCL6 to Mus
         allele_frequencies = db.relationship('AlleleFrequency', backref='allele', lazy='dynamic')
 
-        def __repr__(self): 
+        def __repr__(self):
             return "< Allele {}: {} : {}bp >".format(self.id, self.name, len(self.sequence))
+
+        def kmer_counts(self, k, seq_type='nuc'):
+            #Count kmer occurrences in a given allele.
+              #Returns:  counts : dictionary, {'string': int}
+            if seq_type=='nuc':
+              seq = self.sequence_nuc
+            elif seq_type=='gene':
+              seq = self.sequence_gene
+            elif seq_type=='prot':
+              seq = self.sequence_prot
+
+            if seq==None:
+              seq = self.sequence
+
+            if 'seq' not in locals() or seq==None or seq=='' or len(seq)==0:
+              return None
+
+            counts = {}
+            num_kmers = len(seq) - int(k) + 1
+            for i in range(num_kmers):
+                kmer = seq[i:i+k]
+                if kmer not in counts:
+                    counts[kmer] = 0
+                counts[kmer] += 1
+            return counts
+
+
+        @classmethod
+        def combined_kmers(cls, alleles, k=25, seq_type='nuc'):
+          ret = defaultdict(int)
+          for allele in alleles:
+              counts = allele.kmer_counts(k, seq_type=seq_type)
+              if not counts==None:
+                for km, v in counts.items():
+                    ret[km] += v
+          return dict(ret)
+
+
+def sum_dicts(*dicts):
+    ret = defaultdict(int)
+    if type(dicts[0])==list:
+        dicts = dicts[0]
+    for d in dicts:
+        for km, v in d.items():
+            ret[km] += v
+    return dict(ret)
 
 
 
@@ -1345,6 +1392,13 @@ class Gene(db.Model):
         def __repr__(self): 
             return "< Gene {}: {} >".format(self.id, self.name)
 
+        def kmer_count_alleles(self, k=25, seq_type='nuc'):
+            alleles = self.alleles.all()
+            if len(alleles)==0 or alleles==False:
+                return None
+            else:
+                return Allele.combined_kmers(alleles, k=k, seq_type=seq_type)
+
 
 class Locus(db.Model):  
         __tablename__ = 'locus'
@@ -1358,6 +1412,12 @@ class Locus(db.Model):
         def __repr__(self): 
             return "< {} Locus {}: {} >".format(self.type, self.id, self.name)
 
+        def kmer_count_alleles(self, k=25, seq_type='nuc'):
+            alleles = self.alleles.all()
+            if len(alleles)==0 or alleles==False:
+                return None
+            else:
+                return Allele.combined_kmers(alleles, k=k, seq_type=seq_type)
 
 
 
@@ -1366,28 +1426,36 @@ class Locus(db.Model):
 
 
 class Species(db.Model):
+    __tablename__ = 'species'
+    id = Column(Integer(), primary_key=True)
     name = Column(VARCHAR())
     populations = db.relationship('Population', backref='species', lazy='dynamic')
     strains = db.relationship('Strain', backref='species', lazy='dynamic')
 
 class Strain(db.Model):
+    __tablename__ = 'strain'
+    id = Column(Integer(), primary_key=True)
     name = Column(VARCHAR())
     species_id = Column(Integer(), ForeignKey('species.id'))
     alleles = db.relationship('Allele', backref='strain', lazy='dynamic')
 
 class Population(db.Model):
+    __tablename__ = 'population'
+    id = Column(Integer(), primary_key=True)
     name = Column(VARCHAR())
     species_id = Column(Integer(), ForeignKey('species.id'))
     allele_frequencies = db.relationship('AlleleFrequency', backref='population', lazy='dynamic')
-    source_id = Column(Intger, ForeignKey('source.id'))
+    source_id = Column(Integer, ForeignKey('source.id'))
 
-class AlleleFrequency(bp.Model):
+class AlleleFrequency(db.Model):
+    __tablename__ = 'allele_frequency'
+    id = Column(Integer(), primary_key=True)
     allele_id = Column(Integer(), ForeignKey('allele.id'))
     gene_id = Column(Integer(), ForeignKey('gene.id'))
     locus_id = Column(Integer(), ForeignKey('locus.id'))
     population_id = Column(Integer(), ForeignKey('population.id'))
     value = Column(FLOAT)
-    source_id = Column(Integer, ForeignKey('source.id'))
+    source_id = Column(Integer(), ForeignKey('source.id'))
 
 
 
