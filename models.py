@@ -1378,12 +1378,13 @@ class Allele(db.Model):
             if seq1==seq2: return 0
             seqs = [unicode(s) for s in seq1,seq2 if s and len(s)>0 ]
 
+            import jellyfish
             if type(method) == str:
                 if method == 'hamming':
-                    import jellyfish
                     method = jellyfish.hamming_distance
                 elif method == 'levenshtein':
                     # method = jellyfish.levenshtein_distance
+                    import editdistance
                     method = editdistance.eval  # 4x faster
                 elif method == 'damerau_levenshtien':
                     method = jellyfish.damerau_levenshtein_distance
@@ -1392,7 +1393,7 @@ class Allele(db.Model):
             else:
                 method = method # best to submit an actual callable method
             assert method(unicode('AAAAAA'),
-                          unicode('AAAAAA')) == 0, 'allele_similarity method does not support method(str1,str2) call'
+                          unicode('AAAAAB')), 'allele_similarity method does not support method(str1,str2) call'
 
             distance = method(*seqs)
             return distance

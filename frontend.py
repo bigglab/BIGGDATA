@@ -1913,9 +1913,8 @@ def alleledb_network_json():
 
 
     print "building network json on {} alleles: sequence_type {} distance_metric {} weight_size_by {} color_by {} linkage_threshold {}".format(len(alleles), sequence_type, distance_metric, weight_size_by, color_by, linkage_threshold)
-
     import jellyfish
-    import random
+    import editdistance
     links = []
     comparisons_done = [] # tuples of sorted((allele1 identifier, allele2 identifier))
     for allele_i in alleles:
@@ -1926,7 +1925,7 @@ def alleledb_network_json():
                 # print "sequence 1: {}".format(allele_i.sequence_by_type(seq_type=sequence_type))
                 # print "sequence 2: {}".format(allele_j.sequence_by_type(seq_type=sequence_type))
                 # distance = jellyfish.hamming_distance(unicode(allele_i.sequence_by_type(seq_type=sequence_type)), unicode(allele_j.sequence_by_type(seq_type=sequence_type)))
-                distance = allele_i.distance_to(allele_j, method='hamming') # jellyfish.hamming_distance(unicode(allele_i.sequence), unicode(allele_j.sequence))
+                distance = allele_i.distance_to(allele_j, method=distance_metric) # jellyfish.hamming_distance(unicode(allele_i.sequence), unicode(allele_j.sequence))
                 if distance <= linkage_threshold:
                     links.append({"source":allele_i.name, "target":allele_j.name, 'value':distance})
                 comparisons_done.append(identifier)
