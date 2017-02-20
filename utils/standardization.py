@@ -180,149 +180,154 @@ clean_annotation_dataframe_columns = [
 ]
 
 
-igfft_dtypes = {"Header": str, 
-"SEQ_ID": str, 
-"Sequence": str, 
-"Quality_Score": str, 
-"Document_Header": str, 
-"Strand_Corrected_Sequence": str, 
-"Notes": str, 
-"Errors": str, 
-"Command": str, 
-"Recombination_Type": str, 
-"Percent_Identity": np.float64, 
-"Alignment_Length": np.float64, 
-"Direction": str, 
-"Locus": str, 
-"Chain": str, 
-"Codon_Start": str, 
-"Query_Start": str, 
-"Query_End": str, 
-"Codon_Frame": str, 
-"5_Prime_Annotation": str, 
-"3_Prime_Annotation": str, 
-"Stop_Codon": bool, 
-"CDR3_Junction_In_Frame": bool, 
-"Full_Length": bool, 
-"Productive": str, 
-"Full_Length_Sequence.NT": str, 
-"Full_Length_Sequence.AA": str, 
-"Top_V-Gene_Hits": str, 
-"V-Gene_Alignment_Scores": str, 
-"Top_J-Gene_Hits": str, 
-"J-Gene_Alignment_Scores": str, 
-"FR1_Sequence.NT": str, 
-"CDR1_Sequence.NT": str, 
-"FR2_Sequence.NT": str, 
-"CDR2_Sequence.NT": str, 
-"FR3_Sequence.NT": str, 
-"CDR3_Sequence.NT": str, 
-"FR4_Sequence.NT": str, 
-"FR1_Sequence.AA": str, 
-"CDR1_Sequence.AA": str, 
-"FR2_Sequence.AA": str, 
-"CDR2_Sequence.AA": str, 
-"FR3_Sequence.AA": str, 
-"CDR3_Sequence.AA": str, 
-"FR4_Sequence.AA": str, 
-"FR1_Sequence.NT.Gapped": str, 
-"CDR1_Sequence.NT.Gapped": str, 
-"FR2_Sequence.NT.Gapped": str, 
-"CDR2_Sequence.NT.Gapped": str, 
-"FR3_Sequence.NT.Gapped": str, 
-"FR1_Sequence.AA.Gapped": str, 
-"CDR1_Sequence.AA.Gapped": str, 
-"FR2_Sequence.AA.Gapped": str, 
-"CDR2_Sequence.AA.Gapped": str, 
-"FR3_Sequence.AA.Gapped": str, 
-"VRegion.SHM.NT": np.float64, 
-"VRegion.SHM.Per_nt": np.float64, 
-"Reading_Frames: FR1,CDR1,FR2,CDR2,FR3,CDR3,FR4": str, 
-"VGENE: Total_Matches": np.float64, 
-"VGENE: Total_Mismatches": np.float64, 
-"VGENE: Total_Indel": np.float64, 
-"JRegion.SHM.NT": np.float64, 
-"JRegion.SHM.Per_nt": np.float64, 
-"JGENE: Total_Matches": np.float64, 
-"JGENE: Total_Mismatches": np.float64, 
-"JGENE: Total_Indel": np.float64, 
-"VGENE_Matches: FR1,CDR1,FR2,CDR2,FR3,CDR3": str,
-"VGENE_Mismatches: FR1,CDR1,FR2,CDR2,FR3,CDR3": str,
-"VGENE_Indels: FR1,CDR1,FR2,CDR2,FR3,CDR3": str,
-"VGENE: Query_Start": str, 
-"VGENE: Query_End": str, 
-"VGENE: Query_FR1_Start::End": str, 
-"VGENE: Query_CDR1_Start::End": str, 
-"VGENE: Query_FR2_Start::End": str, 
-"VGENE: Query_CDR2_Start::End": str, 
-"VGENE: Query_FR3_Start::End": str, 
-"VGENE: Germline_Start": str, 
-"VGENE: Germline_End": str, 
-"JGENE: Query_Start": str, 
-"JGENE: Query_End": str, 
-"JGENE: Germline_Start": str, 
-"JGENE: Germline_End": str, 
-"VGENE: Alignment_Sequence_Query": str, 
-"VGENE: Alignment_Sequence_Germline": str,
-"VGENE: Alignment_FR1_Start::End": str, 
-"VGENE: Alignment_CDR1_Start::End": str, 
-"VGENE: Alignment_FR2_Start::End": str, 
-"VGENE: Alignment_CDR2_Start::End": str, 
-"VGENE: Alignment_FR3_Start::End": str, 
-"JGENE: Alignment_Sequence_Query": str, 
-"JGENE: Alignment_Sequence_Germline": str,
-"Isotype": str, 
-"Isotype mismatches": str, 
-"Isotype percent similarity": str, 
-"Isotype barcode direction": str} 
+# igfft_dtypes = {"Header": str,
+# "SEQ_ID": str,
+# "Sequence": str,
+# "Quality_Score": str,
+# "Document_Header": str,
+# "Strand_Corrected_Sequence": str,
+# "Notes": str,
+# "Errors": str,
+# "Command": str,
+# "Recombination_Type": str,
+# "Percent_Identity": np.float64,
+# "Alignment_Length": np.float64,
+# "Direction": str,
+# "Locus": str,
+# "Chain": str,
+# "Codon_Start": str,
+# "Query_Start": str,
+# "Query_End": str,
+# "Codon_Frame": str,
+# "5_Prime_Annotation": str,
+# "3_Prime_Annotation": str,
+# "Stop_Codon": bool,
+# "CDR3_Junction_In_Frame": bool,
+# "Full_Length": bool,
+# "Productive": str,
+# "Full_Length_Sequence.NT": str,
+# "Full_Length_Sequence.AA": str,
+# "Top_V-Gene_Hits": str,
+# "V-Gene_Alignment_Scores": str,
+# "Top_J-Gene_Hits": str,
+# "J-Gene_Alignment_Scores": str,
+# "FR1_Sequence.NT": str,
+# "CDR1_Sequence.NT": str,
+# "FR2_Sequence.NT": str,
+# "CDR2_Sequence.NT": str,
+# "FR3_Sequence.NT": str,
+# "CDR3_Sequence.NT": str,
+# "FR4_Sequence.NT": str,
+# "FR1_Sequence.AA": str,
+# "CDR1_Sequence.AA": str,
+# "FR2_Sequence.AA": str,
+# "CDR2_Sequence.AA": str,
+# "FR3_Sequence.AA": str,
+# "CDR3_Sequence.AA": str,
+# "FR4_Sequence.AA": str,
+# "FR1_Sequence.NT.Gapped": str,
+# "CDR1_Sequence.NT.Gapped": str,
+# "FR2_Sequence.NT.Gapped": str,
+# "CDR2_Sequence.NT.Gapped": str,
+# "FR3_Sequence.NT.Gapped": str,
+# "FR1_Sequence.AA.Gapped": str,
+# "CDR1_Sequence.AA.Gapped": str,
+# "FR2_Sequence.AA.Gapped": str,
+# "CDR2_Sequence.AA.Gapped": str,
+# "FR3_Sequence.AA.Gapped": str,
+# "VRegion.SHM.NT": np.float64,
+# "VRegion.SHM.Per_nt": np.float64,
+# "Reading_Frames: FR1,CDR1,FR2,CDR2,FR3,CDR3,FR4": str,
+# "VGENE: Total_Matches": np.float64,
+# "VGENE: Total_Mismatches": np.float64,
+# "VGENE: Total_Indel": np.float64,
+# "JRegion.SHM.NT": np.float64,
+# "JRegion.SHM.Per_nt": np.float64,
+# "JGENE: Total_Matches": np.float64,
+# "JGENE: Total_Mismatches": np.float64,
+# "JGENE: Total_Indel": np.float64,
+# "VGENE_Matches: FR1,CDR1,FR2,CDR2,FR3,CDR3": str,
+# "VGENE_Mismatches: FR1,CDR1,FR2,CDR2,FR3,CDR3": str,
+# "VGENE_Indels: FR1,CDR1,FR2,CDR2,FR3,CDR3": str,
+# "VGENE: Query_Start": str,
+# "VGENE: Query_End": str,
+# "VGENE: Query_FR1_Start::End": str,
+# "VGENE: Query_CDR1_Start::End": str,
+# "VGENE: Query_FR2_Start::End": str,
+# "VGENE: Query_CDR2_Start::End": str,
+# "VGENE: Query_FR3_Start::End": str,
+# "VGENE: Germline_Start": str,
+# "VGENE: Germline_End": str,
+# "JGENE: Query_Start": str,
+# "JGENE: Query_End": str,
+# "JGENE: Germline_Start": str,
+# "JGENE: Germline_End": str,
+# "VGENE: Alignment_Sequence_Query": str,
+# "VGENE: Alignment_Sequence_Germline": str,
+# "VGENE: Alignment_FR1_Start::End": str,
+# "VGENE: Alignment_CDR1_Start::End": str,
+# "VGENE: Alignment_FR2_Start::End": str,
+# "VGENE: Alignment_CDR2_Start::End": str,
+# "VGENE: Alignment_FR3_Start::End": str,
+# "JGENE: Alignment_Sequence_Query": str,
+# "JGENE: Alignment_Sequence_Germline": str,
+# "Isotype": str,
+# "Isotype mismatches": str,
+# "Isotype percent similarity": str,
+# "Isotype barcode direction": str}
+#
 
-igfft_usecols = {"Header": str, 
-"Sequence": str, 
-"Quality_Score": str, 
-"Recombination_Type": str, 
-"Percent_Identity": np.float64, 
-"Alignment_Length": np.float64, 
-"Direction": str, 
-"Locus": str, 
-"Chain": str, 
-"Full_Length": bool, 
-"Productive": str, 
-"Full_Length_Sequence.NT": str, 
-"Full_Length_Sequence.AA": str, 
-"Top_V-Gene_Hits": str, 
-"V-Gene_Alignment_Scores": str, 
-"Top_J-Gene_Hits": str, 
-"J-Gene_Alignment_Scores": str, 
-"FR1_Sequence.NT": str, 
-"CDR1_Sequence.NT": str, 
-"FR2_Sequence.NT": str, 
-"CDR2_Sequence.NT": str, 
-"FR3_Sequence.NT": str, 
-"CDR3_Sequence.NT": str, 
-"FR4_Sequence.NT": str, 
-"FR1_Sequence.AA": str, 
-"CDR1_Sequence.AA": str, 
-"FR2_Sequence.AA": str, 
-"CDR2_Sequence.AA": str, 
-"FR3_Sequence.AA": str, 
-"CDR3_Sequence.AA": str, 
-"FR4_Sequence.AA": str, 
-"VRegion.SHM.NT": np.float64, 
-"VRegion.SHM.Per_nt": np.float64, 
-"VGENE: Total_Matches": np.float64, 
-"VGENE: Total_Mismatches": np.float64, 
-"VGENE: Total_Indel": np.float64, 
-"JRegion.SHM.NT": np.float64, 
-"JRegion.SHM.Per_nt": np.float64, 
-"JGENE: Total_Matches": np.float64, 
-"JGENE: Total_Mismatches": np.float64, 
-"JGENE: Total_Indel": np.float64, 
-"Isotype": str, 
-"Isotype percent similarity": str }.keys()
+igfft_dtypes = {
+ 'Alignment_Length': np.float64,
+ 'CDR1_Sequence.AA': str,
+ 'CDR1_Sequence.NT': str,
+ 'CDR2_Sequence.AA': str,
+ 'CDR2_Sequence.NT': str,
+ 'CDR3_Sequence.AA': str,
+ 'CDR3_Sequence.NT': str,
+ 'Chain': str,
+ 'Direction': str,
+ 'FR1_Sequence.AA': str,
+ 'FR1_Sequence.NT': str,
+ 'FR2_Sequence.AA': str,
+ 'FR2_Sequence.NT': str,
+ 'FR3_Sequence.AA': str,
+ 'FR3_Sequence.NT': str,
+ 'FR4_Sequence.AA': str,
+ 'FR4_Sequence.NT': str,
+ 'Full_Length': bool,
+ 'Full_Length_Sequence.AA': str,
+ 'Full_Length_Sequence.NT': str,
+ 'Header': str,
+ 'Isotype': str,
+ 'Isotype percent similarity': str,
+ 'J-Gene_Alignment_Scores': str,
+ 'JGENE: Total_Indel': np.float64,
+ 'JGENE: Total_Matches': np.float64,
+ 'JGENE: Total_Mismatches': np.float64,
+ 'JRegion.SHM.NT': np.float64,
+ 'JRegion.SHM.Per_nt': np.float64,
+ 'Locus': str,
+ 'Percent_Identity': np.float64,
+ 'Productive': str,
+ 'Quality_Score': str,
+ 'Recombination_Type': str,
+ 'Sequence': str,
+ 'Top_J-Gene_Hits': str,
+ 'Top_V-Gene_Hits': str,
+ 'V-Gene_Alignment_Scores': str,
+ 'VGENE: Total_Indel': np.float64,
+ 'VGENE: Total_Matches': np.float64,
+ 'VGENE: Total_Mismatches': np.float64,
+ 'VRegion.SHM.NT': np.float64,
+ 'VRegion.SHM.Per_nt': np.float64
+}
+
 
 
 def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_ms_peptides=False, require_annotations=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
-    df = pd.read_table(file_path, dtype=igfft_dtypes, error_bad_lines=False,  usecols=igfft_usecols,) # nrows=100) #, low_memory=False)
+    print "Parsing {} to standardized BIGG format".format(file_path)
+    df = pd.read_table(file_path, dtype=igfft_dtypes, error_bad_lines=False,  usecols=igfft_dtypes.keys(),) # nrows=100) #, low_memory=False)
     column_reindex = {
           'Header' : 'readName',
           'Sequence' : 'readSequence',
@@ -342,39 +347,55 @@ def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_
           'FR4_Sequence.AA' : 'aaSeqFR4',
     }
     df = df.rename(str, columns=column_reindex)
-    if require_annotations != False: df = df.dropna(subset=require_annotations, how='any')
+    full_length = len(df)
+    print '{}: {} annotations total'.format(file_path, full_length)
     df = df.dropna(subset=['Top_V-Gene_Hits', 'Top_J-Gene_Hits'], how='any')
-    df['c_top_hit'] = df.apply(split_on_comma_and_take_first, col='Isotype', axis=1)
-    df['c_top_hit_locus'] = df['c_top_hit'] 
-    df['cBestIdentityPercent'] = df.apply(split_on_comma_and_take_first_float, col='Isotype percent similarity', axis=1)
-    df['allVHitsWithScore'] = df.apply(parse_v_alignments_from_IGFFT_dataframe, axis=1)
-    df['allJHitsWithScore'] = df.apply(parse_j_alignments_from_IGFFT_dataframe, axis=1)
-    df['allDHitsWithScore'] = ''
-    df['allCHitsWithScore'] = ''
-    df['v_top_hit'] = df['allVHitsWithScore'].apply(select_top_hit)
-    df['v_top_hit_locus'] = df['v_top_hit'].apply(trim_ig_locus_name)
-    df['j_top_hit'] = df['allJHitsWithScore'].apply(select_top_hit)
-    df['j_top_hit_locus'] = df['j_top_hit'].apply(trim_ig_locus_name)
-    df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(json.dumps).apply(clean_null_string)
-    df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(json.dumps).apply(clean_null_string)
-    df['d_top_hit'] = None
-    df['d_top_hit_locus'] = None
-    df['nFullSeq'] = df.apply(parse_full_length_nt_seq_from_annotation_dataframe, axis=1) if len(df) >=1 else ''
-    df['aaFullSeq'] = df.apply(parse_full_length_aa_seq_from_annotation_dataframe, axis=1) if len(df) >=1 else ''
-    df = df[~df['aaFullSeq'].str.contains('\*|_')] if rmindels == True else df
-    df = append_cterm_peptides_for_mass_spec(df) if append_ms_peptides == True else df
-    df['v_region_shm'] = df['VRegion.SHM.Per_nt']
-    df['j_region_shm'] = df['JRegion.SHM.Per_nt']
-    df['qualFR1'] = None
-    df['qualCDR1'] = None
-    df['qualFR2'] = None
-    df['qualCDR2'] = None
-    df['qualFR3'] = None
-    df['qualCDR3'] = None
-    df['qualFR4'] = None
-    df = collapse_annotation_dataframe(df)
-    df = df[clean_annotation_dataframe_columns]
-    return df 
+    if require_annotations != False:
+        df = df.dropna(subset=require_annotations, how='any')
+    print "{}: {} annotations pass require_annotations {} and V-Hit and J-Hit filter".format(file_path, len(df), require_annotations)
+    if len(df)==0:
+        print '{}: returning empty dataframe'.format(file_path)
+        return pd.DataFrame(columns=clean_annotation_dataframe_columns)
+    # these routines take too long! chunk to provide updates
+    chunk_size = 10000
+    df_input = df
+    df_output = pd.DataFrame(columns=df_input.columns)
+    print "{}: working on {} annotations in {} chunks".format(file_path, len(df_input), len(df_input)/chunk_size+1)
+    for k, df in df.groupby(np.arange(len(df)) // 10000):
+        print "{} annotations parsed, {}% done".format(k*chunk_size, round(k*chunk_size/float(full_length), 2))
+        df = df.copy()
+        df['c_top_hit'] = df.apply(split_on_comma_and_take_first, col='Isotype', axis=1)
+        df['c_top_hit_locus'] = df['c_top_hit']
+        df['cBestIdentityPercent'] = df.apply(split_on_comma_and_take_first_float, col='Isotype percent similarity', axis=1)
+        df['allVHitsWithScore'] = df.apply(parse_v_alignments_from_IGFFT_dataframe, axis=1)
+        df['allJHitsWithScore'] = df.apply(parse_j_alignments_from_IGFFT_dataframe, axis=1)
+        df['allDHitsWithScore'] = ''
+        df['allCHitsWithScore'] = ''
+        df['v_top_hit'] = df['allVHitsWithScore'].apply(select_top_hit)
+        df['v_top_hit_locus'] = df['v_top_hit'].apply(trim_ig_locus_name)
+        df['j_top_hit'] = df['allJHitsWithScore'].apply(select_top_hit)
+        df['j_top_hit_locus'] = df['j_top_hit'].apply(trim_ig_locus_name)
+        df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(json.dumps).apply(clean_null_string)
+        df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(json.dumps).apply(clean_null_string)
+        df['d_top_hit'] = None
+        df['d_top_hit_locus'] = None
+        df['nFullSeq'] = df.apply(parse_full_length_nt_seq_from_annotation_dataframe, axis=1) if len(df) >=1 else ''
+        df['aaFullSeq'] = df.apply(parse_full_length_aa_seq_from_annotation_dataframe, axis=1) if len(df) >=1 else ''
+        df = df[~df['aaFullSeq'].str.contains('\*|_')] if rmindels == True else df
+        df = append_cterm_peptides_for_mass_spec(df) if append_ms_peptides == True else df
+        df['v_region_shm'] = df['VRegion.SHM.Per_nt']
+        df['j_region_shm'] = df['JRegion.SHM.Per_nt']
+        df['qualFR1'] = None
+        df['qualCDR1'] = None
+        df['qualFR2'] = None
+        df['qualCDR2'] = None
+        df['qualFR3'] = None
+        df['qualCDR3'] = None
+        df['qualFR4'] = None
+        df_output = pd.concat([df_output, df])
+    df_output = collapse_annotation_dataframe(df_output)
+    df_output = df_output[clean_annotation_dataframe_columns]
+    return df_output
 
 def split_on_comma_and_take_first(row, col='Isotype'): 
   return str(row[col]).split(',')[0]
@@ -421,37 +442,54 @@ mixcr_dtypes = {"descrR1" : str,
 
 
 def build_annotation_dataframe_from_mixcr_file(file_path, rmindels=True, append_ms_peptides=False, require_annotations=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
-    df = pd.read_table(file_path, dtype=mixcr_dtypes, error_bad_lines=False) #, low_memory=False)
-    if require_annotations != False: df = df.dropna(subset=require_annotations, how='any')
-    df['readSequence'] = df['readSequence']
-    df['readName'] = df['descrR1']
-    df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
-    df['allDHitsWithScore'] = df['allDHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
-    df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
-    df['allCHitsWithScore'] = df['allCHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
-    df['v_top_hit'] = df['allVHitsWithScore'].apply(select_top_hit)
-    df['v_top_hit_locus'] = df['v_top_hit'].apply(trim_ig_locus_name)
-    df['d_top_hit'] = df['allDHitsWithScore'].apply(select_top_hit)
-    df['d_top_hit_locus'] = df['d_top_hit'].apply(trim_ig_locus_name)
-    df['j_top_hit'] = df['allJHitsWithScore'].apply(select_top_hit)
-    df['j_top_hit_locus'] = df['j_top_hit'].apply(trim_ig_locus_name)
-    df['c_top_hit'] = df['allCHitsWithScore'].apply(select_top_hit)
-    df['c_top_hit_locus'] = df['c_top_hit'].apply(trim_ig_locus_name)
-    df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(json.dumps).apply(clean_null_string)
-    df['allDHitsWithScore'] = df['allDHitsWithScore'].apply(json.dumps).apply(clean_null_string)
-    df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(json.dumps).apply(clean_null_string)
-    df['allCHitsWithScore'] = df['allCHitsWithScore'].apply(json.dumps).apply(clean_null_string)
-    df['v_region_shm'] = df['allVAlignments'].apply(parse_mixcr_alignment_string_to_shm)
-    df['j_region_shm'] = df['allJAlignments'].apply(parse_mixcr_alignment_string_to_shm)
-    # retranslate FR4 region in mixcr output. Don't love this, but its unfortunately necessary as mixcr will annotation aaSeqFR4 as something like AKEAL_SPSPQ:
-    df['aaSeqFR4'] = df['nSeqFR4'].apply(translate_human_nt)
-    df['nFullSeq'] = df.apply(parse_full_length_nt_seq_from_annotation_dataframe, axis=1) if len(df) >=1 else ''
-    df['aaFullSeq'] = df.apply(parse_full_length_aa_seq_from_annotation_dataframe, axis=1) if len(df) >=1 else ''
-    df = df[~df['aaFullSeq'].str.contains('\*|_')] if rmindels == True else df
-    df = append_cterm_peptides_for_mass_spec(df) if append_ms_peptides == True  else df
-    df = collapse_annotation_dataframe(df)
-    df = df[clean_annotation_dataframe_columns] 
-    return df 
+    print "Parsing {} to standardized BIGG format".format(file_path)
+    df = pd.read_table(file_path, dtype=mixcr_dtypes, error_bad_lines=False)  # , low_memory=False)
+    full_length = len(df)
+    print '{}: {} annotations total'.format(file_path, full_length)
+    if require_annotations != False:
+        df = df.dropna(subset=require_annotations, how='any')
+        print "{}: {} annotations pass require_annotations {}".format(file_path, len(df), require_annotations)
+    if len(df)==0:
+        print '{}: returning empty dataframe'.format(file_path)
+        return pd.DataFrame(columns=clean_annotation_dataframe_columns)
+    # these routines take too long! chunk to provide updates
+    chunk_size = 10000
+    df_input = df
+    df_output = pd.DataFrame(columns=df_input.columns)
+    print "{}: working on {} annotations in {} chunks".format(file_path, len(df_input), len(df_input)/chunk_size+1)
+    for k, df in df.groupby(np.arange(len(df)) // 10000):
+        print "{} annotations parsed, {}% done".format(k*chunk_size, round(k*chunk_size/float(full_length), 2))
+        df = df.copy()
+        df['readSequence'] = df['readSequence']
+        df['readName'] = df['descrR1']
+        df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
+        df['allDHitsWithScore'] = df['allDHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
+        df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
+        df['allCHitsWithScore'] = df['allCHitsWithScore'].apply(parse_alignments_from_mixcr_hits)
+        df['v_top_hit'] = df['allVHitsWithScore'].apply(select_top_hit)
+        df['v_top_hit_locus'] = df['v_top_hit'].apply(trim_ig_locus_name)
+        df['d_top_hit'] = df['allDHitsWithScore'].apply(select_top_hit)
+        df['d_top_hit_locus'] = df['d_top_hit'].apply(trim_ig_locus_name)
+        df['j_top_hit'] = df['allJHitsWithScore'].apply(select_top_hit)
+        df['j_top_hit_locus'] = df['j_top_hit'].apply(trim_ig_locus_name)
+        df['c_top_hit'] = df['allCHitsWithScore'].apply(select_top_hit)
+        df['c_top_hit_locus'] = df['c_top_hit'].apply(trim_ig_locus_name)
+        df['allVHitsWithScore'] = df['allVHitsWithScore'].apply(json.dumps).apply(clean_null_string)
+        df['allDHitsWithScore'] = df['allDHitsWithScore'].apply(json.dumps).apply(clean_null_string)
+        df['allJHitsWithScore'] = df['allJHitsWithScore'].apply(json.dumps).apply(clean_null_string)
+        df['allCHitsWithScore'] = df['allCHitsWithScore'].apply(json.dumps).apply(clean_null_string)
+        df['v_region_shm'] = df['allVAlignments'].apply(parse_mixcr_alignment_string_to_shm)
+        df['j_region_shm'] = df['allJAlignments'].apply(parse_mixcr_alignment_string_to_shm)
+        # retranslate FR4 region in mixcr output. Don't love this, but its unfortunately necessary as mixcr will annotation aaSeqFR4 as something like AKEAL_SPSPQ:
+        df['aaSeqFR4'] = df['nSeqFR4'].apply(translate_human_nt)
+        df['nFullSeq'] = df.apply(parse_full_length_nt_seq_from_annotation_dataframe, axis=1) if len(df) >=1 else ''
+        df['aaFullSeq'] = df.apply(parse_full_length_aa_seq_from_annotation_dataframe, axis=1) if len(df) >=1 else ''
+        df = df[~df['aaFullSeq'].str.contains('\*|_')] if rmindels == True else df
+        df = append_cterm_peptides_for_mass_spec(df) if append_ms_peptides == True  else df
+        df_output = pd.concat([df_output, df])
+    df_output = collapse_annotation_dataframe(df_output)
+    df_output = df[clean_annotation_dataframe_columns]
+    return df_output
 
 
 def append_cterm_peptides_for_mass_spec(dataframe): 

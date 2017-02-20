@@ -1917,13 +1917,9 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
 
         session.add(analysis.settings_file)
         session.commit()
-
-
-        logger.info(
-            'Clustering at {}%  on {} with the {} method, requiring at least {} reads per cluster and all of these annotated: {}'.format(
-                cluster_percent, cluster_on, cluster_algorithm, read_cutoff, ','.join(require_annotations)))
         dfs = []
         for file in files:
+            logger.info('Parsing {} and adding to dataframe'.format(file.name))
             df = read_annotation_file(file.path)
             df['group'] = file.dataset.name
             dfs.append(df)
@@ -1931,6 +1927,9 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
         logger.info("{} Total Annotations Grouped From Input Files")
         df = df.dropna(subset=require_annotations, how='any')
         logger.info("{} Total Annotations With {} Annotated Being Clustered".format(len(df), ','.join(require_annotations)))
+        logger.info(
+            'Clustering at {}%  on {} with the {} method, requiring at least {} reads per cluster and all of these annotated: {}'.format(
+                cluster_percent, cluster_on, cluster_algorithm, read_cutoff, ','.join(require_annotations)))
         if len(df) == 0:
             logger.error("No annotations contained all required CDR/FR sequences")
             self.update_state(state='FAILED',
