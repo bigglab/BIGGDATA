@@ -11,8 +11,8 @@ from kombu import Exchange, Queue
 
 BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 CELERY_RESULT_BACKEND = 'rpc://'
-# CELERY_RESULT_PERSISTENT = True
-# CELERY_AMQP_TASK_RESULT_EXPIRES = 3600
+CELERY_RESULT_PERSISTENT = False
+# CELERY_TASK_RESULT_EXPIRES = 3600 # defaults to one day
 
 #limit tasks per process to 1 at a time
 CELERYD_PREFETCH_MULTIPLIER = 1 

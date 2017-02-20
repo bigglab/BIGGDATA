@@ -44,7 +44,6 @@ from flask_bootstrap import Bootstrap
 from flask_bootstrap import __version__ as FLASK_BOOTSTRAP_VERSION
 from flask_nav import Nav 
 from flask_nav.elements import Navbar, View, Subgroup, Link, Text, Separator
-from flask_sqlalchemy import SQLAlchemy
 from markupsafe import escape
 # from render_utils import make_context, smarty_filter, urlencode_filter
 import wtforms
@@ -57,6 +56,8 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import * 
 from sqlalchemy.sql import select
 from sqlalchemy.orm import sessionmaker, scoped_session, validates
+from flask_sqlalchemy import SQLAlchemy
+
 from pymongo import MongoClient
 import pymongo
  
@@ -1295,6 +1296,9 @@ class Source(db.Model):
         type = Column(VARCHAR())
         sample_size = Column(Integer())
         alleles = db.relationship('Allele', backref='source', lazy='dynamic')
+        allele_frequencies = db.relationship('AlleleFrequency', backref='source', lazy='dynamic')
+        populations = db.relationship('Population', backref='source', lazy='dynamic')
+
         def __repr__(self): 
             return "< Source {}: {} >".format(self.id, self.name)
 
@@ -1317,14 +1321,235 @@ class Allele(db.Model):
         nucleotide_length = Column(DOUBLE_PRECISION())
         partial = Column(TEXT())
         reverse_complementary = Column(TEXT())
-        species = Column(TEXT())
         coords = Column(TEXT())
         locus_id = Column(Integer(), ForeignKey('locus.id'))
         gene_id = Column(Integer(), ForeignKey('gene.id'))
         source_id = Column(Integer(), ForeignKey('source.id'))
+        species_id = Column(Integer(), ForeignKey('species.id'))
+        strain_id = Column(Integer(), ForeignKey('strain.id')) # To simplify Mus musculus_BCL6 to Mus
+        allele_frequencies = db.relationship('AlleleFrequency', backref='allele', lazy='dynamic')
 
-        def __repr__(self): 
-            return "< Allele {}: {} : {} >".format(self.id, self.name, self.functionality)
+        def __repr__(self):
+            return "< Allele {}: {} : {}bp >".format(self.id, self.name, len(self.sequence))
+
+        def kmer_counts(self, k, seq_type='nuc'):
+            #Count kmer occurrences in a given allele.
+              #Returns:  counts : dictionary, {'string': int}
+            if seq_type=='nuc':
+              seq = self.sequence_nuc
+            elif seq_type=='gene':
+              seq = self.sequence_gene
+            elif seq_type=='prot':
+              seq = self.sequence_prot
+
+            if seq==None:
+              seq = self.sequence
+
+            if 'seq' not in locals() or seq==None or seq=='' or len(seq)==0:
+              return None
+
+            counts = {}
+            num_kmers = len(seq) - int(k) + 1
+            for i in range(num_kmers):
+                kmer = seq[i:i+k]
+                if kmer not in counts:
+                    counts[kmer] = 0
+                counts[kmer] += 1
+            return counts
+
+        import jellyfish
+        def distance_to(self, target_allele, method='hamming', seq_type='nuc'):
+            if type(target_allele)!=Allele:
+                print 'error: target not an allele class: {}'.format(target_allele)
+                return None
+            if seq_type=='nuc':
+              seq1 = self.sequence_nuc
+              seq2 = target_allele.sequence_nuc
+            elif seq_type=='gene':
+              seq1 = self.sequence_gene
+              seq2 = target_allele.sequence_gene
+            elif seq_type=='prot':
+              seq1 = self.sequence_prot
+              seq2 = target_allele.sequence_gene
+            if seq1==None:
+              seq1 = self.sequence
+              seq2 = target_allele.sequence
+
+            if seq1==seq2: return 0
+            seqs = [unicode(s) for s in seq1,seq2 if s and len(s)>0 ]
+
+            if type(method) == str:
+                if method == 'hamming':
+                    import jellyfish
+                    method = jellyfish.hamming_distance
+                elif method == 'levenshtein':
+                    # method = jellyfish.levenshtein_distance
+                    method = editdistance.eval  # 4x faster
+                elif method == 'damerau_levenshtien':
+                    method = jellyfish.damerau_levenshtein_distance
+                elif method == 'jaro':
+                    method = jellyfish.jaro_distance
+            else:
+                method = method # best to submit an actual callable method
+            assert method(unicode('AAAAAA'),
+                          unicode('AAAAAA')) == 0, 'allele_similarity method does not support method(str1,str2) call'
+
+            distance = method(*seqs)
+            return distance
+
+
+
+        @hybrid_property
+        def sequence_safe(self):
+            if self.sequence_nuc != None and len(self.sequence_nuc) > 1:
+                return self.sequence_nuc
+            elif self.sequence_gene != None and len(self.sequence_gene) > 1:
+                return self.sequence_gene
+            elif self.sequence != None and len(self.sequence) > 1:
+                return self.sequence
+            else:
+                return None
+
+
+        @hybrid_property
+        def sequence_by_type(self, seq_type='nuc'):
+            if self.sequence_nuc != None and seq_type=='nuc' or seq_type=='spliced nucleotide':
+                return self.sequence_nuc
+            elif self.sequence_gene != None and seq_type=='gene' or seq_type=='gene':
+                return self.sequence_gene
+            elif self.sequence_prot != None and seq_type == 'prot' or seq_type=='protein':
+                return self.sequence_prot
+            elif self.sequence_prot != None and seq_type == 'default':
+                return self.sequence
+            else:
+                return None
+
+
+
+        @hybrid_property
+        def to_fasta(self, seq_type='nuc'):
+            header = ">{}_{}_{}\n".format(self.name, self.functionality, self.species.name)
+            if seq_type=='nuc':
+                sequence = self.sequence_nuc
+            elif seq_type=='gene':
+                sequence = self.sequence_gene
+            elif seq_type=='prot':
+                sequence = self.sequene_prot
+            else:
+                return None
+            lines = header + sequence + '\n'
+            return lines
+
+
+
+        @classmethod
+        def combined_kmers(cls, alleles, k=25, seq_type='nuc'):
+          ret = defaultdict(int)
+          for allele in alleles:
+              counts = allele.kmer_counts(k, seq_type=seq_type)
+              if not counts==None:
+                for km, v in counts.items():
+                    ret[km] += v
+          return dict(ret)
+
+
+
+def sum_dicts(*dicts):
+    ret = defaultdict(int)
+    if type(dicts[0])==list:
+        dicts = dicts[0]
+    for d in dicts:
+        for km, v in d.items():
+            ret[km] += v
+    return dict(ret)
+
+
+
+
+
+from scipy.cluster.hierarchy import cophenet
+from scipy.spatial.distance import pdist
+
+def allele_dendrogram(allele_similarity, linkage_method='ward', title='Hierarchical Clustering Dendrogram'):
+    X = allele_similarity
+    Z = linkage(X, linkage_method)
+    # test correlation between linkage and distance
+    c, coph_dists = cophenet(Z, pdist(X))
+
+
+
+    #
+    # plt.title('Hierarchical Clustering Dendrogram (truncated)')
+    # plt.xlabel('sample index or (cluster size)')
+    # plt.ylabel('distance')
+    # dendrogram(
+    #     Z,
+    #     truncate_mode='lastp',  # show only the last p merged clusters
+    #     p=12,  # show only the last p merged clusters
+    #     leaf_rotation=90.,
+    #     leaf_font_size=12.,
+    #     show_contracted=True,  # to get a distribution impression in truncated branches
+    # )
+    # plt.show()
+    #
+
+
+    def allele_dendrogram_call(*args, **kwargs):
+        max_d = kwargs.pop('max_d', None)
+        if max_d and 'color_threshold' not in kwargs:
+            kwargs['color_threshold'] = max_d
+        annotate_above = kwargs.pop('annotate_above', 0)
+
+        ddata = dendrogram(*args, **kwargs)
+
+        if not kwargs.get('no_plot', False):
+            plt.title(title)
+            plt.xlabel('distance')
+            plt.ylabel('allele or (cluster size)')
+            for i, d, c in zip(ddata['icoord'], ddata['dcoord'], ddata['color_list']):
+                if not kwargs.get('orientation', 'left'):
+                    x = 0.5 * sum(i[1:3])
+                    y = d[1]
+                    if y > annotate_above:
+                        plt.plot(x, y, 'o', c=c)
+                        plt.annotate("%.3g" % y, (x, y), xytext=(0, -5),
+                                     textcoords='offset points',
+                                     va='top', ha='center')
+                    if max_d:
+                        plt.axhline(y=max_d, c='k')
+                else:
+                    y = 0.5 * sum(i[1:3])
+                    x = d[1]
+                    if x > annotate_above:
+                        plt.plot(x, y, 'o', c=c)
+                        plt.annotate("%.3g" % x, (x, y), xytext=(0, -5),
+                                     textcoords='offset points',
+                                     va='top', ha='center')
+
+                    if max_d:
+                        plt.axvline(x=max_d, c='k')
+        return ddata
+
+
+
+    plt.figure(figsize=(10,10))
+    allele_dendrogram_call(
+        Z,
+        truncate_mode='lastp',
+        p=30,
+        orientation='left',
+        leaf_rotation=0.,
+        leaf_font_size=12.,
+        show_contracted=True,
+        annotate_above=50,
+        max_d=50,
+        labels=X.index
+    )
+    plt.show()
+
+
+    return True
+
 
 
 
@@ -1334,9 +1559,18 @@ class Gene(db.Model):
         name = Column(TEXT())
         locus_id = Column(Integer(), ForeignKey('locus.id'))
         alleles = db.relationship('Allele', backref='gene', lazy='dynamic')
+        locus_name = Column(TEXT())
+        allele_frequencies = db.relationship('AlleleFrequency', backref='gene', lazy='dynamic')
 
         def __repr__(self): 
             return "< Gene {}: {} >".format(self.id, self.name)
+
+        def kmer_count_alleles(self, k=25, seq_type='nuc'):
+            alleles = self.alleles.all()
+            if len(alleles)==0 or alleles==False:
+                return None
+            else:
+                return Allele.combined_kmers(alleles, k=k, seq_type=seq_type)
 
 
 class Locus(db.Model):  
@@ -1346,16 +1580,85 @@ class Locus(db.Model):
         type = Column(TEXT())
         alleles = db.relationship('Allele', backref='locus', lazy='dynamic')
         genes = db.relationship('Gene', backref='locus', lazy='dynamic')
+        allele_frequencies = db.relationship('AlleleFrequency', backref='locus', lazy='dynamic')
 
         def __repr__(self): 
-            return "< Locus {}: {} >".format(self.id, self.name)
+            return "< {} Locus {}: {} >".format(self.type, self.id, self.name)
+
+        def kmer_count_alleles(self, k=25, seq_type='nuc'):
+            alleles = self.alleles.all()
+            if len(alleles)==0 or alleles==False:
+                return None
+            else:
+                return Allele.combined_kmers(alleles, k=k, seq_type=seq_type)
 
 
 
 
 
+class Species(db.Model):
+    __tablename__ = 'species'
+    id = Column(Integer(), primary_key=True)
+    name = Column(VARCHAR())
+    populations = db.relationship('Population', backref='species', lazy='dynamic')
+    strains = db.relationship('Strain', backref='species', lazy='dynamic')
+    alleles = db.relationship('Allele', backref='species', lazy='dynamic')
 
-######### 
+
+    def __repr__(self):
+        return "< Species {}: {} >".format(self.id, self.name)
+
+
+class Strain(db.Model):
+    __tablename__ = 'strain'
+    id = Column(Integer(), primary_key=True)
+    name = Column(VARCHAR())
+    species_id = Column(Integer(), ForeignKey('species.id'))
+    alleles = db.relationship('Allele', backref='strain', lazy='dynamic')
+
+    def __repr__(self):
+        return "< Strain {}: {} >".format(self.id, self.name)
+
+
+class Population(db.Model):
+    __tablename__ = 'population'
+    id = Column(Integer(), primary_key=True)
+    name = Column(VARCHAR())
+    species_id = Column(Integer(), ForeignKey('species.id'))
+    allele_frequencies = db.relationship('AlleleFrequency', backref='population', lazy='dynamic')
+    source_id = Column(Integer, ForeignKey('source.id'))
+
+    def __repr__(self):
+        return "< Population {}: {} >".format(self.id, self.name)
+
+
+class AlleleFrequency(db.Model):
+    __tablename__ = 'allele_frequency'
+    id = Column(Integer(), primary_key=True)
+    allele_id = Column(Integer(), ForeignKey('allele.id'))
+    gene_id = Column(Integer(), ForeignKey('gene.id'))
+    locus_id = Column(Integer(), ForeignKey('locus.id'))
+    population_id = Column(Integer(), ForeignKey('population.id'))
+    value = Column(FLOAT)
+    source_id = Column(Integer(), ForeignKey('source.id'))
+
+    def __repr__(self):
+        return "< AlleleFrequency {}: {} >".format(self.id)
+
+
+
+class Distance(db.Model):
+    __tablename__ = 'distance'
+    id = Column(Integer, primary_key=True)
+    allele_id_1 = Column(Integer)
+    allele_id_2 = Column(Integer)
+    type = Column(VARCHAR)
+    value = Column(FLOAT)
+
+
+
+
+#########
 
 # MODEL FUNCTIONS 
 

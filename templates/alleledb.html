@@ -1,0 +1,634 @@
+{% extends '_base.html' %}
+
+{% block wide_content %}
+
+<div class="container">
+	<h3 align="center">Allele Database Browser</h3>
+	<br>
+</div>
+<div class="container">
+
+    <br>
+    <br>
+    <br>
+
+    <form role="form" method="POST" action="{{url_for('frontend.alleledb')}}" enctype="multipart/form-data">
+    {{ form.csrf_token }}
+
+    <div class="row" id="console-container">
+		<div class="col-md-12">
+		    <div class="panel panel-default">
+		        <div align='center' class="panel-heading">
+                    <b>Browse Alleles</b>
+                </div>
+                <div class="panel-body">
+                    <table class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th>
+                                Source
+                            </th>
+                            <th>
+                                Species
+                            </th>
+                            <th>
+                                Locus Type
+                            </th>
+                            <th>
+                                Locus
+                            </th>
+                            <th>
+                                Gene
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <th>
+                                {{  form.source_selector(onchange="update_alleles();") }}
+                            </th>
+                            <th>
+                                {{  form.species_selector(onchange="update_alleles();") }}
+                            </th>
+                            <th>
+                                {{  form.locus_type_selector(onchange="update_alleles();") }}
+                            </th>
+                            <th>
+                                {{  form.locus_selector(onchange="update_alleles();") }}
+                            </th>
+                            <th>
+                                {{  form.gene_selector(onchange="update_alleles();") }}
+                            </th>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <br>
+                    <span align="center"><h4><div id="allele_status" name="'allele_status">Status Here</div></h4></span>
+                    <br>
+                    <span align="right"><input class="btn btn-default form-control" value="Reset Form"  style="max-width: 15em;" onclick="reset_alleles();"></span>
+                    <br>
+                </div>
+            </div>
+		</div>
+	</div>
+
+
+
+    <div class="row" id="console-container">
+		<div class="col-md-12">
+		    <div class="panel panel-default">
+		        <div align='center' class="panel-heading">
+                    <b>Build Allele Network</b>
+                </div>
+		        <div class="panel-body">
+                    <div align="center"><h5><span name="allele_sequence_type_status"></span></h5></div>
+                    <table class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th>
+                                Sequence Type
+                            </th>
+                            <th>
+                                Distance Metric
+                            </th>
+                            <th>
+                                Weight Size By
+                            </th>
+                            <th>
+                                Color By
+                            </th>
+                            <th>
+                                Linkage Threshold
+                            </th>
+                        </tr>
+                        <tr>
+
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <th>
+                                {{  form.sequence_type_selector(onchange="update_alleles();") }}
+                            </th>
+                            <th>
+                                {{  form.distance_metric_selector() }}
+                            </th>
+                            <th>
+                                {{  form.weight_size_by_selector() }}
+                            </th>
+                            <th>
+                                {{  form.color_by_selector() }}
+                            </th>
+                            <th>
+                                {{  form.linkage_threshold() }}
+                            </th>
+                        </tr>
+                        <tr>
+                        </tbody>
+                    </table>
+                    <br>
+                    <span align="center"><h4><div id="allele_sequence_type_status" name="'allele_sequence_type_status">Status Here</div></h4></span>
+                    <br>
+                    <span align="right"><input class="btn btn-default form-control" value="Reset Form"  style="max-width: 15em;" onclick="reset_network_params();""></span>
+                    <span><input class="btn btn-default" value="Model Allele Network" style="..." onclick="update_network_json();"></span>
+                    <br>
+                </div>
+            </div>
+		</div>
+	</div>
+
+
+
+
+
+
+    </form>
+
+
+</div>
+
+
+
+
+<div class="container" id="network_display">
+
+	<div class="row" id="console-container">
+		<div class="col-md-12">
+		    <div class="panel panel-default">
+		        <div class="panel-heading">
+                    <b> </b>
+                </div>
+		        <div class="panel-body">
+
+                    <style>
+
+                    .links line {
+                      stroke: #999;
+                      stroke-opacity: 0.6;
+                    }
+
+                    .nodes circle {
+                      stroke: #fff;
+                      stroke-width: 1.5px;
+                    }
+
+                    </style>
+                    <svg width="960" height="600"></svg>
+                    <script src="https://d3js.org/d3.v4.min.js"></script>
+                </div>
+            </div>
+		</div>
+	</div>
+
+</div> <!-- network display -->
+
+
+
+
+
+
+<script>
+
+$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+
+function update_alleles() {
+
+    $("#allele_status").text("Querying...");
+    $("#allele_sequence_type_status").text("");
+
+    var species_selector = $('select[name="species_selector"]');
+    var locus_type_selector = $('select[name="locus_type_selector"]');
+    var locus_selector = $('select[name="locus_selector"]');
+    var gene_selector = $('select[name="gene_selector"]');
+    var source_selector = $('select[name="source_selector"]');
+    var sequence_selector = $('select[name="sequence_type_selector"]');
+
+    $.getJSON($SCRIPT_ROOT + '/alleledb_json', {
+        sequence_type: sequence_selector.val(),
+        source: source_selector.val(),
+        species: species_selector.val(),
+        locus: locus_selector.val(),
+        locus_type: locus_type_selector.val(),
+        gene: gene_selector.val(),
+    }, function(data) {
+
+
+
+        // scope options for species, locus, gene interactively
+        if (data.source_options) {
+            //clear current options
+            previous_value = source_selector.val();
+            source_selector.html('');
+            var optionsAsString = "";
+            for (var i = 0; i < data.source_options.length; i++) {
+                optionsAsString += "<option value='" + data.source_options[i] + "'>" + data.source_options[i] + "</option>";
+            }
+            source_selector.append("");
+            source_selector.append(optionsAsString);
+            source_selector.val(previous_value)
+        };
+
+
+        // scope options for species, locus, gene interactively
+        if (data.species_options) {
+            //clear current options
+            previous_value = species_selector.val();
+            species_selector.html('');
+            var optionsAsString = "";
+            for (var i = 0; i < data.species_options.length; i++) {
+                optionsAsString += "<option value='" + data.species_options[i] + "'>" + data.species_options[i] + "</option>";
+            }
+            species_selector.append("");
+            species_selector.append(optionsAsString);
+            species_selector.val(previous_value)
+        };
+
+
+        // scope options for species, locus, gene interactively
+        if (data.locus_type_options) {
+            //clear current options
+            previous_value = locus_type_selector.val();
+            locus_type_selector.html('');
+            var optionsAsString = "";
+            for (var i = 0; i < data.locus_type_options.length; i++) {
+                optionsAsString += "<option value='" + data.locus_type_options[i] + "'>" + data.locus_type_options[i] + "</option>";
+            }
+            locus_type_selector.append("");
+            locus_type_selector.append(optionsAsString);
+            locus_type_selector.val(previous_value)
+        };
+
+        if (data.locus_options) {
+            //clear current options
+            previous_value = locus_selector.val();
+            locus_selector.html('');
+            var optionsAsString = "";
+            for (var i = 0; i < data.locus_options.length; i++) {
+                optionsAsString += "<option value='" + data.locus_options[i] + "'>" + data.locus_options[i] + "</option>";
+            }
+            locus_selector.append("");
+            locus_selector.append(optionsAsString);
+            locus_selector.val(previous_value)
+        };
+
+
+        // scope options for species, locus, gene interactively
+        if (data.gene_options) {
+            //clear current options
+            previous_value = gene_selector.val();
+            gene_selector.html('');
+            var optionsAsString = "";
+            for (var i = 0; i < data.gene_options.length; i++) {
+                optionsAsString += "<option value='" + data.gene_options[i] + "'>" + data.gene_options[i] + "</option>";
+            }
+            gene_selector.append("");
+            gene_selector.append(optionsAsString);
+            gene_selector.val(previous_value)
+        };
+
+
+        // update form
+        $("#allele_status").text(data.allele_status);
+        $("#allele_sequence_type_status").text(data.allele_sequence_type_status);
+
+
+        // build d3 network
+
+    });
+
+};
+
+</script>
+
+<script src="https://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+<script>
+
+
+function update_network_json() {
+    $("#network_display").show();
+
+    var svg = d3.select("svg"),
+        width = +svg.attr("width"),
+        height = +svg.attr("height");
+
+    var color = d3.scaleOrdinal(d3.schemeCategory20);
+
+    var simulation = d3.forceSimulation()
+        .force("link", d3.forceLink().id(function(d) { return d.id; }))
+        .force("charge", d3.forceManyBody())
+        .force("center", d3.forceCenter(width / 2, height / 2));
+
+
+    var source_selector = $('select[name="source_selector"]');
+    var species_selector = $('select[name="species_selector"]');
+    var locus_type_selector = $('select[name="locus_type_selector"]');
+    var locus_selector = $('select[name="locus_selector"]');
+    var gene_selector = $('select[name="gene_selector"]');
+
+
+    $.getJSON($SCRIPT_ROOT + '/alleledb_network_json', {
+            source: source_selector.val(),
+            species: species_selector.val(),
+            locus: locus_selector.val(),
+            locus_type: locus_type_selector.val(),
+            gene: gene_selector.val(),
+            sequence_type: $('select[name="sequence_type_selector"]').val(),
+            distance_metric: $('select[name="distance_metric_selector"]').val(),
+            weight_by: $('select[name="weight_by_selector"]').val(),
+            color_by: $('select[name="color_by_selector"]').val(),
+            linkage_threshold: $('input[name="linkage_threshold"]').val(),
+
+        }, function(graph) {
+{#            if (error) throw error;#}
+
+            var link = svg.append("g")
+              .attr("class", "links")
+            .selectAll("line")
+            .data(graph.links)
+            .enter().append("line")
+              .attr("stroke-width", function(d) { return Math.sqrt(d.value); });
+
+            var node = svg.append("g")
+              .attr("class", "nodes")
+            .selectAll("circle")
+            .data(graph.nodes)
+            .enter().append("circle")
+              .attr("r", 5)
+              .attr("fill", function(d) { return color(d.group); })
+              .call(d3.drag()
+                  .on("start", dragstarted)
+                  .on("drag", dragged)
+                  .on("end", dragended));
+
+            node.append("title")
+              .text(function(d) { return d.id; });
+
+            simulation
+              .nodes(graph.nodes)
+              .on("tick", ticked);
+
+            simulation.force("link")
+              .links(graph.links);
+
+            function ticked() {
+            link
+                .attr("x1", function(d) { return d.source.x; })
+                .attr("y1", function(d) { return d.source.y; })
+                .attr("x2", function(d) { return d.target.x; })
+                .attr("y2", function(d) { return d.target.y; });
+
+            node
+                .attr("cx", function(d) { return d.x; })
+                .attr("cy", function(d) { return d.y; });
+        }
+
+        function dragstarted(d) {
+          if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+          d.fx = d.x;
+          d.fy = d.y;
+        }
+
+        function dragged(d) {
+          d.fx = d3.event.x;
+          d.fy = d3.event.y;
+        }
+
+        function dragended(d) {
+          if (!d3.event.active) simulation.alphaTarget(0);
+          d.fx   = null;
+          d.fy = null;
+        }
+
+
+});
+};
+
+
+function reset_alleles() {
+    var species_selector = $('select[name="species_selector"]');
+    var locus_type_selector = $('select[name="locus_type_selector"]');
+    var locus_selector = $('select[name="locus_selector"]');
+    var gene_selector = $('select[name="gene_selector"]');
+    var source_selector = $('select[name="source_selector"]');
+    var sequence_selector = $('select[name="sequence_type_selector"]');
+
+    sequence_selector.val("");
+    species_selector.val("");
+    locus_selector.val("");
+    locus_type_selector.val("");
+    gene_selector.val("");
+    source_selector.val("");
+    update_alleles();
+
+};
+
+
+
+function reset_network_params()
+{
+
+
+    var sequence_selector = $('select[name="sequence_type_selector"]');
+    var distance_metric_selector = $('select[name="distance_metric_selector"]');
+    var weight_by_selector = $('select[name="weight_by_selector"]');
+    var color_by_selector = $('select[name="color_by_selector"]');
+    var linkage_threshold_field = $('input[name="linkage_threshold"]');
+
+    sequence_selector.val("");
+    distance_metric_selector.val("");
+    weight_by_selector.val("");
+    color_by_selector.val("");
+    linkage_threshold_field.val();
+
+    update_alleles();
+
+};
+
+
+
+
+
+
+
+
+
+
+
+
+var CodeFlower = function(selector, w, h) {
+  this.w = w;
+  this.h = h;
+
+  d3.select(selector).selectAll("svg").remove();
+
+  this.svg = d3.select(selector).append("svg:svg")
+    .attr('width', w)
+    .attr('height', h);
+
+  this.svg.append("svg:rect")
+    .style("stroke", "#999")
+    .style("fill", "#fff")
+    .attr('width', w)
+    .attr('height', h);
+
+  this.force = d3.layout.force()
+    .on("tick", this.tick.bind(this))
+    .charge(function(d) { return d._children ? -d.size / 100 : -40; })
+    .linkDistance(function(d) { return d.target._children ? 80 : 25; })
+    .size([h, w]);
+};
+
+CodeFlower.prototype.update = function(json) {
+  if (json) this.json = json;
+
+  this.json.fixed = true;
+  this.json.x = this.w / 2;
+  this.json.y = this.h / 2;
+
+  var nodes = this.flatten(this.json);
+  var links = d3.layout.tree().links(nodes);
+  var total = nodes.length || 1;
+
+  // remove existing text (will readd it afterwards to be sure it's on top)
+  this.svg.selectAll("text").remove();
+
+  // Restart the force layout
+  this.force
+    .gravity(Math.atan(total / 50) / Math.PI * 0.4)
+    .nodes(nodes)
+    .links(links)
+    .start();
+
+  // Update the links
+  this.link = this.svg.selectAll("line.link")
+    .data(links, function(d) { return d.target.name; });
+
+  // Enter any new links
+  this.link.enter().insert("svg:line", ".node")
+    .attr("class", "link")
+    .attr("x1", function(d) { return d.source.x; })
+    .attr("y1", function(d) { return d.source.y; })
+    .attr("x2", function(d) { return d.target.x; })
+    .attr("y2", function(d) { return d.target.y; });
+
+  // Exit any old links.
+  this.link.exit().remove();
+
+  // Update the nodes
+  this.node = this.svg.selectAll("circle.node")
+    .data(nodes, function(d) { return d.name; })
+    .classed("collapsed", function(d) { return d._children ? 1 : 0; });
+
+  this.node.transition()
+    .attr("r", function(d) { return d.children ? 3.5 : Math.pow(d.size, 2/5) || 1; });
+
+  // Enter any new nodes
+  this.node.enter().append('svg:circle')
+    .attr("class", "node")
+    .classed('directory', function(d) { return (d._children || d.children) ? 1 : 0; })
+    .attr("r", function(d) { return d.children ? 3.5 : Math.pow(d.size, 2/5) || 1; })
+    .style("fill", function color(d) {
+      return "hsl(" + parseInt(360 / total * d.id, 10) + ",90%,70%)";
+    })
+    .call(this.force.drag)
+    .on("click", this.click.bind(this))
+    .on("mouseover", this.mouseover.bind(this))
+    .on("mouseout", this.mouseout.bind(this));
+
+  // Exit any old nodes
+  this.node.exit().remove();
+
+  this.text = this.svg.append('svg:text')
+    .attr('class', 'nodetext')
+    .attr('dy', 0)
+    .attr('dx', 0)
+    .attr('text-anchor', 'middle');
+
+  return this;
+};
+
+CodeFlower.prototype.flatten = function(root) {
+  var nodes = [], i = 0;
+
+  function recurse(node) {
+    if (node.children) {
+      node.size = node.children.reduce(function(p, v) {
+        return p + recurse(v);
+      }, 0);
+    }
+    if (!node.id) node.id = ++i;
+    nodes.push(node);
+    return node.size;
+  }
+
+  root.size = recurse(root);
+  return nodes;
+};
+
+CodeFlower.prototype.click = function(d) {
+  // Toggle children on click.
+  if (d.children) {
+    d._children = d.children;
+    d.children = null;
+  } else {
+    d.children = d._children;
+    d._children = null;
+  }
+  this.update();
+};
+
+CodeFlower.prototype.mouseover = function(d) {
+  this.text.attr('transform', 'translate(' + d.x + ',' + (d.y - 5 - (d.children ? 3.5 : Math.sqrt(d.size) / 2)) + ')')
+    .text(d.name + ": " + d.size + " loc")
+    .style('display', null);
+};
+
+CodeFlower.prototype.mouseout = function(d) {
+  this.text.style('display', 'none');
+};
+
+CodeFlower.prototype.tick = function() {
+  var h = this.h;
+  var w = this.w;
+  this.link.attr("x1", function(d) { return d.source.x; })
+    .attr("y1", function(d) { return d.source.y; })
+    .attr("x2", function(d) { return d.target.x; })
+    .attr("y2", function(d) { return d.target.y; });
+
+  this.node.attr("transform", function(d) {
+    return "translate(" + Math.max(5, Math.min(w - 5, d.x)) + "," + Math.max(5, Math.min(h - 5, d.y)) + ")";
+  });
+};
+
+CodeFlower.prototype.cleanup = function() {
+  this.update([]);
+  this.force.stop();
+};
+
+
+
+
+
+
+
+
+
+
+$(document).ready(function(){
+    update_alleles();
+    $("#network_display").hide();
+});
+
+
+
+
+
+</script>
+
+
+
+
+{% endblock wide_content %}
+
+
