@@ -301,12 +301,15 @@ function update_alleles() {
 
 </script>
 
+
+
 <script src="https://d3js.org/d3.v4.min.js" charset="utf-8"></script>
 <script>
 
 
 function update_network_json() {
     $("#network_display").show();
+    d3.selectAll("svg > *").remove();
 
     var svg = d3.select("svg"),
         width = +svg.attr("width"),
@@ -364,6 +367,18 @@ function update_network_json() {
             node.append("title")
               .text(function(d) { return d.id; });
 
+
+            var texts = svg.selectAll("text.label")
+                .data(graph.nodes)
+                .enter().append("text")
+                .attr("class", "label")
+                .attr("fill", "black")
+                .attr("dx", 12)
+                .attr("dy", ".35em")
+                .text(function(d) {  return d.name;  });
+
+
+
             simulation
               .nodes(graph.nodes)
               .on("tick", ticked);
@@ -381,6 +396,9 @@ function update_network_json() {
             node
                 .attr("cx", function(d) { return d.x; })
                 .attr("cy", function(d) { return d.y; });
+
+            texts
+                .attr('transform', transform);
         }
 
         function dragstarted(d) {
@@ -398,6 +416,11 @@ function update_network_json() {
           if (!d3.event.active) simulation.alphaTarget(0);
           d.fx   = null;
           d.fy = null;
+        }
+
+
+        function transform(d) {
+            return "translate(" + d.x + "," + d.y + ")";
         }
 
 
@@ -453,7 +476,7 @@ function reset_network_params()
 
 
 
-
+// not used currently, some great ideas here though:
 
 
 var CodeFlower = function(selector, w, h) {

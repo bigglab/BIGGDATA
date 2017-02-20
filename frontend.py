@@ -1908,7 +1908,7 @@ def alleledb_network_json():
     allele_network_dict = {}
     nodes = []
     for i, allele in enumerate(alleles):
-        nodes.append({"id": allele.name, "group": allele.gene.name})
+        nodes.append({"id": allele.name, "group": allele.gene.name, "name": allele.name})
     allele_network_dict['nodes']=nodes
 
 
