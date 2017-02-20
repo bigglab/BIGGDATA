@@ -1819,14 +1819,14 @@ def alleledb_json():
         gene_ids = []
     if sequence_type:
         if sequence_type=='nuc' or sequence_type=='nucleotide' or sequence_type=='rna' or sequence_type=='spliced nucleotide' or sequence_type=='mrna':
-            j['allele_sequence_type_status']+= "{} Alleles have {} sequences".format(allele_query.filter(Allele.sequence_nuc != None).count(), sequence_type)
+            j['allele_sequence_type_status']+= "{} alleles have {} sequences".format(allele_query.filter(Allele.sequence_nuc != None).count(), sequence_type)
         elif sequence_type == 'prot' or sequence_type=='protein':
-            j['allele_sequence_type_status']+="{} Alleles have {} sequences".format(allele_query.filter(Allele.sequence_prot != None).count(), sequence_type)
+            j['allele_sequence_type_status']+="{} alleles have {} sequences".format(allele_query.filter(Allele.sequence_prot != None).count(), sequence_type)
         elif sequence_type=='gene':
-            j['allele_sequence_type_status']+="{} Alleles have {} sequences".format(allele_query.filter(Allele.sequence_gene != None).count(), sequence_type)
+            j['allele_sequence_type_status']+="{} alleles have {} sequences".format(allele_query.filter(Allele.sequence_gene != None).count(), sequence_type)
             # allele_query = allele_query.filter(Allele.sequence_gene  != None)
         elif sequence_type=='default':
-            j['allele_sequence_type_status']+="{} Alleles have {} sequences".format(allele_query.filter(Allele.sequence != None).count(), sequence_type)
+            j['allele_sequence_type_status']+="{} alleles have {} sequences".format(allele_query.filter(Allele.sequence != None).count(), sequence_type)
     print allele_query
     alleles = allele_query.distinct().all()
     print "{} alleles found".format(len(alleles))
@@ -1845,7 +1845,7 @@ def alleledb_json():
         gene_ids = set(map(lambda a: a.gene_id, alleles))
         j['gene_options'] = sorted([x[0] for x in db.session.query(Gene.name).filter(Gene.id.in_(gene_ids)).distinct().all()])
     print j['gene_options']
-    j['allele_status'] += "{} Alleles Match".format(len(alleles))
+    j['allele_status'] += "{} Alleles Match Filters".format(len(alleles))
 
     return jsonify( j )
 
