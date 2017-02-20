@@ -231,12 +231,12 @@ def initiate_celery_task_logger(logger_id, logfile):
     handler.setLevel(logging.INFO)
 
     formatter = ColorFormatter
-    format = '[%(asctime)s: %(levelname)s] %(message)s'
+    format = '[%(asctime)s: %(levelname)s %(funcName)s] %(message)s'
     handler.setFormatter(formatter(format, use_color=False))
     logger.addHandler(handler)
 
     stdout_handler = logging.StreamHandler(sys.stdout)
-    format = '%(name)s: %(message)s'
+    format = '%(message)s'
     stdout_handler.setFormatter(formatter(format, use_color=True))
     stdout_handler.setLevel(logging.DEBUG)
     logger.addHandler(stdout_handler)
@@ -1924,6 +1924,7 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
             df['group'] = file.dataset.name
             dfs.append(df)
         df = pd.concat(dfs)
+        dfs = None # garbage collection - clear up some RAM cause we gunna need it
         logger.info("{} Total Annotations Grouped From Input Files")
         df = df.dropna(subset=require_annotations, how='any')
         logger.info("{} Total Annotations With {} Annotated Being Clustered".format(len(df), ','.join(require_annotations)))

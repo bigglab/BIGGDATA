@@ -488,7 +488,7 @@ def build_annotation_dataframe_from_mixcr_file(file_path, rmindels=True, append_
         df = append_cterm_peptides_for_mass_spec(df) if append_ms_peptides == True  else df
         df_output = pd.concat([df_output, df])
     df_output = collapse_annotation_dataframe(df_output)
-    df_output = df[clean_annotation_dataframe_columns]
+    df_output = df_output[clean_annotation_dataframe_columns]
     return df_output
 
 
