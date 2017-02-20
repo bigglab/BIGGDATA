@@ -1906,7 +1906,7 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
         analysis_file_name_prefix = analysis.name.replace(' ', '_')
         analysis_json_path = '{}/{}_settings.json'.format(analysis.directory.rstrip('/'), analysis_file_name_prefix)
 
-        logger.info("Saving MSDB Execution Settings to {}".format(analysis_json_path)
+        logger.info("Saving MSDB Execution Settings to {}".format(analysis_json_path))
         with open(analysis_json_path, 'w') as json_file:
             # json.dump( (args, kwargs) , json_file)
             json.dump(runtime_parameters, json_file, indent=4, sort_keys=True)
