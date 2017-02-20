@@ -82,9 +82,10 @@ nav.register_element('frontend_top', Navbar(
     View('BIGG DATA', 'frontend.index'),
     View('Login', 'frontend.login'),
     Subgroup(
-        'Documentation', 
-        View('BIGG DATA Overview', 'frontend.overview'), 
-        View('BIGG DB Schema', 'frontend.schema'), 
+        'Documentation',
+        Link('BIGG DATA On GitHub', 'https://github.com/bigglab/BIGGDATA'),
+        #View('BIGG DATA Overview', 'frontend.overview'),
+        #View('BIGG DB Schema', 'frontend.schema'),
         # Link('Confluence', 'under_construction'), 
         Separator(),
         Text('External Docs'),
@@ -116,10 +117,11 @@ nav.register_element('frontend_user', Navbar(
         View('Analyses Dashboard', 'frontend.analyses'),
         Link('Celery Task Monitor', 'http://www.biggdata.io:8001/tasks?sort=-received&limit=100'),
     ),
-        Subgroup(
+    Subgroup(
         'Documentation', 
-        View('BIGG DATA Overview', 'frontend.overview'),
-        View('BIGG DB Schema', 'frontend.schema'), 
+        Link('BIGG DATA On GitHub', 'https://github.com/bigglab/BIGGDATA'),
+        #View('BIGG DATA Overview', 'frontend.overview'),
+        #View('BIGG DB Schema', 'frontend.schema'),
         # Link('Confluence', 'under_construction'), 
         Separator(),
         Text('External Docs'),
@@ -1746,6 +1748,12 @@ def alleledb():
         gene_selector = SelectField(u'Species', choices=())
         source_selector = SelectField(u'Source', choices=())
 
+        sequence_type_selector = SelectField(u'Sequence Type', choices=([('spliced nucleotide', 'spliced nucleotide'), ('gene', 'gene'), ('protein', 'protein'), ('default', 'default')]))
+        distance_metric_selector = SelectField(u'Distance Metric', choices=([('hamming','hamming'), ('levenshtein','levenshtein'),('damerau_levenshtien','damerau_levenshtien'), ('jaro','jaro')]), default='hamming')
+        weight_size_by_selector = SelectField(u'Weight Size By', choices=())
+        color_by_selector = SelectField(u'Color By', choices=())
+        linkage_threshold = FloatField(u'Linkage Threshold')
+
 
     form = AlleleForm()
 
@@ -1757,7 +1765,7 @@ def alleledb():
 
 @frontend.route('/alleledb_json', methods=['GET', 'POST'])
 @login_required
-def alleledb_json(species=None, locus_type=None, locus=None, gene=None):
+def alleledb_json():
 
     print request.args.__dict__
 
@@ -1766,11 +1774,13 @@ def alleledb_json(species=None, locus_type=None, locus=None, gene=None):
     locus_type = request.args.get('locus_type', None, type=str)
     locus = request.args.get('locus', None, type=str)
     gene = request.args.get('gene', None, type=str)
+    sequence_type = request.args.get('sequence_type', None, type=str)
 
     print "alleledb query: species {} locus_type {} locus {} gene {}".format(species, locus_type, locus, gene)
 
+    from collections import defaultdict
 
-    j = {}
+    j = defaultdict(lambda: '')
     allele_query = db.session.query(Allele)
     if source:
         allele_query = allele_query.join(Source).filter(Source.name==source)
@@ -1778,27 +1788,49 @@ def alleledb_json(species=None, locus_type=None, locus=None, gene=None):
         allele_query = allele_query.join(Species).filter(Species.name==species)
     if gene:
         allele_query = allele_query.join(Gene).filter(Gene.name==gene)
-    elif locus:
-        allele_query = allele_query.join(Locus).filter(Locus.name==locus)
     elif locus_type:
-        allele_query = allele_query.join(Locus).filter(Locus.type==locus_type)
+        if locus:
+            allele_query = allele_query.join(Locus).filter(Locus.name == locus)
+            j['gene_options'] = sorted([x[0] for x in set(db.session.query(Gene.name).join(Locus).filter(Locus.name == locus).all())])
+        else:
+            allele_query = allele_query.join(Locus).filter(Locus.type==locus_type)
+            j['gene_options'] = sorted([x[0] for x in set(db.session.query(Gene.name).join(Locus).filter(Locus.type==locus_type).all())])
+            # gene_ids = sorted([x[0] for x inset(map(lambda a: a.gene_id, alleles))
+        j['locus_options'] = sorted([x[0] for x in set(db.session.query(Locus.name).filter(Locus.type==locus_type).all())])
+    elif locus:
+        allele_query = allele_query.join(Locus).filter(Locus.name == locus)
+        j['gene_options'] = sorted([x[0] for x in set(db.session.query(Gene.name).join(Locus).filter(Locus.name == locus).all())])
+    else:
+        gene_ids = []
+    if sequence_type:
+        if sequence_type=='nuc' or sequence_type=='nucleotide' or sequence_type=='rna' or sequence_type=='spliced nucleotide' or sequence_type=='mrna':
+            j['allele_sequence_type_status']+= "{} Alleles have {} sequences".format(allele_query.filter(Allele.sequence_nuc != None).count(), sequence_type)
+        elif sequence_type == 'prot' or sequence_type=='protein':
+            j['allele_sequence_type_status']+="{} Alleles have {} sequences".format(allele_query.filter(Allele.sequence_prot != None).count(), sequence_type)
+        elif sequence_type=='gene':
+            j['allele_sequence_type_status']+="{} Alleles have {} sequences".format(allele_query.filter(Allele.sequence_gene != None).count(), sequence_type)
+            # allele_query = allele_query.filter(Allele.sequence_gene  != None)
+        elif sequence_type=='default':
+            j['allele_sequence_type_status']+="{} Alleles have {} sequences".format(allele_query.filter(Allele.sequence != None).count(), sequence_type)
     print allele_query
-    alleles = allele_query.all()
+    alleles = allele_query.distinct().all()
+    print "{} alleles found".format(len(alleles))
 
+
+    # locus_ids = set(map(lambda a: a.locus_id, alleles))
     species_ids = set(map(lambda a: a.species_id, alleles))
     locus_ids = set(map(lambda a: a.locus_id, alleles))
-    gene_ids = set(map(lambda a: a.gene_id, alleles))
-    # species_ids = set(map(lambda a: a.species_id, alleles))
 
     j['source_options'] = sorted([x[0] for x in db.session.query(Source.name).distinct().all()])
     j['species_options'] = sorted([x[0] for x in db.session.query(Species.name).filter(Species.id.in_(species_ids)).distinct().all()])
     j['locus_type_options'] = sorted([x[0] for x in db.session.query(Locus.type).filter(Locus.id.in_(locus_ids)).distinct().all()])
-    j['locus_options'] = sorted([x[0] for x in db.session.query(Locus.name).filter(Locus.id.in_(locus_ids)).distinct().all()])
-    j['gene_options'] = sorted([x[0] for x in db.session.query(Gene.name).filter(Gene.id.in_(gene_ids)).distinct().all()])
-
+    if 'locus_options' not in j.keys():
+        j['locus_options'] = sorted([x[0] for x in db.session.query(Locus.name).filter(Locus.id.in_(locus_ids)).distinct().all()])
+    if 'gene_options' not in j.keys():
+        gene_ids = set(map(lambda a: a.gene_id, alleles))
+        j['gene_options'] = sorted([x[0] for x in db.session.query(Gene.name).filter(Gene.id.in_(gene_ids)).distinct().all()])
     print j['gene_options']
-
-    j['allele_status'] = "{} Alleles Match".format(len(alleles))
+    j['allele_status'] += "{} Alleles Match".format(len(alleles))
 
     return jsonify( j )
 
@@ -1814,8 +1846,14 @@ def alleledb_network_json():
     locus = request.args.get('locus', None, type=str)
     gene = request.args.get('gene', None, type=str)
 
-    print "alleledb network query: species {} locus_type {} locus {} gene {}".format(species, locus_type, locus, gene)
+    sequence_type = request.args.get('sequence_type', None, type=str)
+    distance_metric = request.args.get('distance_metric', None, type=str)
+    weight_size_by = request.args.get('weight_size_by', None, type=str)
+    color_by = request.args.get('color_by', None, type=str)
+    linkage_threshold = request.args.get('linkage_threshold', None, type=float)
 
+
+    print "alleledb network query: species {} locus_type {} locus {} gene {}".format(species, locus_type, locus, gene)
 
     j = {}
     allele_query = db.session.query(Allele)
@@ -1829,18 +1867,28 @@ def alleledb_network_json():
         allele_query = allele_query.join(Locus).filter(Locus.name==locus)
     elif locus_type:
         allele_query = allele_query.join(Locus).filter(Locus.type==locus_type)
+    if sequence_type:
+        if sequence_type == 'nuc' or sequence_type=='nucleotide' or sequence_type=='spliced nuclotide' or sequence_type=='rna' or sequence_type=='mrna':
+            allele_query = allele_query.filter(Allele.sequence_nuc != None)
+        elif sequence_type == 'prot' or sequence_type=='protein':
+            allele_query = allele_query.filter(Allele.sequence_prot != None)
+        elif sequence_type == 'gene':
+            allele_query = allele_query.filter(Allele.sequence_gene != None)
+        elif sequence_type == 'default':
+            allele_query = allele_query.filter(Allele.sequence != None)
     print allele_query
-    alleles = allele_query.all()
+    alleles = allele_query.distinct().all()
     print "{} alleles found".format(len(alleles))
 
-    if len(alleles)>10:
-        alleles = alleles[0:50]
 
-    names = set(map(lambda a: a.name, alleles))
-    new_alleles = []
-    for name in names:
-        new_alleles.append([a for a in alleles if a.name == name][0])
-    alleles = new_alleles
+    #
+    # # some names and sequences might by identical!
+    # names = set(map(lambda a: a.name, alleles))
+    # new_alleles = []
+    # for name in names:
+    #     new_alleles.append([a for a in alleles if a.name == name][0])
+    # alleles = new_alleles
+    #
 
     allele_network_dict = {}
     nodes = []
@@ -1848,15 +1896,25 @@ def alleledb_network_json():
         nodes.append({"id": allele.name, "group": allele.gene.name})
     allele_network_dict['nodes']=nodes
 
+
+    print "building network json on {} alleles: sequence_type {} distance_metric {} weight_size_by {} color_by {} linkage_threshold {}".format(len(alleles), sequence_type, distance_metric, weight_size_by, color_by, linkage_threshold)
+
     import jellyfish
     import random
     links = []
-    for i, allele_1 in enumerate(alleles):
-        for j, allele_2 in enumerate(alleles):
-            if i < j:
-                distance = random.random()*100
-                if random > 80:
-                    links.append({"source":allele_1.name, "target":allele_2.name, 'value':distance})
+    comparisons_done = [] # tuples of sorted((allele1 identifier, allele2 identifier))
+    for allele_i in alleles:
+        for allele_j in alleles:
+            identifier = tuple(sorted((allele_i.name, allele_j.name)))
+            if identifier not in comparisons_done:
+                # print 'running comparison of {}'.format(identifier)
+                # print "sequence 1: {}".format(allele_i.sequence_by_type(seq_type=sequence_type))
+                # print "sequence 2: {}".format(allele_j.sequence_by_type(seq_type=sequence_type))
+                # distance = jellyfish.hamming_distance(unicode(allele_i.sequence_by_type(seq_type=sequence_type)), unicode(allele_j.sequence_by_type(seq_type=sequence_type)))
+                distance = allele_i.distance_to(allele_j, method='hamming') # jellyfish.hamming_distance(unicode(allele_i.sequence), unicode(allele_j.sequence))
+                if distance <= linkage_threshold:
+                    links.append({"source":allele_i.name, "target":allele_j.name, 'value':distance})
+                comparisons_done.append(identifier)
     allele_network_dict['links']=links
 
     return jsonify ( allele_network_dict )

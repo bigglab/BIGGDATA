@@ -1357,6 +1357,45 @@ class Allele(db.Model):
                 counts[kmer] += 1
             return counts
 
+        import jellyfish
+        def distance_to(self, target_allele, method='hamming', seq_type='nuc'):
+            if type(target_allele)!=Allele:
+                print 'error: target not an allele class: {}'.format(target_allele)
+                return None
+            if seq_type=='nuc':
+              seq1 = self.sequence_nuc
+              seq2 = target_allele.sequence_nuc
+            elif seq_type=='gene':
+              seq1 = self.sequence_gene
+              seq2 = target_allele.sequence_gene
+            elif seq_type=='prot':
+              seq1 = self.sequence_prot
+              seq2 = target_allele.sequence_gene
+            if seq1==None:
+              seq1 = self.sequence
+              seq2 = target_allele.sequence
+
+            if seq1==seq2: return 0
+            seqs = [unicode(s) for s in seq1,seq2 if s and len(s)>0 ]
+
+            if type(method) == str:
+                if method == 'hamming':
+                    import jellyfish
+                    method = jellyfish.hamming_distance
+                elif method == 'levenshtein':
+                    # method = jellyfish.levenshtein_distance
+                    method = editdistance.eval  # 4x faster
+                elif method == 'damerau_levenshtien':
+                    method = jellyfish.damerau_levenshtein_distance
+                elif method == 'jaro':
+                    method = jellyfish.jaro_distance
+            else:
+                method = method # best to submit an actual callable method
+            assert method(unicode('AAAAAA'),
+                          unicode('AAAAAA')) == 0, 'allele_similarity method does not support method(str1,str2) call'
+
+            distance = method(*seqs)
+            return distance
 
 
 
@@ -1370,6 +1409,21 @@ class Allele(db.Model):
                 return self.sequence
             else:
                 return None
+
+
+        @hybrid_property
+        def sequence_by_type(self, seq_type='nuc'):
+            if self.sequence_nuc != None and seq_type=='nuc' or seq_type=='spliced nucleotide':
+                return self.sequence_nuc
+            elif self.sequence_gene != None and seq_type=='gene' or seq_type=='gene':
+                return self.sequence_gene
+            elif self.sequence_prot != None and seq_type == 'prot' or seq_type=='protein':
+                return self.sequence_prot
+            elif self.sequence_prot != None and seq_type == 'default':
+                return self.sequence
+            else:
+                return None
+
 
 
         @hybrid_property
@@ -1399,6 +1453,7 @@ class Allele(db.Model):
           return dict(ret)
 
 
+
 def sum_dicts(*dicts):
     ret = defaultdict(int)
     if type(dicts[0])==list:
@@ -1407,6 +1462,94 @@ def sum_dicts(*dicts):
         for km, v in d.items():
             ret[km] += v
     return dict(ret)
+
+
+
+
+
+from scipy.cluster.hierarchy import cophenet
+from scipy.spatial.distance import pdist
+
+def allele_dendrogram(allele_similarity, linkage_method='ward', title='Hierarchical Clustering Dendrogram'):
+    X = allele_similarity
+    Z = linkage(X, linkage_method)
+    # test correlation between linkage and distance
+    c, coph_dists = cophenet(Z, pdist(X))
+
+
+
+    #
+    # plt.title('Hierarchical Clustering Dendrogram (truncated)')
+    # plt.xlabel('sample index or (cluster size)')
+    # plt.ylabel('distance')
+    # dendrogram(
+    #     Z,
+    #     truncate_mode='lastp',  # show only the last p merged clusters
+    #     p=12,  # show only the last p merged clusters
+    #     leaf_rotation=90.,
+    #     leaf_font_size=12.,
+    #     show_contracted=True,  # to get a distribution impression in truncated branches
+    # )
+    # plt.show()
+    #
+
+
+    def allele_dendrogram_call(*args, **kwargs):
+        max_d = kwargs.pop('max_d', None)
+        if max_d and 'color_threshold' not in kwargs:
+            kwargs['color_threshold'] = max_d
+        annotate_above = kwargs.pop('annotate_above', 0)
+
+        ddata = dendrogram(*args, **kwargs)
+
+        if not kwargs.get('no_plot', False):
+            plt.title(title)
+            plt.xlabel('distance')
+            plt.ylabel('allele or (cluster size)')
+            for i, d, c in zip(ddata['icoord'], ddata['dcoord'], ddata['color_list']):
+                if not kwargs.get('orientation', 'left'):
+                    x = 0.5 * sum(i[1:3])
+                    y = d[1]
+                    if y > annotate_above:
+                        plt.plot(x, y, 'o', c=c)
+                        plt.annotate("%.3g" % y, (x, y), xytext=(0, -5),
+                                     textcoords='offset points',
+                                     va='top', ha='center')
+                    if max_d:
+                        plt.axhline(y=max_d, c='k')
+                else:
+                    y = 0.5 * sum(i[1:3])
+                    x = d[1]
+                    if x > annotate_above:
+                        plt.plot(x, y, 'o', c=c)
+                        plt.annotate("%.3g" % x, (x, y), xytext=(0, -5),
+                                     textcoords='offset points',
+                                     va='top', ha='center')
+
+                    if max_d:
+                        plt.axvline(x=max_d, c='k')
+        return ddata
+
+
+
+    plt.figure(figsize=(10,10))
+    allele_dendrogram_call(
+        Z,
+        truncate_mode='lastp',
+        p=30,
+        orientation='left',
+        leaf_rotation=0.,
+        leaf_font_size=12.,
+        show_contracted=True,
+        annotate_above=50,
+        max_d=50,
+        labels=X.index
+    )
+    plt.show()
+
+
+    return True
+
 
 
 
