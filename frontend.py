@@ -83,7 +83,7 @@ nav.register_element('frontend_top', Navbar(
     View('Login', 'frontend.login'),
     Subgroup(
         'Documentation',
-        Link('BIGG DATA On GitHub', 'https://github.com/bigglab/BIGGDATA'),
+        Link('BIGG DATA GitHub', 'https://github.com/bigglab/BIGGDATA'),
         #View('BIGG DATA Overview', 'frontend.overview'),
         #View('BIGG DB Schema', 'frontend.schema'),
         # Link('Confluence', 'under_construction'), 
@@ -115,11 +115,17 @@ nav.register_element('frontend_user', Navbar(
     Subgroup(
         'Monitor',
         View('Analyses Dashboard', 'frontend.analyses'),
-        Link('Celery Task Monitor', 'http://www.biggdata.io:8001/tasks?sort=-received&limit=100'),
+        View('Celery Task Monitor', 'frontend.celery_monitor'),
+        View('RabbitMQ Monitor', 'frontend.rabbitmq_monitor'),
     ),
     Subgroup(
-        'Documentation', 
-        Link('BIGG DATA On GitHub', 'https://github.com/bigglab/BIGGDATA'),
+        'Database',
+        View('AlleleDB', 'frontend.alleledb'),
+        # Link('Celery Task Monitor', 'http://www.biggdata.io:8001/tasks?sort=-received&limit=100'),
+        ),
+    Subgroup(
+        'Documentation',
+        Link('BIGG DATA GitHub', 'https://github.com/bigglab/BIGGDATA'),
         #View('BIGG DATA Overview', 'frontend.overview'),
         #View('BIGG DB Schema', 'frontend.schema'),
         # Link('Confluence', 'under_construction'), 
@@ -1502,6 +1508,15 @@ def vdj_visualizer():
     return render_template("vdjviz.html", vdjviz_url=vdjviz_url, current_user=current_user)
 
 
+
+@frontend.route('/celery_monitor', methods=['GET'])
+def celery_monitor():
+    return render_template("celery_monitor.html", current_user=current_user)
+
+
+@frontend.route('/rabbitmq_monitor', methods=['GET'])
+def rabbitmq_monitor():
+    return render_template("rabbitmq_monitor.html", current_user=current_user)
 
 
 @frontend.route('/delete_task/<task_id>', methods=['GET', 'POST'])
