@@ -282,6 +282,15 @@ class File(db.Model):
             else:
                 return None
 
+        @hybrid_property
+        def cat(self):
+            with open(self.path) as file:
+                lines = file.read()
+                print lines
+            return None
+
+
+
         # This allows system operations on the file
         # e.g., if os.path.isfile()file
         def __repr__(self): 
@@ -927,7 +936,6 @@ class Project(db.Model):
         id = db.Column(db.Integer, primary_key=True)
         project_name = db.Column(db.String(128))
         description = db.Column(db.String(256))
-        _id = db.Column(JSON())
         cell_types_sequenced = db.Column(db.String(256))
         publications = db.Column(db.String(256)) 
         user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -944,9 +952,9 @@ class Project(db.Model):
         users = association_proxy('project_users', 'user')
         read_only_users = association_proxy('project_users', '_read_only_users')
         shared_users = association_proxy('project_users', '_shared')
+        _id = db.Column(JSON())
 
-
-        def __repr__(self): 
+        def __repr__(self):
             return "{} ({})".format(self.project_name, self.id)
 
         def date_string(self):
@@ -1185,6 +1193,7 @@ class Analysis(db.Model):
         inserted_into_db = Column(Boolean)
         directory = Column(String(256))
         error = Column(String(256))
+        settings = db.Column(JSON())
 
         annotations = db.relationship('Annotation', backref='analysis', lazy='dynamic')
         files = db.relationship('File', backref='analysis', lazy='dynamic', foreign_keys='File.analysis_id' )

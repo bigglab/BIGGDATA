@@ -2845,7 +2845,9 @@ def run_analysis_pipeline(self, *args, **kwargs):
                 session=session,
                 name=name,
                 description=description,
-                async_task_id=self.task.request_id)
+                async_task_id=self.task.request_id,
+                settings=kwargs
+            )
 
             self.set_analysis_id(analysis_id)
 
