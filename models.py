@@ -904,15 +904,15 @@ class Dataset(db.Model):
 
         # aligner= mixcr or igrep    type= overlap or paired
 
-        def run_analysis(self, file_ids=[], type='overlap', aligner='mixcr', user_id=2):
+        def run_analysis(self, file_ids=[], analysis_type='overlap', aligner='mixcr', user_id=2):
                 from app import run_analysis_pipeline
-                if file_ids!=[]:
-                    files = [File.query.get(int(i)) for i in file_ids]
-                elif type(file_ids)==str or type(file_ids)==int:
+                if type(file_ids) != type([]): 
                     files = [File.query.get(int(file_ids))]
+                elif file_ids != []: 
+                    files = [File.query.get(int(id)) for id in file_ids] 
                 else:
                     files = self.primary_data_files()
-                if not len(files)==0:
+                if len(files)==0:
                     print 'must supply or get from dataset.primary_data_files() one or two files. {}'.format("file ids given: {}".format(file_ids) if file_ids!=[] else "")
                     return None
                 settings = dict(user_id=user_id, species='H. sapiens', loci=['IGH', 'IGL', 'IGK'],
@@ -926,14 +926,17 @@ class Dataset(db.Model):
                                 trim_slidingwindow=False, trim_slidingwindow_quality=15, trim_slidingwindow_size=4,
                                 standardize_outputs=True, )
                 settings['analysis_type'] = aligner
-                if type=='overlap':
+                if analysis_type=='overlap':
                     settings['pair_vhvl'] = False
                     settings['pandaseq'] = True
-                elif type=='paired':
+                elif analysis_type=='single': 
+                    settings['pair_vhvl'] = False
+                    settings['pandaseq'] = False 
+                elif analysis_type=='paired':
                     settings['pair_vhvl'] = True
                     settings['pandaseq'] = False
                 else:
-                    print 'must give overlap or paired analysis type, you gave {}'.format(type)
+                    print 'must give overlap or paired analysis type, you gave {}'.format(analysis_type)
 
                 settings['file_ids'] = [file.id for file in files]
                 print "running analysis with these settings: {}".format(settings)

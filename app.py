@@ -2822,7 +2822,7 @@ def run_analysis_pipeline(self, *args, **kwargs):
             raise Exception('User with id {} not found.'.format(user_id))
 
         dataset = None # dont actually rely on dataset argument
-        if dataset_files and len(dataset_files)==2:
+        if dataset_files and len(dataset_files)!=0:
             for file_id in dataset_files:
                 file = session.query(File).get(file_id)
                 if not File == type(file):
@@ -2846,7 +2846,6 @@ def run_analysis_pipeline(self, *args, **kwargs):
                 name=name,
                 description=description,
                 async_task_id=self.task.request_id,
-                settings=kwargs
             )
 
             self.set_analysis_id(analysis_id)
@@ -2867,7 +2866,7 @@ def run_analysis_pipeline(self, *args, **kwargs):
             with open(analysis_json_path, 'w') as json_file:
                 # json.dump( (args, kwargs) , json_file)
                 json.dump(kwargs, json_file, indent=4, sort_keys=True)
-
+            analysis.settings = json.dumps(kwargs)
             if os.path.isfile(analysis_json_path):
                 analysis.settings_file = File(path=analysis_json_path, file_type='JSON', dataset_id=analysis.dataset_id,
                                               analysis_id=analysis.id, user_id=analysis.user_id)
