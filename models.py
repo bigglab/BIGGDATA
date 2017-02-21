@@ -918,7 +918,7 @@ class Dataset(db.Model):
                 settings = dict(user_id=user_id, species='H. sapiens', loci=['IGH', 'IGL', 'IGK'],
                                 append_cterm_peptides=False,
                                 cluster=False, cluster_algorithm='None', cluster_linkage='None', cluster_percent='0.9',
-                                name='automated {} {} run'.format(type, aligner), description=u'',
+                                name='automated {} {} run'.format(analysis_type, aligner), description=u'',
                                 filter=True, filter_percentage=50, filter_quality=20,
                                 pandaseq_algorithm='ea_util', pandaseq_minimum_length=100, pandaseq_minimum_overlap=33,
                                 remove_seqs_with_indels=False, require_annotations=['aaSeqCDR3'],
