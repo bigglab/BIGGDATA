@@ -290,7 +290,7 @@ class File(db.Model):
                     print line
                     line_count+=1
                     if line_count > int(n):
-                        return None
+                        break
 
 
         def read(self):
@@ -908,10 +908,13 @@ class Dataset(db.Model):
                 from app import run_analysis_pipeline
                 if file_ids!=[]:
                     files = [File.query.get(int(i)) for i in file_ids]
+                elif:
+                    type(file_ids)==str of type(file_ids)==int:
+                    files = [File.query.get(int(file_ids))]
                 else:
                     files = self.primary_data_files()
-                if len(files)!=2:
-                    print 'must supply or get from dataset.primary_data_files() two files. {}'.format("file ids given: {}".format(file_ids) if file_ids!=[] else "")
+                if not len(files)==0:
+                    print 'must supply or get from dataset.primary_data_files() one or two files. {}'.format("file ids given: {}".format(file_ids) if file_ids!=[] else "")
                     return None
                 settings = dict(user_id=user_id, species='H. sapiens', loci=['IGH', 'IGL', 'IGK'],
                                 append_cterm_peptides=False,
