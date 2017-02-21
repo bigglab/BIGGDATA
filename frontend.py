@@ -1764,7 +1764,7 @@ def alleledb():
         source_selector = SelectField(u'Source', choices=())
 
         sequence_type_selector = SelectField(u'Sequence Type', choices=([('spliced nucleotide', 'spliced nucleotide'), ('gene', 'gene'), ('protein', 'protein'), ('default', 'default')]))
-        distance_metric_selector = SelectField(u'Distance Metric', choices=([('hamming','hamming'), ('levenshtein','levenshtein'),('damerau_levenshtien','damerau_levenshtien'), ('jaro','jaro')]), default='hamming')
+        distance_metric_selector = SelectField(u'Distance Metric', choices=([('hamming','hamming'), ('levenshtein','levenshtein'),('damerau_levenshtein','damerau_levenshtein'), ('jaro','jaro')]), default='hamming')
         weight_size_by_selector = SelectField(u'Weight Size By', choices=())
         color_by_selector = SelectField(u'Color By', choices=())
         linkage_threshold = FloatField(u'Linkage Threshold')

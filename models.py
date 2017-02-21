@@ -1453,14 +1453,14 @@ class Allele(db.Model):
             seqs = [unicode(s) for s in seq1,seq2 if s and len(s)>0 ]
 
             import jellyfish
+            import editdistance
             if type(method) == str:
                 if method == 'hamming':
                     method = jellyfish.hamming_distance
                 elif method == 'levenshtein':
                     # method = jellyfish.levenshtein_distance
-                    import editdistance
                     method = editdistance.eval  # 4x faster
-                elif method == 'damerau_levenshtien':
+                elif method == 'damerau_levenshtein':
                     method = jellyfish.damerau_levenshtein_distance
                 elif method == 'jaro':
                     method = jellyfish.jaro_distance
