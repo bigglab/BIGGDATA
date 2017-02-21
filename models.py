@@ -908,8 +908,7 @@ class Dataset(db.Model):
                 from app import run_analysis_pipeline
                 if file_ids!=[]:
                     files = [File.query.get(int(i)) for i in file_ids]
-                elif:
-                    type(file_ids)==str of type(file_ids)==int:
+                elif type(file_ids)==str or type(file_ids)==int:
                     files = [File.query.get(int(file_ids))]
                 else:
                     files = self.primary_data_files()
