@@ -362,7 +362,7 @@ def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_
     df_output = pd.DataFrame(columns=df_input.columns)
     print "{}: working on {} annotations in {} chunks".format(file_path, len(df_input), len(df_input)/chunk_size+1)
     for k, df in df.groupby(np.arange(len(df)) // 10000):
-        print "{} annotations parsed, {}% done".format(k*chunk_size, round(k*chunk_size/float(full_length), 2))
+        print "{} annotations parsed, {}% done".format(k*chunk_size, round(k*chunk_size/float(full_length)*100, 2))
         df = df.copy()
         df['c_top_hit'] = df.apply(split_on_comma_and_take_first, col='Isotype', axis=1)
         df['c_top_hit_locus'] = df['c_top_hit']
@@ -458,7 +458,7 @@ def build_annotation_dataframe_from_mixcr_file(file_path, rmindels=True, append_
     df_output = pd.DataFrame(columns=df_input.columns)
     print "{}: working on {} annotations in {} chunks".format(file_path, len(df_input), len(df_input)/chunk_size+1)
     for k, df in df.groupby(np.arange(len(df)) // 10000):
-        print "{} annotations parsed, {}% done".format(k*chunk_size, round(k*chunk_size/float(full_length), 2))
+        print "{} annotations parsed, {}% done".format(k*chunk_size, round(k*chunk_size/float(full_length)*100, 2))
         df = df.copy()
         df['readSequence'] = df['readSequence']
         df['readName'] = df['descrR1']

@@ -2778,9 +2778,11 @@ def run_analysis_pipeline(self, *args, **kwargs):
     print 'kwargs: {}'.format(kwargs)
 
     user_id = kwargs['user_id']
-    file_source = kwargs['file_source']
-    dataset = kwargs['dataset']
-    dataset_files = kwargs['dataset_files']
+    if 'dataset' in kwargs.keys(): dataset = kwargs['dataset']
+    if 'dataset_files' in kwargs.keys():
+        dataset_files = kwargs['dataset_files']
+    if 'dataset_files' not in locals():
+        dataset_files = kwargs['file_ids']
     name = kwargs['name']
     description = kwargs['description']
     trim = kwargs['trim']
@@ -2808,9 +2810,6 @@ def run_analysis_pipeline(self, *args, **kwargs):
     cluster_linkage = kwargs['cluster_linkage']
     cluster_percent = float(kwargs['cluster_percent'])
 
-
-    if dataset and dataset != []: dataset = dataset[0]
-
     ##### Obtain Files for Analysis #####
     file_ids_to_analyze = []
     analysis_id = None
@@ -2822,16 +2821,15 @@ def run_analysis_pipeline(self, *args, **kwargs):
         if not current_user:
             raise Exception('User with id {} not found.'.format(user_id))
 
-        dataset = None
-        if dataset_files and dataset_files != []:
+        dataset = None # dont actually rely on dataset argument
+        if dataset_files and len(dataset_files)==2:
             for file_id in dataset_files:
-                if type(file_id) == str and file_id.isdigit(): file_id = int(file_id)
                 file = session.query(File).get(file_id)
-                if not file:
+                if not File == type(file):
                     raise Exception('File with id {} not found.'.format(file_id))
                 else:
-                    file_ids_to_analyze.append(file_id)
                     dataset = file.dataset
+                    file_ids_to_analyze.append(file_id)
         else:
             raise Exception('No files given for analysis.')
 

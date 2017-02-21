@@ -285,7 +285,7 @@ class File(db.Model):
         # This allows system operations on the file
         # e.g., if os.path.isfile()file
         def __repr__(self): 
-            return "<File {} >".format(self.name)
+            return "<File {}  {} >".format(self.id, self.name)
             # if self.paired_partner: 
             #     p = 'Paired To: {}'.format(str(self.paired_partner))
             # else: 
@@ -499,6 +499,14 @@ class File(db.Model):
             self.name = name
 
             return True
+
+
+        def exists(self):
+            if os.path.isfile(self.path):
+                return True
+            else:
+                return False
+
 
         # Determine if the file described in the database actually exists
         # If the file does not exist, change database setting appropriate
@@ -872,6 +880,47 @@ class Dataset(db.Model):
 
             except:
                 return "Error: no default dataset found."
+
+
+        # aligner= mixcr or igrep    type= overlap or paired
+
+        def run_analysis(self, file_ids=[], type='overlap', aligner='mixcr', user_id=2):
+                from app import run_analysis_pipeline
+                if file_ids!=[]:
+                    files = [File.query.get(int(i)) for i in file_ids]
+                else:
+                    files = self.primary_data_files()
+                if len(files)!=2:
+                    print 'must supply or get from dataset.primary_data_files() two files. {}'.format("file ids given: {}".format(file_ids) if file_ids!=[] else "")
+                    return None
+                settings = dict(user_id=user_id, species='H. sapiens', loci=['IGH', 'IGL', 'IGK'],
+                                append_cterm_peptides=False,
+                                cluster=False, cluster_algorithm='None', cluster_linkage='None', cluster_percent='0.9',
+                                name='automated {} {} run'.format(type, aligner), description=u'',
+                                filter=True, filter_percentage=50, filter_quality=20,
+                                pandaseq_algorithm='ea_util', pandaseq_minimum_length=100, pandaseq_minimum_overlap=33,
+                                remove_seqs_with_indels=False, require_annotations=['aaSeqCDR3'],
+                                trim=False, trim_illumina_adapters=True,
+                                trim_slidingwindow=False, trim_slidingwindow_quality=15, trim_slidingwindow_size=4,
+                                standardize_outputs=True, )
+                settings['analysis_type'] = aligner
+                if type=='overlap':
+                    settings['pair_vhvl'] = False
+                    settings['pandaseq'] = True
+                elif type=='paired':
+                    settings['pair_vhvl'] = True
+                    settings['pandaseq'] = False
+                else:
+                    print 'must give overlap or paired analysis type, you gave {}'.format(type)
+
+                settings['file_ids'] = [file.id for file in files]
+                print "running analysis with these settings: {}".format(settings)
+                # kick it off
+                task = run_analysis_pipeline.apply_async((), settings)
+                settings['async task id']=task
+                return settings
+
+
 
 class Project(db.Model):
         __tablename__ = 'project'
