@@ -283,11 +283,20 @@ class File(db.Model):
                 return None
 
         @hybrid_property
-        def cat(self):
+        def cat(self, n=100):
+            with open(self.path) as file:
+                line_count = 0
+                for line in file.readlines():
+                    print line
+                    line_count+=1
+                    if line_count > int(n):
+                        return None
+
+
+        def read(self):
             with open(self.path) as file:
                 lines = file.read()
-                print lines
-            return None
+            return lines
 
 
 
@@ -798,6 +807,8 @@ class Dataset(db.Model):
                     if 'R1' in file.name and file.name.replace('R1', 'R2') in file_names: 
                         out_files.append(file)
                     if 'R2' in file.name and file.name.replace('R2', 'R1') in file_names: 
+                        out_files.append(file)
+                    if len(files)==1:
                         out_files.append(file)
                 if len(out_files) > 2: 
                     print "too many predicted primary_data_files!"
