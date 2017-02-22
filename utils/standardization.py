@@ -326,7 +326,7 @@ igfft_dtypes = {
 
 
 def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_ms_peptides=False, require_annotations=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
-    print "Parsing {} to standardized BIGG format".format(file_path)
+    print("Parsing {} to standardized BIGG format".format(file_path))
     df = pd.read_table(file_path, dtype=igfft_dtypes, error_bad_lines=False,  usecols=igfft_dtypes.keys(),) # nrows=100) #, low_memory=False)
     column_reindex = {
           'Header' : 'readName',
@@ -348,21 +348,21 @@ def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_
     }
     df = df.rename(str, columns=column_reindex)
     full_length = len(df)
-    print '{}: {} annotations total'.format(file_path, full_length)
+    print('{}: {} annotations total'.format(file_path, full_length))
     df = df.dropna(subset=['Top_V-Gene_Hits', 'Top_J-Gene_Hits'], how='any')
     if require_annotations != False:
         df = df.dropna(subset=require_annotations, how='any')
-    print "{}: {} annotations pass require_annotations {} and V-Hit and J-Hit filter".format(file_path, len(df), require_annotations)
+    print("{}: {} annotations pass require_annotations {} and V-Hit and J-Hit filter".format(file_path, len(df), require_annotations))
     if len(df)==0:
-        print '{}: returning empty dataframe'.format(file_path)
+        print('{}: returning empty dataframe'.format(file_path))
         return pd.DataFrame(columns=clean_annotation_dataframe_columns)
     # these routines take too long! chunk to provide updates
     chunk_size = 10000
     df_input = df
     df_output = pd.DataFrame(columns=df_input.columns)
-    print "{}: working on {} annotations in {} chunks".format(file_path, len(df_input), len(df_input)/chunk_size+1)
+    print("{}: working on {} annotations in {} chunks".format(file_path, len(df_input), len(df_input)/chunk_size+1))
     for k, df in df.groupby(np.arange(len(df)) // 10000):
-        print "{} annotations parsed, {}% done".format(k*chunk_size, round(k*chunk_size/float(full_length)*100, 2))
+        print("{} annotations parsed, {}% done".format(k*chunk_size, round(k*chunk_size/float(full_length)*100, 2)))
         df = df.copy()
         df['c_top_hit'] = df.apply(split_on_comma_and_take_first, col='Isotype', axis=1)
         df['c_top_hit_locus'] = df['c_top_hit']
@@ -442,23 +442,23 @@ mixcr_dtypes = {"descrR1" : str,
 
 
 def build_annotation_dataframe_from_mixcr_file(file_path, rmindels=True, append_ms_peptides=False, require_annotations=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
-    print "Parsing {} to standardized BIGG format".format(file_path)
+    print("Parsing {} to standardized BIGG format".format(file_path))
     df = pd.read_table(file_path, dtype=mixcr_dtypes, error_bad_lines=False)  # , low_memory=False)
     full_length = len(df)
-    print '{}: {} annotations total'.format(file_path, full_length)
+    print('{}: {} annotations total'.format(file_path, full_length))
     if require_annotations != False:
         df = df.dropna(subset=require_annotations, how='any')
-        print "{}: {} annotations pass require_annotations {}".format(file_path, len(df), require_annotations)
+        print("{}: {} annotations pass require_annotations {}".format(file_path, len(df), require_annotations))
     if len(df)==0:
-        print '{}: returning empty dataframe'.format(file_path)
+        print('{}: returning empty dataframe'.format(file_path))
         return pd.DataFrame(columns=clean_annotation_dataframe_columns)
     # these routines take too long! chunk to provide updates
     chunk_size = 10000
     df_input = df
     df_output = pd.DataFrame(columns=df_input.columns)
-    print "{}: working on {} annotations in {} chunks".format(file_path, len(df_input), len(df_input)/chunk_size+1)
+    print("{}: working on {} annotations in {} chunks".format(file_path, len(df_input), len(df_input)/chunk_size+1))
     for k, df in df.groupby(np.arange(len(df)) // 10000):
-        print "{} annotations parsed, {}% done".format(k*chunk_size, round(k*chunk_size/float(full_length)*100, 2))
+        print("{} annotations parsed, {}% done".format(k*chunk_size, round(k*chunk_size/float(full_length)*100, 2)))
         df = df.copy()
         df['readSequence'] = df['readSequence']
         df['readName'] = df['descrR1']
