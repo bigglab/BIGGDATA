@@ -124,6 +124,54 @@ class User(db.Model):
             return projects
 
 
+        def get_projects_datasets_files(self, file_types=['FASTQ', 'GZIPPED_FASTQ', 'FASTA', 'GZIPPED_FASTA']):
+            #retrieve datasets grouped over projects - including shared
+            projects = self.get_ordered_projects()
+            project_datasets_files = []
+            datasets_processed = []
+            for project in projects:
+                datasets = [d for d in project.datasets if d != None and d!= self.default_dataset]
+                for d in datasets: datasets_processed.append(d)
+                if len(datasets)>0:
+                    project_dict = dict(
+                        id= str(project.id),
+                        title= project.name,
+                        has_children= len(datasets),
+                        type= 'project'
+                    )
+                    datasets_files = []
+                    for dataset in sorted(datasets, key=lambda d: d.name):
+                        dataset_files = dataset.dataset_and_files_of_types(file_types=file_types)
+                        if dataset_files != None and len([f for f in dataset_files.values() if f!=None and f != []])>0:
+                            datasets_files.append(dataset_files)
+                    project_dict['children'] = datasets_files
+                    project_datasets_files.append(project_dict)
+
+            #retrieve datasets orphaned without a project but with your user_id
+            owned_datasets = self.datasets.all()
+            orphan_datasets = [d for d in owned_datasets if d.name not in datasets_processed]
+            if len(orphan_datasets) > 0:
+                project_dict = dict(
+                    id= '0',
+                    title= 'orphaned datasets',
+                    has_children= len(orphan_datasets),
+                    type= 'project'
+                )
+                datasets_files = []
+                for dataset in sorted(orphan_datasets, key=lambda d: d.name):
+                    dataset_files = dataset.dataset_and_files_of_types(file_types=file_types)
+                    if dataset_files != None and len([f for f in dataset_files.values() if f != None and f != []]) > 0:
+                        datasets_files.append(dataset_files)
+                    project_dict['children'] = datasets_files
+                project_datasets_files.append(project_dict)
+
+
+            # check we're not returning empty entries
+            # project_datasets_files =
+            return project_datasets_files
+
+
+
         @hybrid_property
         def name(self):
             return self.first_name + ' ' + self.last_name
@@ -901,6 +949,30 @@ class Dataset(db.Model):
             except:
                 return "Error: no default dataset found."
 
+        def dataset_and_files_of_types(self, file_types=['FASTQ', 'GZIPPED_FASTQ', 'FASTA', 'GZIPPED_FASTA']):
+            files = [f for f in self.files.all() if f.file_type in file_types]
+            if len(files) > 0:
+                dataset_value = {
+                    'id': str(self.id),
+                    'title': self.name,
+                    'has_children': len(files),
+                    'type': 'dataset'
+                }
+                dataset_files = []
+                for file in files:
+                    file_value = {
+                        'id': file.id,
+                        'title': file.name,
+                        'type': 'file',
+                        'file_type': file.file_type,
+                        'has_children': "0"
+                    }
+                    dataset_files.append(file_value)
+                dataset_value['children'] = dataset_files
+                return dataset_value
+            else:
+                return None
+
 
         # aligner= mixcr or igrep    type= overlap or paired
 
@@ -950,7 +1022,7 @@ class Dataset(db.Model):
 class Project(db.Model):
         __tablename__ = 'project'
         id = db.Column(db.Integer, primary_key=True)
-        project_name = db.Column(db.String(128))
+        name = db.Column(db.String(128))
         description = db.Column(db.String(256))
         cell_types_sequenced = db.Column(db.String(256))
         publications = db.Column(db.String(256)) 
@@ -971,7 +1043,7 @@ class Project(db.Model):
         _id = db.Column(JSON())
 
         def __repr__(self):
-            return "{} ({})".format(self.project_name, self.id)
+            return "{} ({})".format(self.name, self.id)
 
         def date_string(self):
             try:
@@ -1906,7 +1978,7 @@ def get_project_choices(user = None, new = False):
     if len(projects) > 0:
         for project in projects:
             if project.role(user) == 'Owner' or project.role(user) == 'Editor':
-                project_tuples.append( (str(project.id), project.project_name))
+                project_tuples.append( (str(project.id), project.name))
         if len(project_tuples) > 0 and new:
             project_tuples.insert(0, ('new', 'New Project'))
     elif new:
@@ -1954,15 +2026,15 @@ def generate_new_project(user = None, datasets = None, name=None, description=No
     new_project = Project()
     new_project.user_id = user.id
     if name: 
-        new_project.project_name = name 
+        new_project.name = name
         new_project.description = description 
         session.add(new_project)
         session.flush()
     else: 
-        new_project.project_name = 'Project'
+        new_project.name = 'Project'
         session.add(new_project)
         session.flush()
-        new_project.project_name = 'Project ' + str(new_project.id)
+        new_project.name = 'Project ' + str(new_project.id)
     new_project.users = [user]
     if datasets:
         if type(datasets)==list: 

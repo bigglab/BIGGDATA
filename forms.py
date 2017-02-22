@@ -161,7 +161,7 @@ class FileEditForm(Form):
 
 class CreateProjectForm(Form):
     user_id = 'user.id'
-    project_name = TextField('Project Name', [validators.required(), validators.length(max=128)])
+    name = TextField('Project Name', [validators.required(), validators.length(max=128)])
     description = TextAreaField('Project Description', [validators.length(max=256)])
     cell_types_sequenced = TextField('Cell Types Sequenced', [validators.length(max=50)])        
     publications = TextField('Publications', [validators.length(max=256)])

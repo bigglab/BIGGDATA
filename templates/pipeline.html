@@ -2,13 +2,59 @@
 
 {% block wide_content %}
 
+{#<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>#}
+{#<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js"></script>#}
+{#<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/smoothness/jquery-ui.css">#}
+
+{#<script type='text/javascript' src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.js"></script>#}
+{#<script type='text/javascript' src="{{ url_for('static', filename='js/jquery.moreorless.js') }}"></script>#}
+{#<script type='text/javascript' src="{{ url_for('static', filename='js/jquery.treeselect.js') }}"></script>#}
+{#<script type='text/javascript' src="{{ url_for('static', filename='js/jquery.chosentree.js') }}"></script>#}
+{#<link rel='stylesheet' type='text/css' href="{{ url_for('static', filename='css/moreorless.css') }}" />#}
+{#<link rel='stylesheet' type='text/css' href="{{ url_for('static', filename='css/treeselect.css') }}" />#}
+{#<link rel='stylesheet' type='text/css' href="{{ url_for('static', filename='css/chosentree.css') }}" />#}
+
+
+<script type='text/javascript'>
+
+
+    jQuery(function() {
+        JSONObject = JSON.parse({{ projects_datasets_files }});
+
+        $('div.chosentree').chosentree({
+           width: 500,
+           deepLoad: true,
+           load: function(node, callback) {
+               callback(JSONObject);
+           }
+        });
+
+    });
+
+
+</script>
+
+
+
+
+
+
 <div class="container">
   <h3 align="center">BIGG Data - Build Analysis Pipeline</h3>
   <br>
 </div>
 
 
+<div class="'container">
+    {#    <p>{{ projects_datasets_files }}</p>#}
+    <div class="chosentree">
+    </div>
+</div>
+
+
+
 <div class="container">
+
 
   <div class="row" id="console-container">
     <div class="col-md-12">
@@ -24,7 +70,7 @@
               
             <div class="panel panel-default">
               <div class="panel-heading">
-                <center><b>Select Files to Analyze</b></center>
+                <b>Select Files to Analyze</b>
               </div>
               <div class="panel-body">
                 <div class="file_dataset panel-body panel-default" style="padding: 20px;">
