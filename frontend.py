@@ -83,6 +83,7 @@ nav.register_element('frontend_top', Navbar(
     View('Login', 'frontend.login'),
     Subgroup(
         'Documentation',
+        View('About BIGG DATA', 'frontend.about'),
         Link('BIGG DATA GitHub', 'https://github.com/bigglab/BIGGDATA'),
         #View('BIGG DATA Overview', 'frontend.overview'),
         #View('BIGG DB Schema', 'frontend.schema'),
@@ -125,8 +126,8 @@ nav.register_element('frontend_user', Navbar(
         ),
     Subgroup(
         'Documentation',
+        View('About BIGG DATA' , 'frontend.about'),
         Link('BIGG DATA GitHub', 'https://github.com/bigglab/BIGGDATA'),
-        #View('BIGG DATA Overview', 'frontend.overview'),
         #View('BIGG DB Schema', 'frontend.schema'),
         # Link('Confluence', 'under_construction'), 
         Separator(),
@@ -1332,13 +1333,17 @@ def show_project(project_id):
 
 
 
+@frontend.route('/about', methods=['GET', 'POST'])
+@login_required
+def about():
+    return render_template("about.html")
 
 
 @frontend.route('/analysis', methods=['GET', 'POST'])
 @login_required
 def analyses(status=[]):
     status = request.args.getlist('status')
-    analyses = current_user.analyses.all()
+    analyses = current_user.analyses.all()[-50:]
     analysis_file_dict = OrderedDict()
     for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
         analysis_file_dict[analysis] = analysis.files.all() 
@@ -1879,15 +1884,15 @@ def alleledb_network_json():
 
     allele_query = db.session.query(Allele)
     if source:
-        allele_query = allele_query.join(Source).filter(Source.name==source)
+        allele_query = allele_query.join(Source).filter(Source.name == source)
     if species:
-        allele_query = allele_query.join(Species).filter(Species.name==species)
+        allele_query = allele_query.join(Species).filter(Species.name == species)
     if gene:
-        allele_query = allele_query.join(Gene).filter(Gene.name==gene)
+        allele_query = allele_query.join(Gene).filter(Gene.name == gene)
     if locus:
-        allele_query = allele_query.join(Locus).filter(Locus.name==locus)
-    if locus_type:
-        allele_query = allele_query.join(Locus).filter(Locus.type==locus_type)
+        allele_query = allele_query.join(Locus).filter(Locus.name == locus)
+    elif locus_type:
+        allele_query = allele_query.join(Locus).filter(Locus.type == locus_type)
     if sequence_type:
         if sequence_type == 'nuc' or sequence_type=='nucleotide' or sequence_type=='spliced nuclotide' or sequence_type=='rna' or sequence_type=='mrna':
             allele_query = allele_query.filter(Allele.sequence_nuc != None)

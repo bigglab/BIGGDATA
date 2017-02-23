@@ -1,0 +1,171 @@
+{% extends '_base.html' %}
+
+{% block wide_content %}
+
+
+
+
+<div class="container">
+
+    <br>
+
+    <div class="row" id="console-container">
+		<div class="col-md-12">
+		    <div class="panel panel-default">
+		        <div align='center' class="panel-heading">
+                    <b>About The Project:</b>
+                </div>
+                <div class="panel-body" align="center">
+{#                    <div id="codeflower"></div>#}
+
+                    <br>
+                    <h4>A web portal to manage files and centralize analysis tasks related to immuno-repertoire sequencing projects in the lab</h4>
+
+                    <br>
+                    <br>
+
+                    <h5>Primary Goals:</h5>
+                    <p>File Management - File Conversion, User Associations, File Metadata, Storage+Retrieval<br>
+                    Preprocessing - Quality Filter, Adapter Trimming, PEAR/Stitching Overlaps, (Kmer-based error correction?)<br>
+                    Annotating - alignment, V-gene calls, CDR calls, isotyping<br>
+                    Storing Data - Tracking raw and analyzed files, Automated backup<br>
+                    Postprocessing - crunching numbers, pairing VH:VL libraries, making mass spec (fasta uniq) database, ask questions on annotated files<br>
+                    </p>
+
+                    <br>
+
+                    <h5>Scope of Project:</h5>
+                    <p>File Management<br>
+                    Download from GSAF Link, Local Files<br>
+                    Job Output Files - Download Analysis Files<br>
+                    Track File Metadata<br>
+                    Pipeline Management<br>
+                    Preprocessing, Annotation, Analysis and DB Integration Pipelines (as far as a game plan goes, let's start small and work up)<br>
+                    Local asynchronous job execution<br>
+                    </p>
+
+                    <br>
+
+                    <h5>Keys to Project Success:</h5>
+                    <p>Centralize sequence data and analyses generated from BIGG-funded NGS<br>
+                    Standardize and make it easy to go from FASTQ to uniform annotation files and analysis summaries<br>
+                    Enable researchers to share data between each other on read-only and read-write levels<br>
+                    Login and see dashboard of tasks/pipelines/actions recently executed<br>
+                    </p>
+
+                    <br>
+
+                    <h5>Comparables:</h5>
+                    <p>Seven Bridges' IGOR system is an excellent example of what we need:<br>
+                    http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3635388/<br>
+                    Arvados System from Curoverse would be ideal, but requires 8 nodes to run services:<br>
+                    https://arvados.org/<br>
+                    </p>
+
+                    <br>
+
+                </div>
+            </div>
+		</div>
+	</div>
+
+
+
+    <div class="row" id="console-container">
+		<div class="col-md-12">
+		    <div class="panel panel-default">
+		        <div align='center' class="panel-heading">
+                    <b>Project Status Updates:</b>
+                </div>
+                <div class="panel-body" align="center">
+
+                    <br>
+
+                    <h4>Initial Stack Considerations:</h4>
+                    <p>
+                    <br>We are moving to a new computer nicknamed 'geordy'  that will serve as the web app server, computation worker, mongo + postgres db servers, and primary file storage.
+                    <br>But we are mindful of the future and where we need to go from here:
+                    <br>Pipeline executions will be able to run on computing grid
+                    <br>Web server / file access not within our on-campus firewall / security guidelines
+                    <br>Jobs are asynchronous and can be scheduled without immediate resource dependencies
+                    </p>
+
+                    <br>
+
+                    <h4>Initial Stack At Beginning Of Development:</h4>
+                    <p>Flask Web App
+                    <br>Celery / RabbitMQ Task Management
+                    <br>MongoDB
+                    </p>
+
+                    <br>
+
+                    <h4>Stack Update June 2016:</h4>
+                    <p>Flask Web App Running On Scalable Heroku Server(s)
+                    <br>Cloud RabbitMQ Queue System, Can Route Tasks To Discreet Queues Based on UT or External User Status
+                    <br>AWS Compute Instance Configured And Imaged. Need to Install Celery / other dependencies on Geordy
+                    <br>Currently only linked to PostgreSQL server running on Heroku, but will soon have parsers for our mongo collections to build experiment, sequence and annotation records and stepwise migrate data to SQL (if we want).
+                    </p>
+
+                    <br>
+
+                    <h4>Stack update Jan. 2017:</h4>
+                    <p>BIGG Data Beta Ready. Need to migrate MongoDB data and invite users. Ready to ingest new data from GSAF, local files, server files, web URLS or the NCBI SRA.
+                    <br>Annotations from MiXCR, IGFFT standardized for downstream analysis, including pairing Heavy::Light IG or TCR data and concatenating experiments, determining clones through variety of clustering methods for downstream analysis or mass spec.
+                    <br>Relocalized stack on geordy system and migrated to 'biggdata'  user for portability. Need to install de novo and debug installation instructions.
+                    <br>Migrated PostgreSQL Database from Heroku and indexed database to optimize expensive queries.
+                    <br>Built database tables for IG and HLA genes and imported libraries from IMGT, RepSeqIO. Have population data from US Match and dbMHC to incorporate.
+                    </p>
+
+
+                    <br>
+                    <br>
+
+                </div>
+            </div>
+		</div>
+	</div>
+
+
+
+
+
+
+
+
+</div>
+
+
+
+<script src="https://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+<script src="{{ url_for('static', filename='js/code_flower_d3.js') }}" charset="utf-8"></script>
+
+
+
+<script>
+
+
+$(document).ready(function(){
+
+
+    var jsonData = JSON.parse('{"children":[{"name":"app.py","size":3009},{"name":"celery_config.py","size":76},{"name":"forms.py","size":264},{"name":"frontend.py","size":2108},{"name":"functions.py","size":246},{"name":"manage.py","size":23},{"name":"migrations","children":[{"name":"env.py","size":87}]},{"name":"models.py","size":1936},{"name":"mongo_functions.py","size":980},{"name":"shell_loader.py","size":133},{"name":"tests.py","size":124},{"name":"utils","children":[{"name":"clustering.py","size":265},{"name":"distance_metrics.py","size":170},{"name":"igrep_clonotyping_function.py","size":96},{"name":"pairing.py","size":109},{"name":"pairing_from_jon.py","size":856},{"name":"parsing_external_dbs.py","size":78},{"name":"sequence_similarity.py","size":244},{"name":"standardization.py","size":534},{"name":"tests.py","size":128}]}],"name":"root"}');
+
+    var myflower = new CodeFlower("#codeflower", 400, 400);
+
+    myflower.update(jsonData);
+
+{#    myflower.update({"children":[{"name":"app.py","size":3009},{"name":"celery_config.py","size":76},{"name":"forms.py","size":264},{"name":"frontend.py","size":2108},{"name":"functions.py","size":246},{"name":"manage.py","size":23},{"name":"migrations","children":[{"name":"env.py","size":87}]},{"name":"models.py","size":1936},{"name":"mongo_functions.py","size":980},{"name":"shell_loader.py","size":133},{"name":"tests.py","size":124},{"name":"utils","children":[{"name":"clustering.py","size":265},{"name":"distance_metrics.py","size":170},{"name":"igrep_clonotyping_function.py","size":96},{"name":"pairing.py","size":109},{"name":"pairing_from_jon.py","size":856},{"name":"parsing_external_dbs.py","size":78},{"name":"sequence_similarity.py","size":244},{"name":"standardization.py","size":534},{"name":"tests.py","size":128}]}],"name":"root"});#}
+
+
+});
+
+
+
+</script>
+
+
+
+
+{% endblock wide_content %}
+
+
