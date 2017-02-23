@@ -83,6 +83,7 @@ nav.register_element('frontend_top', Navbar(
     View('Login', 'frontend.login'),
     Subgroup(
         'Documentation',
+        View('About BIGG DATA', 'frontend.about'),
         Link('BIGG DATA GitHub', 'https://github.com/bigglab/BIGGDATA'),
         #View('BIGG DATA Overview', 'frontend.overview'),
         #View('BIGG DB Schema', 'frontend.schema'),
@@ -125,8 +126,8 @@ nav.register_element('frontend_user', Navbar(
         ),
     Subgroup(
         'Documentation',
+        View('About BIGG DATA' , 'frontend.about'),
         Link('BIGG DATA GitHub', 'https://github.com/bigglab/BIGGDATA'),
-        #View('BIGG DATA Overview', 'frontend.overview'),
         #View('BIGG DB Schema', 'frontend.schema'),
         # Link('Confluence', 'under_construction'), 
         Separator(),
@@ -1332,6 +1333,10 @@ def show_project(project_id):
 
 
 
+@frontend.route('/about', methods=['GET', 'POST'])
+@login_required
+def about():
+    return render_template("about.html")
 
 
 @frontend.route('/analysis', methods=['GET', 'POST'])

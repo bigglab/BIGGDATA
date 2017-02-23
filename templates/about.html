@@ -1,0 +1,69 @@
+{% extends '_base.html' %}
+
+{% block wide_content %}
+
+
+
+
+<div class="container">
+
+    <br>
+
+    <div class="row" id="console-container">
+		<div class="col-md-12">
+		    <div class="panel panel-default">
+		        <div align='center' class="panel-heading">
+                    <b>About BIGG DATA</b>
+                </div>
+                <div class="panel-body">
+{#                    <div id="codeflower"></div>#}
+                    <br>
+                    <h4>Primary Purposes:</h4>
+                    <h5>Organize, Track and Backup BIGG Sequencing Data</h5>
+                    <h5>Standardize VDJ Analyses</h5>
+                    <h5>Enable</h5>
+                    <br>
+                    <br>
+                </div>
+            </div>
+		</div>
+	</div>
+
+
+
+</div>
+
+
+
+<script src="https://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+<script src="{{ url_for('static', filename='js/code_flower_d3.js') }}" charset="utf-8"></script>
+
+
+
+<script>
+
+
+$(document).ready(function(){
+
+
+    var jsonData = JSON.parse('{"children":[{"name":"app.py","size":3009},{"name":"celery_config.py","size":76},{"name":"forms.py","size":264},{"name":"frontend.py","size":2108},{"name":"functions.py","size":246},{"name":"manage.py","size":23},{"name":"migrations","children":[{"name":"env.py","size":87}]},{"name":"models.py","size":1936},{"name":"mongo_functions.py","size":980},{"name":"shell_loader.py","size":133},{"name":"tests.py","size":124},{"name":"utils","children":[{"name":"clustering.py","size":265},{"name":"distance_metrics.py","size":170},{"name":"igrep_clonotyping_function.py","size":96},{"name":"pairing.py","size":109},{"name":"pairing_from_jon.py","size":856},{"name":"parsing_external_dbs.py","size":78},{"name":"sequence_similarity.py","size":244},{"name":"standardization.py","size":534},{"name":"tests.py","size":128}]}],"name":"root"}');
+
+    var myflower = new CodeFlower("#codeflower", 400, 400);
+
+    myflower.update(jsonData);
+
+{#    myflower.update({"children":[{"name":"app.py","size":3009},{"name":"celery_config.py","size":76},{"name":"forms.py","size":264},{"name":"frontend.py","size":2108},{"name":"functions.py","size":246},{"name":"manage.py","size":23},{"name":"migrations","children":[{"name":"env.py","size":87}]},{"name":"models.py","size":1936},{"name":"mongo_functions.py","size":980},{"name":"shell_loader.py","size":133},{"name":"tests.py","size":124},{"name":"utils","children":[{"name":"clustering.py","size":265},{"name":"distance_metrics.py","size":170},{"name":"igrep_clonotyping_function.py","size":96},{"name":"pairing.py","size":109},{"name":"pairing_from_jon.py","size":856},{"name":"parsing_external_dbs.py","size":78},{"name":"sequence_similarity.py","size":244},{"name":"standardization.py","size":534},{"name":"tests.py","size":128}]}],"name":"root"});#}
+
+
+});
+
+
+
+</script>
+
+
+
+
+{% endblock wide_content %}
+
+
