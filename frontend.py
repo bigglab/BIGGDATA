@@ -1338,7 +1338,7 @@ def show_project(project_id):
 @login_required
 def analyses(status=[]):
     status = request.args.getlist('status')
-    analyses = current_user.analyses.all()
+    analyses = current_user.analyses.all()[-50:]
     analysis_file_dict = OrderedDict()
     for analysis in sorted(analyses, key=lambda x: x.started, reverse=True): 
         analysis_file_dict[analysis] = analysis.files.all() 
