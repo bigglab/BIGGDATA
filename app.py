@@ -699,7 +699,7 @@ def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, pro
             os.rename(source, destination)
 
             file_paths = [destination]
-            filename_array = ['{}_1.fastq.gz'.format(accession)]
+            # filename_array = ['{}_1.fastq.gz'.format(accession)]
 
             os.rmdir('{}/{}/1/'.format(directory, accession))
             os.rmdir('{}/{}/'.format(directory, accession))
@@ -716,7 +716,7 @@ def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, pro
                 os.rename(source, destination)
 
                 file_paths.append(destination)
-                filename_array.append('{}_{}.fastq.gz'.format(accession, directory_number))
+                # filename_array.append('{}_{}.fastq.gz'.format(accession, directory_number))
 
                 os.rmdir('{}/{}/{}/'.format(directory, accession, directory_number))
 
@@ -726,9 +726,11 @@ def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, pro
         else:
             raise Exception('Number of files from SRA export not one or two...')
         logger.info('Writing sra output files to {}'.format(directory))
-        return_value = import_files_as_dataset(file_paths, filename_array=filename_array, user_id=user_id, name=name,
+        return_value = import_files_as_dataset(filepath_array=file_paths, user_id=user_id, name=name,
                                                chain=chain, dataset=file_dataset, parent_task=self)
         logger.info('SRA import complete.')
+
+        print return_value.__dict__
 
         file_ids = return_value.file_ids
 
@@ -795,7 +797,7 @@ def import_files_as_dataset(self, filepath_array=[], user_id=2, chain=None, name
             new_file_ids.append(file.id)
     d.primary_data_files_ids = new_file_ids
     db.session.commit()
-    return ReturnValue('Files copied and added to Dataset {} (): {}'.format(d.id, d.directory, file_ids=new_file_ids))
+    return ReturnValue('Files copied and added to Dataset {} ({}): {}'.format(d.id, d.directory, new_file_ids), file_ids=new_file_ids)
 
 
 

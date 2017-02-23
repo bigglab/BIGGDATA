@@ -1007,7 +1007,7 @@ def create_project():
         # Still need to test for duplicate names
         new_project = Project(
                             user_id = current_user.id,
-                            project_name = create_project_form.project_name.data,
+                            name = create_project_form.name.data,
                             description = create_project_form.description.data,
                             cell_types_sequenced = create_project_form.cell_types_sequenced.data,
                             publications = create_project_form.publications.data,
@@ -1159,7 +1159,7 @@ def edit_project(project_id):
             edit_project_form.viewers.data = viewer_defaults # default should be a list of ids NOT SELECTED
 
             # prepopulate the form with data from the database                
-            edit_project_form.project_name.data = project.project_name
+            edit_project_form.name.data = project.name
             edit_project_form.description.data = project.description
             edit_project_form.cell_types_sequenced.data = project.cell_types_sequenced
             edit_project_form.publications.data = project.publications
@@ -1220,7 +1220,7 @@ def edit_project(project_id):
 
                 # Still need to test for duplicate names
                 # update the database with the data, then redirect
-                project.project_name = edit_project_form.project_name.data
+                project.name = edit_project_form.name.data
                 project.description = edit_project_form.description.data
                 project.cell_types_sequenced = edit_project_form.cell_types_sequenced.data
                 project.publications = edit_project_form.publications.data
@@ -1293,7 +1293,7 @@ def show_project(project_id):
 
     read_only = current_user in project.read_only_users
 
-    show_project_form.project_name.data = project.project_name
+    show_project_form.name.data = project.name
     show_project_form.description.data = project.description
     show_project_form.cell_types_sequenced.data = project.cell_types_sequenced
     show_project_form.publications.data = project.publications
@@ -1877,7 +1877,6 @@ def alleledb_network_json():
 
     print "alleledb network query: species {} locus_type {} locus {} gene {}".format(species, locus_type, locus, gene)
 
-    j = {}
     allele_query = db.session.query(Allele)
     if source:
         allele_query = allele_query.join(Source).filter(Source.name==source)
@@ -1987,6 +1986,34 @@ def zip_file_status_json():
     return jsonify( response )
 
 
+
+
+
+@frontend.route('/project_dataset_options', methods=['GET', 'POST'])
+@login_required
+def project_dataset_options():
+
+    assert current_user, 'no current_user object identified... exiting'
+    if 'file_types' in request.args.keys():
+        file_types = request.args.get('file_types', [], type=list)
+        return_value = current_user.get_projects_datasets_files(file_types=file_types)
+    else:
+        return_value = current_user.get_projects_datasets_files()
+
+    print return_value
+    if type(return_value)==type(OrderedDict()) or type(return_value)==type(dict()) or type(return_value)==list:
+        return json.dumps ( return_value )
+        # return jsonify ( return_value )
+    else:
+        'project_dataset_options route did not return a dict...'
+        return json.dumps( None )
+        # return jsonify ( None )
+
+
+
+
+
+
 @frontend.route('/pipeline', methods=['GET', 'POST'])
 @login_required
 def pipeline(selected_dataset=None):
@@ -2077,6 +2104,11 @@ def pipeline(selected_dataset=None):
             # This form does not need a new dataset option
             build_pipeline_form.dataset.choices = [tup for tup in dataset_tuples if tup[0] in dataset_file_dict.keys()]
 
+        # NEW ROUTINE
+        projects_datasets_files = current_user.get_projects_datasets_files(file_types=['FASTQ', 'GZIPPED_FASTQ', 'FASTA'])
+        projects_datasets_files_formatted =  json.dumps ({'id':'node1', 'level':1, 'title':'placeholder', 'has_children':True, 'children': projects_datasets_files})
+        # for pdf in projects_datasets_files:
+        #     projects_datasets_files_formatted += json.dumps ( pdf )
 
         # list of tuples to set arbitrary HTML tag attributes
         # passed to JQUERY to set attributes
@@ -2085,56 +2117,8 @@ def pipeline(selected_dataset=None):
         form_warning_style = 'border: 2px solid #d66; border-radius: 7px; box-shadow: 0 0 10px #d66;'
 
 
-        return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes )
+        return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, projects_datasets_files=projects_datasets_files_formatted, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes )
 
-
- 
-@frontend.route('/test_pipeline', methods=['GET', 'POST'])
-@login_required
-def test_pipeline(selected_dataset=None):
-
-
-
-
-
-    # put the form contents into a format that can be serialized and sent to a celery task
-    form_output_dict = {
-        'user_id' : current_user.id,    
-        'file_source' : build_pipeline_form.file_source.data,
-        'dataset' : build_pipeline_form.dataset.data,
-        'dataset_files' : build_pipeline_form.dataset_files.data,
-        'name' : build_pipeline_form.name.data,
-        'description' : build_pipeline_form.description.data,
-        'trim' : build_pipeline_form.trim.data,
-        'trim_slidingwindow' : build_pipeline_form.trim_slidingwindow.data,
-        'trim_slidingwindow_size' : build_pipeline_form.trim_slidingwindow_size.data,
-        'trim_slidingwindow_quality' : build_pipeline_form.trim_slidingwindow_quality.data,
-        'trim_illumina_adapters' : build_pipeline_form.trim_illumina_adapters.data,
-        'filter' : build_pipeline_form.filter.data, 
-        'filter_quality' : build_pipeline_form.filter_quality.data, 
-        'filter_percentage' : build_pipeline_form.filter_percentage.data, 
-        'pandaseq' : build_pipeline_form.pandaseq.data,
-        'pandaseq_algorithm' : build_pipeline_form.pandaseq_algorithm.data,
-        'pandaseq_minimum_overlap' : build_pipeline_form.pandaseq_minimum_overlap.data, 
-        'pandaseq_minimum_length': build_pipeline_form.pandaseq_minimum_length.data, 
-        'analysis_type' : build_pipeline_form.analysis_type.data,
-        'cluster' : build_pipeline_form.cluster.data,
-        'species' : build_pipeline_form.species.data,
-        'loci': build_pipeline_form.loci.data,
-        'standardize_outputs': build_pipeline_form.standardize_outputs.data,
-        'require_annotations': build_pipeline_form.require_annotations.data,
-        'append_cterm_peptides': build_pipeline_form.append_cterm_peptides.data,
-        'remove_seqs_with_indels': build_pipeline_form.remove_seqs_with_indels.data,
-        'generate_msdb' : build_pipeline_form.generate_msdb.data,
-        'pair_vhvl' : build_pipeline_form.pair_vhvl.data,
-        'msdb_cluster_percent' : str(build_pipeline_form.msdb_cluster_percent.data),
-        'vhvl_min' : str(build_pipeline_form.vhvl_min.data),
-        'vhvl_max' : str(build_pipeline_form.vhvl_max.data),
-        'vhvl_step' : str(build_pipeline_form.vhvl_step.data)
-    }
-
-    result = run_analysis_pipeline.apply_async( (), form_output_dict, queue=celery_queue)
-    return redirect(url_for("frontend.dashboard"))
 
 
 
