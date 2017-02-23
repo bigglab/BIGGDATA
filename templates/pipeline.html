@@ -10,33 +10,26 @@
 {#<script type='text/javascript' src="{{ url_for('static', filename='js/jquery.moreorless.js') }}"></script>#}
 {#<script type='text/javascript' src="{{ url_for('static', filename='js/jquery.treeselect.js') }}"></script>#}
 {#<script type='text/javascript' src="{{ url_for('static', filename='js/jquery.chosentree.js') }}"></script>#}
-{#<link rel='stylesheet' type='text/css' href="{{ url_for('static', filename='css/moreorless.css') }}" />#}
+{#        <link rel='stylesheet' type='text/css' href="{{ url_for('static', filename='css/moreorless.css') }}" />#}
 {#<link rel='stylesheet' type='text/css' href="{{ url_for('static', filename='css/treeselect.css') }}" />#}
 {#<link rel='stylesheet' type='text/css' href="{{ url_for('static', filename='css/chosentree.css') }}" />#}
 
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js"></script>
+<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/smoothness/jquery-ui.css" />
 
-<script type='text/javascript'>
-
-
-    jQuery(function() {
-        JSONObject = JSON.parse({{ projects_datasets_files }});
-
-        $('div.chosentree').chosentree({
-           width: 500,
-           deepLoad: true,
-           load: function(node, callback) {
-               callback(JSONObject);
-           }
-        });
-
-    });
-
-
-</script>
+<script type='text/javascript' src="{{ url_for('static', filename='js/jquery.treeselect.js') }}"></script>
+<link rel='stylesheet' type='text/css' href="{{ url_for('static', filename='css/jquery.treeselect.css') }}" />
 
 
 
 
+
+{#<p>{{ projects_datasets_files }}</p>#}
+  <div class="container">
+    <div class="chosentree">
+    </div>
+  </div>
 
 
 <div class="container">
@@ -45,11 +38,28 @@
 </div>
 
 
-<div class="'container">
-    {#    <p>{{ projects_datasets_files }}</p>#}
-    <div class="chosentree">
-    </div>
-</div>
+
+
+<script type='text/javascript'>
+
+{#    JSONObject = JSON.parse('{{ projects_datasets_files }}');#}
+
+// JSONObject = JSON.parse('{"level": 1, "has_children": true, "title": "Project 101", "id": "101", "type": "project", "children": [{"level": 2, "has_children": true, "title": "SRR1525443", "id": "290", "type": "dataset", "children": [{"level": 3, "file_type": "GZIPPED_FASTQ", "has_children": false, "title": "SRR1525443_1.fastq.gz", "type": "file", "id": 3419}]}]}'); // {"level": 1, "has_children": true, "title": "Project 100", "id": "100", "type": "project", "children": [{"level": 2, "has_children": true, "title": "SRR1525443", "id": "290", "type": "dataset", "children": [{"level": 3, "file_type": "GZIPPED_FASTQ", "has_children": false, "title": "SRR1525443_1.fastq.gz", "type": "file", "id": 3419}]}]}');
+
+    jQuery(function() {
+    $('div.chosentree').chosentree({
+      width: 500,
+      deepLoad: true,
+      showtree: true,
+      load: function(node, callback) {
+          callback(JSONObject)
+      }
+    });
+  });
+
+
+</script>
+
 
 
 

@@ -136,8 +136,9 @@ class User(db.Model):
                     project_dict = dict(
                         id= str(project.id),
                         title= project.name,
-                        has_children= len(datasets),
-                        type= 'project'
+                        has_children= True,
+                        type= 'project',
+                        level=2,
                     )
                     datasets_files = []
                     for dataset in sorted(datasets, key=lambda d: d.name):
@@ -154,8 +155,9 @@ class User(db.Model):
                 project_dict = dict(
                     id= '0',
                     title= 'orphaned datasets',
-                    has_children= len(orphan_datasets),
-                    type= 'project'
+                    has_children= True,
+                    # type= 'project',
+                    level=2
                 )
                 datasets_files = []
                 for dataset in sorted(orphan_datasets, key=lambda d: d.name):
@@ -955,17 +957,19 @@ class Dataset(db.Model):
                 dataset_value = {
                     'id': str(self.id),
                     'title': self.name,
-                    'has_children': len(files),
-                    'type': 'dataset'
+                    'has_children': True,
+                    # 'type': 'dataset',
+                    'level': 3
                 }
                 dataset_files = []
                 for file in files:
                     file_value = {
                         'id': file.id,
                         'title': file.name,
-                        'type': 'file',
-                        'file_type': file.file_type,
-                        'has_children': "0"
+                        # 'type': 'file',
+                        # 'file_type': file.file_type,
+                        'has_children': False,
+                        'level': 4
                     }
                     dataset_files.append(file_value)
                 dataset_value['children'] = dataset_files

@@ -2106,7 +2106,9 @@ def pipeline(selected_dataset=None):
 
         # NEW ROUTINE
         projects_datasets_files = current_user.get_projects_datasets_files(file_types=['FASTQ', 'GZIPPED_FASTQ', 'FASTA'])
-
+        projects_datasets_files_formatted =  json.dumps ({'id':'node1', 'level':1, 'title':'placeholder', 'has_children':True, 'children': projects_datasets_files})
+        # for pdf in projects_datasets_files:
+        #     projects_datasets_files_formatted += json.dumps ( pdf )
 
         # list of tuples to set arbitrary HTML tag attributes
         # passed to JQUERY to set attributes
@@ -2115,7 +2117,7 @@ def pipeline(selected_dataset=None):
         form_warning_style = 'border: 2px solid #d66; border-radius: 7px; box-shadow: 0 0 10px #d66;'
 
 
-        return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, projects_datasets_files=projects_datasets_files, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes )
+        return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, projects_datasets_files=projects_datasets_files_formatted, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes )
 
 
 
