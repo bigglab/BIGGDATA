@@ -23,7 +23,7 @@
                 {% for project in shared_projects %}
                     <tr>
                         <th>                                
-                            <a href="{{url_for('.show_project', project_id = project.id)}}">{{project.project_name}}</a>
+                            <a href="{{url_for('.show_project', project_id = project.id)}}">{{project.name}}</a>
                         </th>
                         <th>{{project.description}}</th>
                         <th>{{project.species}}</th>
@@ -53,7 +53,7 @@
                 {% for project in projects %}
                     <tr>
                         <th>                                
-                            <a href="{{url_for('.show_project', project_id = project.id)}}">{{project.project_name}}</a>
+                            <a href="{{url_for('.show_project', project_id = project.id)}}">{{project.name}}</a>
                         </th>
                         <th>{{project.description}}</th>
                         <th>{{project.species}}</th>

@@ -124,6 +124,56 @@ class User(db.Model):
             return projects
 
 
+        def get_projects_datasets_files(self, file_types=['FASTQ', 'GZIPPED_FASTQ', 'FASTA', 'GZIPPED_FASTA']):
+            #retrieve datasets grouped over projects - including shared
+            projects = self.get_ordered_projects()
+            project_datasets_files = []
+            datasets_processed = []
+            for project in projects:
+                datasets = [d for d in project.datasets if d != None and d!= self.default_dataset]
+                for d in datasets: datasets_processed.append(d)
+                if len(datasets)>0:
+                    project_dict = dict(
+                        id= str(project.id),
+                        title= project.name,
+                        has_children= True,
+                        type= 'project',
+                        level=2,
+                    )
+                    datasets_files = []
+                    for dataset in sorted(datasets, key=lambda d: d.name):
+                        dataset_files = dataset.dataset_and_files_of_types(file_types=file_types)
+                        if dataset_files != None and len([f for f in dataset_files.values() if f!=None and f != []])>0:
+                            datasets_files.append(dataset_files)
+                    project_dict['children'] = datasets_files
+                    project_datasets_files.append(project_dict)
+
+            #retrieve datasets orphaned without a project but with your user_id
+            owned_datasets = self.datasets.all()
+            orphan_datasets = [d for d in owned_datasets if d.name not in datasets_processed]
+            if len(orphan_datasets) > 0:
+                project_dict = dict(
+                    id= '0',
+                    title= 'orphaned datasets',
+                    has_children= True,
+                    # type= 'project',
+                    level=2
+                )
+                datasets_files = []
+                for dataset in sorted(orphan_datasets, key=lambda d: d.name):
+                    dataset_files = dataset.dataset_and_files_of_types(file_types=file_types)
+                    if dataset_files != None and len([f for f in dataset_files.values() if f != None and f != []]) > 0:
+                        datasets_files.append(dataset_files)
+                    project_dict['children'] = datasets_files
+                project_datasets_files.append(project_dict)
+
+
+            # check we're not returning empty entries
+            # project_datasets_files =
+            return project_datasets_files
+
+
+
         @hybrid_property
         def name(self):
             return self.first_name + ' ' + self.last_name
@@ -282,10 +332,28 @@ class File(db.Model):
             else:
                 return None
 
+        @hybrid_property
+        def cat(self, n=100):
+            with open(self.path) as file:
+                line_count = 0
+                for line in file.readlines():
+                    print line
+                    line_count+=1
+                    if line_count > int(n):
+                        break
+
+
+        def read(self):
+            with open(self.path) as file:
+                lines = file.read()
+            return lines
+
+
+
         # This allows system operations on the file
         # e.g., if os.path.isfile()file
         def __repr__(self): 
-            return "<File {} >".format(self.name)
+            return "<File {}  {} >".format(self.id, self.name)
             # if self.paired_partner: 
             #     p = 'Paired To: {}'.format(str(self.paired_partner))
             # else: 
@@ -499,6 +567,14 @@ class File(db.Model):
             self.name = name
 
             return True
+
+
+        def exists(self):
+            if os.path.isfile(self.path):
+                return True
+            else:
+                return False
+
 
         # Determine if the file described in the database actually exists
         # If the file does not exist, change database setting appropriate
@@ -782,6 +858,8 @@ class Dataset(db.Model):
                         out_files.append(file)
                     if 'R2' in file.name and file.name.replace('R2', 'R1') in file_names: 
                         out_files.append(file)
+                    if len(files)==1:
+                        out_files.append(file)
                 if len(out_files) > 2: 
                     print "too many predicted primary_data_files!"
                     return None 
@@ -873,12 +951,83 @@ class Dataset(db.Model):
             except:
                 return "Error: no default dataset found."
 
+        def dataset_and_files_of_types(self, file_types=['FASTQ', 'GZIPPED_FASTQ', 'FASTA', 'GZIPPED_FASTA']):
+            files = [f for f in self.files.all() if f.file_type in file_types]
+            if len(files) > 0:
+                dataset_value = {
+                    'id': str(self.id),
+                    'title': self.name,
+                    'has_children': True,
+                    # 'type': 'dataset',
+                    'level': 3
+                }
+                dataset_files = []
+                for file in files:
+                    file_value = {
+                        'id': file.id,
+                        'title': file.name,
+                        # 'type': 'file',
+                        # 'file_type': file.file_type,
+                        'has_children': False,
+                        'level': 4
+                    }
+                    dataset_files.append(file_value)
+                dataset_value['children'] = dataset_files
+                return dataset_value
+            else:
+                return None
+
+
+        # aligner= mixcr or igrep    type= overlap or paired
+
+        def run_analysis(self, file_ids=[], analysis_type='overlap', aligner='mixcr', user_id=2):
+                from app import run_analysis_pipeline
+                if type(file_ids) != type([]): 
+                    files = [File.query.get(int(file_ids))]
+                elif file_ids != []: 
+                    files = [File.query.get(int(id)) for id in file_ids] 
+                else:
+                    files = self.primary_data_files()
+                if len(files)==0:
+                    print 'must supply or get from dataset.primary_data_files() one or two files. {}'.format("file ids given: {}".format(file_ids) if file_ids!=[] else "")
+                    return None
+                settings = dict(user_id=user_id, species='H. sapiens', loci=['IGH', 'IGL', 'IGK'],
+                                append_cterm_peptides=False,
+                                cluster=False, cluster_algorithm='None', cluster_linkage='None', cluster_percent='0.9',
+                                name='automated {} {} run'.format(analysis_type, aligner), description=u'',
+                                filter=True, filter_percentage=50, filter_quality=20,
+                                pandaseq_algorithm='ea_util', pandaseq_minimum_length=100, pandaseq_minimum_overlap=33,
+                                remove_seqs_with_indels=False, require_annotations=['aaSeqCDR3'],
+                                trim=False, trim_illumina_adapters=True,
+                                trim_slidingwindow=False, trim_slidingwindow_quality=15, trim_slidingwindow_size=4,
+                                standardize_outputs=True, )
+                settings['analysis_type'] = aligner
+                if analysis_type=='overlap':
+                    settings['pair_vhvl'] = False
+                    settings['pandaseq'] = True
+                elif analysis_type=='single': 
+                    settings['pair_vhvl'] = False
+                    settings['pandaseq'] = False 
+                elif analysis_type=='paired':
+                    settings['pair_vhvl'] = True
+                    settings['pandaseq'] = False
+                else:
+                    print 'must give overlap or paired analysis type, you gave {}'.format(analysis_type)
+
+                settings['file_ids'] = [file.id for file in files]
+                print "running analysis with these settings: {}".format(settings)
+                # kick it off
+                task = run_analysis_pipeline.apply_async((), settings)
+                settings['async task id']=task
+                return settings
+
+
+
 class Project(db.Model):
         __tablename__ = 'project'
         id = db.Column(db.Integer, primary_key=True)
-        project_name = db.Column(db.String(128))
+        name = db.Column(db.String(128))
         description = db.Column(db.String(256))
-        _id = db.Column(JSON())
         cell_types_sequenced = db.Column(db.String(256))
         publications = db.Column(db.String(256)) 
         user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -895,10 +1044,10 @@ class Project(db.Model):
         users = association_proxy('project_users', 'user')
         read_only_users = association_proxy('project_users', '_read_only_users')
         shared_users = association_proxy('project_users', '_shared')
+        _id = db.Column(JSON())
 
-
-        def __repr__(self): 
-            return "{} ({})".format(self.project_name, self.id)
+        def __repr__(self):
+            return "{} ({})".format(self.name, self.id)
 
         def date_string(self):
             try:
@@ -1136,6 +1285,7 @@ class Analysis(db.Model):
         inserted_into_db = Column(Boolean)
         directory = Column(String(256))
         error = Column(String(256))
+        settings = db.Column(JSON())
 
         annotations = db.relationship('Annotation', backref='analysis', lazy='dynamic')
         files = db.relationship('File', backref='analysis', lazy='dynamic', foreign_keys='File.analysis_id' )
@@ -1379,14 +1529,14 @@ class Allele(db.Model):
             seqs = [unicode(s) for s in seq1,seq2 if s and len(s)>0 ]
 
             import jellyfish
+            import editdistance
             if type(method) == str:
                 if method == 'hamming':
                     method = jellyfish.hamming_distance
                 elif method == 'levenshtein':
                     # method = jellyfish.levenshtein_distance
-                    import editdistance
                     method = editdistance.eval  # 4x faster
-                elif method == 'damerau_levenshtien':
+                elif method == 'damerau_levenshtein':
                     method = jellyfish.damerau_levenshtein_distance
                 elif method == 'jaro':
                     method = jellyfish.jaro_distance
@@ -1832,7 +1982,7 @@ def get_project_choices(user = None, new = False):
     if len(projects) > 0:
         for project in projects:
             if project.role(user) == 'Owner' or project.role(user) == 'Editor':
-                project_tuples.append( (str(project.id), project.project_name))
+                project_tuples.append( (str(project.id), project.name))
         if len(project_tuples) > 0 and new:
             project_tuples.insert(0, ('new', 'New Project'))
     elif new:
@@ -1880,15 +2030,15 @@ def generate_new_project(user = None, datasets = None, name=None, description=No
     new_project = Project()
     new_project.user_id = user.id
     if name: 
-        new_project.project_name = name 
+        new_project.name = name
         new_project.description = description 
         session.add(new_project)
         session.flush()
     else: 
-        new_project.project_name = 'Project'
+        new_project.name = 'Project'
         session.add(new_project)
         session.flush()
-        new_project.project_name = 'Project ' + str(new_project.id)
+        new_project.name = 'Project ' + str(new_project.id)
     new_project.users = [user]
     if datasets:
         if type(datasets)==list: 

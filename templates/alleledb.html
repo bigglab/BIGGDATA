@@ -66,6 +66,7 @@
                     <span align="center"><h4><div id="allele_status" name="'allele_status">Status Here</div></h4></span>
                     <br>
                     <span align="right"><input class="btn btn-default form-control" value="Reset Form"  style="max-width: 15em;" onclick="reset_alleles();"></span>
+                    <span align="right"><input class="btn btn-default form-control" value="Populate Defaults"  style="max-width: 15em;" onclick="default_network();"></span>
                     <br>
                 </div>
             </div>
@@ -292,6 +293,17 @@ function update_alleles() {
 
 </script>
 
+<script>
+
+
+//default network
+
+
+
+</script>
+
+
+
 
 
 <script src="https://d3js.org/d3.v4.min.js" charset="utf-8"></script>
@@ -419,6 +431,38 @@ function update_network_json() {
 };
 
 
+
+
+
+function default_network() {
+
+    var source_selector = $('select[name="source_selector"]');
+    var species_selector = $('select[name="species_selector"]');
+    var locus_type_selector = $('select[name="locus_type_selector"]');
+    var locus_selector = $('select[name="locus_selector"]');
+    var gene_selector = $('select[name="gene_selector"]');
+    var sequence_type_selector = $('select[name="sequence_type_selector"]');
+    var distance_metric_selector = $('select[name="distance_metric_selector"]');
+    var weight_by_selector = $('select[name="weight_by_selector"]');
+    var color_by_selector = $('select[name="color_by_selector"]');
+    var linkage_threshold = $('input[name="linkage_threshold"]');
+
+    source_selector.val('IMGT');
+    species_selector.val('Homo sapiens');
+    locus_type_selector.val('IG');
+    locus_selector.val('IGHD');
+//  gene_selector.val('');
+    sequence_type_selector.val('default');
+    distance_metric_selector.val('levenshtein');
+//    weight_by_selector.val();
+//    color_by_selector.val();
+    linkage_threshold.val(6);
+    update_alleles();
+
+};
+
+
+
 function reset_alleles() {
     var species_selector = $('select[name="species_selector"]');
     var locus_type_selector = $('select[name="locus_type_selector"]');
@@ -426,13 +470,14 @@ function reset_alleles() {
     var gene_selector = $('select[name="gene_selector"]');
     var source_selector = $('select[name="source_selector"]');
     var sequence_selector = $('select[name="sequence_type_selector"]');
-
     sequence_selector.val("");
     species_selector.val("");
     locus_selector.val("");
     locus_type_selector.val("");
     gene_selector.val("");
     source_selector.val("");
+
+
     update_alleles();
 
 };
@@ -633,6 +678,11 @@ $(document).ready(function(){
     update_alleles();
     $("#network_display").hide();
     $("#sequence_type_selector").val("");
+    $("#allele_sequence_type_status").val("");
+
+    $("#color_by_selector").val('gene');
+    $("#color_by_selector").prop('disabled', true);
+    $("#weight_size_by_selector").prop('disabled', true);
 });
 
 

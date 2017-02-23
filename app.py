@@ -699,7 +699,7 @@ def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, pro
             os.rename(source, destination)
 
             file_paths = [destination]
-            filename_array = ['{}_1.fastq.gz'.format(accession)]
+            # filename_array = ['{}_1.fastq.gz'.format(accession)]
 
             os.rmdir('{}/{}/1/'.format(directory, accession))
             os.rmdir('{}/{}/'.format(directory, accession))
@@ -716,7 +716,7 @@ def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, pro
                 os.rename(source, destination)
 
                 file_paths.append(destination)
-                filename_array.append('{}_{}.fastq.gz'.format(accession, directory_number))
+                # filename_array.append('{}_{}.fastq.gz'.format(accession, directory_number))
 
                 os.rmdir('{}/{}/{}/'.format(directory, accession, directory_number))
 
@@ -726,9 +726,11 @@ def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, pro
         else:
             raise Exception('Number of files from SRA export not one or two...')
         logger.info('Writing sra output files to {}'.format(directory))
-        return_value = import_files_as_dataset(file_paths, filename_array=filename_array, user_id=user_id, name=name,
+        return_value = import_files_as_dataset(filepath_array=file_paths, user_id=user_id, name=name,
                                                chain=chain, dataset=file_dataset, parent_task=self)
         logger.info('SRA import complete.')
+
+        print return_value.__dict__
 
         file_ids = return_value.file_ids
 
@@ -795,7 +797,7 @@ def import_files_as_dataset(self, filepath_array=[], user_id=2, chain=None, name
             new_file_ids.append(file.id)
     d.primary_data_files_ids = new_file_ids
     db.session.commit()
-    return ReturnValue('Files copied and added to Dataset {} (): {}'.format(d.id, d.directory, file_ids=new_file_ids))
+    return ReturnValue('Files copied and added to Dataset {} ({}): {}'.format(d.id, d.directory, new_file_ids), file_ids=new_file_ids)
 
 
 
@@ -2778,9 +2780,11 @@ def run_analysis_pipeline(self, *args, **kwargs):
     print 'kwargs: {}'.format(kwargs)
 
     user_id = kwargs['user_id']
-    file_source = kwargs['file_source']
-    dataset = kwargs['dataset']
-    dataset_files = kwargs['dataset_files']
+    if 'dataset' in kwargs.keys(): dataset = kwargs['dataset']
+    if 'dataset_files' in kwargs.keys():
+        dataset_files = kwargs['dataset_files']
+    if 'dataset_files' not in locals():
+        dataset_files = kwargs['file_ids']
     name = kwargs['name']
     description = kwargs['description']
     trim = kwargs['trim']
@@ -2808,9 +2812,6 @@ def run_analysis_pipeline(self, *args, **kwargs):
     cluster_linkage = kwargs['cluster_linkage']
     cluster_percent = float(kwargs['cluster_percent'])
 
-
-    if dataset and dataset != []: dataset = dataset[0]
-
     ##### Obtain Files for Analysis #####
     file_ids_to_analyze = []
     analysis_id = None
@@ -2822,16 +2823,15 @@ def run_analysis_pipeline(self, *args, **kwargs):
         if not current_user:
             raise Exception('User with id {} not found.'.format(user_id))
 
-        dataset = None
-        if dataset_files and dataset_files != []:
+        dataset = None # dont actually rely on dataset argument
+        if dataset_files and len(dataset_files)!=0:
             for file_id in dataset_files:
-                if type(file_id) == str and file_id.isdigit(): file_id = int(file_id)
                 file = session.query(File).get(file_id)
-                if not file:
+                if not File == type(file):
                     raise Exception('File with id {} not found.'.format(file_id))
                 else:
-                    file_ids_to_analyze.append(file_id)
                     dataset = file.dataset
+                    file_ids_to_analyze.append(file_id)
         else:
             raise Exception('No files given for analysis.')
 
@@ -2847,7 +2847,8 @@ def run_analysis_pipeline(self, *args, **kwargs):
                 session=session,
                 name=name,
                 description=description,
-                async_task_id=self.task.request_id)
+                async_task_id=self.task.request_id,
+            )
 
             self.set_analysis_id(analysis_id)
 
@@ -2867,7 +2868,7 @@ def run_analysis_pipeline(self, *args, **kwargs):
             with open(analysis_json_path, 'w') as json_file:
                 # json.dump( (args, kwargs) , json_file)
                 json.dump(kwargs, json_file, indent=4, sort_keys=True)
-
+            analysis.settings = json.dumps(kwargs)
             if os.path.isfile(analysis_json_path):
                 analysis.settings_file = File(path=analysis_json_path, file_type='JSON', dataset_id=analysis.dataset_id,
                                               analysis_id=analysis.id, user_id=analysis.user_id)

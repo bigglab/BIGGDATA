@@ -1007,7 +1007,7 @@ def create_project():
         # Still need to test for duplicate names
         new_project = Project(
                             user_id = current_user.id,
-                            project_name = create_project_form.project_name.data,
+                            name = create_project_form.name.data,
                             description = create_project_form.description.data,
                             cell_types_sequenced = create_project_form.cell_types_sequenced.data,
                             publications = create_project_form.publications.data,
@@ -1159,7 +1159,7 @@ def edit_project(project_id):
             edit_project_form.viewers.data = viewer_defaults # default should be a list of ids NOT SELECTED
 
             # prepopulate the form with data from the database                
-            edit_project_form.project_name.data = project.project_name
+            edit_project_form.name.data = project.name
             edit_project_form.description.data = project.description
             edit_project_form.cell_types_sequenced.data = project.cell_types_sequenced
             edit_project_form.publications.data = project.publications
@@ -1220,7 +1220,7 @@ def edit_project(project_id):
 
                 # Still need to test for duplicate names
                 # update the database with the data, then redirect
-                project.project_name = edit_project_form.project_name.data
+                project.name = edit_project_form.name.data
                 project.description = edit_project_form.description.data
                 project.cell_types_sequenced = edit_project_form.cell_types_sequenced.data
                 project.publications = edit_project_form.publications.data
@@ -1293,7 +1293,7 @@ def show_project(project_id):
 
     read_only = current_user in project.read_only_users
 
-    show_project_form.project_name.data = project.project_name
+    show_project_form.name.data = project.name
     show_project_form.description.data = project.description
     show_project_form.cell_types_sequenced.data = project.cell_types_sequenced
     show_project_form.publications.data = project.publications
@@ -1764,9 +1764,9 @@ def alleledb():
         source_selector = SelectField(u'Source', choices=())
 
         sequence_type_selector = SelectField(u'Sequence Type', choices=([('spliced nucleotide', 'spliced nucleotide'), ('gene', 'gene'), ('protein', 'protein'), ('default', 'default')]))
-        distance_metric_selector = SelectField(u'Distance Metric', choices=([('hamming','hamming'), ('levenshtein','levenshtein'),('damerau_levenshtien','damerau_levenshtien'), ('jaro','jaro')]), default='hamming')
+        distance_metric_selector = SelectField(u'Distance Metric', choices=([('hamming','hamming'), ('levenshtein','levenshtein'),('damerau_levenshtein','damerau_levenshtein'), ('jaro','jaro')]), default='hamming')
         weight_size_by_selector = SelectField(u'Weight Size By', choices=())
-        color_by_selector = SelectField(u'Color By', choices=())
+        color_by_selector = SelectField(u'Color By', choices=([('gene', 'gene'), ('organism', 'organism')]))
         linkage_threshold = FloatField(u'Linkage Threshold')
 
 
@@ -1797,22 +1797,33 @@ def alleledb_json():
 
     j = defaultdict(lambda: '')
     allele_query = db.session.query(Allele)
+    locus_name_query = db.session.query(Locus.name).join(Allele)
+    locus_type_query = db.session.query(Locus.type).join(Allele)
+    species_query = db.session.query(Species.name).join(Allele)
     if source:
         allele_query = allele_query.join(Source).filter(Source.name==source)
+        locus_name_query = locus_name_query.join(Source).filter(Source.name == source)
+        locus_type_query = locus_type_query.join(Source).filter(Source.name == source)
+        species_query = species_query.join(Source).filter(Source.name==source)
     if species:
         allele_query = allele_query.join(Species).filter(Species.name==species)
+        locus_name_query = locus_name_query.join(Species).filter(Species.name == species)
+        locus_type_query = locus_type_query.join(Species).filter(Species.name == species)
     if gene:
         allele_query = allele_query.join(Gene).filter(Gene.name==gene)
-    elif locus_type:
+    if locus_type:
         if locus:
+            species_query = species_query.join(Locus).filter(Locus.type == locus_type, Locus.name == locus)
             allele_query = allele_query.join(Locus).filter(Locus.name == locus)
             j['gene_options'] = sorted([x[0] for x in set(db.session.query(Gene.name).join(Locus).filter(Locus.name == locus).all())])
         else:
+            species_query = species_query.join(Locus).filter(Locus.type == locus_type)
             allele_query = allele_query.join(Locus).filter(Locus.type==locus_type)
             j['gene_options'] = sorted([x[0] for x in set(db.session.query(Gene.name).join(Locus).filter(Locus.type==locus_type).all())])
             # gene_ids = sorted([x[0] for x inset(map(lambda a: a.gene_id, alleles))
         j['locus_options'] = sorted([x[0] for x in set(db.session.query(Locus.name).filter(Locus.type==locus_type).all())])
     elif locus:
+        species_query = species_query.join(Locus).filter(Locus.name==locus)
         allele_query = allele_query.join(Locus).filter(Locus.name == locus)
         j['gene_options'] = sorted([x[0] for x in set(db.session.query(Gene.name).join(Locus).filter(Locus.name == locus).all())])
     else:
@@ -1832,21 +1843,17 @@ def alleledb_json():
     print "{} alleles found".format(len(alleles))
 
 
-    # locus_ids = set(map(lambda a: a.locus_id, alleles))
-    species_ids = set(map(lambda a: a.species_id, alleles))
-    locus_ids = set(map(lambda a: a.locus_id, alleles))
+    j['species_options'] = [s.name for s in species_query.distinct().all()]
 
     j['source_options'] = sorted([x[0] for x in db.session.query(Source.name).distinct().all()])
-    j['species_options'] = sorted([x[0] for x in db.session.query(Species.name).filter(Species.id.in_(species_ids)).distinct().all()])
-    j['locus_type_options'] = sorted([x[0] for x in db.session.query(Locus.type).filter(Locus.id.in_(locus_ids)).distinct().all()])
-    if 'locus_options' not in j.keys():
-        j['locus_options'] = sorted([x[0] for x in db.session.query(Locus.name).filter(Locus.id.in_(locus_ids)).distinct().all()])
+    if 'locus_options' not in j.keys(): j['locus_options'] = sorted([l.name for l in locus_name_query.distinct().all()])
+    if 'locus_type_options' not in j.keys(): j['locus_type_options'] = sorted([l.type for l in locus_type_query.distinct().all()])
     if 'gene_options' not in j.keys():
         gene_ids = set(map(lambda a: a.gene_id, alleles))
         j['gene_options'] = sorted([x[0] for x in db.session.query(Gene.name).filter(Gene.id.in_(gene_ids)).distinct().all()])
-    print j['gene_options']
     j['allele_status'] += "{} Alleles Match Filters".format(len(alleles))
 
+    print j
     return jsonify( j )
 
 
@@ -1870,7 +1877,6 @@ def alleledb_network_json():
 
     print "alleledb network query: species {} locus_type {} locus {} gene {}".format(species, locus_type, locus, gene)
 
-    j = {}
     allele_query = db.session.query(Allele)
     if source:
         allele_query = allele_query.join(Source).filter(Source.name==source)
@@ -1878,9 +1884,9 @@ def alleledb_network_json():
         allele_query = allele_query.join(Species).filter(Species.name==species)
     if gene:
         allele_query = allele_query.join(Gene).filter(Gene.name==gene)
-    elif locus:
+    if locus:
         allele_query = allele_query.join(Locus).filter(Locus.name==locus)
-    elif locus_type:
+    if locus_type:
         allele_query = allele_query.join(Locus).filter(Locus.type==locus_type)
     if sequence_type:
         if sequence_type == 'nuc' or sequence_type=='nucleotide' or sequence_type=='spliced nuclotide' or sequence_type=='rna' or sequence_type=='mrna':
@@ -1908,7 +1914,7 @@ def alleledb_network_json():
     allele_network_dict = {}
     nodes = []
     for i, allele in enumerate(alleles):
-        nodes.append({"id": allele.name, "group": allele.gene.name, "name": allele.name})
+        nodes.append({"id": allele.id, "group": allele.gene.name, "name": allele.name})
     allele_network_dict['nodes']=nodes
 
 
@@ -1919,7 +1925,7 @@ def alleledb_network_json():
     comparisons_done = [] # tuples of sorted((allele1 identifier, allele2 identifier))
     for allele_i in alleles:
         for allele_j in alleles:
-            identifier = tuple(sorted((allele_i.name, allele_j.name)))
+            identifier = tuple(sorted((allele_i.id, allele_j.id)))
             if identifier not in comparisons_done:
                 # print 'running comparison of {}'.format(identifier)
                 # print "sequence 1: {}".format(allele_i.sequence_by_type(seq_type=sequence_type))
@@ -1927,7 +1933,7 @@ def alleledb_network_json():
                 # distance = jellyfish.hamming_distance(unicode(allele_i.sequence_by_type(seq_type=sequence_type)), unicode(allele_j.sequence_by_type(seq_type=sequence_type)))
                 distance = allele_i.distance_to(allele_j, method=distance_metric) # jellyfish.hamming_distance(unicode(allele_i.sequence), unicode(allele_j.sequence))
                 if distance <= linkage_threshold:
-                    links.append({"source":allele_i.name, "target":allele_j.name, 'value':distance})
+                    links.append({"source":allele_i.id, "target":allele_j.id, 'value':distance})
                 comparisons_done.append(identifier)
     allele_network_dict['links']=links
 
@@ -1978,6 +1984,34 @@ def zip_file_status_json():
     }
 
     return jsonify( response )
+
+
+
+
+
+@frontend.route('/project_dataset_options', methods=['GET', 'POST'])
+@login_required
+def project_dataset_options():
+
+    assert current_user, 'no current_user object identified... exiting'
+    if 'file_types' in request.args.keys():
+        file_types = request.args.get('file_types', [], type=list)
+        return_value = current_user.get_projects_datasets_files(file_types=file_types)
+    else:
+        return_value = current_user.get_projects_datasets_files()
+
+    print return_value
+    if type(return_value)==type(OrderedDict()) or type(return_value)==type(dict()) or type(return_value)==list:
+        return json.dumps ( return_value )
+        # return jsonify ( return_value )
+    else:
+        'project_dataset_options route did not return a dict...'
+        return json.dumps( None )
+        # return jsonify ( None )
+
+
+
+
 
 
 @frontend.route('/pipeline', methods=['GET', 'POST'])
@@ -2070,6 +2104,11 @@ def pipeline(selected_dataset=None):
             # This form does not need a new dataset option
             build_pipeline_form.dataset.choices = [tup for tup in dataset_tuples if tup[0] in dataset_file_dict.keys()]
 
+        # NEW ROUTINE
+        projects_datasets_files = current_user.get_projects_datasets_files(file_types=['FASTQ', 'GZIPPED_FASTQ', 'FASTA'])
+        projects_datasets_files_formatted =  json.dumps ({'id':'node1', 'level':1, 'title':'placeholder', 'has_children':True, 'children': projects_datasets_files})
+        # for pdf in projects_datasets_files:
+        #     projects_datasets_files_formatted += json.dumps ( pdf )
 
         # list of tuples to set arbitrary HTML tag attributes
         # passed to JQUERY to set attributes
@@ -2078,56 +2117,8 @@ def pipeline(selected_dataset=None):
         form_warning_style = 'border: 2px solid #d66; border-radius: 7px; box-shadow: 0 0 10px #d66;'
 
 
-        return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes )
+        return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, projects_datasets_files=projects_datasets_files_formatted, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes )
 
-
- 
-@frontend.route('/test_pipeline', methods=['GET', 'POST'])
-@login_required
-def test_pipeline(selected_dataset=None):
-
-
-
-
-
-    # put the form contents into a format that can be serialized and sent to a celery task
-    form_output_dict = {
-        'user_id' : current_user.id,    
-        'file_source' : build_pipeline_form.file_source.data,
-        'dataset' : build_pipeline_form.dataset.data,
-        'dataset_files' : build_pipeline_form.dataset_files.data,
-        'name' : build_pipeline_form.name.data,
-        'description' : build_pipeline_form.description.data,
-        'trim' : build_pipeline_form.trim.data,
-        'trim_slidingwindow' : build_pipeline_form.trim_slidingwindow.data,
-        'trim_slidingwindow_size' : build_pipeline_form.trim_slidingwindow_size.data,
-        'trim_slidingwindow_quality' : build_pipeline_form.trim_slidingwindow_quality.data,
-        'trim_illumina_adapters' : build_pipeline_form.trim_illumina_adapters.data,
-        'filter' : build_pipeline_form.filter.data, 
-        'filter_quality' : build_pipeline_form.filter_quality.data, 
-        'filter_percentage' : build_pipeline_form.filter_percentage.data, 
-        'pandaseq' : build_pipeline_form.pandaseq.data,
-        'pandaseq_algorithm' : build_pipeline_form.pandaseq_algorithm.data,
-        'pandaseq_minimum_overlap' : build_pipeline_form.pandaseq_minimum_overlap.data, 
-        'pandaseq_minimum_length': build_pipeline_form.pandaseq_minimum_length.data, 
-        'analysis_type' : build_pipeline_form.analysis_type.data,
-        'cluster' : build_pipeline_form.cluster.data,
-        'species' : build_pipeline_form.species.data,
-        'loci': build_pipeline_form.loci.data,
-        'standardize_outputs': build_pipeline_form.standardize_outputs.data,
-        'require_annotations': build_pipeline_form.require_annotations.data,
-        'append_cterm_peptides': build_pipeline_form.append_cterm_peptides.data,
-        'remove_seqs_with_indels': build_pipeline_form.remove_seqs_with_indels.data,
-        'generate_msdb' : build_pipeline_form.generate_msdb.data,
-        'pair_vhvl' : build_pipeline_form.pair_vhvl.data,
-        'msdb_cluster_percent' : str(build_pipeline_form.msdb_cluster_percent.data),
-        'vhvl_min' : str(build_pipeline_form.vhvl_min.data),
-        'vhvl_max' : str(build_pipeline_form.vhvl_max.data),
-        'vhvl_step' : str(build_pipeline_form.vhvl_step.data)
-    }
-
-    result = run_analysis_pipeline.apply_async( (), form_output_dict, queue=celery_queue)
-    return redirect(url_for("frontend.dashboard"))
 
 
 

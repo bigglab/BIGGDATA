@@ -81,7 +81,7 @@
                 <td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.id}}</a></td>
                 <td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
                 <td>{{dataset.description}}</td>
-                <td>{{dataset.projects|map(attribute='project_name')|join(',')}}</td>
+                <td>{{dataset.projects|map(attribute='name')|join(',')}}</td>
               </tr>
             {% endfor %}
             
