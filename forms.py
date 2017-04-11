@@ -62,7 +62,7 @@ class CreateMSDBAnalysisForm(Form):
     read_cutoff = IntegerField(default=1)
     cluster_on = SelectField('Cluster On', choices=[('nSeqCDR3', 'CDR3 NT'),('aaSeqCDR3', 'CDR3 AA'),('aaFullSeq', 'Full AA'), ('nFullSeq', 'Full NT')], default = 'aaSeqCDR3')
     append_cterm_peptides = BooleanField(default=False)
-
+    max_sequences_per_cluster_to_report = IntegerField(default=1)
 
 class AssociateFilesToDatasetForm(Form):
     file_ids  = SelectField(u'Files', coerce=int)

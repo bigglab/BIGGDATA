@@ -1436,7 +1436,8 @@ def msdb(status=[]):
                         'require_annotations' : msdb_form.require_annotations.data, 
                         'read_cutoff': msdb_form.read_cutoff.data, 
                         'cluster_on': msdb_form.cluster_on.data, 
-                        'append_cterm_peptides': msdb_form.append_cterm_peptides.data
+                        'append_cterm_peptides': msdb_form.append_cterm_peptides.data,
+                        'max_sequences_per_cluster_to_report': msdb_form.max_sequences_per_cluster_to_report.data,
                      }, queue=celery_queue )
 
             return redirect( url_for('frontend.dashboard') )

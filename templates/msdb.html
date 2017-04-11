@@ -42,6 +42,7 @@
                   <th width=15%>Cluster %</th>
                   <th width=18%>Cluster Algorithm</th>
                   <th width=15%>Append C-term Peptides</th>
+                  <th width=10%>Max Seqs To Report Per Cluster</th>
               </tr>
           </thead>
           <tbody>
@@ -51,6 +52,7 @@
                 <td><br>{{ msdb_form.msdb_cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
                 <td><br><a href="http://drive5.com/usearch/manual/uclust_algo.html">Greedy Info</a><br><a href="http://drive5.com/usearch/manual/agg.html">Agglomerative Info</a><br><br>{{ msdb_form.msdb_cluster_algorithm(id='cluster_algorithm_select', onchange="hide_linkage(this)") }}<br><br><div id="linkage_select">Linkage: {{msdb_form.msdb_cluster_linkage()}}<br><br>Warning: HUGE MEMORY USAGE. Only use with small files (>10K annotations) or it's likely to fail.</div></td>
                 <td>{{ msdb_form.append_cterm_peptides(class = 'form-control') }}</td>
+                <td>{{  msdb_form.max_sequences_per_cluster_to_report(class = 'form-control')}}</td>
               </tr>
           </tbody>
         </table>
