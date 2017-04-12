@@ -16,7 +16,7 @@
     <h1>View Project</h1>
     
     {% if not read_only %}
-        You may edit the information below by <a href='{{url_for("frontend.edit_project", project_id = project_id)}}'>clicking here</a>.
+        You may edit the information below by <a href='{{url_for("frontend.edit_project", project_id=project.id)}}'>clicking here</a>.
         <br/>
     {% else %}
         <p>The information about your project is listed below. </p>
@@ -159,87 +159,46 @@
 
 <script>
     
-    var table = $('#datasets').DataTable({
-        columnDefs: [
-        { targets: 'no-sort', orderable: false }
-        ],
-        order: [[ 1, 'desc' ]], 
-        pageLength:100
-    });
- 
-    var table_data = [
-    {%- for dataset, files in datadict.iteritems() -%}
-        {%- if files == [] -%}
-            `<a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
-        {% else %}
-            {%- set files = files -%}
-            `{%- include "partials/files_no_preview.html" with context %}`,
-        {% endif %}
-    {%- endfor -%}
-        ''
-    ]
-    table.rows().every( function () {
-        this.child( table_data[this.index()] );
-    } );
+	var table = $('#datasets').DataTable({
+		columnDefs: [
+  		{ targets: 'no-sort', orderable: false }
+  		],
+  		order: [[ 1, 'desc' ]],
+  		pageLength:100
+	});
 
 
-    $('#datasets tbody').on( 'click', 'td.details-control', function () {
-        var child = table.row( this ).child;
-        var tr = $(this).closest('tr');
-        
-        if ( child.isShown() ) {
-            child.hide();
-            tr.removeClass('shown');
-        }
-        else {
-            child.show();
-            tr.addClass('shown')
-        }
-    } );
+	var table_data = [
+	{%- for dataset, files in datadict.iteritems() -%}
+		{%- if files == [] -%}
+			`<a href="{{url_for('.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
+		{% else %}
+			{%- set files = files -%}
+			`{%- include "partials/files_no_preview.html" with context %}`,
+		{% endif %}
+	{%- endfor -%}
+		''
+	]
 
 
+	table.rows().every( function () {
+	    this.child( table_data[this.index()] );
+	} );
 
 
-    // <!-- legacy table -->
+	$('#datasets tbody').on( 'click', 'td.details-control', function () {
+		var child = table.row( this ).child;
+		var tr = $(this).closest('tr');
 
-
-    // var table = $('#dataset').DataTable({
-    //     columnDefs: [
-    //     { targets: 'no-sort', orderable: false }
-    //     ],
-    //     order: [[ 1, 'asc' ]]
-    // });
- 
-    // var table_data = [
-    // {%- for dataset in datasets -%}
-    //     {%- if dataset.files.all() == [] -%}
-    //         `<a href="{{url_for('frontend.dataset', id=dataset.id)}}">Click Here To Add Files To Dataset {{dataset.id}}</a><br/>`,
-    //     {%- else -%}
-    //         {%- set files = dataset.files -%}
-    //         `{%- include "partials/files.html" with context %}`,
-    //     {%- endif -%}
-    // {%- endfor -%}
-    //     ''
-    // ];
-
-    // table.rows().every( function () {
-    //     this.child( table_data[this.index()] );
-    // } );
-
-    // $('#dataset tbody').on( 'click', 'td.details-control', function () {
-    //     var child = table.row( this ).child;
-    //     var tr = $(this).closest('tr');
-        
-    //     if ( child.isShown() ) {
-    //         child.hide();
-    //         tr.removeClass('shown');
-    //     }
-    //     else {
-    //         child.show();
-    //         tr.addClass('shown')
-
-    //     }
-    // } );
+	    if ( child.isShown() ) {
+	        child.hide();
+	        tr.removeClass('shown');
+	    }
+	    else {
+	        child.show();
+	        tr.addClass('shown')
+	    }
+	} );
 
 </script>
 

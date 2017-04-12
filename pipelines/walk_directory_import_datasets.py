@@ -21,19 +21,20 @@ for (path, names, files) in walk(d):
 				datasets[(dataset_name, pairing)] = [r1,r2]
 
 print datasets
-
-
-for np, filepath_array in datasets.items(): 
-  if np[0] in current_datasets: 
+current_datasets = [d[0] for d in db.session.query(Dataset.name).distinct().all()]
+new_datasets = []
+for (n,p), filepath_array in datasets.items(): 
+  if n in current_datasets: 
       do_nothing = None
   else: 
-      dataset_name = np[0]
+      dataset_name = n
       print dataset_name
-      paired = np[1]
+      paired = p
       print paired
       print filepath_array
       import_files_as_dataset.apply_async((), {'name':dataset_name,  'paired':paired, 'user_id':2, 'project':96, 'filepath_array':filepath_array})
-      time.sleep(10)
+      time.sleep(0.01)
+      new_datasets.append(((n,p),filepath_array))
 
 
 

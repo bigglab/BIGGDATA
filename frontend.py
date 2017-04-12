@@ -1436,7 +1436,8 @@ def msdb(status=[]):
                         'require_annotations' : msdb_form.require_annotations.data, 
                         'read_cutoff': msdb_form.read_cutoff.data, 
                         'cluster_on': msdb_form.cluster_on.data, 
-                        'append_cterm_peptides': msdb_form.append_cterm_peptides.data
+                        'append_cterm_peptides': msdb_form.append_cterm_peptides.data,
+                        'max_sequences_per_cluster_to_report': msdb_form.max_sequences_per_cluster_to_report.data,
                      }, queue=celery_queue )
 
             return redirect( url_for('frontend.dashboard') )
@@ -1884,15 +1885,15 @@ def alleledb_network_json():
 
     allele_query = db.session.query(Allele)
     if source:
-        allele_query = allele_query.join(Source).filter(Source.name==source)
+        allele_query = allele_query.join(Source).filter(Source.name == source)
     if species:
-        allele_query = allele_query.join(Species).filter(Species.name==species)
+        allele_query = allele_query.join(Species).filter(Species.name == species)
     if gene:
-        allele_query = allele_query.join(Gene).filter(Gene.name==gene)
+        allele_query = allele_query.join(Gene).filter(Gene.name == gene)
     if locus:
-        allele_query = allele_query.join(Locus).filter(Locus.name==locus)
-    if locus_type:
-        allele_query = allele_query.join(Locus).filter(Locus.type==locus_type)
+        allele_query = allele_query.join(Locus).filter(Locus.name == locus)
+    elif locus_type:
+        allele_query = allele_query.join(Locus).filter(Locus.type == locus_type)
     if sequence_type:
         if sequence_type == 'nuc' or sequence_type=='nucleotide' or sequence_type=='spliced nuclotide' or sequence_type=='rna' or sequence_type=='mrna':
             allele_query = allele_query.filter(Allele.sequence_nuc != None)

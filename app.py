@@ -1864,7 +1864,7 @@ def run_quality_filtering_with_analysis_id(self, analysis_id=None, analysis_name
 def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None, analysis_name=None,
                  analysis_description=None, append_cterm_peptides=False, cluster_percent=0.9,
                  cluster_algorithm='greedy', cluster_on='aaSeqCDR3', read_cutoff=1, require_annotations=['aaSeqCDR3'],
-                 cluster_linkage='min'):
+                 cluster_linkage='min', max_sequences_per_cluster_to_report=1):
 
     logger = self.logger
 
@@ -1903,7 +1903,7 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
                      'append_cterm_peptides':append_cterm_peptides, 'cluster_percent':cluster_percent,
                      'cluster_algorithm':cluster_algorithm, 'cluster_on':cluster_on, 'read_cutoff':read_cutoff,
                      'require_annotations':require_annotations,
-                     'cluster_linkage':cluster_linkage}
+                     'cluster_linkage':cluster_linkage, 'max_sequences_per_cluster_to_report':max_sequences_per_cluster_to_report}
 
 
         analysis_file_name_prefix = analysis.name.replace(' ', '_')
@@ -1928,7 +1928,7 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
             dfs.append(df)
         df = pd.concat(dfs)
         dfs = None # garbage collection - clear up some RAM cause we gunna need it
-        logger.info("{} Total Annotations Grouped From Input Files")
+        logger.info("{} Total Annotations Grouped From Input Files".format(len(df)))
         df = df.dropna(subset=require_annotations, how='any')
         logger.info("{} Total Annotations With {} Annotated Being Clustered".format(len(df), ','.join(require_annotations)))
         logger.info(
@@ -1943,7 +1943,7 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
         saved_stdout = sys.stdout
         sys.stdout = LoggerWriterRedirect(logger, task=self)
         df = cluster_dataframe(df, identity=cluster_percent, on=cluster_on, how=cluster_algorithm,
-                               linkage=cluster_linkage, read_cutoff=read_cutoff, group_tag='group')
+                               linkage=cluster_linkage, read_cutoff=read_cutoff, group_tag='group', max_sequences_per_cluster_to_report=max_sequences_per_cluster_to_report)
         # Restore STDOUT to the console
         sys.stdout = saved_stdout
         logger.info("{} Clusters Generated".format(len(df)))
@@ -1967,7 +1967,7 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
                         path="{}/{}_MSDB.txt".format(analysis.directory, analysis.name).replace(' ', '_'),
                         file_type='MSDB_TXT', analysis_id=analysis.id, user_id=user_id, check_name=False)
         logger.info('Writing MSDB Tabbed file to path: {}'.format(new_file.path))
-        df.to_csv(new_file.path, sep='\t', index=True)
+        df.to_csv(new_file.path, sep='\t', index=False)
         session.add(new_file)
 
         logger.info('MSDB analysis complete. {} sequences were written.'.format(len(df)))

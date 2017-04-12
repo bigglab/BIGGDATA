@@ -26,10 +26,10 @@
 
 
 {#<p>{{ projects_datasets_files }}</p>#}
-  <div class="container">
-    <div class="chosentree">
-    </div>
-  </div>
+{#  <div class="container">#}
+{#    <div class="chosentree">#}
+{#    </div>#}
+{#  </div>#}
 
 
 <div class="container">
@@ -42,7 +42,7 @@
 
 <script type='text/javascript'>
 
-{#    JSONObject = JSON.parse('{{ projects_datasets_files }}');#}
+    JSONObject = JSON.parse('{{ projects_datasets_files }}');
 
 // JSONObject = JSON.parse('{"level": 1, "has_children": true, "title": "Project 101", "id": "101", "type": "project", "children": [{"level": 2, "has_children": true, "title": "SRR1525443", "id": "290", "type": "dataset", "children": [{"level": 3, "file_type": "GZIPPED_FASTQ", "has_children": false, "title": "SRR1525443_1.fastq.gz", "type": "file", "id": 3419}]}]}'); // {"level": 1, "has_children": true, "title": "Project 100", "id": "100", "type": "project", "children": [{"level": 2, "has_children": true, "title": "SRR1525443", "id": "290", "type": "dataset", "children": [{"level": 3, "file_type": "GZIPPED_FASTQ", "has_children": false, "title": "SRR1525443_1.fastq.gz", "type": "file", "id": 3419}]}]}');
 
@@ -252,11 +252,12 @@
                       <td width="15px"></td>
                       <td>                              
                         <label class="radio">
-                          <input id="analysis_type-0" name="analysis_type" type="radio" value="igrep" class="igrep">IGFFT (and To Generate MS DB)
+                          <input id="analysis_type-0" name="analysis_type" type="radio" value="igrep" class="igrep">IGREP IGFFT Alignment
                         </label>
                         <div id="collapse" class="collapse igrep radio1">
-
-
+                            <h5> Our 'In-House' aligner, IGFFT uses a Fast Fourier Transform and is similar to the MSA aligner MAFFT </h5>
+                            <h5> This analysis calls the alignment pipeline in the IGREP release, so annotations will be similar to previous experiments </h5>
+                            <h5> Alignments are made from flat text file datasets derived from the IMGT database November 2015</h5>
                         </div> <!-- /igrep collapse -->
                       </td>
                     </tr>
@@ -265,8 +266,15 @@
                       <td width="15px"></td>
                       <td>                              
                         <label class="radio">
-                          <input id="analysis_type-1" name="analysis_type" type="radio" value="mixcr"  checked="yep" class="mixcr">MixCR
+                          <input id="analysis_type-1" name="analysis_type" type="radio" value="mixcr"  checked="yep" class="mixcr">MixCR Alignment - Recommended
                         </label>
+                        <div id="collapse" class="collapse mixcr radio1">
+                            <h5>MiXCR uses the KAligner program originally developed for the ABySS assembly pipeline</h5>
+                            <h5>This algorithm is a bit different in that it splits the reads into kmers, aligns the kmers and then compares those alignments</h5>
+                            <h5>Alignments are made against the <a href=https://github.com/repseqio/repseqio">RepSeqIO</a> Database, which includes all IMGT alleles</h5>
+                        </div> <!-- /mixcr collapse -->
+
+
                       </td>
                     </tr>
                   
@@ -274,27 +282,11 @@
                       <td width="15px"></td>
                       <td>                              
                         <label class="radio">
-                          <input id="analysis_type-2" name="analysis_type" type="radio" value="abstar" class="abstar">ABStar
+                          <input id="analysis_type-2" name="analysis_type" type="radio" value="abstar" class="abstar">ABStar Alignment
                         </label>
                         <div id="collapse" class="collapse abstar radio1">
-
-                          <!-- <table class='table table-striped'> 
-                              <thead>
-                                  <tr>
-                                      <th>{#{ build_pipeline_form.download_url.label }#}:</th>
-                                      <th><label>Chain:</label></th>
-                                      <th></th>
-                                  </tr>
-                              </thead>
-                              <tbody>
-                                  <tr>
-                                      <td>{#{ build_pipeline_form.download_url(size=30, class="form-control") }#}</td>
-                                      <td>{#{ build_pipeline_form.download_chain(class="form-control") }#}</td>
-                                      <td></td>
-                                  </tr>
-                              </tbody>
-                          </table> -->
-
+                            <h5>AbSTAR perms iterative V->J->D alignments using the BLAST algorithm</h5>
+                            <h5>This routine works, but is under construction. Outputs will be produced in the native AbSTAR JSON format but not standardized.</h5>
                         </div>
 
                       </td>
