@@ -1453,7 +1453,7 @@ def annotate_analysis_from_db(analysis_id):
 @celery.task(base=LogTask, bind=True)
 def run_pandaseq_with_dataset_id(self, dataset_id, analysis_id=None, analysis_name='',
                                  analysis_description='Pandaseq Alignment Consensus', file_ids=[], user_id=2,
-                                 minimum_length=100, minimum_overlap=10, algorithm='pear'):
+                                 minimum_length=100, maximum_length=500, minimum_overlap=10, algorithm='pear'):
     logger = self.logger
     dataset = db.session.query(Dataset).filter(Dataset.id == dataset_id).first()
     files = [db.session.query(File).get(file_id) for file_id in file_ids]
@@ -1508,11 +1508,12 @@ def run_pandaseq_with_dataset_id(self, dataset_id, analysis_id=None, analysis_na
         alignment_file.user_id = dataset.user_id
         alignment_file.path = '{}.pandaseq_{}.fastq'.format(basepath, algorithm)
         alignment_file.name = "{}.pandaseq_{}.fastq".format(basename, algorithm)
-        alignment_file.command = 'pandaseq -f {} -r {} -F -T 4 -A {} -w {} -l {} -o {} 2> {}.log'.format(files[0].path,
+        alignment_file.command = 'pandaseq -f {} -r {} -F -T 4 -A {} -w {} -l {} -L {} -o {} 2> {}.log'.format(files[0].path,
                                                                                                          files[1].path,
                                                                                                          algorithm,
                                                                                                          alignment_file.path,
                                                                                                          minimum_length,
+                                                                                                         maximum_length,
                                                                                                          minimum_overlap,
                                                                                                          alignment_file.path)
         alignment_file.file_type = 'PANDASEQ_ALIGNED_FASTQ'
