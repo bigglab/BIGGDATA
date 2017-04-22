@@ -40,6 +40,11 @@ def collapse_annotation_dataframe(df, on='aaFullSeq', keep_group_tag=None):
 def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='min', read_cutoff=1, group_tag=None, remove_temp_files=False, max_sequences_per_cluster_to_report=1):
 	print "#####  {} Total Annotations Being Clustered  #####".format(len(df))
 	print 'No group_tag specified....' if group_tag==None else 'Keeping and tagging read counts by groups tagged "{}"'.format(group_tag)
+	if on not in df.columns:
+		if on + '_h' in df.columns:
+			on = on+'_h'
+		elif on + '_l' in df.columns:
+			on = on+'_l'
 	df = collapse_annotation_dataframe(df, on=on, keep_group_tag=group_tag)
 	print "#####  {} Annotations After Collapsing On Identical {}  #####".format(len(df), on)
 	print 'Sorting annotations based on length of {} (leads to more accurate clustering with greedy algorithm)'.format(on)

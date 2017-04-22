@@ -1927,6 +1927,8 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
         df = pd.concat(dfs)
         del(dfs) # garbage collection - clear up some RAM cause we gunna need it
         logger.info("{} Total Annotations Grouped From Input Files".format(len(df)))
+        if len([a for a in require_annotations if a not in df.columns]) > 0 :
+            require_annotations = [a + '_h' for a in require_annotations]
         df = df.dropna(subset=require_annotations, how='any')
         logger.info("{} Total Annotations With {} Annotated Being Clustered".format(len(df), ','.join(require_annotations)))
         logger.info(
