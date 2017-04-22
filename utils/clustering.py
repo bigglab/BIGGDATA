@@ -23,27 +23,28 @@ def collapse_annotation_dataframe(df, on='aaFullSeq', keep_group_tag=None):
 			grouped = df.groupby(by=on, as_index=False, sort=False)
 		df_collapsed = grouped.first()
 		#if already collapsed by standardization routine, readCount will be annotated
-		if 'readCount' in df_collapsed.index.tolist(): 
-			df_collapsed['collapsedCount'] = grouped['readCount'].transform('sum')
+		if 'collapsedCount' in df_collapsed.index.tolist():
+			df_collapsed['collapsedCount'] = grouped['collapsedCount'].transform('sum')
 		elif 'collapsed' in df_collapsed.index.tolist(): 
 			df_collapsed['collapsedCount'] = grouped['collapsed'].transform('sum')
 		elif 'Collapsed' in df_collapsed.index.tolist(): 
 			df_collapsed['collapsedCount'] = grouped['Collapsed'].transform('sum')
-		elif 'collapsedCount' in df_collapsed.index.tolist(): 
-			df_collapsed['collapsedCount'] = grouped['collapsedCount'].transform('sum')
+		elif 'readCount' in df_collapsed.index.tolist():
+			df_collapsed['collapsedCount'] = grouped['readCount'].transform('sum')
 		else: 
 			df_collapsed['collapsedCount'] = grouped.size().tolist()
 		return df_collapsed
 
 
 # agglomerative non-greedy clustering with minimum identity to one sequence in cluster satisfying linkage. can also run with max or avg linkage...
-def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='min', read_cutoff=1, group_tag=None, remove_temp_files=True, max_sequences_per_cluster_to_report=1):
+def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='min', read_cutoff=1, group_tag=None, remove_temp_files=False, max_sequences_per_cluster_to_report=1):
 	print "#####  {} Total Annotations Being Clustered  #####".format(len(df))
 	print 'No group_tag specified....' if group_tag==None else 'Keeping and tagging read counts by groups tagged "{}"'.format(group_tag)
 	df = collapse_annotation_dataframe(df, on=on, keep_group_tag=group_tag)
 	print "#####  {} Annotations After Collapsing On Identical {}  #####".format(len(df), on)
 	print 'Sorting annotations based on length of {} (leads to more accurate clustering with greedy algorithm)'.format(on)
-	df['tmp_on_length'] = df[on].str.len()
+	df['tmp_on_col'] = df[on].str.replace('*','').str.replace('_','')
+	df['tmp_on_length'] = df['tmp_on_col'].str.len()
 	df = df[df['tmp_on_length']>1] 
 	df = df.sort_values('tmp_on_length', ascending=False).reset_index(drop=True).drop('tmp_on_length', axis=1)
 
@@ -52,9 +53,10 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		temp_fasta_file = tempfile.NamedTemporaryFile(delete=False)
 		for index, row in df.iterrows(): 
 			temp_fasta_file.write('>{}\n'.format(index))
-			temp_fasta_file.write('{}\n'.format(''.join(row[on])))
+			temp_fasta_file.write('{}\n'.format(row['tmp_on_col']))
 			last_index = index
 		temp_fasta_file.close()
+		df = df.drop('tmp_on_col', axis=1)
 		print '{} fasta sequences for clustering written to temp file {}'.format(last_index+1, temp_fasta_file.name)
 		print '**************** Clustering With Agglomerative Algorithm ***************'
 		temp_distmatrix_file = tempfile.mktemp()
@@ -92,9 +94,10 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		temp_fasta_file = tempfile.NamedTemporaryFile(delete=False)
 		for index, row in df.iterrows(): 
 			temp_fasta_file.write('>{}\n'.format(index))
-			temp_fasta_file.write('{}\n'.format(''.join(row[on])))
+			temp_fasta_file.write('{}\n'.format(row['tmp_on_col']))
 			last_index = index
 		temp_fasta_file.close()
+		df = df.drop('tmp_on_col', axis=1)
 		print '{} fasta sequences for clustering written to temp file {}'.format(last_index+1, temp_fasta_file.name)
 		print '**************** Clustering With Greedy Algorithm **********************'
 		temp_centroids_file = tempfile.mktemp()
@@ -132,10 +135,11 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 	elif how=='D': 
 		print '********************** Writing {} Sequences **********************'.format(on)
 		temp_seq_file = tempfile.NamedTemporaryFile(delete=False)
-		for index, row in df.iterrows(): 
-			temp_seq_file.write('{}\n'.format(''.join(row[on])))
+		for index, row in df.iterrows():
+			temp_seq_file.write('{}\n'.format(''.join(row['tmp_on_col'])))
 			last_index = index
 		temp_seq_file.close()
+		df = df.drop('tmp_on_col', axis=1)
 		print '{} sequences for clustering written to temp file {}'.format(last_index+1, temp_seq_file.name)
 		print '**************** Clustering With D Algorithm ***************'
 		temp_clustered_output_file = tempfile.mktemp()
@@ -193,44 +197,6 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 	return clustered_df
 
 
-
-
-
-# filter min reads? 
-
-def cluster_dataframe_d(df, identity=0.94, read_cutoff=1, on='aaSeqCDR3', group_tag=None, remove_temp_files=True):
-	print 'No group_tag specified....' if group_tag==None else 'Keeping and tagging read counts by groups tagged "{}"'.format(group_tag)
-	df = collapse_annotation_dataframe(df, on=on, keep_group_tag=group_tag)
-	print 'Sorting annotations based on length of {} (leads to more accurate clustering with greedy algorithm)'.format(on)
-	df['tmp_on_length'] = df[on].str.len()
-	df = df[df['tmp_on_length']>1] 
-	df = df.sort_values('tmp_on_length', ascending=False).reset_index(drop=True).drop('tmp_on_length', axis=1)
-
-	# to allow for re-clustering: 
-	if 'clusterSize' in df.columns: 
-		size_key='clusterSize' 
-	else: 
-		size_key='collapsedCount'
-	df['clusterSize'] = df[~df.clusterId.isnull()].groupby(['clusterId'])[size_key].transform(sum)
-	print 'Generating clustered dataframe for output.'
-	if group_tag==None: 
-		if 'group' not in df.columns:
-			df['group'] = 'Group1'
-			group_tag='group'
-		else: 
-			group_tag='group'
-	df['groupClusterSize'] = df.groupby([group_tag, 'clusterId'])[size_key].transform(sum)
-	df['groupClusterSizeTag'] = df[group_tag] + ":" + df['groupClusterSize'].astype(str) + "reads"
-	concat_sizes = lambda sizes: "%s" % '|'.join(set(sizes))
-	df['group_tag'] = df.groupby('clusterId')['groupClusterSizeTag'].transform(concat_sizes)
-	clustered_df = df[df.clusterSize>=read_cutoff].sort_values(['clusterSize', 'collapsedCount', 'clusterId'],ascending=[False,False,True]).groupby(['clusterId']).head(1).reset_index() #     df[['clusterSize','collapsed','clusterId','CDRH3_AA','CDRL3_AA','CDRH3_NT','CDRL3_NT','VH','DH','JH','VL','JL','VH_AvgSHM','VL_AvgSHM','VHIso','VLIso']]   .to_csv(clustered_nt_output, index=None, sep='\t')
-	clustered_df.drop(['groupClusterSize', 'groupClusterSizeTag', 'index_row'], axis=1, inplace=True)
-	# raw_clustered_nt_output = df[df.clusterSize>=1].sort_values(['clusterSize','clusterId','collapsed',on],ascending=[False,True,False,True]) # .drop_duplicates(['CDRH3_NT','CDRL3_NT','ClusterID']) #   df[['clusterSize','readCount','clusterId','CDRH3_AA','CDRL3_AA','CDRH3_NT','CDRL3_NT','VH','DH','JH','VL','JL','VH_AvgSHM','VL_AvgSHM','VHIso','VLIso']]      .to_csv(raw_clustered_nt_output, index=None, sep='\t')
-	ordered_cols = ['clusterId', 'clusterSize', 'collapsedCount'] 
-	output_cols = ordered_cols + [c for c in clustered_df.columns if c not in ordered_cols]
-	clustered_df = clustered_df[output_cols]
-	print 'Clustering and processing complete.'
-	return clustered_df
 
 
 
