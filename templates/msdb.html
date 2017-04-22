@@ -3,7 +3,7 @@
 {% block content %}
 
 <div class="container">
-<h3 align="center">Generate Mass Spec Database From Annotation Files</h3>
+<h3 align="center">Cluster Across Datasets  &  Generate Mass Spec Database</h3>
 </div>
 <br>
 
@@ -20,39 +20,63 @@
         <table class='table table-striped' width=100%> 
           <thead>
               <tr>
-                  <th>MSDB Analysis Name</th>
-                  <th>MSDB Description</th>
-                  <th width=15%>Minimum # Reads</th>
+                  <th>Analysis Name</th>
+                  <th>Analysis Description</th>
               </tr>
           </thead>
           <tbody>
               <tr>
                 <td>{{ msdb_form.name(class = 'form-control') }}</td>
                 <td>{{ msdb_form.description(class = 'form-control') }}</td>
-                <td>{{ msdb_form.read_cutoff(class = 'form-control') }}</td>
-                <!-- <td><input type='submit' class="btn btn-default form-control" value="Generate MSDB"></td> -->
               </tr>
           </tbody>
         </table>
         <table class='table table-striped' width=100%> 
           <thead>
               <tr>
-                  <th width=20%>Required Annotated</th>
-                  <th width=15%>Cluster On</th>
+                  <th width=15%>Required Annotated</th>
+                  <th width=10%>Cluster On</th>
                   <th width=15%>Cluster %</th>
                   <th width=18%>Cluster Algorithm</th>
-                  <th width=15%>Append C-term Peptides</th>
-                  <th width=10%>Max Seqs To Report Per Cluster</th>
+                  <th width=15%>Minimum # Reads</th>
+                  <th width=20%>Max Seqs To Report Per Cluster</th>
               </tr>
           </thead>
           <tbody>
               <tr>
                 <td>{{ msdb_form.require_annotations() }}</td>
                 <td>{{ msdb_form.cluster_on() }}</td>
-                <td><br>{{ msdb_form.msdb_cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
-                <td><br><a href="http://drive5.com/usearch/manual/uclust_algo.html">Greedy Info</a><br><a href="http://drive5.com/usearch/manual/agg.html">Agglomerative Info</a><br><br>{{ msdb_form.msdb_cluster_algorithm(id='cluster_algorithm_select', onchange="hide_linkage(this)") }}<br><br><div id="linkage_select">Linkage: {{msdb_form.msdb_cluster_linkage()}}<br><br>Warning: HUGE MEMORY USAGE. Only use with small files (>10K annotations) or it's likely to fail.</div></td>
-                <td>{{ msdb_form.append_cterm_peptides(class = 'form-control') }}</td>
+                <td>{{ msdb_form.cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
+                <td>{{ msdb_form.cluster_algorithm(id='cluster_algorithm_select', onchange="hide_linkage(this)") }}<br><br><div id="linkage_select">Linkage: {{msdb_form.cluster_linkage()}}<br><br>Warning: HUGE MEMORY USAGE. Only use with small files (>10K annotations) or it's likely to fail.</div><br><a href="http://drive5.com/usearch/manual/uclust_algo.html">Greedy Info</a><br><a href="http://drive5.com/usearch/manual/agg.html">Agglomerative Info</a><br><br></td>
+                <td>{{ msdb_form.read_cutoff(class = 'form-control') }}</td>
                 <td>{{  msdb_form.max_sequences_per_cluster_to_report(class = 'form-control')}}</td>
+              </tr>
+          </tbody>
+        </table>
+        <table class='table table-striped' width=100%>
+          <thead>
+              <tr>
+                  <th width=10%>Mass Spec Analysis Options:</th>
+                  <th width=10%>Generate Mass Spec Fasta File</th>
+                  <th width=20%>Append C-term Peptides</th>
+              </tr>
+          </thead>
+          <tbody>
+              <tr>
+                  <td></td>
+                  <td>{{ msdb_form.generate_fasta_file(class = 'form-control') }}</td>
+                  <td>{{ msdb_form.append_cterm_peptides(class = 'append_cterm_peptides') }}
+                            <div id="collapse" class="collapse append_cterm_peptides in" style="display: none;">
+                                  <label>
+                                      <b>This preliminary process artificially adds missing peptides to the end of the AA sequences:</b>
+                                      <br>
+                                      <p>To the end of IgL seqs, 'GQPK' will be added.</p>
+                                      <p>To the end of IgK seqs, 'R'.</p>
+                                      <p>To the end of IgH seqs, 'ASTK'.</p>
+                                      <p>#Eventually this will be rewritten to snag exact peptides from 3' of raw reads.</p>
+                                  </label>
+                            </div>
+                    </td>
               </tr>
           </tbody>
         </table>
