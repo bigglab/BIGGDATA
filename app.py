@@ -1961,13 +1961,16 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
             with open(new_file.path, 'w') as file:
                 if 'aaSeqCDR3' in df.columns:
                     cdr3_col = 'aaSeqCDR3'
+                    aaFullSeq_col = 'aaFullSeq'
                 elif 'aaSeqCDR3_h' in df.columns:
                     cdr3_col = 'aaSeqCDR3_h'
+                    aaFullSeq_col = 'aaFullSeq_h'
                 elif 'aaSeqCDR3_l' in df.columns:
                     cdr3_col = 'aaSeqCDR3_l'
+                    aaFullSeq_col = 'aaFullSeq_l'
                 for i, row in df.iterrows():
                     file.write('>{}_{}_{}_{}\n'.format(i, row[cdr3_col], row['clusterSize'], row['collapsedCount']))
-                    file.write(row['aaFullSeq'])
+                    file.write(row[aaFullSeq_col])
                     file.write('\n')
             session.add(new_file)
 
