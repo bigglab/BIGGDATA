@@ -1959,8 +1959,14 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
                             file_type='MSDB_FASTA', analysis_id=analysis.id, user_id=user_id, check_name=False)
             logger.info('Writing MSDB Fasta file to path: {}'.format(new_file.path))
             with open(new_file.path, 'w') as file:
+                if 'aaSeqCDR3' in df.columns:
+                    cdr3_col = 'aaSeqCDR3'
+                elif 'aaSeqCDR3_h' in df.columns:
+                    cdr3_col = 'aaSeqCDR3_h'
+                elif 'aaSeqCDR3_l' in df.columns:
+                    cdr3_col = 'aaSeqCDR3_l'
                 for i, row in df.iterrows():
-                    file.write('>{}_{}_{}_{}\n'.format(i, row['aaSeqCDR3'], row['clusterSize'], row['collapsedCount']))
+                    file.write('>{}_{}_{}_{}\n'.format(i, row[cdr3_col], row['clusterSize'], row['collapsedCount']))
                     file.write(row['aaFullSeq'])
                     file.write('\n')
             session.add(new_file)
