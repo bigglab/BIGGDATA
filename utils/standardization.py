@@ -393,7 +393,7 @@ def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_
         df['qualCDR3'] = None
         df['qualFR4'] = None
         df_output = pd.concat([df_output, df])
-    df_output = collapse_annotation_dataframe(df_output)
+    df_output = collapse_annotation_dataframe(df_output, on='readSequence')
     df_output = df_output[clean_annotation_dataframe_columns]
     return df_output
 
@@ -487,7 +487,7 @@ def build_annotation_dataframe_from_mixcr_file(file_path, rmindels=True, append_
         df = df[~df['aaFullSeq'].str.contains('\*|_')] if rmindels == True else df
         df = append_cterm_peptides_for_mass_spec(df) if append_ms_peptides == True  else df
         df_output = pd.concat([df_output, df])
-    df_output = collapse_annotation_dataframe(df_output)
+    df_output = collapse_annotation_dataframe(df_output, on='readSequence')
     df_output = df_output[clean_annotation_dataframe_columns]
     return df_output
 
@@ -521,6 +521,7 @@ def collapse_annotation_dataframe(df, on='aaFullSeq', keep_group_tag=None):
       df_collapsed['collapsedCount'] = grouped['collapsedCount'].transform('sum')
     else: 
       df_collapsed['collapsedCount'] = grouped.size().tolist()
+    df_collapsed = df_collapsed.sort_values('collapsedCount', ascending=False)
     return df_collapsed
 
 

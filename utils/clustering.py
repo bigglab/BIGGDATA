@@ -27,6 +27,7 @@ def collapse_annotation_dataframe(df, on='aaFullSeq', keep_group_tag=None):
 			df_collapsed['collapsedCount'] = grouped['collapsedCount'].transform('sum')
 		else: 
 			df_collapsed['collapsedCount'] = grouped.size().tolist()
+		df_collapsed = df_collapsed.sort_values('collapsedCount', ascending=False)
 		return df_collapsed
 
 
@@ -191,9 +192,9 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 	ordered_cols = ['clusterId', 'clusterSize', 'collapsedCount'] 
 	output_cols = ordered_cols + [c for c in clustered_df.columns if c not in ordered_cols]
 	clustered_df = clustered_df[output_cols]
+	clustered_df = clustered_df.sort_values('clusterSize', ascending=False)
 	print 'Clustering and processing complete.'
 	return clustered_df
-
 
 
 
