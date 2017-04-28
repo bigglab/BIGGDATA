@@ -1864,7 +1864,7 @@ def run_quality_filtering_with_analysis_id(self, analysis_id=None, analysis_name
 def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None, analysis_name=None,
                  analysis_description=None, append_cterm_peptides=False, cluster_percent=0.9,
                  cluster_algorithm='greedy', cluster_on='aaSeqCDR3', read_cutoff=1, require_annotations=['aaSeqCDR3'],
-                 cluster_linkage='min', max_sequences_per_cluster_to_report=1):
+                 cluster_linkage='min', max_sequences_per_cluster_to_report=1, generate_fasta_file=False):
 
     logger = self.logger
 
@@ -1874,19 +1874,17 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
         # Get the DB objects
         user = session.query(User).get(user_id)
         files = [db.session.query(File).get(id) for id in file_ids]
-        logger.info('Preparing new MSDB with these annotations: {}'.format(','.join([f.path for f in files])))
+        logger.info('Preparing new clustering analysis with these annotations: {}'.format(','.join([f.path for f in files])))
 
         # Determine if a new analysis is needed
         if analysis_id != None:
             analysis = session.query(Analysis).get(analysis_id)
-            output_directory = analysis.directory
         else:  # no analysis provided, so we have to create a new analysis
-            analysis = generate_new_analysis(user=user, directory=None, directory_prefix='MSDB_Analysis_',
+            analysis = generate_new_analysis(user=user, directory=None, directory_prefix='Post-annotation_Analysis_',
                                              name=analysis_name, description=analysis_description, program='MSDB',
                                              session=session)
 
         self.set_analysis_id(analysis.id)
-        output_directory = analysis.directory
 
         # Set analysis database values
         analysis.started = 'now'
@@ -1903,13 +1901,13 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
                      'append_cterm_peptides':append_cterm_peptides, 'cluster_percent':cluster_percent,
                      'cluster_algorithm':cluster_algorithm, 'cluster_on':cluster_on, 'read_cutoff':read_cutoff,
                      'require_annotations':require_annotations,
-                     'cluster_linkage':cluster_linkage, 'max_sequences_per_cluster_to_report':max_sequences_per_cluster_to_report}
+                     'cluster_linkage':cluster_linkage, 'max_sequences_per_cluster_to_report':max_sequences_per_cluster_to_report, 'generate_fasta_file':generate_fasta_file}
 
 
         analysis_file_name_prefix = analysis.name.replace(' ', '_')
         analysis_json_path = '{}/{}_settings.json'.format(analysis.directory.rstrip('/'), analysis_file_name_prefix)
 
-        logger.info("Saving MSDB Execution Settings to {}".format(analysis_json_path))
+        logger.info("Saving Execution Settings to {}".format(analysis_json_path))
         with open(analysis_json_path, 'w') as json_file:
             # json.dump( (args, kwargs) , json_file)
             json.dump(runtime_parameters, json_file, indent=4, sort_keys=True)
@@ -1927,8 +1925,10 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
             df['group'] = file.dataset.name
             dfs.append(df)
         df = pd.concat(dfs)
-        dfs = None # garbage collection - clear up some RAM cause we gunna need it
+        del(dfs) # garbage collection - clear up some RAM cause we gunna need it
         logger.info("{} Total Annotations Grouped From Input Files".format(len(df)))
+        if len([a for a in require_annotations if a not in df.columns]) > 0 :
+            require_annotations = [a + '_h' for a in require_annotations]
         df = df.dropna(subset=require_annotations, how='any')
         logger.info("{} Total Annotations With {} Annotated Being Clustered".format(len(df), ','.join(require_annotations)))
         logger.info(
@@ -1938,7 +1938,7 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
             logger.error("No annotations contained all required CDR/FR sequences")
             self.update_state(state='FAILED',
                               meta={'status': 'No Annotations Resulted After Filtering On Required CDR/FR Sequences'})
-            return ReturnValue("MSDB Construction Failed - No Sequences Remaining After Filtering", file_ids=[])
+            return ReturnValue("Post-analysis Clustering Failed - No Sequences Remaining After Filtering", file_ids=[])
         # redirect logger to capture function output
         saved_stdout = sys.stdout
         sys.stdout = LoggerWriterRedirect(logger, task=self)
@@ -1953,90 +1953,38 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
             df = append_cterm_peptides_for_mass_spec(df)
 
         # write output files
-        new_file = File(name="{}_MSDB.fasta".format(analysis.name).replace(' ', '_'), directory=analysis.directory,
-                        path="{}/{}_MSDB.fasta".format(analysis.directory, analysis.name).replace(' ', '_'),
-                        file_type='MSDB_FASTA', analysis_id=analysis.id, user_id=user_id, check_name=False)
-        logger.info('Writing MSDB Fasta file to path: {}'.format(new_file.path))
-        with open(new_file.path, 'w') as file:
-            for i, row in df.iterrows():
-                file.write('>{}_{}_{}_{}\n'.format(i, row['aaSeqCDR3'], row['clusterSize'], row['collapsedCount']))
-                file.write(row['aaFullSeq'])
-                file.write('\n')
-        session.add(new_file)
-        new_file = File(name="{}_MSDB.txt".format(analysis.name).replace(' ', '_'), directory=analysis.directory,
-                        path="{}/{}_MSDB.txt".format(analysis.directory, analysis.name).replace(' ', '_'),
-                        file_type='MSDB_TXT', analysis_id=analysis.id, user_id=user_id, check_name=False)
-        logger.info('Writing MSDB Tabbed file to path: {}'.format(new_file.path))
+        if generate_fasta_file:
+            new_file = File(name="{}_Clustered_MSDB.fasta".format(analysis.name).replace(' ', '_'), directory=analysis.directory,
+                            path="{}/{}_Clustered_MSDB.fasta".format(analysis.directory, analysis.name).replace(' ', '_'),
+                            file_type='MSDB_FASTA', analysis_id=analysis.id, user_id=user_id, check_name=False)
+            logger.info('Writing MSDB Fasta file to path: {}'.format(new_file.path))
+            with open(new_file.path, 'w') as file:
+                if 'aaSeqCDR3' in df.columns:
+                    cdr3_col = 'aaSeqCDR3'
+                    aaFullSeq_col = 'aaFullSeq'
+                elif 'aaSeqCDR3_h' in df.columns:
+                    cdr3_col = 'aaSeqCDR3_h'
+                    aaFullSeq_col = 'aaFullSeq_h'
+                elif 'aaSeqCDR3_l' in df.columns:
+                    cdr3_col = 'aaSeqCDR3_l'
+                    aaFullSeq_col = 'aaFullSeq_l'
+                for i, row in df.iterrows():
+                    file.write('>{}_{}_{}_{}\n'.format(i, row[cdr3_col], row['clusterSize'], row['collapsedCount']))
+                    file.write(row[aaFullSeq_col])
+                    file.write('\n')
+            session.add(new_file)
+
+
+        new_file = File(name="{}_Clustered.txt".format(analysis.name).replace(' ', '_'), directory=analysis.directory,
+                        path="{}/{}_Clustered.txt".format(analysis.directory, analysis.name).replace(' ', '_'),
+                        file_type='CLUSTERED_TXT', analysis_id=analysis.id, user_id=user_id, check_name=False)
+        logger.info('Writing Clustered Tabbed file to path: {}'.format(new_file.path))
         df.to_csv(new_file.path, sep='\t', index=False)
         session.add(new_file)
 
-        logger.info('MSDB analysis complete. {} sequences were written.'.format(len(df)))
-        return ReturnValue('MSDB analysis complete for analysis {}.'.format(analysis.id), file_ids=[])
+        logger.info('Post-annotation analysis complete. {} sequences were written.'.format(len(df)))
+        return ReturnValue('Post-annotation analysis complete for analysis {}.'.format(analysis.id), file_ids=[])
 
-
-
-def run_usearch_cluster_fast_on_analysis_file(analysis, file, identity=0.9):
-    dataset = analysis.dataset
-    files_to_execute = []
-    print 'RUNNING USEARCH CLUSTERING ON THIS FILE: {}'.format(file)
-    path = '/{}'.format('/'.join(file.path.split('/')[:-1]))
-    basename = file.path.split('/')[-1].split('.')[0]
-    basepath = '{}/{}'.format(path, basename)
-    print 'Writing output files to base name: {}'.format(basepath)
-    output_files = []
-    # Instantiate Source Files
-    consensus_output_file = File()
-    consensus_output_file.user_id = dataset.user_id
-    consensus_output_file.path = '{}.uclust_consensus.fasta'.format(basepath)
-    consensus_output_file.name = "{}.uclust_consensus.fasta".format(basename)
-    consensus_output_file.command = ""
-    consensus_output_file.file_type = 'CLUSTERED_CONSENSUS_FASTA'
-    uclust_output_file = File()
-    uclust_output_file.user_id = dataset.user_id
-    uclust_output_file.path = '{}.uclust.tab'.format(basepath)
-    uclust_output_file.name = "{}.uclust.tab".format(basename)
-    uclust_output_file.command = ""
-    uclust_output_file.file_type = 'UCLUST_OUTPUT_TAB_TEXT'
-    centroid_output_file = File()
-    centroid_output_file.user_id = dataset.user_id
-    centroid_output_file.path = '{}.uclust_centroids.fasta'.format(basepath)
-    centroid_output_file.name = "{}.uclust_centroids.fasta".format(basename)
-    centroid_output_file.file_type = 'CLUSTERED_CENTROIDS_FASTA'
-    centroid_output_file.command = "usearch -cluster_fast {} -id {} -centroids {} -consout {} -uc {}".format(file.path,
-                                                                                                             identity,
-                                                                                                             centroid_output_file.path,
-                                                                                                             consensus_output_file.path,
-                                                                                                             uclust_output_file.path)
-    files_to_execute.append(centroid_output_file)
-    files_to_execute.append(consensus_output_file)
-    files_to_execute.append(uclust_output_file)
-    analysis.status = 'EXECUTING USEARCH'
-    db.session.commit()
-    for f in files_to_execute:
-        f.command = f.command.encode('ascii')
-        f.dataset_id = analysis.dataset_id
-        f.analysis_id = analysis.id
-        f.chain = file.chain
-        print 'Executing: {}'.format(f.command)
-        analysis.active_command = f.command
-        f.in_use = True
-        db.session.add(f)
-        db.session.commit()
-        # MAKE THE CALL 
-        response = os.system(f.command)
-        print 'Response: {}'.format(response)
-        if response == 0:
-            f.available = True
-            f.in_use = False
-            f.file_size = os.path.getsize(f.path)
-            db.session.commit()
-        else:
-            f.available = False
-            f.in_use = False
-            analysis.status = 'FAILED'
-            db.session.commit()
-    print 'Uclust job for analysis {} has been executed.'.format(analysis)
-    return files_to_execute
 
 
 # Provided with a list of file ids, this function unzips those files if necessary, creates a new file

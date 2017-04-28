@@ -110,7 +110,7 @@ nav.register_element('frontend_user', Navbar(
     Subgroup(
         'Run Analysis', 
         View('VDJ Annotation Pipline', 'frontend.pipeline'),
-        View('Create MSDB from Annotations', 'frontend.msdb'),
+        View('Cluster Annotations / Create MSDB', 'frontend.msdb'),
         View('VDJ VIZualizer', 'frontend.vdj_visualizer'),
         ),
     Subgroup(
@@ -1430,15 +1430,16 @@ def msdb(status=[]):
                         'analysis_name' : msdb_form.name.data,
                         'analysis_description' : msdb_form.description.data,
                         'file_ids' : msdb_form.file_ids.data, 
-                        'cluster_percent' : float(msdb_form.msdb_cluster_percent.data), 
-                        'cluster_algorithm': msdb_form.msdb_cluster_algorithm.data, 
-                        'cluster_linkage': msdb_form.msdb_cluster_linkage.data, 
+                        'cluster_percent' : float(msdb_form.cluster_percent.data),
+                        'cluster_algorithm': msdb_form.cluster_algorithm.data,
+                        'cluster_linkage': msdb_form.cluster_linkage.data,
                         'require_annotations' : msdb_form.require_annotations.data, 
                         'read_cutoff': msdb_form.read_cutoff.data, 
                         'cluster_on': msdb_form.cluster_on.data, 
-                        'append_cterm_peptides': msdb_form.append_cterm_peptides.data,
                         'max_sequences_per_cluster_to_report': msdb_form.max_sequences_per_cluster_to_report.data,
-                     }, queue=celery_queue )
+                        'append_cterm_peptides': msdb_form.append_cterm_peptides.data,
+                        'generate_fasta_file': msdb_form.generate_fasta_file.data,
+                    }, queue=celery_queue )
 
             return redirect( url_for('frontend.dashboard') )
         else:
@@ -1453,14 +1454,14 @@ def msdb(status=[]):
         else:
             next_analysis_id = 1
 
-        msdb_form.name.data = 'MSDB Analysis {}'.format( str(next_analysis_id) )
+        msdb_form.name.data = 'Post-Annotation Analysis {}'.format( str(next_analysis_id) )
 
         datasets = current_user.get_ordered_datasets()
         dataset_file_dict = {}
 
         dataset_ids = tuple(map(lambda d: d.id, datasets))
         files = db.session.query(File).filter(File.dataset_id.in_(dataset_ids)).filter(File.file_type.in_(('ANNOTATION', 'BIGG_ANNOTATION', 'MIXCR_ANNOTATION', 'IGREP_ANNOTATION', 'IGFFT_ANNOTATION'))).filter(File.available==True).all()
-        files = [file for file in files if 'paired' not in file.name]
+        # files = [file for file in files if 'paired' not in file.name] #eliminate paired files? No! Need to support them.
         sorted_files = sorted(files, key=lambda f: f.dataset_id, reverse=True)
         grouped_files = itertools.groupby(sorted_files, key=lambda f: f.dataset_id)
         for dataset_id, files in grouped_files: 
@@ -1477,6 +1478,9 @@ def msdb(status=[]):
             flash('You have no datasets with annotation files available for analysis', 'warning')
 
         return render_template("msdb.html", msdb_form=msdb_form, status=status, current_user=current_user, dataset_file_dict = dataset_file_dict) 
+
+
+
 
 
 
