@@ -40,7 +40,7 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 			on = on+'_h'
 		elif on + '_l' in df.columns:
 			on = on+'_l'
-	df = collapse_annotation_dataframe(df, on=on, keep_group_tag=group_tag)
+	df = collapse_annotation_dataframe(df, on=on, keep_group_tag=group_tag).sort_values('collapsedCount', ascending=False)
 	print "#####  {} Annotations After Collapsing On Identical {}  #####".format(len(df), on)
 	print 'Sorting annotations based on length of {} (leads to more accurate clustering with greedy algorithm)'.format(on)
 	df['tmp_on_col'] = df[on].str.replace('*','').str.replace('_','')
@@ -192,11 +192,8 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 	ordered_cols = ['clusterId', 'clusterSize', 'collapsedCount'] 
 	output_cols = ordered_cols + [c for c in clustered_df.columns if c not in ordered_cols]
 	clustered_df = clustered_df[output_cols]
-	clustered_df = clustered_df.sort_values('clusterSize', ascending=False)
 	print 'Clustering and processing complete.'
 	return clustered_df
-
-
 
 
 
