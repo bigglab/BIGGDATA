@@ -1,3 +1,4 @@
+instance/*
 aws/biggdata.pem
 data/from_appsoma
 data/dropbox_root/*
@@ -11,7 +12,4 @@ paringtempfile.txt
 .DS_Store
 .idea
 .idea/*
-instance
-instance/*
 node*
-instance/config.py
