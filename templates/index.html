@@ -2,8 +2,8 @@
 
 {% block wide_content %}
 <center>
-			<h1>BIGG Data Analysis Portal</h1>
-			<h4><b>B</b>rent <b>I</b>verson, <b>G</b>eorge <b>G</b>eorgiou Laboratory</h4>
+			<h1>BIGG Data Immune Receptor Sequencing Analysis Portal</h1>
+			<h4>Built for use by the <b>B</b>rent <b>I</b>verson, <b>G</b>eorge <b>G</b>eorgiou Laboratory</h4>
 			<br>
 </center>
 	<div class="row">
@@ -12,33 +12,44 @@
 			{% if current_user.is_authenticated() %}
 				<p>Good to see you here, {{current_user.first_name}}. 
 				{% if current_user.files.all() == [] -%}
-					To get started running some analyses, you must import some files. You can <a href="{{url_for('.import_files')}}">import a sample set from NCBI, upload a file from your computer, download from web urls, copy from a path on the server or import from a GSAF URL</a>. </p>
+					To get started running some analyses, you must import some files. You can <a href="{{url_for('.import_files')}}">import a sample set from NCBI, upload a file from your computer, download from web urls, copy from a path on our servers or import an entire submission from a GSAF S3 URL</a>. </p>
 				{% elif current_user.datasets.all() == [] -%}
 					You've got <a href="{{url_for('.files')}}">some files</a>, but no datasets! 
 					<a href="{{url_for('.datasets')}}">Create a Dataset</a> and add some files to run an analysis. </p>
 				{% else %}
 							Looks like you're up and running:</p>
 							<br>
-							<a href="{{url_for('.datasets')}}">Go To My Datasets</a><br>
-							<a href="{{url_for('.analyses')}}">Go To My Analyses</a><br>
+							<a href="{{url_for('.import_files')}}">Import New Data</a> or <a href="{{url_for('.datasets')}}">See Available Datasets</a><br>
+                            <br>
+							<a href="{{url_for('.analyses')}}">See Files Generated From My Previous Analyses</a><br>
+                            <br>
+							<a href="{{url_for('.projects')}}">Group Data Into Projects To Share With Others</a><br>
 				{% endif %}
 			{% else %}
 					<p>Welcome to BIGG Data! You may login or create a new user using the form to the right. </p>
 			{% endif %}	
 			<br>	
+        </div>
+    </div>
 
-			<h4>Background / Utility</h4>
+    <br>
+    <br>
+
+    <div class="row">
+
+        <div class="col-md-8 {% if current_user.is_authenticated() -%}center-block{%- endif %}">
+
 			<p>The BIGG Data portal is intended to faciliitate VDJ-type recombination analysis from Immunorepertoire (IG + TCR) sequencing data. You can upload or link your own datasets, run alignments of consensus data to VDJ genes, and vizualize repertoire distribution.</p>
 			<br>
-			<h4>How It Works</h4>
-			<p>BIGG Data organizes your information into projects, datasets, and files to help automate analysis. Datasets represent a set of sequencing files coming from a particular Illumina library.</p>
-			<p>By defining attributes such as chain and species when adding a dataset, you can populate new analyses with the most appropriate default settings. This will also enable auto-analysis of data when it becomes available.</p>
-			<p>When running an analysis on a pair of overlapping reads from the same locus, reads should be pre-processed for overlap alignments and the higher confidence consensus sequences taken into analysis. This is done by default if neccesary, but you can also pre-run the overlap alignment with alternative settings if you like. The overlaps from the freshest alignment will be analyzed.</p> 
 
 			<br>
 			<br>
 
 		</div>
+
+    </div>
+
+
 		
 		{%- if not current_user.is_authenticated() -%}
 			<div class="col-md-4">

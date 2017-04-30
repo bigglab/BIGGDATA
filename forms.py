@@ -167,8 +167,8 @@ class CreateProjectForm(Form):
     cell_types_sequenced = TextField('Cell Types Sequenced', [validators.length(max=50)])        
     publications = TextField('Publications', [validators.length(max=256)])
     lab = TextField('Lab', [validators.length(max=128)], default = 'Georgiou')
-    editors = SelectMultipleField('Modify Users Who Can Edit', choices=[('None','None')])
-    viewers = SelectMultipleField('Modify Users Who Can View', choices=[('None','None')])
+    editors = SelectMultipleField('Add Users Who Can Edit Project', choices=[('None','None')])
+    viewers = SelectMultipleField('Add Users Who Can Only View', choices=[('None','None')])
     datasets = SelectMultipleField('Add Existing Datasets to Project', choices=[('None','None')])
 
     file = FileField(u'Add Datasets from JSON File')
