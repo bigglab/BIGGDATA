@@ -10,7 +10,8 @@
 <div class="container">
 
     <h1>Create a New Project</h1>
-    <p>Please input information about your project below:</p>
+    <br>
+    <br>
     <br>
     <form method="POST" action="{{url_for('frontend.create_project')}}" enctype="multipart/form-data">
         
@@ -67,51 +68,13 @@
                             </tr>
                         </tbody>
                     </table>
-                    <div id="collapseOne" class="collapse">
+                    <div id="collapseOne" class="collapse" onload="this.expand()">
+                        <p style="padding-left: 40px">Click To Add Or Remove</p>
                         {{ create_project_form.datasets(class_="form-control")}} <br/>
                          <noscript>To edit datasets, You must enable JavaScript.</noscript>
                     </div>
                 </div> <!-- /accordian -->
                 <br/>
-                <div id="accordion">
-                    <table cellpadding="5" cellspacing="0" border="0">
-                        <tbody class="accordian-control">
-                            <tr>
-                                <td class="collapse-control"></td>
-                                <td class="none" valign="center">{{ create_project_form.file.label(for='') }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div id="collapseOne" class="collapse">
-                        <span>
-                        <div class="input-group">
-                            <span class="input-group-btn">
-                                <span class="btn btn-default btn-file">
-                                    Browse...{{ create_project_form.file()}} 
-                                </span>
-                            </span>
-                            <input type="text" class="form-control" readonly>
-                        </div>
-                        </span>
-                        <br/>
-                         <noscript>To edit datasets, You must enable JavaScript.</noscript>
-                    </div>
-                </div> <!-- /accordian -->
-                <br/>
-                <div id="accordion">
-                    <table cellpadding="5" cellspacing="0" border="0">
-                        <tbody class="accordian-control">
-                            <tr>
-                                <td class="collapse-control"></td>
-                                <td valign="center"><label>Add Datasets from JSON URL</label>{#{ create_project_form.datasets.label }#}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div id="collapseOne" class="collapse">
-                        {#{ create_project_form.datasets(class_="form-control")}#} <br/>
-                         <noscript>To edit datasets, You must enable JavaScript.</noscript>
-                    </div>
-                </div> <!-- /accordian -->
             </div>
             <div class="col-md-4">
                 <div id="accordion">
@@ -150,6 +113,12 @@
     </form>
 
 </div>
+
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
 
 <script>
 

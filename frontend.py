@@ -88,6 +88,7 @@ nav.register_element('frontend_top', Navbar(
         #View('BIGG DATA Overview', 'frontend.overview'),
         #View('BIGG DB Schema', 'frontend.schema'),
         # Link('Confluence', 'under_construction'), 
+
         Separator(),
         Text('External Docs'),
         Link('Flask-Bootstrap', 'http://pythonhosted.org/Flask-Bootstrap'),
@@ -121,7 +122,7 @@ nav.register_element('frontend_user', Navbar(
     ),
     Subgroup(
         'Database',
-        View('AlleleDB', 'frontend.alleledb'),
+        View('Germline Allele DB', 'frontend.alleledb'),
         # Link('Celery Task Monitor', 'http://www.biggdata.io:8001/tasks?sort=-received&limit=100'),
         ),
     Subgroup(

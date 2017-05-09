@@ -3,7 +3,7 @@
 {% block wide_content %}
 
 <div class="container">
-	<h3 align="center">Allele Database Browser</h3>
+	<h3 align="center">HLA, IG, And TCR Germline Allele Database</h3>
 	<br>
 </div>
 <div class="container">
@@ -19,7 +19,7 @@
 		<div class="col-md-12">
 		    <div class="panel panel-default">
 		        <div align='center' class="panel-heading">
-                    <b>Browse Alleles</b>
+                    <b>Filter Alleles</b>
                 </div>
                 <div class="panel-body">
                     <table class="table table-striped">
@@ -79,7 +79,7 @@
 		<div class="col-md-12">
 		    <div class="panel panel-default">
 		        <div align='center' class="panel-heading">
-                    <b>Build Allele Network</b>
+                    <b>Display Allele Homology Graph</b>
                 </div>
 		        <div class="panel-body">
                     <div align="center"><h5><span name="allele_sequence_type_status"></span></h5></div>
@@ -92,9 +92,9 @@
                             <th>
                                 Distance Metric
                             </th>
-                            <th>
-                                Weight Size By
-                            </th>
+{#                            <th>#}
+{#                                Weight Size By#}
+{#                            </th>#}
                             <th>
                                 Color By
                             </th>
@@ -114,9 +114,9 @@
                             <th>
                                 {{  form.distance_metric_selector() }}
                             </th>
-                            <th>
-                                {{  form.weight_size_by_selector() }}
-                            </th>
+{#                            <th>#}
+{#                                {{  form.weight_size_by_selector() }}#}
+{#                            </th>#}
                             <th>
                                 {{  form.color_by_selector() }}
                             </th>
