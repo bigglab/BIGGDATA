@@ -506,7 +506,8 @@ def append_cterm_peptides_for_mass_spec(dataframe):
 def collapse_annotation_dataframe(df, on='aaFullSeq', keep_group_tag=None):
     if len(df) == 0: return df.reindex(columns = df.columns.tolist() + ['collapsedCount'])
     # Remove duplicates and assign read counts.
-    if keep_group_tag != None: print 'Keeping separate groups on key {}'.format(keep_group_tag)
+    if keep_group_tag != None:
+        print 'Keeping separate groups on key {}'.format(keep_group_tag)
     if keep_group_tag==None: 
       grouped = df.groupby(by=on, as_index=False, sort=False)
     else: 
