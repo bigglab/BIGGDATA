@@ -2,8 +2,8 @@ import os, sys
 import pandas as pd
 import numpy as np
 
-sys.path.append('/data/resources/software/BIGGDATA')
-from utils.standardization import *
+#sys.path.append('/data/resources/software/BIGGDATA')
+#from utils.standardization import *
 
 
 
@@ -56,13 +56,13 @@ mixcr_output_presets = "/data/resources/software/BIGGDATA/mixcr_output_presets.t
 
 
 
-rule standardize_output:
-  output: "{sample}.bigg.txt"
-  input: "{sample}.mixcr.txt"
-  message: "standardizing {wildcards.sample}"
-  run:
-    df = build_annotation_dataframe_from_mixcr_file(input[0], require_annotations=['aaSeqCDR1', 'aaSeqCDR2', 'aaSeqCDR3', 'aaSeqFR4'])
-    df.to_csv(output[0], sep='\t', index=False)
+#rule standardize_output:
+#  output: "{sample}.bigg.txt"
+#  input: "{sample}.mixcr.txt"
+#  message: "standardizing {wildcards.sample}"
+#  run:
+#    df = build_annotation_dataframe_from_mixcr_file(input[0], require_annotations=['aaSeqCDR1', 'aaSeqCDR2', 'aaSeqCDR3', 'aaSeqFR4'])
+#    df.to_csv(output[0], sep='\t', index=False)
 
 
 rule mixcr_export:
