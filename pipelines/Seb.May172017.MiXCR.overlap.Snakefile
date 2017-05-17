@@ -41,7 +41,7 @@ else:
   ext = '.fastq'
 
 rule all:
- input: "{}.mixcr.txt".format(read1.replace('_R1', '').replace('_R2', '').replace('.fastq.gz', '').replace('.fastq', ''))
+ input: "{}.mixcr.txt".format(read1.replace('_R1_001', '').replace('_R2_001', '').replace('.fastq.gz', '').replace('.fastq', ''))
  # input: "{}.bigg.txt".format(read1.replace('_R1', '').replace('_R2', '').replace('.fastq.gz', '').replace('.fastq', ''))
  # input: "{}.bigg.txt".format(sample)
 
