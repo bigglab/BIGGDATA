@@ -508,7 +508,7 @@ def collapse_annotation_dataframe(df, on='aaFullSeq', keep_group_tag=None):
     # Remove duplicates and assign read counts.
     if keep_group_tag != None:
         print 'Keeping separate groups on key {}'.format(keep_group_tag)
-    if keep_group_tag==None: 
+    if keep_group_tag==None:
       grouped = df.groupby(by=on, as_index=False, sort=False)
     else: 
       if type(on)==type([]): 
