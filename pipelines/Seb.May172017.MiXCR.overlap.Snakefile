@@ -31,7 +31,7 @@ print('read one: {}'.format(read1))
 print('read two: {}'.format(read2))
 
 
-sample = read1.split('/')[-1].split('.')[0].replace('_R1', '').replace('_R2', '')
+sample = read1.split('/')[-1].split('.')[0].replace('_R1_001', '').replace('_R2_001', '')
 
 print('sample name: {}'.format(sample))
 
@@ -91,7 +91,7 @@ rule quality_filter:
 
 rule pandaseq:
   output: "{sample}.merged.fastq"
-  input: expand("{{sample}}_R{num}{ext}", ext=[ext], num=['1','2'])
+  input: expand("{{sample}}_R{num}_001{ext}", ext=[ext], num=['1','2'])
   log: "log/{}.pandaseq.log".format(sample)
   threads: THREADS
   message: "running pandaseq on sample {}".format(sample)
