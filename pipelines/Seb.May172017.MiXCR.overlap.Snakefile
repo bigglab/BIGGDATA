@@ -51,7 +51,7 @@ rule all:
 #   input
 
 
-mixcr_output_presets = "/data/resources/software/BIGGDATA/mixcr_output_presets.txt"
+mixcr_output_presets = "/data/resources/software/BIGGDATA/utils/mixcr_output_presets.txt"
 # mixcr_output_presets = "mixcr_output_presets.txt"
 
 
