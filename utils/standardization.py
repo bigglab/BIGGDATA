@@ -161,13 +161,6 @@ clean_annotation_dataframe_columns = [
  'nSeqFR3',
  'nSeqCDR3',
  'nSeqFR4',
- 'qualFR1',
- 'qualCDR1',
- 'qualFR2',
- 'qualCDR2',
- 'qualFR3',
- 'qualCDR3',
- 'qualFR4',
  'aaSeqFR1',
  'aaSeqCDR1',
  'aaSeqFR2',
@@ -385,13 +378,6 @@ def build_annotation_dataframe_from_igfft_file(file_path, rmindels=True, append_
         df = append_cterm_peptides_for_mass_spec(df) if append_ms_peptides == True else df
         df['v_region_shm'] = df['VRegion.SHM.Per_nt']
         df['j_region_shm'] = df['JRegion.SHM.Per_nt']
-        df['qualFR1'] = None
-        df['qualCDR1'] = None
-        df['qualFR2'] = None
-        df['qualCDR2'] = None
-        df['qualFR3'] = None
-        df['qualCDR3'] = None
-        df['qualFR4'] = None
         df_output = pd.concat([df_output, df])
     df_output = collapse_annotation_dataframe(df_output, on='readSequence')
     df_output = df_output[clean_annotation_dataframe_columns]
@@ -420,14 +406,7 @@ mixcr_dtypes = {"descrR1" : str,
 "nSeqCDR2" : str, 
 "nSeqFR3" : str, 
 "nSeqCDR3" : str, 
-"nSeqFR4" : str, 
-"qualFR1" : str, 
-"qualCDR1" : str, 
-"qualFR2" : str, 
-"qualCDR2" : str, 
-"qualFR3" : str, 
-"qualCDR3" : str, 
-"qualFR4" : str, 
+"nSeqFR4" : str,
 "aaSeqFR1" : str, 
 "aaSeqCDR1" : str, 
 "aaSeqFR2" : str, 
@@ -441,9 +420,9 @@ mixcr_dtypes = {"descrR1" : str,
 "cBestIdentityPercent": np.float64}
 
 
-def build_annotation_dataframe_from_mixcr_file(file_path, rmindels=True, append_ms_peptides=False, require_annotations=['aaSeqFR1', 'aaSeqCDR1', 'aaSeqFR2', 'aaSeqCDR2', 'aaSeqFR3', 'aaSeqCDR3', 'aaSeqFR4']):
+def build_annotation_dataframe_from_mixcr_file(file_path, rmindels=True, append_ms_peptides=False, require_annotations=['aaSeqCDR3']):
     print("Parsing {} to standardized BIGG format".format(file_path))
-    df = pd.read_table(file_path, dtype=mixcr_dtypes, error_bad_lines=False)  # , low_memory=False)
+    df = pd.read_table(file_path, dtype=mixcr_dtypes, error_bad_lines=False, usecols=mixcr_dtypes.keys())  # , low_memory=False)
     full_length = len(df)
     print('{}: {} annotations total'.format(file_path, full_length))
     if require_annotations != False:
@@ -546,14 +525,7 @@ annotation_dataframe_dtypes = {
     "nSeqCDR2": str, 
     "nSeqFR3": str, 
     "nSeqCDR3": str, 
-    "nSeqFR4": str, 
-    "qualFR1": str, 
-    "qualCDR1": str, 
-    "qualFR2": str, 
-    "qualCDR2": str, 
-    "qualFR3": str, 
-    "qualCDR3": str, 
-    "qualFR4": str, 
+    "nSeqFR4": str,
     "aaSeqFR1": str, 
     "aaSeqCDR1": str, 
     "aaSeqFR2": str, 
