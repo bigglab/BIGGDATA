@@ -59,6 +59,22 @@ def flatten_list(lst):
     return [item for sublist in lst for item in sublist]
 
 
+def flatten_json(y):
+    out = {}
+    def flatten(x, name=''):
+        if type(x) is dict:
+            for a in x:
+                flatten(x[a], name + a + '_')
+        elif type(x) is list:
+            i = 0
+            for a in x:
+                flatten(a, name + str(i) + '_')
+                i += 1
+        else:
+            out[name[:-1]] = x
+    flatten(y)
+    return out
+
 
 def demultiplex_tuple_counts(d, reverse=False, index=0): 
     isotypes = [x for x in set(flatten_list([o[0] for o in d if o[0] != None])) if x != None]
