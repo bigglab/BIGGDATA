@@ -50,6 +50,24 @@
     </div>
 
 
+    <div class="row">
+
+        <div class="col-md-12 {% if current_user.is_authenticated() -%}center-block{%- endif %}">
+
+
+        <iframe
+        src="http://www.biggdata.io:3000/public/dashboard/df75f11a-8791-4ef9-8b70-2fead3c40132"
+        frameborder="0"
+        width="100%"
+        height="800"
+        allowtransparency
+        ></iframe>
+
+		</div>
+
+    </div>
+
+
 		
 		{%- if not current_user.is_authenticated() -%}
 			<div class="col-md-4">
