@@ -1,6 +1,9 @@
 import operator 
 import json 
 from models import * 
+from Bio.SeqIO.FastaIO import SimpleFastaParser # for df_from_fasta function
+import pandas
+
 
 def _modify_function(f):
 	"""A decorator function that replaces the function it wraps with a function that captures all information necessary to call the function again:
@@ -90,6 +93,17 @@ def demultiplex_tuple_counts(d, reverse=False, index=0):
     return isotype_data
 
 
+
+def df_from_fasta(filepath):
+
+	with open(filepath) as fasta_file:  # Will close handle cleanly
+		identifiers = []
+		seqs = []
+		for title, sequence in SimpleFastaParser(fasta_file):
+				identifiers.append(title.split(None, 1)[0])  # First word is ID
+				seqs.append(sequence)
+	df = pandas.DataFrame({'name':identifiers, 'sequence':seqs})
+	return df
 
 
 ######### 
