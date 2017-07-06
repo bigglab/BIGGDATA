@@ -18,10 +18,10 @@ def pair_annotation_files(file1, file2):
 def pair_annotation_dataframes(df1, df2): 
 	print "{} annotations in file 1, {} in file 2".format(len(df1), len(df2))
 
-	df1_h = df1[df1.apply(lambda r: r['v_top_hit'][:3] in ['IGH', 'TRB'], axis=1)]
-	df2_h = df2[df2.apply(lambda r: r['v_top_hit'][:3] in ['IGH', 'TRB'], axis=1)]
-	df1_l = df1[df1.apply(lambda r: r['v_top_hit'][:3] in ['IGK','IGL','TRA'], axis=1)]
-	df2_l = df2[df2.apply(lambda r: r['v_top_hit'][:3] in ['IGK','IGL','TRA'], axis=1)]
+	df1_h = df1[df1.apply(lambda r: r['v_top_hit'][:3] in ['IGH', 'TRB', 'TRD'], axis=1)]
+	df2_h = df2[df2.apply(lambda r: r['v_top_hit'][:3] in ['IGH', 'TRB', 'TRD'], axis=1)]
+	df1_l = df1[df1.apply(lambda r: r['v_top_hit'][:3] in ['IGK','IGL','TRA', 'TRG'], axis=1)]
+	df2_l = df2[df2.apply(lambda r: r['v_top_hit'][:3] in ['IGK','IGL','TRA', 'TRG'], axis=1)]
 	df_h = df1_h.append(df2_h)
 	df_l = df1_l.append(df2_l)
 	print '{} IGH or TRB annotations, {} IGL/L or TRA annotations'.format(len(df_h), len(df_l))
