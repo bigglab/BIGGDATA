@@ -1,6 +1,9 @@
 import operator 
 import json 
 from models import * 
+from Bio.SeqIO.FastaIO import SimpleFastaParser # for df_from_fasta function
+import pandas
+
 
 def _modify_function(f):
 	"""A decorator function that replaces the function it wraps with a function that captures all information necessary to call the function again:
@@ -59,6 +62,22 @@ def flatten_list(lst):
     return [item for sublist in lst for item in sublist]
 
 
+def flatten_json(y):
+    out = {}
+    def flatten(x, name=''):
+        if type(x) is dict:
+            for a in x:
+                flatten(x[a], name + a + '_')
+        elif type(x) is list:
+            i = 0
+            for a in x:
+                flatten(a, name + str(i) + '_')
+                i += 1
+        else:
+            out[name[:-1]] = x
+    flatten(y)
+    return out
+
 
 def demultiplex_tuple_counts(d, reverse=False, index=0): 
     isotypes = [x for x in set(flatten_list([o[0] for o in d if o[0] != None])) if x != None]
@@ -74,6 +93,17 @@ def demultiplex_tuple_counts(d, reverse=False, index=0):
     return isotype_data
 
 
+
+def df_from_fasta(filepath):
+
+	with open(filepath) as fasta_file:  # Will close handle cleanly
+		identifiers = []
+		seqs = []
+		for title, sequence in SimpleFastaParser(fasta_file):
+				identifiers.append(title.split(None, 1)[0])  # First word is ID
+				seqs.append(sequence)
+	df = pandas.DataFrame({'name':identifiers, 'sequence':seqs})
+	return df
 
 
 ######### 

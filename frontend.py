@@ -123,7 +123,7 @@ nav.register_element('frontend_user', Navbar(
     Subgroup(
         'Database',
         View('Germline Allele DB', 'frontend.alleledb'),
-        # Link('Celery Task Monitor', 'http://www.biggdata.io:8001/tasks?sort=-received&limit=100'),
+        Link('Metabase DB Browser', 'http://www.biggdata.io:3000'),
         ),
     Subgroup(
         'Documentation',
