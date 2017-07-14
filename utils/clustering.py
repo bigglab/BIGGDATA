@@ -160,7 +160,7 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		# 	for filename in temp_seq_file.name, temp_clustered_output_file, temp_distmatrix_file: 
 		# 		os.remove(filename)
 		print('Appending clonotypes to dataframe')
-		if 'clusterId' in df.columns: df.drop('clusterId', 1)
+		if 'clusterId' in df.columns: df.drop('clusterId', axis=1, inplace=True)
 		df = pd.merge(df, clonoDict, on=on, how='left')
 		# df.fillna('', inplace=True)
 
@@ -173,7 +173,7 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		size_key='clusterSize' 
 	else: 
 		size_key='collapsedCount'
-	df['clusterSize'] = df[~df.clusterId.isnull()].groupby(['clusterId'])[size_key].transform(sum)
+	df['clusterSize'] = df[~df['clusterId'].isnull()].groupby(['clusterId'])[size_key].transform(sum)
 	print 'Generating clustered dataframe for output.'
 	if group_tag!=None:
 		df['groupClusterSize'] = df.groupby([group_tag, 'clusterId'])[size_key].transform(sum)
