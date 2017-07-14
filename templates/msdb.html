@@ -31,58 +31,117 @@
               </tr>
           </tbody>
         </table>
-        <table class='table table-striped' width=100%> 
-          <thead>
-              <tr>
-                  <th width=15%>Require Annotated</th>
-                  <th width=10%>Cluster On</th>
-                  <th width=15%>Cluster %</th>
-                  <th width=18%>Cluster Algorithm</th>
-                  <th width=15%>Minimum # Reads</th>
-                  <th width=20%>Max Seqs To Report Per Cluster</th>
-              </tr>
-          </thead>
-          <tbody>
-              <tr>
-                <td>{{ msdb_form.require_annotations() }}</td>
-                <td>{{ msdb_form.cluster_on() }}</td>
-                <td>{{ msdb_form.cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
-                <td>{{ msdb_form.cluster_algorithm(id='cluster_algorithm_select', onchange="hide_linkage(this)") }}<br><br><div id="linkage_select">Linkage: {{msdb_form.cluster_linkage()}}<br><br>Warning: HUGE MEMORY USAGE. Only use with small files (>10K annotations) or it's likely to fail.</div><br><a href="http://drive5.com/usearch/manual/uclust_algo.html">Greedy Info</a><br><a href="http://drive5.com/usearch/manual/agg.html">Agglomerative Info</a><br><br></td>
-                <td>{{ msdb_form.read_cutoff(class = 'form-control') }}</td>
-                <td>{{  msdb_form.max_sequences_per_cluster_to_report(class = 'form-control')}}</td>
-              </tr>
-          </tbody>
-        </table>
-        <table class='table table-striped' width=100%>
-          <thead>
-              <tr>
-                  <th width=10%>Mass Spec Analysis Options:</th>
-                  <th width=10%>Generate Mass Spec Fasta File</th>
-                  <th width=20%>Append C-term Peptides</th>
-              </tr>
-          </thead>
-          <tbody>
-              <tr>
-                  <td></td>
-                  <td>{{ msdb_form.generate_fasta_file(class = 'form-control') }}</td>
-                  <td>{{ msdb_form.append_cterm_peptides(class = 'append_cterm_peptides') }}
-                            <div id="collapse" class="collapse append_cterm_peptides in" style="display: none;">
-                                  <label>
-                                      <b>This preliminary process artificially adds missing peptides to the end of the AA sequences:</b>
-                                      <br>
-                                      <p>To the end of IgL seqs, 'GQPK' will be added.</p>
-                                      <p>To the end of IgK seqs, 'R'.</p>
-                                      <p>To the end of IgH seqs, 'ASTK'.</p>
-                                      <p>#Eventually this will be rewritten to snag exact peptides from 3' of raw reads.</p>
-                                  </label>
-                            </div>
-                    </td>
-              </tr>
-          </tbody>
-        </table>
+
+        <br>
+        <br>
+
+        <div class="panel panel-default">
+            <div class="panel-heading" align="center">
+                <b>Step One: Error Correction by High-Similarity Read Clustering</b>
+            </div>
+            <div class="panel-body">
+                <table class='table table-striped' width=100%>
+                    <thead>
+                        <tr>
+                            <th width=10%>Cluster On</th>
+                            <th width=15%>Cluster Homology</th>
+                            <th width=18%>Cluster Algorithm</th>
+                            <th width=15%>Minimum # Reads</th>
+                            <th width=20%>Max Seqs To Report Per Cluster</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                          <td>{{ msdb_form.error_correct_cluster_on() }}</td>
+                          <td>{{ msdb_form.error_correct_cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
+                          <td>{{ msdb_form.error_correct_cluster_algorithm(class="form-control") }}</td>
+                          <td>{{ msdb_form.error_correct_read_cutoff(class = 'form-control') }}</td>
+                          <td>{{ msdb_form.error_correct_max_sequences_per_cluster_to_report(class = 'form-control')}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table>
+                    <tr>
+                        <td>Require these regions be annotated: {{ msdb_form.require_annotations() }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+
+        <div class="panel panel-default">
+            <div class="panel-heading" align="center">
+                <b>Step Two: Clonotyping by High-Sensitivity Clustering On CDR3 AA or NT</b>
+            </div>
+            <div class="panel-body">
+                <table class='table table-striped' width=100%>
+                    <thead>
+                        <tr>
+                            <th width=10%>Cluster On</th>
+                            <th width=15%>Cluster Homology</th>
+                            <th width=18%>Cluster Algorithm</th>
+                            <th width=15%>Minimum # Reads</th>
+                            <th width=20%>Max Seqs To Report Per Cluster</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                          <td>{{ msdb_form.clonotyping_cluster_on() }}</td>
+                          <td>{{ msdb_form.clonotyping_cluster_percent(class="form-control", type="number", step = "0.01") }}</td>
+                          <td>{{ msdb_form.clonotyping_cluster_algorithm(id='cluster_algorithm_select', class='form-control', onchange="hide_linkage(this)") }}<br><br><div id="linkage_select">Linkage: {{msdb_form.clonotyping_cluster_linkage()}}<br><br>Warning: HUGE MEMORY USAGE. Only use with small files (>10K annotations) or it's likely to fail.</div><br><a href="http://drive5.com/usearch/manual/uclust_algo.html">Greedy Info</a><br><a href="http://drive5.com/usearch/manual/agg.html">Agglomerative Info</a><br><br></td>
+                          <td>{{ msdb_form.clonotyping_read_cutoff(class = 'form-control') }}</td>
+                          <td>{{ msdb_form.clonotyping_max_sequences_per_cluster_to_report(class = 'form-control')}}</td>
+                        </tr>
+                    </tbody>
+                </table>            </div>
+        </div>
+
+          <br>
+
+        <div class="panel panel-default">
+            <div class="panel-heading" align="center">
+                <b>Step Three: Post-Analysis Routines To Optimize Mass Spec Search Database</b>
+            </div>
+            <div class="panel-body">
+                <table class='table table-striped' width=100%>
+                  <thead>
+                      <tr>
+                          <th width=12%>Generate Fasta File</th>
+                          <th width=20%>Append C-terminal Peptides</th>
+                          <th width=16%>Rescue N-terminal Peptides</th>
+                          <th width=16%>Rescue C-terminal Peptides</th>
+                          <th width=15%>Confirm Isotype Calls</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      <tr>
+                          <td>{{ msdb_form.generate_fasta_file(class = '') }}</td>
+                          <td>{{ msdb_form.append_cterm_peptides(class = 'append_cterm_peptides') }}
+                          <td>{{ msdb_form.rescue_n_terminal_peptides(class = '', disabled=True) }}</td>
+                          <td>{{ msdb_form.rescue_c_terminal_peptides(class = '', disabled=True) }}</td>
+                          <td>{{ msdb_form.confirm_isotype_calls(class = '', disabled=True) }}</td>
+                            </td>
+                      </tr>
+                  </tbody>
+                </table>
+                <div id="collapse" class="container collapse append_cterm_peptides in" style="display: none; width: 80%;" align="center">
+                    <br>
+                        <b>This preliminary 'Append Cterm Peptides' function artificially adds missing peptides to the end of the AA sequences:</b>
+                        <br><br>
+                        <p>To the end of IgL Full AA Seqs, 'GQPK' will be added.</p>
+                        <p>To the end of IgK Full AA Seqs, 'R'.</p>
+                        <p>To the end of IgH Full AA Seqs, 'ASTK'.</p>
+                        <p>#Eventually this will be rewritten to recover exact translation from 3' of raw reads.</p>
+                    <br>
+                </div>
+            </div>
+        </div>
+
+
       </div>
     </div>
 
+    <br>
     <br>
 
     <div style="margin-left: 20px; margin-right: 20px;" class="panel panel-default">
@@ -106,7 +165,7 @@
           <tbody>
             {% for dataset, files in dataset_file_dict.iteritems() %}
               <tr>
-                <td {% if files != [] -%}class='details-control'{%- endif -%}></td>
+                <td {% if files != [] -%} class='details-control' {%- endif -%} ></td>
                 <td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.id}}</a></td>
                 <td><a href="{{url_for('.dataset', id=dataset.id)}}">{{dataset.name}}</a></td>
                 <td>{{dataset.description}}</td>
@@ -159,7 +218,7 @@ var table = $('#datasets').DataTable({
     { targets: 'no-sort', orderable: false }
     ],
     order: [[ 1, 'desc' ]], 
-    pageLength:100
+    pageLength:10
 });
 
 

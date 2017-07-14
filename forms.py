@@ -55,15 +55,25 @@ class CreateMSDBAnalysisForm(Form):
     dataset_id = IntegerField()
     name = TextField(u'Name', )
     description = TextField(u'Description')
-    cluster_percent = DecimalField(places=2, rounding=None, default = 0.90)
-    cluster_algorithm = SelectField(u'Cluster Algorithm', choices=[('greedy', 'Greedy'), ('agglomerative', 'Agglomerative'), ('D', 'D Clonotyping')], validators=[validators.input_required()])
-    cluster_linkage = SelectField(u'Cluster Linkage', choices=[('min', 'min'), ('avg', 'avg'), ('max', 'max')], validators=[validators.input_required()])
     require_annotations = MultiCheckboxField('Require Annotations', choices=[('aaSeqFR1', 'FR1'),('aaSeqCDR1', 'CDR1'),('aaSeqFR2', 'FR2'),('aaSeqCDR2', 'CDR2'),('aaSeqFR3', 'FR3'),('aaSeqCDR3', 'CDR3'),('aaSeqFR4', 'FR4')], default = ['aaSeqCDR3'])
-    read_cutoff = IntegerField(default=1)
-    cluster_on = SelectField('Cluster On', choices=[('nSeqCDR3', 'CDR3 NT'),('aaSeqCDR3', 'CDR3 AA'),('aaFullSeq', 'Full AA'), ('nFullSeq', 'Full NT')], default = 'aaSeqCDR3')
-    max_sequences_per_cluster_to_report = IntegerField(default=1)
+    error_correct_cluster_on = SelectField('Cluster On', choices=[('aaFullSeq', 'Full AA'), ('nFullSeq', 'Full NT'), ('readSequence', 'Raw Read')], default = 'nFullSeq')
+    error_correct_cluster_percent = DecimalField(places=3, rounding=None, default = 0.965)
+    error_correct_cluster_algorithm = SelectField(u'Cluster Algorithm', choices=[('greedy', 'Greedy')], validators=[validators.input_required()])
+    error_correct_read_cutoff = IntegerField(default=2)
+    error_correct_max_sequences_per_cluster_to_report = IntegerField(default=9999999)
+    clonotyping_cluster_on = SelectField('Cluster On', choices=[('nSeqCDR3', 'CDR3 NT'),('aaSeqCDR3', 'CDR3 AA'),('aaFullSeq', 'Full AA'), ('nFullSeq', 'Full NT')], default = 'aaSeqCDR3')
+    clonotyping_cluster_percent = DecimalField(places=3, rounding=None, default = 0.92)
+    clonotyping_cluster_algorithm = SelectField(u'Cluster Algorithm', choices=[('greedy', 'Greedy'), ('agglomerative', 'Agglomerative'), ('D', 'D Clonotyping')], validators=[validators.input_required()], default='D')
+    clonotyping_read_cutoff = IntegerField(default=1)
+    clonotyping_max_sequences_per_cluster_to_report = IntegerField(default=1)
+    clonotyping_cluster_linkage = SelectField(u'Cluster Linkage', choices=[('min', 'min'), ('avg', 'avg'), ('max', 'max')], validators=[validators.input_required()])
     generate_fasta_file = BooleanField(default=False)
-    append_cterm_peptides = BooleanField(default=False)
+    rescue_n_terminal_peptides = BooleanField(default=False)
+    rescue_c_terminal_peptides = BooleanField(default=False)
+    confirm_isotype_calls = BooleanField(default=False)
+    append_cterm_peptides = BooleanField(default=False) # rough *ASTK addition etc - temporary placeholder fix
+
+
 
 class AssociateFilesToDatasetForm(Form):
     file_ids  = SelectField(u'Files', coerce=int)

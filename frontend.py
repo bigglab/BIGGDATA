@@ -1426,20 +1426,28 @@ def msdb(status=[]):
             result = run_msdb.apply_async( ( ),
                     { 
                         'user_id' : current_user.id, 
-                        # 'dataset_id' : output_dataset_id, 
+                        'file_ids' : msdb_form.file_ids.data,
+                        # 'dataset_id' : output_dataset_id,
                         'analysis_id' : None, 
                         'analysis_name' : msdb_form.name.data,
                         'analysis_description' : msdb_form.description.data,
-                        'file_ids' : msdb_form.file_ids.data, 
-                        'cluster_percent' : float(msdb_form.cluster_percent.data),
-                        'cluster_algorithm': msdb_form.cluster_algorithm.data,
-                        'cluster_linkage': msdb_form.cluster_linkage.data,
-                        'require_annotations' : msdb_form.require_annotations.data, 
-                        'read_cutoff': msdb_form.read_cutoff.data, 
-                        'cluster_on': msdb_form.cluster_on.data, 
-                        'max_sequences_per_cluster_to_report': msdb_form.max_sequences_per_cluster_to_report.data,
-                        'append_cterm_peptides': msdb_form.append_cterm_peptides.data,
+                        'error_correct_cluster_on': msdb_form.error_correct_cluster_on.data,
+                        'error_correct_cluster_percent' : float(msdb_form.error_correct_cluster_percent.data),
+                        'error_correct_cluster_algorithm': msdb_form.error_correct_cluster_algorithm.data,
+                        'error_correct_read_cutoff': msdb_form.error_correct_read_cutoff.data,
+                        'error_correct_max_sequences_per_cluster_to_report': msdb_form.error_correct_max_sequences_per_cluster_to_report.data,
+                        'clonotyping_cluster_on': msdb_form.clonotyping_cluster_on.data,
+                        'clonotyping_cluster_percent' : float(msdb_form.clonotyping_cluster_percent.data),
+                        'clonotyping_cluster_algorithm': msdb_form.clonotyping_cluster_algorithm.data,
+                        'clonotyping_read_cutoff': msdb_form.clonotyping_read_cutoff.data,
+                        'clonotyping_max_sequences_per_cluster_to_report': msdb_form.clonotyping_max_sequences_per_cluster_to_report.data,
+                        'clonotyping_cluster_linkage': msdb_form.clonotyping_cluster_linkage.data,
+                        'require_annotations' : msdb_form.require_annotations.data,
                         'generate_fasta_file': msdb_form.generate_fasta_file.data,
+                        'append_cterm_peptides': msdb_form.append_cterm_peptides.data,
+                        'rescue_n_terminal_peptides': msdb_form.rescue_n_terminal_peptides.data,
+                        'rescue_c_terminal_peptides': msdb_form.rescue_c_terminal_peptides.data,
+                        'confirm_isotype_calls': msdb_form.confirm_isotype_calls.data,
                     }, queue=celery_queue )
 
             return redirect( url_for('frontend.dashboard') )
@@ -1478,7 +1486,7 @@ def msdb(status=[]):
         if len(datasets) == 0: 
             flash('You have no datasets with annotation files available for analysis', 'warning')
 
-        return render_template("msdb.html", msdb_form=msdb_form, status=status, current_user=current_user, dataset_file_dict = dataset_file_dict) 
+        return render_template("msdb.html", msdb_form=msdb_form, wtf=wtforms, status=status, current_user=current_user, dataset_file_dict = dataset_file_dict)
 
 
 

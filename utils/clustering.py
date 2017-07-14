@@ -175,19 +175,15 @@ def cluster_dataframe(df, identity=0.94, on='aaSeqCDR3', how="greedy", linkage='
 		size_key='collapsedCount'
 	df['clusterSize'] = df[~df.clusterId.isnull()].groupby(['clusterId'])[size_key].transform(sum)
 	print 'Generating clustered dataframe for output.'
-	if group_tag==None: 
-		if 'group' not in df.columns:
-			df['group'] = 'Group1'
-			group_tag='group'
-		else: 
-			group_tag='group'
-	df['groupClusterSize'] = df.groupby([group_tag, 'clusterId'])[size_key].transform(sum)
-	df['groupClusterSizeTag'] = df[group_tag] + ":" + df['groupClusterSize'].astype(str) + "reads"
-	concat_sizes = lambda sizes: "%s" % '|'.join(set(sizes))
-	df['group_tag'] = df.groupby('clusterId')['groupClusterSizeTag'].transform(concat_sizes)
+	if group_tag!=None:
+		df['groupClusterSize'] = df.groupby([group_tag, 'clusterId'])[size_key].transform(sum)
+		df['groupClusterSizeTag'] = df[group_tag] + ":" + df['groupClusterSize'].astype(str) + "reads"
+		concat_sizes = lambda sizes: "%s" % '|'.join(set(sizes))
+		df['group_tag'] = df.groupby('clusterId')['groupClusterSizeTag'].transform(concat_sizes)
 	# report only max_sequences_per_cluster_to_report number of hits
 	clustered_df = df[df.clusterSize>=read_cutoff].sort_values(['clusterSize', 'collapsedCount', 'clusterId'],ascending=[False,False,True]).groupby(['clusterId']).head(max_sequences_per_cluster_to_report).reset_index() #     df[['clusterSize','collapsed','clusterId','CDRH3_AA','CDRL3_AA','CDRH3_NT','CDRL3_NT','VH','DH','JH','VL','JL','VH_AvgSHM','VL_AvgSHM','VHIso','VLIso']]   .to_csv(clustered_nt_output, index=None, sep='\t')
-	for x in ['groupClusterSize', 'groupClusterSizeTag', 'index_row', 'index', '']: 
+	# for x in ['groupClusterSize', 'groupClusterSizeTag', 'index_row', 'index', '']:
+	for x in ['index_row', 'index', '']:
 		if x in clustered_df.columns: clustered_df.drop(x, axis=1, inplace=True)
 	ordered_cols = ['clusterId', 'clusterSize', 'collapsedCount'] 
 	output_cols = ordered_cols + [c for c in clustered_df.columns if c not in ordered_cols]

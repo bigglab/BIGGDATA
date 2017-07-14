@@ -1861,10 +1861,11 @@ def run_quality_filtering_with_analysis_id(self, analysis_id=None, analysis_name
 
 # Returns a ReturnValue with field file_ids which reflects only the new files added during the analysis
 @celery.task(base=LogTask, bind=True)
-def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None, analysis_name=None,
-                 analysis_description=None, append_cterm_peptides=False, cluster_percent=0.9,
-                 cluster_algorithm='greedy', cluster_on='aaSeqCDR3', read_cutoff=1, require_annotations=['aaSeqCDR3'],
-                 cluster_linkage='min', max_sequences_per_cluster_to_report=1, generate_fasta_file=False):
+def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None, analysis_name=None, analysis_description=None,
+             require_annotations=['aaSeqCDR3'], clonotyping_cluster_linkage='min',
+             error_correct_cluster_on='aaSeqCDR3', error_correct_cluster_percent=0.9, error_correct_cluster_algorithm='greedy', error_correct_read_cutoff=1, error_correct_max_sequences_per_cluster_to_report=1,
+             clonotyping_cluster_on='aaSeqCDR3', clonotyping_cluster_percent=0.9, clonotyping_cluster_algorithm='greedy', clonotyping_read_cutoff=1, clonotyping_max_sequences_per_cluster_to_report=1,
+             generate_fasta_file=False, append_cterm_peptides=False, rescue_n_terminal_peptides=False, rescue_c_terminal_peptides=False, confirm_isotype_calls=False):
 
     logger = self.logger
 
@@ -1897,11 +1898,10 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
         session.add(analysis)
         session.commit()
 
-        runtime_parameters = {'file_ids':file_ids, 'user_id':user_id, 'dataset_id':dataset_id, 'analysis_id':analysis.id, 'analysis_name':analysis_name,
-                     'append_cterm_peptides':append_cterm_peptides, 'cluster_percent':cluster_percent,
-                     'cluster_algorithm':cluster_algorithm, 'cluster_on':cluster_on, 'read_cutoff':read_cutoff,
-                     'require_annotations':require_annotations,
-                     'cluster_linkage':cluster_linkage, 'max_sequences_per_cluster_to_report':max_sequences_per_cluster_to_report, 'generate_fasta_file':generate_fasta_file}
+        runtime_parameters = {'file_ids':file_ids, 'user_id':user_id, 'dataset_id':dataset_id, 'analysis_id':analysis.id, 'analysis_name':analysis_name, 'analysis_description': analysis_description, 'require_annotations':require_annotations,
+                     'error_correct_cluster_on':error_correct_cluster_on, 'error_correct_cluster_percent':error_correct_cluster_percent, 'error_correct_cluster_algorithm':error_correct_cluster_algorithm, 'error_correct_read_cutoff':error_correct_read_cutoff, 'error_correct_max_sequences_per_cluster_to_report':error_correct_max_sequences_per_cluster_to_report,
+                     'clonotyping_cluster_on':clonotyping_cluster_on, 'clonotyping_cluster_percent':clonotyping_cluster_percent, 'clonotyping_cluster_algorithm':clonotyping_cluster_algorithm, 'clonotyping_read_cutoff':clonotyping_read_cutoff, 'clonotyping_max_sequences_per_cluster_to_report':clonotyping_max_sequences_per_cluster_to_report, 'clonotyping_cluster_linkage':clonotyping_cluster_linkage,
+                     'append_cterm_peptides':append_cterm_peptides, 'rescue_n_terminal_peptides':rescue_n_terminal_peptides, 'rescue_c_terminal_peptides':rescue_c_terminal_peptides, 'confirm_isotype_calls':confirm_isotype_calls, 'generate_fasta_file':generate_fasta_file}
 
 
         analysis_file_name_prefix = analysis.name.replace(' ', '_')
@@ -1918,35 +1918,51 @@ def run_msdb(self, file_ids=[], user_id=None, dataset_id=None, analysis_id=None,
 
         session.add(analysis.settings_file)
         session.commit()
+
+        # NEED TO GATHER ALL SUBMITTED FILES INTO ONE DF, RUN ERROR CORRECTION CLUSTERING ON EACH FILE AS INGESTED
         dfs = []
         for file in files:
             logger.info('Parsing {} and adding to dataframe'.format(file.name))
             df = read_annotation_file(file.path)
             df['group'] = file.dataset.name
-            dfs.append(df)
+            logger.info('Error Correction Clustering Data From {}'.format(file.name))
+            logger.info('Clustering at {}%  on {} with the {} method, requiring at least {} reads per cluster and all these fields annotated: {}'.format(error_correct_cluster_percent, error_correct_cluster_on, error_correct_cluster_algorithm, error_correct_read_cutoff, ','.join(require_annotations)))
+            # redirect logger to capture function output
+            saved_stdout = sys.stdout
+            sys.stdout = LoggerWriterRedirect(logger, task=self)
+            df = cluster_dataframe(df, identity=error_correct_cluster_percent, on=error_correct_cluster_on, how=error_correct_cluster_algorithm,
+                                   read_cutoff=error_correct_read_cutoff, group_tag='group', max_sequences_per_cluster_to_report=error_correct_max_sequences_per_cluster_to_report)
+            # Restore STDOUT to the console
+            sys.stdout = saved_stdout
+            logger.info("{} Error Corrected Annotations Generated".format(len(df)))
+            dfs.append(df.copy())
         df = pd.concat(dfs)
+        for df_to_burn in dfs: del(df_to_burn)
         del(dfs) # garbage collection - clear up some RAM cause we gunna need it
+        logger.info("")
+        logger.info('########  CLONOTYPING  ########')
         logger.info("{} Total Annotations Grouped From Input Files".format(len(df)))
         if len([a for a in require_annotations if a not in df.columns]) > 0 :
             require_annotations = [a + '_h' for a in require_annotations]
         df = df.dropna(subset=require_annotations, how='any')
-        logger.info("{} Total Annotations With {} Annotated Being Clustered".format(len(df), ','.join(require_annotations)))
-        logger.info(
-            'Clustering at {}%  on {} with the {} method, requiring at least {} reads per cluster and all of these annotated: {}'.format(
-                cluster_percent, cluster_on, cluster_algorithm, read_cutoff, ','.join(require_annotations)))
+        logger.info("{} Total Annotations With Required Annotations".format(len(df), ','.join(require_annotations)))
+
         if len(df) == 0:
             logger.error("No annotations contained all required CDR/FR sequences")
             self.update_state(state='FAILED',
                               meta={'status': 'No Annotations Resulted After Filtering On Required CDR/FR Sequences'})
             return ReturnValue("Post-analysis Clustering Failed - No Sequences Remaining After Filtering", file_ids=[])
+
+        logger.info('Clonotype Clustering at {}%  on {} with the {} method, requiring at least {} reads per cluster and all of these annotated: {}'.format(
+                clonotyping_cluster_percent, clonotyping_cluster_on, clonotyping_cluster_algorithm, clonotyping_read_cutoff, ','.join(require_annotations)))
         # redirect logger to capture function output
         saved_stdout = sys.stdout
         sys.stdout = LoggerWriterRedirect(logger, task=self)
-        df = cluster_dataframe(df, identity=cluster_percent, on=cluster_on, how=cluster_algorithm,
-                               linkage=cluster_linkage, read_cutoff=read_cutoff, group_tag='group', max_sequences_per_cluster_to_report=max_sequences_per_cluster_to_report)
+        df = cluster_dataframe(df, identity=clonotyping_cluster_percent, on=clonotyping_cluster_on, how=clonotyping_cluster_algorithm,
+                               linkage=clonotyping_cluster_linkage, read_cutoff=clonotyping_read_cutoff, group_tag='group', max_sequences_per_cluster_to_report=clonotyping_max_sequences_per_cluster_to_report)
         # Restore STDOUT to the console
         sys.stdout = saved_stdout
-        logger.info("{} Clusters Generated".format(len(df)))
+        logger.info("{} Clusters Generated From Clonotyping".format(len(df)))
 
         if append_cterm_peptides:
             logger.info('Appending C-terminal constant region peptides to end of sequences')
