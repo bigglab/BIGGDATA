@@ -82,6 +82,11 @@ nav.register_element('frontend_top', Navbar(
     View('BIGG DATA', 'frontend.index'),
     View('Login', 'frontend.login'),
     Subgroup(
+        'Database',
+        View('Germline Allele DB', 'frontend.alleledb'),
+        #Link('Metabase DB Browser', 'http://www.biggdata.io:3000'),
+    ),
+    Subgroup(
         'Documentation',
         View('About BIGG DATA', 'frontend.about'),
         Link('BIGG DATA GitHub', 'https://github.com/bigglab/BIGGDATA'),
@@ -1773,7 +1778,7 @@ def json_celery_log():
 
 
 @frontend.route('/alleledb', methods=['GET','POST'])
-@login_required
+# @login_required
 def alleledb():
     class AlleleForm(Form):
         locus_type_selector = SelectField(u'Species', choices=())
