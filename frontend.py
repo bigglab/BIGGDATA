@@ -1803,7 +1803,7 @@ def alleledb():
 
 
 @frontend.route('/alleledb_json', methods=['GET', 'POST'])
-@login_required
+# @login_required
 def alleledb_json():
 
     print request.args.__dict__
