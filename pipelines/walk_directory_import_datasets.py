@@ -1,12 +1,13 @@
 #script to walk through a directory and import any paired read files
 
 from collections import OrderedDict
+import os
 
 # d = '/data/russ/YoungOldSeqs'
 
 def walk_directory_and_collect_datasets(d):
 	datasets = OrderedDict()
-	for (path, names, files) in walk(d):
+	for (path, names, files) in os.walk(d):
 		if files!=[]:
 			r1s = [f for f in map(lambda s: path+'/'+s, files) if 'R1' in f and '.fastq' in f and 'filtered' not in f]
 			r2s = [f for f in map(lambda s: path+'/'+s, files) if 'R2' in f and '.fastq' in f and 'filtered' not in f]
