@@ -1357,8 +1357,7 @@ def pair_annotation_files_with_analysis_id(self, user_id=None, analysis_id=None,
         # Restore STDOUT to the console
         sys.stdout = saved_stdout
 
-        def add_paired_txt(string): return string.replace('_R1', '').replace('_R2', '').replace('R1', '').replace('R2',
-                                                                                                                  '').replace(
+        def add_paired_txt(string): return string.replace('_R1', '').replace('_R2', '').replace(
             '.R1.', '.').replace('.R2.', '.').replace('.txt', '', 99) + '.paired.txt'
 
         new_file = File(name=add_paired_txt(file.name), directory=file.directory, path=add_paired_txt(file.path),

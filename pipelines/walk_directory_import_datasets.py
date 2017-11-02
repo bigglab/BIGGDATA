@@ -19,7 +19,7 @@ def walk_directory_and_collect_datasets(d):
 						pairing = True
 					else:
 						pairing = False
-					sample, seq_type = path.split('/')[-2:]
+					# sample, seq_type = path.split('/')[-2:]
 					datasets[(dataset_name, pairing)] = [r1,r2]
 	return datasets
 
