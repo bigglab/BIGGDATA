@@ -91,7 +91,7 @@ rule usearch_mergefastq:
     log: "log/{}.usearch_mergefastq.log".format(sample)
     threads: THREADS
     message: "running usearch mergefastq on sample {}".format(sample)
-    shell: "usearch  -fastq_mergepairs {input[0]} -reverse {input[1]} -fastqout {output} 2> {log}"
+    shell: "/stor/work/Georgiou/BIGGDATA/data/resources/software/usearch  -fastq_mergepairs {input[0]} -reverse {input[1]} -fastqout {output} 2> {log}"
 
 
 
