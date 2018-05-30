@@ -673,7 +673,7 @@ def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, pro
         path = os.path.splitext(path)[0] + '_1' + os.path.splitext(path)[1]
 
     logger.info('Fetching SRA data from NCBI {}'.format(accession))
-    command = "/data/resources/software/sratoolkit.2.8.1-2/bin/fastq-dump -I --gzip --defline-qual '+' --split-files -T --outdir {} {}".format(
+    command = "/data/resources/software/sratoolkit.2.8.1-2/bin/fastq-dump -I --defline-qual '+' --split-files -T --outdir {} {}".format(
         directory, accession)
 
     logger.info(command)
@@ -694,8 +694,8 @@ def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, pro
         dirs = os.listdir('{}/{}'.format(directory, accession))
         if dirs == ['1']:
             # flatten and clean up the directory tree:
-            source = '{}/{}/1/fastq.gz'.format(directory, accession)
-            destination = '{}/{}_1.fastq.gz'.format(directory, accession)
+            source = '{}/{}/1/fastq'.format(directory, accession)
+            destination = '{}/{}_1.fastq'.format(directory, accession)
             os.rename(source, destination)
 
             file_paths = [destination]
@@ -711,14 +711,34 @@ def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, pro
 
             for directory_number in dirs:
                 # flatten and clean up the directory tree:
-                source = '{}/{}/{}/fastq.gz'.format(directory, accession, directory_number)
-                destination = '{}/{}_{}.fastq.gz'.format(directory, accession, directory_number)
+                source = '{}/{}/{}/fastq'.format(directory, accession, directory_number)
+                destination = '{}/{}_{}.fastq'.format(directory, accession, directory_number)
                 os.rename(source, destination)
 
                 file_paths.append(destination)
-                # filename_array.append('{}_{}.fastq.gz'.format(accession, directory_number))
+                # filename_array.append('{}_{}.fastq'.format(accession, directory_number))
 
                 os.rmdir('{}/{}/{}/'.format(directory, accession, directory_number))
+
+            # repair fastq headers to match for paired data
+
+
+            logger.info('Repairing matching headers for paired data from SRA')
+            command = "/data/resources/software/fastq-pair/build/fastq_pair -m {} {}".format(file_paths[0], file_paths[1])
+            logger.info(command)
+
+            command_line_args = shlex.split(command)
+            command_line_process = subprocess.Popen(command_line_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1)
+            for line in iter(command_line_process.stdout.readline, b''):
+                line = line.strip()
+                logger.info(line.strip())
+            response, error = command_line_process.communicate()
+            command_line_process.stdout.close()
+            command_line_process.wait()
+
+            # rename fixed paired header files to original
+            os.rename(file_paths[0] + ".paired.fq", file_paths[0])
+            os.rename(file_paths[1] + ".paired.fq", file_paths[1])
 
             os.rmdir('{}/{}/'.format(directory, accession))
 
@@ -734,8 +754,7 @@ def import_from_sra(self, accession=None, name=None, user_id=57, chain=None, pro
 
         file_ids = return_value.file_ids
 
-        return ReturnValue('Dataset from SRA Accession {} created for user {}'.format(accession, user.username),
-                           file_ids=file_ids)
+        return ReturnValue('Dataset from SRA Accession {} created for user {}'.format(accession, user.username), file_ids=file_ids)
     else:
         raise Exception('fastq-dump command failed:'.format(error))
 
