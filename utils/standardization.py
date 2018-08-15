@@ -118,7 +118,8 @@ def parse_mixcr_alignment_string_to_shm(alignment):
     germ_end = sub_strings[1]
     query_start = sub_strings[3]
     query_end = sub_strings[4]
-    algn_len = sub_strings[2]
+    #algn_len = sub_strings[2] # this germ length is too long compared to germ start to germ end, weirdly
+    algn_len = int(sub_strings[1])-int(sub_strings[0])
     alignment_string = sub_strings[5]
     num_mismatch = alignment_string.count('S')
     num_del = alignment_string.count('D')
