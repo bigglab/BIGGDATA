@@ -1,3 +1,4 @@
+src/*
 instance/*
 aws/biggdata.pem
 data/from_appsoma
