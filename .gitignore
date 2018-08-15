@@ -13,3 +13,16 @@ paringtempfile.txt
 .idea
 .idea/*
 node*
+bin/*
+celery.log
+ete2/*
+flask.log
+gci_datasets.json
+include/*
+lib/*
+local/*
+man/*
+nohup.out
+pip-selfcheck.json
+share/*
+var/*
