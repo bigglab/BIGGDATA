@@ -84,7 +84,7 @@ nav.register_element('frontend_top', Navbar(
     Subgroup(
         'Database',
         View('Germline Allele DB', 'frontend.alleledb'),
-        #Link('Metabase DB Browser', 'http://www.biggdata.io:3000'),
+        #Link('Metabase DB Browser', 'http://geordbas01.ccbb.utexas.edu:3000/'),
     ),
     Subgroup(
         'Documentation',
@@ -128,7 +128,7 @@ nav.register_element('frontend_user', Navbar(
     Subgroup(
         'Database',
         View('Germline Allele DB', 'frontend.alleledb'),
-        Link('Metabase DB Browser', 'http://www.biggdata.io:3000'),
+        Link('Metabase DB Browser', 'http://geordbas01.ccbb.utexas.edu:3000/'),
         ),
     Subgroup(
         'Documentation',
