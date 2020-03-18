@@ -37,7 +37,7 @@ Flask-Script==2.0.5
 Flask-SQLAlchemy==2.1
 Flask-User==0.6.8
 Flask-WTF==0.12
-flower==0.8.3
+flower==0.9.2
 future==0.15.2
 futures==3.0.3
 gnureadline==6.3.3
