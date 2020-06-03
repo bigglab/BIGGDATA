@@ -1661,16 +1661,16 @@ def run_split_pacbio_with_files(analysis_id=None, file_ids=None, logger=celery_l
         basepath = '{0}/{1}'.format(analysis.directory, basename)
         logger.info('Writing split pacbio file to basepath: {}'.format(basepath))
 
-        output_file = File()
-        output_file.path = '{}.pacbio_split_R1.fastq'.format(basepath)
-        output_file.name = "{}.pacbio_split_R1.fastq".format(basename)
-        output_file.dataset_id = analysis.dataset_id
-        output_file.user_id = analysis.user_id
-        output_file.analysis_id = analysis.id
-        output_file.chain = "IGH/IGL"
-        output_file.command = '#custom python script to split pacbio sam files'
-        output_file.file_type = 'SPLIT_FASTQ'
-        files_to_execute.append(output_file)
+        output_file1 = File()
+        output_file1.path = '{}.pacbio_split_R1.fastq'.format(basepath)
+        output_file1.name = "{}.pacbio_split_R1.fastq".format(basename)
+        output_file1.dataset_id = analysis.dataset_id
+        output_file1.user_id = analysis.user_id
+        output_file1.analysis_id = analysis.id
+        output_file1.chain = "IGH/IGL"
+        output_file1.command = '#custom python script to split pacbio sam files'
+        output_file1.file_type = 'SPLIT_FASTQ'
+        files_to_execute.append(output_file1)
 
         output_file2 = File()
         output_file2.path = '{}.pacbio_split_R2.fastq'.format(basepath)
