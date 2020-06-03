@@ -1728,19 +1728,19 @@ def run_split_pacbio_with_files(analysis_id=None, file_ids=None, logger=celery_l
         db.session.add(f)
         db.session.commit()
 
-            if response == 0:
-                f.available = True
-                f.in_use = False
-                f.file_size = os.path.getsize(f.path)
-                db.session.commit()
-                db.session.refresh(f)
+        if response == 0:
+            f.available = True
+            f.in_use = False
+            f.file_size = os.path.getsize(f.path)
+            db.session.commit()
+            db.session.refresh(f)
 
-            else:
-                f.available = False
-                f.in_use = False
-                analysis.status = 'FAILED'
-                db.session.commit()
-                logger.error('Error writing trimmed file {}: {}'.format(f.path, error))
+        else:
+            f.available = False
+            f.in_use = False
+            analysis.status = 'FAILED'
+            db.session.commit()
+            logger.error('Error writing trimmed file {}: {}'.format(f.path, error))
 
         db.session.refresh(f)
         output_file_ids.append(f.id)
