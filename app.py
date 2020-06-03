@@ -1709,7 +1709,7 @@ def run_split_pacbio_with_files(analysis_id=None, file_ids=None, logger=celery_l
                     qual1, qual2 = quals[0:match_indexes[0]], quals[match_indexes[0] + 17:]
                     out1.write('@{}\n{}\n+\n{}\n'.format(header, seq1, qual1))
                     out2.write('@{}\n{}\n+\n{}\n'.format(header, seq2, qual2))
-                elif use_concatemers == True:
+                #elif use_concatemers == True:
                     #print("Using all sequences found in amplicon...")
 
         out1.close()
