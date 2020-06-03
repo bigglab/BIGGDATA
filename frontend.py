@@ -2113,7 +2113,7 @@ def pipeline(selected_dataset=None):
             dataset_project_dict = {}
 
             dataset_ids = tuple(map(lambda d: d.id, datasets))
-            files = db.session.query(File).filter(File.dataset_id.in_(dataset_ids)).filter(File.file_type.in_(('FASTQ', 'GZIPPED_FASTQ', 'FASTA', 'GZIPPED_FASTA'))).all()
+            files = db.session.query(File).filter(File.dataset_id.in_(dataset_ids)).filter(File.file_type.in_(('FASTQ', 'GZIPPED_FASTQ', 'FASTA', 'GZIPPED_FASTA', 'SAM', 'BAM', 'SPLIT_FASTQ'))).all()
             sorted_files = sorted(files, key=lambda f: f.dataset_id, reverse=True)
             grouped_files = itertools.groupby(sorted_files, key=lambda f: f.dataset_id)
             files_by_dataset_id = OrderedDict()
@@ -2131,7 +2131,7 @@ def pipeline(selected_dataset=None):
             build_pipeline_form.dataset.choices = [tup for tup in dataset_tuples if tup[0] in dataset_file_dict.keys()]
 
         # NEW ROUTINE
-        projects_datasets_files = current_user.get_projects_datasets_files(file_types=['FASTQ', 'GZIPPED_FASTQ', 'FASTA'])
+        projects_datasets_files = current_user.get_projects_datasets_files(file_types=['FASTQ', 'GZIPPED_FASTQ', 'FASTA', 'SAM', 'BAM', 'SPLIT_FASTQ'])
         projects_datasets_files_formatted =  json.dumps ({'id':'node1', 'level':1, 'title':'placeholder', 'has_children':True, 'children': projects_datasets_files})
         # for pdf in projects_datasets_files:
         #     projects_datasets_files_formatted += json.dumps ( pdf )
