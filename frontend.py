@@ -2063,6 +2063,8 @@ def pipeline(selected_dataset=None):
                 'dataset_files' : build_pipeline_form.dataset_files.data,
                 'name' : build_pipeline_form.name.data,
                 'description' : build_pipeline_form.description.data,
+                'split_pacbio': build_pipeline_form.split_pacbio.data,
+                'split_pacbio_use_concatemers': build_pipeline_form.split_pacbio_use_concatemers.data,
                 'trim' : build_pipeline_form.trim.data,
                 'trim_slidingwindow' : build_pipeline_form.trim_slidingwindow.data,
                 'trim_slidingwindow_size' : build_pipeline_form.trim_slidingwindow_size.data,

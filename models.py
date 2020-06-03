@@ -474,8 +474,8 @@ class File(db.Model):
                     d = self.dataset 
                     d.paired = True 
 
-                self.chain = 'HEAVY/LIGHT'
-                f.chain = 'HEAVY/LIGHT'
+                self.chain = 'IGH/IGL'
+                f.chain = 'IGH/IGL'
                 return True 
             else: 
                 return False

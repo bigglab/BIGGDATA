@@ -561,11 +561,11 @@ def parse_name_for_chain_type(name):
     if 'tcra' in name.lower() or 'alpha' in name.lower() and 'tcrb' in name.lower() or 'beta' in name.lower():
         chain = 'TCRA/B'
     if 'igh' in name.lower() or 'heavy' in name.lower():
-        chain = 'HEAVY'
+        chain = 'IGH'
     if 'igl' in name.lower() or 'igk' in name.lower() or 'light' in name.lower():
-        chain = 'LIGHT'
+        chain = 'IGL'
     if 'igl' in name.lower() or 'igk' in name.lower() or 'light' in name.lower() and 'igh' in name.lower() or 'heavy' in name.lower():
-        chain = 'HEAVY/LIGHT'
+        chain = 'IGH/IGL'
     try:
         chain
     except NameError:
@@ -1624,6 +1624,134 @@ def run_pandaseq_with_dataset_id(self, dataset_id, analysis_id=None, analysis_na
     db.session.commit()
 
     return ReturnValue('PANDAseq analysis complete.', file_ids=output_file_ids)
+
+
+
+#finds exact matches only, for now
+def find_all_indexes(input_str, search_str):
+    l1 = []
+    length = len(input_str)
+    index = 0
+    while index < length:
+        i = input_str.find(search_str, index)
+        if i == -1:
+            return l1
+        l1.append(i)
+        index = i + 1
+    return l1
+
+
+
+def run_split_pacbio_with_files(analysis_id=None, file_ids=None, logger=celery_logger, use_concatemers=False):
+    analysis = db.session.query(Analysis).get(analysis_id)
+
+    files = map(lambda x: db.session.query(File).filter(File.id == x).first(), file_ids)
+
+    if not analysis:
+        raise Exception('Analysis with ID {} not found.'.format(analysis_id))
+    analysis_name = 'Analysis_{}'.format(analysis.id)
+
+    logger.info('Running python script to Split PacBio Amplicons on files {}.'.format(', '.join([str(file.id) for file in files])))
+
+    files_to_execute = []
+
+    for file in files:
+        # path = '/{}'.format('/'.join(file.path.split('/')[:-1])).replace('//', '/')
+        basename = file.path.split('/')[-1].split('.')[0]
+        basepath = '{0}/{1}'.format(analysis.directory, basename)
+        logger.info('Writing split pacbio file to basepath: {}'.format(basepath))
+
+        output_file = File()
+        output_file.path = '{}.pacbio_split_R1.fastq'.format(basepath)
+        output_file.name = "{}.pacbio_split_R1.fastq".format(basename)
+        output_file.dataset_id = analysis.dataset_id
+        output_file.user_id = analysis.user_id
+        output_file.analysis_id = analysis.id
+        output_file.chain = "IGH/IGL"
+        output_file.command = '#custom python script to split pacbio sam files'
+        output_file.file_type = 'SPLIT_FASTQ'
+        files_to_execute.append(output_file)
+
+        output_file2 = File()
+        output_file2.path = '{}.pacbio_split_R2.fastq'.format(basepath)
+        output_file2.name = "{}.pacbio_split_R2.fastq".format(basename)
+        output_file2.dataset_id = analysis.dataset_id
+        output_file2.user_id = analysis.user_id
+        output_file2.analysis_id = analysis.id
+        output_file2.chain = "VH/VL"
+        output_file2.command = '#custom python script to split pacbio sam files'
+        output_file2.file_type = 'SPLIT_FASTQ'
+        files_to_execute.append(output_file2)
+
+        analysis.status = 'EXECUTING PACBIO SPLIT'
+        db.session.commit()
+
+        # MAKE IT HAPPEN
+        out1 = open(output_file1.path, 'w')
+        out2 = open(output_file2.path, 'w')
+
+        #assert file is sam file
+        with open(file.path) as sam:
+            for line in sam:
+                line = line.rstrip()
+                els = line.split('\t')
+                header = els[0]
+                seq = els[9]
+                quals = els[10]
+                # print('Name: {}, Seq: {}'.format(header, seq))
+                logger.info('Employing Georgiou Lab Standard Overlap Oligo Sequence - TATTCCCATCGCGGCGC')
+                match_indexes = find_all_indexes(seq, "TATTCCCATCGCGGCGC")
+                match_indexes += find_all_indexes(seq, "GCGCCGCGATGGGAATA")
+                # print(match_indexes)
+                if len(match_indexes) == 1: # only use singleton amplicon sequences
+                    # print('only one match found, splitting sequence: ')
+                    seq1, seq2 = seq[0:match_indexes[0]], seq[match_indexes[0] + 17:]
+                    qual1, qual2 = quals[0:match_indexes[0]], quals[match_indexes[0] + 17:]
+                    out1.write('@{}\n{}\n+\n{}\n'.format(header, seq1, qual1))
+                    out2.write('@{}\n{}\n+\n{}\n'.format(header, seq2, qual2))
+                elif use_concatemers == True:
+                    #print("Using all sequences found in amplicon...")
+
+        out1.close()
+        out2.close()
+
+    #assert files were created
+    response = 0 # successfully split - assert file size or something
+
+    #still need to register files
+    output_file_ids = []
+    for f in files_to_execute:
+        f.command = f.command.encode('ascii')
+        logger.info('Executing: {}'.format(f.command))
+        analysis.active_command = f.command
+        f.in_use = True
+        db.session.add(f)
+        db.session.commit()
+
+            if response == 0:
+                f.available = True
+                f.in_use = False
+                f.file_size = os.path.getsize(f.path)
+                db.session.commit()
+                db.session.refresh(f)
+
+            else:
+                f.available = False
+                f.in_use = False
+                analysis.status = 'FAILED'
+                db.session.commit()
+                logger.error('Error writing trimmed file {}: {}'.format(f.path, error))
+
+        db.session.refresh(f)
+        output_file_ids.append(f.id)
+
+    logger.info('Split PacBio job for analysis {} has been executed.'.format(analysis))
+    return ReturnValue('Success', file_ids=output_file_ids)
+
+
+
+
+
 
 
 def run_trim_analysis_with_files(analysis_id=None, file_ids=None, logger=celery_logger, trim_illumina_adapters=True,
@@ -2771,6 +2899,8 @@ def run_analysis_pipeline(self, *args, **kwargs):
     name = kwargs['name']
     description = kwargs['description']
     trim = kwargs['trim']
+    split_pacbio = kwargs['split_pacbio']
+    split_pacbio_use_concatemers = kwargs['split_pacbio_use_concatemers']
     trim_slidingwindow = kwargs['trim_slidingwindow']
     trim_slidingwindow_size = kwargs['trim_slidingwindow_size']
     trim_slidingwindow_quality = kwargs['trim_slidingwindow_quality']
@@ -2864,6 +2994,13 @@ def run_analysis_pipeline(self, *args, **kwargs):
 
     ##### Perform Pre-processing #####
     self.update_state(state='RUNNING', meta={'status': 'Pre-processing reads'})
+    if split_pacbio:
+
+        return_value = run_split_pacbio_with_files(analysis_id=analysis_id, file_ids=file_ids_to_analyze,
+                                                    logger=logger, use_concatemers=split_pacbio_use_concatemers)
+        file_ids_to_analyze = return_value.file_ids
+        logger.info(return_value)
+
     if trim:
 
         if trim_slidingwindow_size == '': trim_slidingwindow_size = 4

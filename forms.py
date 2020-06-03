@@ -167,7 +167,7 @@ class FileEditForm(Form):
     name = TextField('File Name', [validators.length(max=256)])
     description = TextField('Description', [validators.length(max=256)])
     paired_partner = SelectField('Paired partner', coerce=int)
-    chain  = SelectField('Chain', choices=(('HEAVY', 'HEAVY'), ('LIGHT', 'LIGHT'), ('HEAVY/LIGHT', 'HEAVY/LIGHT'), ('TCRA', 'TCRA'), ('TCRB', 'TCRB'), ('TCRA/B', 'TCRA/B')))
+    chain  = SelectField('Chain', choices=(('IGH', 'IGH'), ('IGL/K', 'IGL/K'), ('IGH/IGL', 'IGH/IGL'), ('TCRA', 'TCRA'), ('TCRB', 'TCRB'), ('TCRA/B', 'TCRA/B')))
     file_type  = SelectField('File Type', choices=())
 
 class CreateProjectForm(Form):
@@ -242,6 +242,9 @@ class BuildPipelineForm(Form):
 
     dataset = SelectMultipleField(u'Select Dataset', choices = [ ('','') ] )
     dataset_files = SelectMultipleField(u'Select Files', choices = [ ('','') ])
+
+    split_pacbio = BooleanField(u'Split PacBio Amplicon Reads')
+    split_pacbio_use_concatemers = BooleanField(u'Use All Concatenated Seqs Found in PacBio Amplicons')
 
     trim = BooleanField(u'Trim Illumina Adapters')
     trim_slidingwindow = BooleanField(u'Use Sliding Window Trimming', default=False) # Perform a sliding window trimming, cutting once the average quality within the window falls below a threshold.

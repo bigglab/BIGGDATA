@@ -124,12 +124,39 @@
                 <div id="accordion">
 
                   <table >
+
+                    <tr>
+                      <td>
+                        <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                          <label>
+                              {{ build_pipeline_form.split_pacbio](class='split_pacbio') }}
+                              <b>PacBio Amplicon Data:</b> Split Native Paired Sequencing HIFI Amplicon Reads From PacBio SAM File
+                          </label>
+                        </div> <!-- /checkbox -->
+
+                        <div id="collapse" class="collapse split_pacbio">
+                          <div style="margin-left: 25px">
+
+                            <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                              <label>
+                                  {{ build_pipeline_form.split_pacbio_use_concatemers(class='split_pacbio_use_concatemers') }}
+                                  <b>Use Concatemers:</b> Either overlap PCR concatemerization or PacBio HIFI read processing leaves more than two IG reads on some amplicons. By default, onle the first two are taken as R1/R2. Alternatively, further multiples of IG reads can be written as successive R1/R2 (but the IG read counts will be less accurate).
+                              </label>
+                            </div>
+
+                          </div>
+                        </div> <!-- /trim collapse -->
+
+                      </td>
+                    </tr>
+
+
                     <tr>
                       <td>
                         <div class="checkbox" class="pull-right" style="padding-left: 4px">
                           <label>
                               {{ build_pipeline_form.trim(class='trim') }}
-                              <b>Trimmomatic:</b> Trim FASTQ data
+                              <b>Trim Reads:</b> Trim the ends of FASTQ data by quality or known adapter identity
                           </label>
                         </div> <!-- /checkbox -->
 
@@ -139,7 +166,7 @@
                             <div class="checkbox" class="pull-right" style="padding-left: 4px">
                               <label>
                                   {{ build_pipeline_form.trim_slidingwindow(class='trim_slidingwindow') }}
-                                  <b>Use Sliding Window:</b> Perform a sliding window trimming, cutting once the average quality within the window falls below a threshold. Default is a window of size 4 which trims reads under Q15.
+                                  <b>Trim on Sliding Window Quality:</b> Perform a sliding window trimming, cutting once the average quality within the window falls below a threshold. Default is a window of size 4 which trims reads under Q15.
                               </label>
                             </div>
 
@@ -163,7 +190,7 @@
                             <div class="checkbox" class="pull-right" style="padding-left: 4px">
                               <label>
                                 {{ build_pipeline_form.trim_illumina_adapters(class='trim_illumina_adapters') }}
-                                  <b>Trim Illumina Adapters</b>
+                                  <b>Align and Trim Known Illumina Adapters</b>
                               </label>
                             </div>                                      
 
@@ -172,6 +199,10 @@
 
                       </td>
                     </tr>
+
+
+
+
                     <tr>
                       <td>
                         <div class="checkbox" class="pull-right" style="padding-left: 4px">
