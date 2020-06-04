@@ -1578,7 +1578,7 @@ def json_celery_log():
     interval = 60000
     tasks = Set(current_user.celery_tasks)
     tasks.discard(None)
-    tasks = sorted(tasks, key=lambda x: x.id, reverse=True)[0:10]
+    tasks = sorted(tasks, key=lambda x: x.id, reverse=True)[0:3]
 
     tasks_pending = False
 
