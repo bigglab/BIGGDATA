@@ -156,7 +156,7 @@
                         <div class="checkbox" class="pull-right" style="padding-left: 4px">
                           <label>
                               {{ build_pipeline_form.trim(class='trim') }}
-                              <b>Trim Reads:</b> Trim the ends of FASTQ data by quality or known adapter identity
+                              <b>Trim Illumina Reads:</b> Trim the ends of FASTQ data by quality or known adapter identity
                           </label>
                         </div> <!-- /checkbox -->
 
@@ -208,7 +208,7 @@
                         <div class="checkbox" class="pull-right" style="padding-left: 4px">
                           <label >
                               {{ build_pipeline_form.pandaseq(class='pandaseq') }}
-                              <b>Overlapping Reads:</b> Align and assemble overlapping pair-end reads
+                              <b>Assemble Overlapping Illumina Reads:</b> Align and take quality-based consensus sequence of overlapping pair-end reads
                           </label>
                         </div> <!-- /checkbox -->
 
@@ -237,7 +237,7 @@
                         <div class="checkbox" class="pull-right" style="padding-left: 4px">
                           <label >
                               {{ build_pipeline_form.filter(class='quality_filter') }}
-                              <b>Quality Filter:</b> Filter out reads with certain % of read below given PHRED quality
+                              <b>End-to-End Quality Filter:</b> Filter out reads with certain % of read below given PHRED quality
                           </label>
                         </div> <!-- /checkbox -->
 
