@@ -1382,7 +1382,7 @@ def pair_annotation_files_with_analysis_id(self, user_id=None, analysis_id=None,
 
         new_file = File(name=add_paired_txt(file.name), directory=file.directory, path=add_paired_txt(file.path),
                         file_type='BIGG_ANNOTATION', dataset_id=file.dataset_id, analysis_id=file.analysis_id,
-                        user_id=user_id, parent_id=file.id, check_name=False)
+                        user_id=user_id, parent_id=file.id, check_name=False, chain='PAIRED')
         logger.info('Writing paired file to path: {}'.format(new_file.path))
         paired_df.to_csv(new_file.path, sep='\t', index=False)
         session.add(new_file)
