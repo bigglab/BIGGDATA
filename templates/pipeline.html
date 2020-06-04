@@ -372,28 +372,14 @@
 
                         <div class="checkbox" class="pull-right" style="padding-left: 4px">
                           <label>
-                              {{ build_pipeline_form.pair_vhvl}}
-                              <b>Paired VH::VL Data - Collapse to single data file</b> 
-                          </label>
-                        </div> <!-- /checkbox -->
-
-
-
-                        <div class="checkbox" class="pull-right" style="padding-left: 4px">
-                          <label>
                               {{ build_pipeline_form.standardize_outputs(class='standardize_outputs') }}
-                              <b>Standardize Output To BIGG-compatible Format</b>
+                              <b>Standardize Output To Our DB-compatible Format To Enable Other Options</b>
                           </label>
                         </div> <!-- /checkbox -->
 
                         <div id="collapse" class="collapse standardize_outputs in">
                           <div style="margin-left: 25px">
 
-                            <div style="padding-left: 4px">
-                              <label>
-                                  <b>This will route the raw annotation file through our standardization, which will reformat columns to be identical regardless of alignment program.</b>
-                              </label>
-                            </div>
 
                             <div class="checkbox" class="pull-right" style="padding-left: 4px">
                               <label>
@@ -410,9 +396,18 @@
                             </div>
 
 
+                            <div class="checkbox" class="pull-right" style="padding-left: 4px">
+                              <label>
+                                  {{ build_pipeline_form.pair_vhvl}}
+                                  <b>Paired VH::VL Data - Collapse to single data file</b>
+                              </label>
+                            </div> <!-- /checkbox -->
+
+
            
-                          </div>
-                        </div> 
+                          </div> # style
+                        </div> # collapse
+                          
                       </td>
                     </tr>
                   </table>
