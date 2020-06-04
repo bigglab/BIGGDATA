@@ -1691,6 +1691,8 @@ def run_split_pacbio_with_files(analysis_id=None, file_ids=None, logger=celery_l
         out2 = open(output_file2.path, 'w')
 
         #assert file is sam file
+        logger.info('Splitting on Exact Match to Georgiou Lab Overlap Oligo Sequence TATTCCCATCGCGGCGC')
+
         with open(file.path) as sam:
             for line in sam:
                 line = line.rstrip()
@@ -1699,7 +1701,6 @@ def run_split_pacbio_with_files(analysis_id=None, file_ids=None, logger=celery_l
                 seq = els[9]
                 quals = els[10]
                 # print('Name: {}, Seq: {}'.format(header, seq))
-                logger.info('Employing Georgiou Lab Standard Overlap Oligo Sequence - TATTCCCATCGCGGCGC')
                 match_indexes = find_all_indexes(seq, "TATTCCCATCGCGGCGC")
                 match_indexes += find_all_indexes(seq, "GCGCCGCGATGGGAATA")
                 # print(match_indexes)
