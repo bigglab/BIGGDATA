@@ -1662,8 +1662,8 @@ def run_split_pacbio_with_files(analysis_id=None, file_ids=None, logger=celery_l
         logger.info('Writing split pacbio file to basepath: {}'.format(basepath))
 
         output_file1 = File()
-        output_file1.path = '{}.pacbio_split_R1.fastq'.format(basepath)
-        output_file1.name = "{}.pacbio_split_R1.fastq".format(basename)
+        output_file1.path = '{}SplitR1.R1.fastq'.format(basepath)
+        output_file1.name = "{}SplitR1.R1.fastq".format(basename)
         output_file1.dataset_id = analysis.dataset_id
         output_file1.user_id = analysis.user_id
         output_file1.analysis_id = analysis.id
@@ -1673,8 +1673,8 @@ def run_split_pacbio_with_files(analysis_id=None, file_ids=None, logger=celery_l
         files_to_execute.append(output_file1)
 
         output_file2 = File()
-        output_file2.path = '{}.pacbio_split_R2.fastq'.format(basepath)
-        output_file2.name = "{}.pacbio_split_R2.fastq".format(basename)
+        output_file2.path = '{}SplitR2.R2.fastq'.format(basepath)
+        output_file2.name = "{}SplitR2.R2.fastq".format(basename)
         output_file2.dataset_id = analysis.dataset_id
         output_file2.user_id = analysis.user_id
         output_file2.analysis_id = analysis.id
