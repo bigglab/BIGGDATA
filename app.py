@@ -1333,6 +1333,7 @@ def standardize_output_files(self, user_id=None, analysis_id=None, file_ids=None
             new_file = File(name=add_bigg_txt(file.name), directory=file.directory, path=add_bigg_txt(file.path),
                             file_type='BIGG_ANNOTATION', dataset_id=file.dataset_id, analysis_id=file.analysis_id,
                             user_id=user_id, parent_id=file.id, check_name=False)
+            new_file.chain=file.chain
             logger.info('Writing standardized file to path: {}'.format(new_file.path))
             df.to_csv(new_file.path, sep='\t', index=False)
             session.add(new_file)
@@ -2288,8 +2289,11 @@ def run_igrep_annotation_on_dataset_files(dataset_id, file_ids, user_id, analysi
             if not loci:
                 loci = ''
                 if file.chain == 'HEAVY': loci = 'igh'
+                if file.chain == 'IGH': loci = 'igh'
                 if file.chain == 'LIGHT': loci = 'igk,igl'
+                if file.chain == 'IGL/K': loci = 'igk,igl'
                 if file.chain == 'HEAVY/LIGHT': loci = 'igh,igk,igl'
+                if file.chain == 'IGH/IGL': loci = 'igh,igk,igl'
 
                 # Set default loci here
                 if loci == '': loci = 'igh,igk,igl'
