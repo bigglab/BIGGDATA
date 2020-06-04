@@ -1678,7 +1678,7 @@ def run_split_pacbio_with_files(analysis_id=None, file_ids=None, logger=celery_l
         output_file2.dataset_id = analysis.dataset_id
         output_file2.user_id = analysis.user_id
         output_file2.analysis_id = analysis.id
-        output_file2.chain = "VH/VL"
+        output_file2.chain = "IGH/IGL"
         output_file2.command = '#custom python script to split pacbio sam files'
         output_file2.file_type = 'SPLIT_FASTQ'
         files_to_execute.append(output_file2)
