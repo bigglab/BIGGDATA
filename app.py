@@ -944,7 +944,7 @@ def run_mixcr_analysis_id_with_files(self, analysis_id, file_ids, species=None, 
         alignment_file.path = '{}.mixcr'.format(basepath)
         alignment_file.name = "{}.mixcr".format(basename)
         # MIGHT NEED TO ADD THIS ARGUMENT to align (from costas)   -OjParameters.parameters.mapperMaxSeedsDistance=5 
-        alignment_file.command = '{} align -t 6 -OjParameters.parameters.mapperMaxSeedsDistance=5 --chains {} --species {} --save-description -f {} {}'.format(
+        alignment_file.command = '{} align -f -t 6 -OjParameters.parameters.mapperMaxSeedsDistance=5 --chains {} --species {} --save-description -f {} {}'.format(
             app.config['MIXCR'], loci, species, file.path, alignment_file.path)
         alignment_file.file_type = 'MIXCR_ALIGNMENTS'
         output_files.append(alignment_file)
