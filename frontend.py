@@ -2097,9 +2097,12 @@ def pipeline(selected_dataset=None):
 
 
         # get a list of user projects - relational includes those they own and those shared with them
-        projects = current_user.get_ordered_projects()
+        # projects = current_user.get_ordered_projects()
         # get datasets from owned and shared projects
         datasets = current_user.get_ordered_datasets()
+
+        pipeline_request_fetched_datasets = time.time()
+        print("Dataset Fetching took {} seconds.".format(pipeline_request_fetched_datasets - pipeline_request_start))
 
 
         if len(datasets) > 0: 
@@ -2115,6 +2118,10 @@ def pipeline(selected_dataset=None):
             sorted_files = sorted(files, key=lambda f: f.dataset_id, reverse=True)
             grouped_files = itertools.groupby(sorted_files, key=lambda f: f.dataset_id)
             files_by_dataset_id = OrderedDict()
+
+            pipeline_request_preloop = time.time()
+            print("Preloop took {} seconds.".format(pipeline_request_preloop - pipeline_request_start))
+
             for dataset_id, files in grouped_files: 
                 files_by_dataset_id[str(dataset_id)] = {}
                 file_names_by_id = {}
@@ -2125,12 +2132,15 @@ def pipeline(selected_dataset=None):
 
             dataset_file_dict = {k:v for k, v in files_by_dataset_id.items() if v != {}}
 
+            pipeline_request_postloop = time.time()
+            print("Postloop took {} seconds.".format(pipeline_request_postloop - pipeline_request_start))
+
             # This form does not need a new dataset option
             build_pipeline_form.dataset.choices = [tup for tup in dataset_tuples if tup[0] in dataset_file_dict.keys()]
 
-        # NEW ROUTINE
-        projects_datasets_files = current_user.get_projects_datasets_files(file_types=['FASTQ', 'GZIPPED_FASTQ', 'FASTA', 'SAM', 'BAM', 'SPLIT_FASTQ'])
-        projects_datasets_files_formatted =  json.dumps ({'id':'node1', 'level':1, 'title':'placeholder', 'has_children':True, 'children': projects_datasets_files})
+        # ROUTINE attempt to speed it up - never could get it to connect json to render groups / drag and drop etc
+        # projects_datasets_files = current_user.get_projects_datasets_files(file_types=['FASTQ', 'GZIPPED_FASTQ', 'FASTA', 'SAM', 'BAM', 'SPLIT_FASTQ'])
+        # projects_datasets_files_formatted =  json.dumps ({'id':'node1', 'level':1, 'title':'placeholder', 'has_children':True, 'children': projects_datasets_files})
         # for pdf in projects_datasets_files:
         #     projects_datasets_files_formatted += json.dumps ( pdf )
 
@@ -2141,9 +2151,9 @@ def pipeline(selected_dataset=None):
         form_warning_style = 'border: 2px solid #d66; border-radius: 7px; box-shadow: 0 0 10px #d66;'
 
         pipeline_request_end = time.time()
-        print("Build pipeline request took {} seconds.".format(pipeline_request_end - pipeline_request_start))
+        print("Pipeline Full Request took {} seconds.".format(pipeline_request_end - pipeline_request_start))
 
-        return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, projects_datasets_files=projects_datasets_files_formatted, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes )
+        return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes ) # projects_datasets_files=projects_datasets_files_formatted,
 
 
 
