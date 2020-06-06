@@ -2036,6 +2036,7 @@ def project_dataset_options():
 
 
 
+import time
 
 
 @frontend.route('/pipeline', methods=['GET', 'POST'])
@@ -2043,11 +2044,8 @@ def project_dataset_options():
 def pipeline(selected_dataset=None):
 
     build_pipeline_form = BuildPipelineForm(request.form)
-    print request 
-    print '######### request values #########'
-    print request.values 
-    print '#############'
 
+    pipeline_request_start = time.time()
 
     if request.method == 'POST':
 
@@ -2142,6 +2140,8 @@ def pipeline(selected_dataset=None):
         runtime_attributes = []
         form_warning_style = 'border: 2px solid #d66; border-radius: 7px; box-shadow: 0 0 10px #d66;'
 
+        pipeline_request_end = time.time()
+        print("Build pipeline request took {} seconds.".format(pipeline_request_end - pipeline_request_start))
 
         return render_template( "pipeline.html", build_pipeline_form = build_pipeline_form, projects_datasets_files=projects_datasets_files_formatted, dataset_file_dict = dataset_file_dict, dataset_project_dict = dataset_project_dict, runtime_attributes = runtime_attributes )
 
