@@ -13,14 +13,9 @@
 
 <div class="container">
 
-    <h1>View Project</h1>
+    <h1>{{ show_project_form.name.data }}</h1>
     
-    {% if not read_only %}
-        You may edit the information below by <a href='{{url_for("frontend.edit_project", project_id=project.id)}}'>clicking here</a>.
-        <br/>
-    {% else %}
-        <p>The information about your project is listed below. </p>
-    {% endif %}
+
 
     <br>
 
@@ -29,36 +24,38 @@
 
         <div class='row'>
 
-            <div class="col-md-4">
+            <div class="col-md-3">
                 {{ show_project_form.name.label }}<br/>
                 {{ show_project_form.name.data }}<br/>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
+                {{ show_project_form.cell_types_sequenced.label }}<br/>
+                {{ show_project_form.cell_types_sequenced.data if show_project_form.cell_types_sequenced.data != None }}<br/>
+            </div>
+            <div class="col-md-3">
+                {{ show_project_form.species.label }}<br/>
+                {{ show_project_form.species.data if show_project_form.species.data != None }}<br/>
+            </div>
+            <div class="col-md-3">
                 {{ show_project_form.lab.label }}<br/>
-                {{ show_project_form.lab.data }}<br/>
+                {{ show_project_form.lab.data if show_project_form.lab.data != None }}<br/>
+            </div>
+
+        </div>
+        <br/>
+        <br/>
+        <div class='row'>
+
+            <div class="col-md-6">
+                {{ show_project_form.description.label }}<br/>
+                {{ show_project_form.description.data }} <br/>
             </div>
 
             <div class="col-md-4">
                 {{ show_project_form.publications.label }}<br/>
-                {{ show_project_form.publications.data }}<br/>
+                {{ show_project_form.publications.data if show_project_form.publications.data != None }}<br/>
             </div>
-        </div>
-        <br/>
-        <br/>
-        <div class='row'>
 
-            <div class="col-md-4">
-                {{ show_project_form.cell_types_sequenced.label }}<br/>
-                {{ show_project_form.cell_types_sequenced.data }}<br/>
-            </div>
-            <div class="col-md-4">
-                {{ show_project_form.species.label }}<br/>
-                {{ show_project_form.species.data }}<br/>
-            </div>
-            <div class="col-md-4">
-                <label>Creation Date</label><br/>
-                {{ creation_date }}<br/>
-            </div>
 
             <div class="col-md-4">
             </div>
@@ -66,25 +63,16 @@
         <br/>
         <br/>
         <div class='row'>
-            <div class="col-md-4">
-                <label>Owner</label><br/>
-                {{owner}}<br/>
-                <br/>
-                {{ show_project_form.description.label }}<br/>
-                {{ show_project_form.description.data }} <br/>
-            </div>
             <div class="col-md-4">
                 {% if dataset_list %}
-                    <label>Datasets</label><br/>
+                    <label>Project Datasets:</label><br/>
                     <table>
                         <tr>
-                            <td>Dataset:</td>
-                            <td style="padding-left:8px">Owner Name:</td>
+                            <td>Dataset Name (ID)</td>
                         </tr>
                         {% for dataset, name, dataset_id in dataset_list %}
                         <tr>
                             <td><a href="{{ url_for( 'frontend.dataset', id = dataset_id ) }}">{{dataset}}</a></td>
-                            <td style="padding-left:8px">{{name}}</td>
                         </tr>
                         {% endfor %}
                     </table>
@@ -107,6 +95,10 @@
                 {% endif %}
             </div>
 
+            <br/>
+
+
+
         </div>
         <input type='hidden' name='submit' value="Update">
         
@@ -117,10 +109,19 @@
 
 
 
+<div class="container">
+            <div class="col-md-6">
+                {% if not read_only %}
+                    You may edit these project details by <a href='{{url_for("frontend.edit_project", project_id=project.id)}}'>clicking here</a>.
+                {% else %}
+                    <p>The information about this project is read-only. </p>
+                {% endif %}
+            </div>
+</div>
 
 
-
-
+<br>
+<br>
 <br>
 
 <div class="container">

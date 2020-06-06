@@ -45,7 +45,7 @@
                     <th width="15%">Project Name</th>
                     <th width="30%">Description</th>
                     <th>Species</th>
-                    <th>Created</th>
+                    <th></th>
                     <th>Role</th>
                 </tr>
             </thead>
@@ -55,9 +55,9 @@
                         <th>                                
                             <a href="{{url_for('.show_project', project_id = project.id)}}">{{project.name}}</a>
                         </th>
-                        <th>{{project.description}}</th>
-                        <th>{{project.species}}</th>
-                        <th>{{project.created}}</th>
+                        <th>{{project.description if project.description!=None}}</th>
+                        <th>{{project.species if project.species!=None}}</th>
+                        <th></th>
                         <th>{{project.role(current_user)}}</th>
                     </tr>
                 {% endfor %}

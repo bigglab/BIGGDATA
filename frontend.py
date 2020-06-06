@@ -108,10 +108,10 @@ nav.register_element('frontend_user', Navbar(
     Subgroup(
         'Manage Data',
         View('Import Files', 'frontend.import_files'), 
-        View('My Files', 'frontend.files'), 
-        View('My Datasets', 'frontend.datasets'),
         View('My Projects', 'frontend.projects'),
-        View('Create Project', 'frontend.create_project'),
+        View('My Datasets', 'frontend.datasets'),
+        View('All My Files', 'frontend.files'),
+        #View('Create Project', 'frontend.create_project'),
         ),
     Subgroup(
         'Run Analysis', 
@@ -1268,7 +1268,10 @@ def edit_project(project_id):
             else:
                 flash_errors(edit_project_form)
 
-            return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner, current_user=current_user)
+            # return render_template("edit_project.html", edit_project_form = edit_project_form, project_id = project_id, owner = owner, current_user=current_user)
+            # return redirect(url_for('.show_project')) #, project.id)
+            return redirect(url_for('.projects'))
+
     else:
         flash('Error: the project was not found or you do not have permission to edit the project.', 'warning')
         return redirect( url_for('.projects') )

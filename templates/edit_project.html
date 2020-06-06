@@ -9,7 +9,7 @@
 {% block wide_content %}
 
     <h1>Edit Project</h1>
-    <p>Please edit the information about your project below. You must press the "Update" button to save changes.
+    <br>
     <br>
     <form method="POST" action="{{url_for('frontend.edit_project', project_id = project_id)}}" enctype="multipart/form-data">
         
@@ -22,98 +22,39 @@
                 {{ edit_project_form.name(class_="form-control") }} <br/>
             </div>
             <div class="col-md-4">
-                {{ edit_project_form.lab.label }}<br/>
-                {{ edit_project_form.lab(class_="form-control") }} <br/>            
-            </div>
-
-            <div class="col-md-4">
-                {{ edit_project_form.publications.label }}<br/>
-                {{ edit_project_form.publications(class_="form-control") }} <br/>             
-            </div>
-        </div>
-        <div class='row'>
-
-            <div class="col-md-4">
                 {{ edit_project_form.cell_types_sequenced.label }}<br/>
                 {{ edit_project_form.cell_types_sequenced(class_="form-control") }} <br/>
             </div>
             <div class="col-md-4">
                 {{ edit_project_form.species.label }}<br/>
-                {{ edit_project_form.species(class_="form-control") }} <br/>            
+                {{ edit_project_form.species(class_="form-control") }} <br/>
             </div>
 
+        </div>
+
+        <div class='row'>
             <div class="col-md-4">
+                {{ edit_project_form.lab.label }}<br/>
+                {{ edit_project_form.lab(class_="form-control") }} <br/>            
+            </div>
+
+            <div class="col-md-8">
+                {{ edit_project_form.publications.label }}<br/>
+                {{ edit_project_form.publications(class_="form-control") }} <br/>             
+            </div>
+
+        </div>
+
+        <div class="row">
+            <div class="col-md-10">
+                {{ edit_project_form.description.label }}<br/>
+                {{ edit_project_form.description(class_="form-control", rows = '4', multiple='multiple') }} <br/>
             </div>
         </div>
-        <br/>
-        <div class='row'>
 
-            <div class="col-md-4">
-                <label>Owner</label><br/>
-                {{owner}}<br/>
-                <br/>
-                {{ edit_project_form.description.label }}<br/>
-                {{ edit_project_form.description(class_="form-control", rows = '5', multiple='multiple') }} <br/>
-                <br/>
-                <input type='hidden' name='submit' value="Update">
-                <button type="submit" value="submit" class="btn btn-default">Update</button>
-            </div>
-            <div class="col-md-4"> <!-- datasets col -->
-                <div id="accordion">
-                    <table cellpadding="5" cellspacing="0" border="0">
-                        <tbody class="accordian-control">
-                            <tr>
-                                <td class="collapse-control"></td>
-                                <td valign="center">{{ edit_project_form.datasets.label }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div id="collapseOne" class="collapse">
-                        {{ edit_project_form.datasets(class_="form-control")}} <br/>
-                         <noscript>To edit datasets, You must enable JavaScript.</noscript>
-                    </div>
-                </div> <!-- /accordian -->
-<!--                 <br/>
-                <div id="accordion">
-                    <table cellpadding="5" cellspacing="0" border="0">
-                        <tbody class="accordian-control">
-                            <tr>
-                                <td class="collapse-control"></td>
-                                <td class="none" valign="center">{{ edit_project_form.file.label(for='') }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div id="collapseOne" class="collapse">
-                        <span>
-                        <div class="input-group">
-                            <span class="input-group-btn">
-                                <span class="btn btn-default btn-file">
-                                    Browse...{{ edit_project_form.file()}} 
-                                </span>
-                            </span>
-                            <input type="text" class="form-control" readonly>
-                        </div>
-                        </span>
-                        <br/>
-                         <noscript>To edit datasets, You must enable JavaScript.</noscript>
-                    </div>
-                </div> <!-- /accordian -->
-                <br/>
-                <!--  <div id="accordion">
-                    <table cellpadding="5" cellspacing="0" border="0">
-                        <tbody class="accordian-control">
-                            <tr>
-                                <td class="collapse-control"></td>
-                                <td valign="center"><label>Add Datasets from JSON URL</label>{#{ edit_project_form.datasets.label }#}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div id="collapseOne" class="collapse">
-                        {#{ edit_project_form.datasets(class_="form-control")}#} <br/>
-                         <noscript>To edit datasets, You must enable JavaScript.</noscript>
-                    </div>
-                </div> -->
-            </div>
+        <br/>
+
+        <div class="row">
             <div class="col-md-4">
                 <div id="accordion">
                     <table cellpadding="5" cellspacing="0" border="0">
@@ -129,8 +70,9 @@
                         <noscript>To edit users, You must enable JavaScript.</noscript>
                     </div>
                 </div> <!-- /accordian -->
-                <br/>
-                <div id="accordion">                
+            </div>
+            <div class="col-md-4">
+                <div id="accordion">
                      <table cellpadding="5" cellspacing="0" border="0">
                         <tbody class="accordian-control">
                             <tr>
@@ -145,75 +87,48 @@
                     </div>
                 </div> <!-- /accordian -->
                 <br/>
-            </div>  <!-- /col  -->            
-            <!-- <div class="col-md-4">
-                {{ edit_project_form.datasets.label }}
-                {{ edit_project_form.datasets(class_="form-control searchable", rows = '5', multiple='multiple') }} <br/>
-                <script>
-
-                    $('.searchable').multiSelect({
-                        selectableHeader: "Add to Project<br/><input type='text' class='search-input' autocomplete='off' placeholder='Search'>",
-                        selectionHeader: "Not in Project<br/><input type='text' class='search-input' autocomplete='off' placeholder='Search'>",
-                        afterInit: function(ms){
-                        var that = this,
-                            $selectableSearch = that.$selectableUl.prev(),
-                            $selectionSearch = that.$selectionUl.prev(),
-                            selectableSearchString = '#'+that.$container.attr('id')+' .ms-elem-selectable:not(.ms-selected)',
-                            selectionSearchString = '#'+that.$container.attr('id')+' .ms-elem-selection.ms-selected';
-
-                        that.qs1 = $selectableSearch.quicksearch(selectableSearchString)
-                        .on('keydown', function(e){
-                          if (e.which === 40){
-                            that.$selectableUl.focus();
-                            return false;
-                          }
-                        });
-
-                        that.qs2 = $selectionSearch.quicksearch(selectionSearchString)
-                        .on('keydown', function(e){
-                          if (e.which == 40){
-                            that.$selectionUl.focus();
-                            return false;
-                          }
-                        });
-                        },
-                        afterSelect: function(){
-                        this.qs1.cache();
-                        this.qs2.cache();
-                        },
-                        afterDeselect: function(){
-                        this.qs1.cache();
-                        this.qs2.cache();
-                        }
-                    });
-
-                </script>
-                <noscript>To edit users, You must enable JavaScript.</noscript>
             </div>
+            <div class="col-md-4"> <!-- datasets col -->
+                <div id="accordion">
+                    <table cellpadding="5" cellspacing="0" border="0">
+                        <tbody class="accordian-control">
+                            <tr>
+                                <td class="collapse-control"></td>
+                                <td valign="center">{{ edit_project_form.datasets.label }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div id="collapseOne" class="collapse">
+                        {{ edit_project_form.datasets(class_="form-control")}} <br/>
+                         <noscript>To edit datasets, You must enable JavaScript.</noscript>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="row">
             <div class="col-md-4">
-                {{ edit_project_form.editors.label }}
-                {{ edit_project_form.editors(class_="form-control", rows = '5', multiple='multiple') }} <br/>
-                <script>
-                    $('#editors').multiSelect({
-                        selectableHeader: "Grant Access",
-                        selectionHeader: "Deny Access"
-                    })
-                </script>
-                <br/>
-                {{ edit_project_form.viewers.label }}
-                {{ edit_project_form.viewers(class_="form-control", rows = '5', multiple='multiple') }} 
-                <script>
-                    $('#viewers').multiSelect({
-                        selectableHeader: "Grant Access",
-                        selectionHeader: "Deny Access"
-                    })
-                </script>
+                <label>Created by </label> {{owner}}<br/>
+            </div>
+        </div>
 
-                <noscript>To edit users, You must enable JavaScript.</noscript>
-            </div> -->
 
-        </div>        
+
+        <br/>
+
+        <div class="row">
+            <div class="col-md-4">
+                <input type='hidden' name='submit' value="Update">
+                <button type="submit" value="submit" class="btn btn-default">Update</button>
+            </div>
+        </div>
+
+        <br/>
+        <br/>
+
     </form>
+
 
 <script>
 
