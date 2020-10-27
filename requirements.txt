@@ -15,7 +15,7 @@ cffi==1.3.0
 chartkick==0.4.2
 copytext==0.1.9
 coverage==4.0.1
-cryptography==1.2.3
+cryptography==3.2
 decorator==4.0.4
 dill==0.2.4
 docutils==0.12
