@@ -53,7 +53,7 @@ itsdangerous==0.24
 JayDeBeApi==0.2.0
 jdcal==1.0.1
 jellyfish==0.5.6
-Jinja2==2.8
+Jinja2==2.11.3
 JPype1==0.6.1
 kombu==3.0.30
 librabbitmq==1.6.1
